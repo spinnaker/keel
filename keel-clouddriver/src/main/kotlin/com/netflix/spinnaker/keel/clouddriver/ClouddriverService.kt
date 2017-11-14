@@ -16,6 +16,7 @@
 package com.netflix.spinnaker.keel.clouddriver
 
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
+import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroup
 import retrofit.http.GET
@@ -45,4 +46,12 @@ interface ClouddriverService {
 
   @GET("/credentials")
   fun listCredentials(): Set<Credential>
+
+  @GET("/{provider}/loadBalancers/{account}/{region}/{name}")
+  fun getElasticLoadBalancer(
+    @Path("provider") provider: String,
+    @Path("account") account: String,
+    @Path("region") region: String,
+    @Path("name") name: String
+  ): Set<ElasticLoadBalancer>
 }
