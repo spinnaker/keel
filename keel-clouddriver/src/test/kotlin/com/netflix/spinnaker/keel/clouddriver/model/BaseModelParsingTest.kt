@@ -1,16 +1,17 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
 import com.natpryce.hamkrest.equalTo
-import com.natpryce.hamkrest.should.shouldMatch
 import com.natpryce.hamkrest.should.shouldNotMatch
 import com.netflix.spinnaker.config.KeelConfiguration
+import com.netflix.spinnaker.config.KeelProperties
+import com.netflix.spinnaker.hamkrest.shouldEqual
 import com.netflix.spinnaker.keel.clouddriver.ClouddriverService
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import org.junit.jupiter.api.Test
-import retrofit.Endpoints
+import retrofit.Endpoints.newFixedEndpoint
 import retrofit.RestAdapter
 import retrofit.client.Client
 import retrofit.client.Header
@@ -20,12 +21,14 @@ import retrofit.converter.JacksonConverter
 import retrofit.mime.TypedByteArray
 import java.net.URL
 
-abstract class BaseModelParsingTest<T> {
+abstract class BaseModelParsingTest<out T> {
 
-  private val mapper = KeelConfiguration().objectMapper()
+  private val mapper = KeelConfiguration()
+    .apply { properties = KeelProperties() }
+    .objectMapper()
   private val client = mock<Client>()
   private val cloudDriver = RestAdapter.Builder()
-    .setEndpoint(Endpoints.newFixedEndpoint("https://spinnaker.💩"))
+    .setEndpoint(newFixedEndpoint("https://spinnaker.💩"))
     .setClient(client)
     .setConverter(JacksonConverter(mapper))
     .build()
@@ -63,7 +66,3 @@ fun Request.jsonResponse(
     headers,
     TypedByteArray("application/json", body.readBytes())
   )
-
-infix fun <T> T.shouldEqual(expected: T) {
-  shouldMatch(equalTo(expected))
-}

@@ -21,9 +21,7 @@ object SecurityGroupTest : BaseModelParsingTest<SecurityGroup>() {
       accountName = "mgmttest",
       region = "us-west-2",
       vpcId = "vpc-b5y5kcad",
-      inboundRules = listOf(
-
-      ),
+      inboundRules = emptyList(),
       moniker = Moniker(
         app = "covfefe",
         cluster = "covfefe",

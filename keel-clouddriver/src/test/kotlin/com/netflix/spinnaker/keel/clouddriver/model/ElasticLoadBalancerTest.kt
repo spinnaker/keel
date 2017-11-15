@@ -1,12 +1,13 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
 import com.netflix.spinnaker.keel.clouddriver.ClouddriverService
-import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.*
-import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.Protocol.HTTP
-import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.Protocol.TCP
-import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.Scheme.internal
+import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.HealthCheck
+import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.ListenerDescription
+import com.netflix.spinnaker.keel.model.Listener
+import com.netflix.spinnaker.keel.model.Protocol.HTTP
+import com.netflix.spinnaker.keel.model.Protocol.TCP
+import com.netflix.spinnaker.keel.model.Scheme.internal
 import java.net.URL
-import java.time.Instant
 
 object ElasticLoadBalancerTest : BaseModelParsingTest<ElasticLoadBalancer>() {
 
@@ -30,7 +31,6 @@ object ElasticLoadBalancerTest : BaseModelParsingTest<ElasticLoadBalancer>() {
       vpcid = "vpc-ljycv6ep",
       availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c"),
       dnsname = "internal-covfefe-test-vpc0-991611405.us-west-2.elb.amazonaws.com",
-      subnets = setOf("subnet-rb5qsr6n", "subnet-obmsqtr1", "subnet-19fdc8li"),
       securityGroups = setOf("sg-skerlbt5", "sg-epos7i16", "sg-feuxpxqk", "sg-k6cc85a1"),
       healthCheck = HealthCheck(
         target = "HTTP:7001/health",
@@ -46,18 +46,16 @@ object ElasticLoadBalancerTest : BaseModelParsingTest<ElasticLoadBalancer>() {
             loadBalancerPort = 80,
             instanceProtocol = HTTP,
             instancePort = 7001
-          ),
-          policyNames = emptySet())
-        ,
+          )
+        ),
         ListenerDescription(
           listener = Listener(
             protocol = TCP,
             loadBalancerPort = 443,
             instanceProtocol = TCP,
             instancePort = 7002
-          ),
-          policyNames = emptySet())
-      ),
-      createdTime = Instant.ofEpochMilli(1488575522770L)
+          )
+        )
+      )
     )
 }

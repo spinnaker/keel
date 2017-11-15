@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
-import java.time.Instant
+import com.netflix.spinnaker.keel.model.Listener
+import com.netflix.spinnaker.keel.model.Scheme
 
 data class ElasticLoadBalancer(
   val loadBalancerName: String,
@@ -8,15 +9,13 @@ data class ElasticLoadBalancer(
   val vpcid: String?,
   val availabilityZones: Set<String>,
   val dnsname: String,
-  val subnets: Set<String>,
   val securityGroups: Set<String>,
   val healthCheck: HealthCheck,
-  val listenerDescriptions: Set<ListenerDescription>,
-  val createdTime: Instant
+  val listenerDescriptions: Set<ListenerDescription>
 ) {
-  enum class Scheme {
-    internal, external
-  }
+  data class ListenerDescription(
+    val listener: Listener
+  )
 
   data class HealthCheck(
     val target: String,
@@ -25,20 +24,4 @@ data class ElasticLoadBalancer(
     val unhealthyThreshold: Int,
     val healthyThreshold: Int
   )
-
-  data class ListenerDescription(
-    val listener: Listener,
-    val policyNames: Set<String>
-  )
-
-  data class Listener(
-    val protocol: Protocol,
-    val loadBalancerPort: Int,
-    val instanceProtocol: Protocol,
-    val instancePort: Int
-  )
-
-  enum class Protocol {
-    HTTP, HTTPS, TCP, SSL
-  }
 }

@@ -18,6 +18,7 @@ package com.netflix.spinnaker.config
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
 import com.fasterxml.jackson.databind.DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.jonpeterson.jackson.module.versioning.VersioningModule
@@ -32,7 +33,9 @@ import com.netflix.spinnaker.keel.memory.MemoryTraceRepository
 import com.netflix.spinnaker.keel.policy.PolicySpec
 import com.netflix.spinnaker.keel.tracing.TraceRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
 import org.springframework.context.annotation.ComponentScan
@@ -42,6 +45,7 @@ import org.springframework.util.ClassUtils
 import java.time.Clock
 
 @Configuration
+@EnableConfigurationProperties(KeelProperties::class)
 @ComponentScan(basePackages = arrayOf(
   "com.netflix.spinnaker.keel.dryrun",
   "com.netflix.spinnaker.keel.filter"
@@ -49,6 +53,8 @@ import java.time.Clock
 open class KeelConfiguration {
 
   private val log = LoggerFactory.getLogger(javaClass)
+
+  @Autowired lateinit var properties: KeelProperties
 
   @Bean
   open fun objectMapper() =
@@ -63,6 +69,11 @@ open class KeelConfiguration {
       .registerModule(JavaTimeModule())
       .disable(FAIL_ON_UNKNOWN_PROPERTIES)
       .disable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS)
+      .apply {
+        if (properties.prettyPrintJson) {
+          enable(INDENT_OUTPUT)
+        }
+      }
 
   private fun findAllSubtypes(clazz: Class<*>, pkg: String): List<Class<*>>
     = ClassPathScanningCandidateComponentProvider(false)
