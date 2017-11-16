@@ -8,6 +8,7 @@ import com.netflix.spinnaker.config.KeelConfiguration
 import com.netflix.spinnaker.config.KeelProperties
 import com.netflix.spinnaker.hamkrest.shouldEqual
 import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Automatic
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Manual
 import com.netflix.spinnaker.keel.intents.HealthEndpoint.Http
 import com.netflix.spinnaker.keel.model.Listener
 import com.netflix.spinnaker.keel.model.Protocol.SSL
@@ -34,6 +35,28 @@ object LoadBalancerIntentTest {
     mapper.readValue<LoadBalancerIntent>(json).apply {
       spec shouldEqual elb.spec
     }
+  }
+
+  @Test
+  fun `availability zones defaults to automatic`() {
+    mapper.readValue<Map<String, Any>>(json)
+      .apply { (get("spec") as MutableMap<String, Any>).remove("availabilityZones") }
+      .let {
+        mapper.convertValue<LoadBalancerIntent>(it).apply {
+          (spec as AmazonElasticLoadBalancerSpec).availabilityZones shouldEqual Automatic
+        }
+      }
+  }
+
+  @Test
+  fun `availability zones can be configured manually`() {
+    mapper.readValue<Map<String, Any>>(json)
+      .apply { (get("spec") as MutableMap<String, Any>)["availabilityZones"] = listOf("us-west-2a", "us-west-2c") }
+      .let {
+        mapper.convertValue<LoadBalancerIntent>(it).apply {
+          (spec as AmazonElasticLoadBalancerSpec).availabilityZones shouldEqual Manual(setOf("us-west-2a", "us-west-2c"))
+        }
+      }
   }
 
   val elb = LoadBalancerIntent(

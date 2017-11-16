@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.github.jonpeterson.jackson.module.versioning.JsonVersionedModel
 import com.netflix.spinnaker.keel.ApplicationAwareIntentSpec
 import com.netflix.spinnaker.keel.Intent
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Automatic
 import com.netflix.spinnaker.keel.intents.HealthEndpoint.*
 import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneConfigDeserializer
 import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneConfigSerializer
@@ -52,7 +53,7 @@ data class AmazonElasticLoadBalancerSpec(
   override val region: String,
   override val securityGroupNames: Set<String>,
   val vpcName: String?,
-  val availabilityZones: AvailabilityZoneConfig,
+  val availabilityZones: AvailabilityZoneConfig = Automatic,
   val scheme: Scheme,
   val listeners: Set<Listener>,
   val healthCheck: HealthCheck
