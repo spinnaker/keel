@@ -10,19 +10,19 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.TextNode
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec.automatic
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec.manual
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Automatic
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Manual
 
-class AvailabilityZoneSpecSerializer : JsonSerializer<AvailabilityZoneSpec>() {
+class AvailabilityZoneConfigSerializer : JsonSerializer<AvailabilityZoneConfig>() {
   override fun serialize(
-    value: AvailabilityZoneSpec,
+    value: AvailabilityZoneConfig,
     gen: JsonGenerator,
     serializers: SerializerProvider
   ) {
     when (value) {
-      is automatic -> gen.writeString(automatic.javaClass.simpleName)
-      is manual -> value.availabilityZones.apply {
+      is Automatic -> gen.writeString(Automatic.javaClass.simpleName.toLowerCase())
+      is Manual -> value.availabilityZones.apply {
         gen.writeStartArray()
         forEach {
           gen.writeString(it)
@@ -33,17 +33,17 @@ class AvailabilityZoneSpecSerializer : JsonSerializer<AvailabilityZoneSpec>() {
   }
 }
 
-class AvailabilityZoneSpecDeserializer : JsonDeserializer<AvailabilityZoneSpec>() {
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): AvailabilityZoneSpec {
+class AvailabilityZoneConfigDeserializer : JsonDeserializer<AvailabilityZoneConfig>() {
+  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): AvailabilityZoneConfig {
     val tree: TreeNode = p.readValueAsTree()
     return when (tree) {
-      is TextNode -> automatic
-      is ArrayNode -> manual(tree.map { it.textValue() }.toSet())
+      is TextNode -> Automatic // TODO: pretty crude assumption here
+      is ArrayNode -> Manual(tree.map { it.textValue() }.toSet())
       else -> throw InvalidFormatException(
         p,
         "Expected text or array but found ${tree.javaClass.simpleName}",
         tree,
-        AvailabilityZoneSpec::class.java
+        AvailabilityZoneConfig::class.java
       )
     }
   }

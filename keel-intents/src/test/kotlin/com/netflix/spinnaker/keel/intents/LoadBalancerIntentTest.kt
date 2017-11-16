@@ -7,7 +7,7 @@ import com.natpryce.hamkrest.should.shouldMatch
 import com.netflix.spinnaker.config.KeelConfiguration
 import com.netflix.spinnaker.config.KeelProperties
 import com.netflix.spinnaker.hamkrest.shouldEqual
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec.automatic
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Automatic
 import com.netflix.spinnaker.keel.intents.HealthEndpoint.Http
 import com.netflix.spinnaker.keel.model.Listener
 import com.netflix.spinnaker.keel.model.Protocol.SSL
@@ -44,7 +44,7 @@ object LoadBalancerIntentTest {
       accountName = "mgmt",
       region = "us-west-2",
       securityGroupNames = setOf("covfefe", "nf-infrastructure", "nf-datacenter"),
-      availabilityZones = automatic,
+      availabilityZones = Automatic,
       scheme = internal,
       listeners = setOf(Listener(TCP, 80, TCP, 7001), Listener(SSL, 443, SSL, 7002)),
       healthCheck = HealthCheck(Http(7001, "/healthcheck")),

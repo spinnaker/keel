@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer
 import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.HealthCheck
 import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.ListenerDescription
 import com.netflix.spinnaker.keel.intents.AmazonElasticLoadBalancerSpec
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig
 import com.netflix.spinnaker.keel.intents.LoadBalancerSpec
 import com.netflix.spinnaker.keel.model.Job
 import org.springframework.stereotype.Component
@@ -22,7 +22,7 @@ class LoadBalancerConverter(
         scheme = spec.scheme,
         availabilityZones = spec.availabilityZones.let { zoneSpec ->
           when (zoneSpec) {
-            is AvailabilityZoneSpec.manual -> zoneSpec.availabilityZones
+            is AvailabilityZoneConfig.Manual -> zoneSpec.availabilityZones
             else -> cloudDriver
               .listSubnets(spec.cloudProvider)
               .filter {

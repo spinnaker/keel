@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.clouddriver.ClouddriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.intents.AmazonElasticLoadBalancerSpec
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneSpec.automatic
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Automatic
 import com.netflix.spinnaker.keel.intents.HealthCheck
 import com.netflix.spinnaker.keel.intents.HealthEndpoint.Http
 import com.netflix.spinnaker.keel.model.Listener
@@ -30,7 +30,7 @@ object LoadBalancerConverterTest {
     accountName = "prod",
     region = "us-west-2",
     securityGroupNames = setOf("covfefe", "nf-infrastructure", "nf-datacenter"),
-    availabilityZones = automatic,
+    availabilityZones = Automatic,
     scheme = internal,
     listeners = setOf(Listener(TCP, 80, TCP, 7001), Listener(SSL, 443, SSL, 7002)),
     healthCheck = HealthCheck(Http(7001, "/healthcheck"))

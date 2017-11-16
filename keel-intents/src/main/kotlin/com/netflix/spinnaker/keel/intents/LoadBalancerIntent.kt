@@ -14,8 +14,8 @@ import com.github.jonpeterson.jackson.module.versioning.JsonVersionedModel
 import com.netflix.spinnaker.keel.ApplicationAwareIntentSpec
 import com.netflix.spinnaker.keel.Intent
 import com.netflix.spinnaker.keel.intents.HealthEndpoint.*
-import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneSpecDeserializer
-import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneSpecSerializer
+import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneConfigDeserializer
+import com.netflix.spinnaker.keel.intents.jackson.AvailabilityZoneConfigSerializer
 import com.netflix.spinnaker.keel.model.Listener
 import com.netflix.spinnaker.keel.model.Protocol
 import com.netflix.spinnaker.keel.model.Protocol.*
@@ -52,7 +52,7 @@ data class AmazonElasticLoadBalancerSpec(
   override val region: String,
   override val securityGroupNames: Set<String>,
   val vpcName: String?,
-  val availabilityZones: AvailabilityZoneSpec,
+  val availabilityZones: AvailabilityZoneConfig,
   val scheme: Scheme,
   val listeners: Set<Listener>,
   val healthCheck: HealthCheck
@@ -97,12 +97,12 @@ sealed class HealthEndpoint(
   }
 }
 
-@JsonSerialize(using = AvailabilityZoneSpecSerializer::class)
-@JsonDeserialize(using = AvailabilityZoneSpecDeserializer::class)
-sealed class AvailabilityZoneSpec {
-  object automatic : AvailabilityZoneSpec()
+@JsonSerialize(using = AvailabilityZoneConfigSerializer::class)
+@JsonDeserialize(using = AvailabilityZoneConfigDeserializer::class)
+sealed class AvailabilityZoneConfig {
+  object Automatic : AvailabilityZoneConfig()
 
-  data class manual(
+  data class Manual(
     val availabilityZones: Set<String>
-  ) : AvailabilityZoneSpec()
+  ) : AvailabilityZoneConfig()
 }
