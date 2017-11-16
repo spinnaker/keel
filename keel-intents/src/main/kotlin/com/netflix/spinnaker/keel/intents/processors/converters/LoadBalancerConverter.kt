@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer
 import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.HealthCheck
 import com.netflix.spinnaker.keel.clouddriver.model.ElasticLoadBalancer.ListenerDescription
 import com.netflix.spinnaker.keel.intents.AmazonElasticLoadBalancerSpec
-import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig
+import com.netflix.spinnaker.keel.intents.AvailabilityZoneConfig.Manual
 import com.netflix.spinnaker.keel.intents.LoadBalancerSpec
 import com.netflix.spinnaker.keel.model.Job
 import org.springframework.stereotype.Component
@@ -16,20 +16,14 @@ class LoadBalancerConverter(
 ) : SpecConverter<LoadBalancerSpec, ElasticLoadBalancer> {
   override fun convertToState(spec: LoadBalancerSpec): ElasticLoadBalancer {
     if (spec is AmazonElasticLoadBalancerSpec) {
-      val vpcId = networkNameToId(cloudDriver.listNetworks(), spec.cloudProvider, spec.region, spec.vpcName)
+      val (vpcId, zones) = spec.fetchVpcAndZones()
       return ElasticLoadBalancer(
         loadBalancerName = spec.name,
         scheme = spec.scheme,
-        availabilityZones = spec.availabilityZones.let { zoneSpec ->
-          when (zoneSpec) {
-            is AvailabilityZoneConfig.Manual -> zoneSpec.availabilityZones
-            else -> cloudDriver
-              .listSubnets(spec.cloudProvider)
-              .filter {
-                it.account == spec.accountName && it.region == spec.region && it.vpcId == vpcId
-              }
-              .map { it.availabilityZone }
-              .toSet()
+        availabilityZones = spec.availabilityZones.let { zoneConfig ->
+          when (zoneConfig) {
+            is Manual -> zoneConfig.availabilityZones
+            else -> zones
           }
         },
         healthCheck = spec.healthCheck.run {
@@ -54,4 +48,17 @@ class LoadBalancerConverter(
   override fun convertToJob(spec: LoadBalancerSpec): List<Job> {
     TODO("not implemented")
   }
+
+  private fun AmazonElasticLoadBalancerSpec.fetchVpcAndZones(): Pair<String, Set<String>> =
+    networkNameToId(cloudDriver.listNetworks(), cloudProvider, region, vpcName)
+      ?.let { vpcId ->
+        Pair(vpcId,
+          cloudDriver
+            .listSubnets(cloudProvider)
+            .filter {
+              it.account == accountName && it.region == region && it.vpcId == vpcId
+            }
+            .map { it.availabilityZone }
+            .toSet())
+      } ?: throw IllegalStateException("VPC name $vpcName is invalid")
 }
