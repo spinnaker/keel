@@ -70,7 +70,7 @@ object LoadBalancerIntentTest {
       availabilityZones = Automatic,
       scheme = internal,
       listeners = setOf(Listener(TCP, 80, TCP, 7001), Listener(SSL, 443, SSL, 7002)),
-      healthCheck = HealthCheck(Http(7001, "/healthcheck")),
+      healthCheck = HealthCheckSpec(Http(7001, "/healthcheck")),
       vpcName = "vpcName"
     )
   )

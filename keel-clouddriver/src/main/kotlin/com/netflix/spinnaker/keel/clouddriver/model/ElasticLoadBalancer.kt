@@ -8,7 +8,6 @@ data class ElasticLoadBalancer(
   val scheme: Scheme?,
   val vpcid: String?,
   val availabilityZones: Set<String>,
-  val dnsname: String,
   val securityGroups: Set<String>,
   val healthCheck: HealthCheck,
   val listenerDescriptions: Set<ListenerDescription>

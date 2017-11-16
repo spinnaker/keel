@@ -54,12 +54,12 @@ data class AmazonElasticLoadBalancerSpec(
   override val securityGroupNames: Set<String>,
   val vpcName: String?,
   val availabilityZones: AvailabilityZoneConfig = Automatic,
-  val scheme: Scheme,
+  val scheme: Scheme?,
   val listeners: Set<Listener>,
-  val healthCheck: HealthCheck
+  val healthCheck: HealthCheckSpec
 ) : LoadBalancerSpec()
 
-data class HealthCheck(
+data class HealthCheckSpec(
   val target: HealthEndpoint,
   val interval: Int = 10,
   val timeout: Int = 5,

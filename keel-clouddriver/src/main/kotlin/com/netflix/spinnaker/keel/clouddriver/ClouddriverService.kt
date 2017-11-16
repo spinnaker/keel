@@ -35,6 +35,9 @@ interface ClouddriverService {
                        @Path("region") region: String,
                        @Query("vpcId") vpcId: String): SecurityGroup?
 
+  @GET("/securityGroups/{account}")
+  fun getSecurityGroups(@Path("account") account: String): Collection<SecurityGroup>
+
   @GET("/networks")
   fun listNetworks(): Map<String, Set<Network>>
 

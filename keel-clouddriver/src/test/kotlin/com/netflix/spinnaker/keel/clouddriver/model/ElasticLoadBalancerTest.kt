@@ -30,7 +30,6 @@ object ElasticLoadBalancerTest : BaseModelParsingTest<ElasticLoadBalancer>() {
       scheme = internal,
       vpcid = "vpc-ljycv6ep",
       availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c"),
-      dnsname = "internal-covfefe-test-vpc0-991611405.us-west-2.elb.amazonaws.com",
       securityGroups = setOf("sg-skerlbt5", "sg-epos7i16", "sg-feuxpxqk", "sg-k6cc85a1"),
       healthCheck = HealthCheck(
         target = "HTTP:7001/health",
