@@ -1,5 +1,3 @@
-apply from: "$rootDir/gradle/junit5.gradle"
-
 dependencies {
   compile project(":keel-retrofit")
   compile "com.netflix.spinnaker.moniker:moniker:0.2.0"
