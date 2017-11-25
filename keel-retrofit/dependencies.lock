@@ -37,10 +37,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.squareup.okhttp:okhttp-apache": {
@@ -127,10 +127,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.squareup.okhttp:okhttp-apache": {
@@ -217,10 +217,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.squareup.okhttp:okhttp-apache": {
@@ -327,10 +327,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.squareup.okhttp:okhttp-apache": {
@@ -417,10 +417,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.squareup.okhttp:okhttp-apache": {
@@ -511,10 +511,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.nhaarman:mockito-kotlin": {
@@ -621,10 +621,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.nhaarman:mockito-kotlin": {
@@ -731,10 +731,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.nhaarman:mockito-kotlin": {
@@ -849,10 +849,10 @@
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ],
-            "locked": "1.108.0"
+            "locked": "1.109.0"
         },
         "com.netflix.spinnaker.kork:kork-web": {
-            "locked": "1.108.0",
+            "locked": "1.109.0",
             "requested": "+"
         },
         "com.nhaarman:mockito-kotlin": {
