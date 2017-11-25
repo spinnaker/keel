@@ -596,16 +596,23 @@
             "locked": "1.2.2"
         },
         "com.natpryce:hamkrest": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-test"
+            ],
             "locked": "1.4.2.2",
             "requested": "+"
         },
         "com.netflix.spinnaker.keel:keel-core": {
             "firstLevelTransitive": [
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "project": true
         },
         "com.netflix.spinnaker.keel:keel-retrofit": {
+            "project": true
+        },
+        "com.netflix.spinnaker.keel:keel-test": {
             "project": true
         },
         "com.netflix.spinnaker.kork:kork-core": {
@@ -663,7 +670,8 @@
         "org.jetbrains.kotlin:kotlin-stdlib-jre8": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core",
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "locked": "1.1.60",
             "requested": "1.1.60"
@@ -725,16 +733,23 @@
             "locked": "1.2.2"
         },
         "com.natpryce:hamkrest": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-test"
+            ],
             "locked": "1.4.2.2",
             "requested": "+"
         },
         "com.netflix.spinnaker.keel:keel-core": {
             "firstLevelTransitive": [
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "project": true
         },
         "com.netflix.spinnaker.keel:keel-retrofit": {
+            "project": true
+        },
+        "com.netflix.spinnaker.keel:keel-test": {
             "project": true
         },
         "com.netflix.spinnaker.kork:kork-core": {
@@ -792,7 +807,8 @@
         "org.jetbrains.kotlin:kotlin-stdlib-jre8": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core",
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "locked": "1.1.60",
             "requested": "1.1.60"
@@ -854,16 +870,23 @@
             "locked": "1.2.2"
         },
         "com.natpryce:hamkrest": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-test"
+            ],
             "locked": "1.4.2.2",
             "requested": "+"
         },
         "com.netflix.spinnaker.keel:keel-core": {
             "firstLevelTransitive": [
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "project": true
         },
         "com.netflix.spinnaker.keel:keel-retrofit": {
+            "project": true
+        },
+        "com.netflix.spinnaker.keel:keel-test": {
             "project": true
         },
         "com.netflix.spinnaker.kork:kork-core": {
@@ -921,7 +944,8 @@
         "org.jetbrains.kotlin:kotlin-stdlib-jre8": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core",
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "locked": "1.1.60",
             "requested": "1.1.60"
@@ -991,16 +1015,23 @@
             "locked": "1.2.2"
         },
         "com.natpryce:hamkrest": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-test"
+            ],
             "locked": "1.4.2.2",
             "requested": "+"
         },
         "com.netflix.spinnaker.keel:keel-core": {
             "firstLevelTransitive": [
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "project": true
         },
         "com.netflix.spinnaker.keel:keel-retrofit": {
+            "project": true
+        },
+        "com.netflix.spinnaker.keel:keel-test": {
             "project": true
         },
         "com.netflix.spinnaker.kork:kork-core": {
@@ -1058,7 +1089,8 @@
         "org.jetbrains.kotlin:kotlin-stdlib-jre8": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core",
-                "com.netflix.spinnaker.keel:keel-retrofit"
+                "com.netflix.spinnaker.keel:keel-retrofit",
+                "com.netflix.spinnaker.keel:keel-test"
             ],
             "locked": "1.1.60",
             "requested": "1.1.60"

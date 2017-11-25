@@ -81,8 +81,8 @@ class IntentController
     intentRepository.getIntent(id)
       .takeIf { it != null }
       ?.run {
-        applicationEventPublisher.publishEvent(AfterIntentDeleteEvent(this))
         intentRepository.deleteIntent(id)
+        applicationEventPublisher.publishEvent(AfterIntentDeleteEvent(this))
       }
   }
 
