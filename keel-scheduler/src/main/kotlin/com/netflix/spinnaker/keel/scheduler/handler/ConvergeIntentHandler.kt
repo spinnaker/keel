@@ -20,11 +20,12 @@ import com.netflix.spinnaker.keel.Intent
 import com.netflix.spinnaker.keel.IntentActivityRepository
 import com.netflix.spinnaker.keel.IntentRepository
 import com.netflix.spinnaker.keel.IntentSpec
+import com.netflix.spinnaker.keel.event.BeforeIntentConvergeEvent
+import com.netflix.spinnaker.keel.event.IntentConvergeFailureEvent
+import com.netflix.spinnaker.keel.event.IntentConvergeSuccessEvent
+import com.netflix.spinnaker.keel.event.IntentConvergeTimeoutEvent
 import com.netflix.spinnaker.keel.orca.OrcaIntentLauncher
 import com.netflix.spinnaker.keel.scheduler.ConvergeIntent
-import com.netflix.spinnaker.keel.scheduler.ConvergenceTimeoutEvent
-import com.netflix.spinnaker.keel.scheduler.IntentNotFoundEvent
-import com.netflix.spinnaker.keel.scheduler.IntentOrchestratedEvent
 import com.netflix.spinnaker.q.MessageHandler
 import com.netflix.spinnaker.q.Queue
 import net.logstash.logback.argument.StructuredArguments.value
@@ -60,7 +61,7 @@ class ConvergeIntentHandler
 
     if (clock.millis() > message.timeoutTtl) {
       log.warn("Intent timed out, canceling converge for {}", value("intent", message.intent.id))
-      applicationEventPublisher.publishEvent(ConvergenceTimeoutEvent(message))
+      applicationEventPublisher.publishEvent(IntentConvergeTimeoutEvent(message.intent))
 
       registry.counter(canceledId.withTags("kind", message.intent.kind, "reason", CANCELLATION_REASON_TIMEOUT))
       return
@@ -69,22 +70,27 @@ class ConvergeIntentHandler
     val intent = getIntent(message)
     if (intent == null) {
       log.warn("Intent no longer exists, canceling converge for {}", value("intent", message.intent.id))
-      applicationEventPublisher.publishEvent(IntentNotFoundEvent(message.intent.id))
+      applicationEventPublisher.publishEvent(com.netflix.spinnaker.keel.event.IntentNotFoundEvent(message.intent.id))
 
       registry.counter(canceledId.withTags("kind", message.intent.kind, "reason", CANCELLATION_REASON_NOT_FOUND))
       return
     }
 
+    applicationEventPublisher.publishEvent(BeforeIntentConvergeEvent(intent))
+
     try {
       orcaIntentLauncher.launch(intent)
         .takeIf { it.orchestrationIds.isNotEmpty() }
         ?.also { result ->
-          applicationEventPublisher.publishEvent(IntentOrchestratedEvent(intent, result.orchestrationIds))
+          applicationEventPublisher.publishEvent(IntentConvergeSuccessEvent(intent, result.orchestrationIds))
           intentActivityRepository.addOrchestrations(intent.id, result.orchestrationIds)
         }
       registry.counter(invocationsId.withTags(message.intent.getMetricTags("result", "success")))
     } catch (t: Throwable) {
       log.error("Failed launching intent: ${intent.id}", t)
+      applicationEventPublisher.publishEvent(
+        IntentConvergeFailureEvent(intent, t.message ?: "Could not determine reason", t)
+      )
       registry.counter(invocationsId.withTags(message.intent.getMetricTags("result", "failed")))
     }
   }

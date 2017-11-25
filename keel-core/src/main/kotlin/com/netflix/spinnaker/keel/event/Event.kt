@@ -19,38 +19,40 @@ import com.netflix.spinnaker.keel.Intent
 import com.netflix.spinnaker.keel.IntentSpec
 
 abstract class KeelEvent {
+  val timestamp: Long = System.currentTimeMillis()
+}
+
+abstract class IntentAwareEvent : KeelEvent() {
   abstract val intent: Intent<IntentSpec>
 }
 
-data class OnIntentUpsertEvent(
+data class AfterIntentUpsertEvent(
   override val intent: Intent<IntentSpec>
+) : IntentAwareEvent()
+
+data class AfterIntentDeleteEvent(
+  override val intent: Intent<IntentSpec>
+) : IntentAwareEvent()
+
+data class BeforeIntentConvergeEvent(
+  override val intent: Intent<IntentSpec>
+) : IntentAwareEvent()
+
+data class IntentConvergeTimeoutEvent(
+  override val intent: Intent<IntentSpec>
+) : IntentAwareEvent()
+
+data class IntentNotFoundEvent(
+  val intentId: String
 ) : KeelEvent()
 
-data class OnIntentDeleteEvent(
-  override val intent: Intent<IntentSpec>
-) : KeelEvent()
-
-data class OnStateChangeEvent(
-  override val intent: Intent<IntentSpec>
-) : KeelEvent()
-
-// Triggered before launching the converge orchestrations: Can be used to
-// do last-minute operations.
-data class OnConvergeStartEvent(
-  override val intent: Intent<IntentSpec>
-) : KeelEvent()
-
-data class OnConvergeLaunchEvent(
+data class IntentConvergeSuccessEvent(
   override val intent: Intent<IntentSpec>,
   val orchestrations: List<String>
-) : KeelEvent()
+) : IntentAwareEvent()
 
-data class OnConvergeSuccessEvent(
-  override val intent: Intent<IntentSpec>
-) : KeelEvent()
-
-data class OnConvergeFailureEvent(
+data class IntentConvergeFailureEvent(
   override val intent: Intent<IntentSpec>,
   val reason: String,
   val cause: Throwable?
-) : KeelEvent()
+) : IntentAwareEvent()
