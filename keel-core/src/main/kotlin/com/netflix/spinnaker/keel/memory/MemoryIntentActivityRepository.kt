@@ -60,7 +60,7 @@ class MemoryIntentActivityRepository
   }
 
   override fun getCurrent(intentId: String): List<String> {
-    return currentOrchestrations.getOrDefault(intentId, listOf<String>()).toList()
+    return currentOrchestrations.getOrDefault(intentId, mutableSetOf()).toList()
   }
 
   override fun upsertCurrent(intentId: String, orchestrations: List<String>) {
@@ -82,7 +82,7 @@ class MemoryIntentActivityRepository
     currentOrchestrations.remove(intentId)
   }
 
-  override fun getHistory(intentId: String) = orchestrations.getOrDefault(intentId, listOf<String>()).toList()
+  override fun getHistory(intentId: String) = orchestrations.getOrDefault(intentId, mutableSetOf()).toList()
 
   override fun logConvergence(intentConvergenceRecord: IntentConvergenceRecord) {
     val intentId = intentConvergenceRecord.intentId
