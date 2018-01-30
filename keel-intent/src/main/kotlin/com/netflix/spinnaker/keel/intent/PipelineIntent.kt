@@ -15,6 +15,8 @@
  */
 package com.netflix.spinnaker.keel.intent
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter
+import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -49,7 +51,8 @@ data class PipelineSpec(
   val parameters: List<Map<String, Any?>>,
   val notifications: List<Map<String, Any?>>,
   val flags: PipelineFlags,
-  val properties: PipelineProperties
+  val properties: PipelineProperties,
+  val template: PipelineTemplate? = null
 ) : ApplicationAwareIntentSpec()
 
 class PipelineFlags : HashMap<String, Boolean>() {
@@ -77,6 +80,9 @@ class PipelineStage : HashMap<String, Any>() {
 
   val refId: String
     get() = get("refId").toString()
+
+  // TODO refactor these classes to use anysetters
+  val templateMetadata: StageTemplateMetadata? = null
 
   val dependsOn: List<String>
     get() = if (containsKey("dependsOn")) this["dependsOn"] as List<String> else listOf()
@@ -108,3 +114,62 @@ class ManualTrigger(m: Map<String, Any>) : HashMap<String, Any>(m), Trigger
 
 @JsonTypeName("pipeline")
 class PipelineTrigger(m: Map<String, Any>) : HashMap<String, Any>(m), Trigger
+
+/**
+ * Defines the metadata for a pipeline template. The inclusion of this class will define it as a
+ * template.
+ *
+ * TODO rz - needs a better verisoning scheme (handled in the spec, or otherwise?)
+ * TODO rz - Split up the data class into two: One for actual pipelines, one for templates themselves
+ * TODO rz - Should be possible to run a template as a pipeline, if it's fully formed as-is
+ */
+data class PipelineTemplate(
+  val name: String,
+  val description: String,
+  val labels: List<String>,
+  val flags: PipelineTemplateFlags,
+  // Allow multiple sources, layer them on top of each other in FIFO
+  val sources: List<PipelineTemplateSource> = listOf()
+)
+
+/**
+ * @param protect Dictates whether the template's stage graph can be mutated by child pipelines.
+ * @param version The version of the template. Providing a value for this will save any changes as a new object keyed
+ * by this value. Not providing the value, or not incrementing the value will save over previous versions.
+ */
+data class PipelineTemplateFlags(
+  val protect: Boolean = false,
+  val version: String? = null
+)
+
+/**
+ * Not sure we care what's inside of the pipeline template sources. Depends on if we want to just
+ * diff based on the source info, or if we want to resolve things as well.
+ */
+class PipelineTemplateSource(
+  val kind: String,
+  val version: String?
+) {
+
+  private val properties: MutableMap<String, Any> = mutableMapOf()
+
+  @JsonAnySetter
+  fun set(name: String, value: Any) {
+    properties[name] = value
+  }
+
+  @JsonAnyGetter
+  fun properties() = properties
+}
+
+data class StageTemplateMetadata(
+  val inject: StageInjectionRule,
+  val `when`: List<String>
+)
+
+data class StageInjectionRule(
+  val first: Boolean = false,
+  val last: Boolean = false,
+  val before: List<String> = listOf(),
+  val after: List<String> = listOf()
+)
