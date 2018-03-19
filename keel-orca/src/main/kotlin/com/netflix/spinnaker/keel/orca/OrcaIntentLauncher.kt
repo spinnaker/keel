@@ -54,7 +54,7 @@ open class OrcaIntentLauncher
       }
 
       intentActivityRepository.logConvergence(IntentConvergenceRecord(
-        intentId = intent.id(),
+        intentId = intent.id,
         changeType = result.changeSummary.type,
         orchestrations = orchestrationIds,
         messages = result.changeSummary.message,
