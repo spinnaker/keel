@@ -15,9 +15,12 @@
  */
 package com.netflix.spinnaker.config
 
+import com.netflix.spinnaker.kork.jedis.RedisClientConfiguration
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 
 @Configuration
 @ComponentScan("com.netflix.spinnaker.keel.redis")
+@Import(RedisClientConfiguration::class)
 open class RedisConfiguration

@@ -80,7 +80,7 @@ open class DynomiteConfiguration {
 
   // TODO rz - HealthIndicator
 
-  class StaticHostSupplier(private val hosts: MutableCollection<Host>) : HostSupplier {
+  class StaticHostSupplier(private val hosts: MutableList<Host>) : HostSupplier {
     override fun getHosts() = hosts
   }
 
