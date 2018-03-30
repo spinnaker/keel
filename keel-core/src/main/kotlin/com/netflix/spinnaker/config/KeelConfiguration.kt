@@ -22,6 +22,8 @@ import com.netflix.spinnaker.keel.memory.MemoryIntentActivityRepository
 import com.netflix.spinnaker.keel.memory.MemoryIntentRepository
 import com.netflix.spinnaker.keel.memory.MemoryTraceRepository
 import com.netflix.spinnaker.keel.policy.Policy
+import com.netflix.spinnaker.keel.tagging.NoopTaggingService
+import com.netflix.spinnaker.keel.tagging.TaggingService
 import com.netflix.spinnaker.keel.tracing.TraceRepository
 import com.netflix.spinnaker.kork.jackson.ObjectMapperSubtypeConfigurer.ClassSubtypeLocator
 import org.springframework.beans.factory.annotation.Autowired
@@ -71,6 +73,10 @@ open class KeelConfiguration {
   @Bean
   @ConditionalOnMissingBean(TraceRepository::class)
   open fun memoryTraceRepository(): TraceRepository = MemoryTraceRepository()
+
+  @Bean
+  @ConditionalOnMissingBean(TaggingService::class)
+  open fun taggingService(): TaggingService = NoopTaggingService()
 
   @Bean open fun clock(): Clock = Clock.systemDefaultZone()
 
