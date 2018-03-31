@@ -15,12 +15,13 @@
  */
 package com.netflix.spinnaker.config
 
-import com.netflix.spinnaker.kork.jedis.RedisClientConfiguration
+import com.netflix.spinnaker.kork.dynomite.DynomiteClientConfiguration
+import com.netflix.spinnaker.kork.jedis.JedisClientConfiguration
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 
 @Configuration
 @ComponentScan("com.netflix.spinnaker.keel.redis")
-@Import(RedisClientConfiguration::class)
+@Import(JedisClientConfiguration::class, DynomiteClientConfiguration::class)
 open class RedisConfiguration
