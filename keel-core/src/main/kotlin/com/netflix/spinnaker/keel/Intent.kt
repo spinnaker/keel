@@ -18,6 +18,7 @@ package com.netflix.spinnaker.keel
 import com.fasterxml.jackson.annotation.*
 import com.github.jonpeterson.jackson.module.versioning.JsonSerializeToVersion
 import com.netflix.spectator.api.BasicTag
+import com.netflix.spinnaker.keel.annotation.IntentConstraint
 import com.netflix.spinnaker.keel.attribute.Attribute
 import com.netflix.spinnaker.keel.policy.Policy
 import kotlin.reflect.KClass
@@ -32,6 +33,7 @@ import kotlin.reflect.KClass
  * @param policies User-defined behavioral policies specific to the intent.
  * @param cas An optional ID-granular pessimistic lock.
  */
+@IntentConstraint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 abstract class Intent<out S : IntentSpec>

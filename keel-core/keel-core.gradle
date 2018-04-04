@@ -18,6 +18,7 @@ dependencies {
   compile "org.slf4j:slf4j-api:1.7.+"
   compile "com.netflix.spinnaker.kork:kork-core:+"
   compile "net.logstash.logback:logstash-logback-encoder:4.+"
+  compile "javax.validation:validation-api:1.1.0.Final"
 
   compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
   compile "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"

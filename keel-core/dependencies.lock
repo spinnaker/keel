@@ -24,6 +24,10 @@
             "locked": "1.124.0",
             "requested": "+"
         },
+        "javax.validation:validation-api": {
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "locked": "4.11",
             "requested": "4.+"
@@ -62,6 +66,10 @@
             "locked": "1.124.0",
             "requested": "+"
         },
+        "javax.validation:validation-api": {
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "locked": "4.11",
             "requested": "4.+"
@@ -99,6 +107,10 @@
         "com.netflix.spinnaker.kork:kork-core": {
             "locked": "1.124.0",
             "requested": "+"
+        },
+        "javax.validation:validation-api": {
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "locked": "4.11",
@@ -158,6 +170,10 @@
             "locked": "1.124.0",
             "requested": "+"
         },
+        "javax.validation:validation-api": {
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "locked": "4.11",
             "requested": "4.+"
@@ -195,6 +211,10 @@
         "com.netflix.spinnaker.kork:kork-core": {
             "locked": "1.124.0",
             "requested": "+"
+        },
+        "javax.validation:validation-api": {
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "locked": "4.11",
@@ -271,6 +291,13 @@
         "com.nhaarman:mockito-kotlin": {
             "locked": "1.5.0",
             "requested": "+"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -370,6 +397,13 @@
             "locked": "1.5.0",
             "requested": "+"
         },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
@@ -467,6 +501,13 @@
         "com.nhaarman:mockito-kotlin": {
             "locked": "1.5.0",
             "requested": "+"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -573,6 +614,13 @@
         "com.nhaarman:mockito-kotlin": {
             "locked": "1.5.0",
             "requested": "+"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final",
+            "requested": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
