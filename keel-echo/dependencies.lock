@@ -75,6 +75,12 @@
             ],
             "locked": "1.9.0"
         },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
@@ -172,6 +178,12 @@
             ],
             "locked": "1.9.0"
         },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
@@ -268,6 +280,12 @@
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ],
             "locked": "1.9.0"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -386,6 +404,12 @@
             ],
             "locked": "1.9.0"
         },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
@@ -482,6 +506,12 @@
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ],
             "locked": "1.9.0"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -594,6 +624,12 @@
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ],
             "locked": "1.9.0"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -720,6 +756,12 @@
             ],
             "locked": "1.9.0"
         },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
+        },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
                 "com.netflix.spinnaker.keel:keel-core"
@@ -844,6 +886,12 @@
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ],
             "locked": "1.9.0"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
@@ -977,6 +1025,12 @@
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ],
             "locked": "1.9.0"
+        },
+        "javax.validation:validation-api": {
+            "firstLevelTransitive": [
+                "com.netflix.spinnaker.keel:keel-core"
+            ],
+            "locked": "1.1.0.Final"
         },
         "net.logstash.logback:logstash-logback-encoder": {
             "firstLevelTransitive": [
