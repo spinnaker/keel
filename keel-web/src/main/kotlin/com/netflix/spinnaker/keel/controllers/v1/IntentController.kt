@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
+import javax.validation.Valid
 import javax.ws.rs.QueryParam
 
 @RestController
@@ -55,12 +56,7 @@ class IntentController
 
   @RequestMapping(value = [""], method = [(RequestMethod.POST)])
   @ResponseStatus(HttpStatus.ACCEPTED)
-  fun upsertIntent(@RequestBody req: UpsertIntentRequest): Any {
-    // TODO rz - validate intents
-    // TODO rz - calculate graph
-
-    // TODO rz - add "notes" API property for history/audit
-
+  fun upsertIntent(@Valid @RequestBody req: UpsertIntentRequest): Any {
     if (req.dryRun) {
       return req.intents.map { dryRunIntentLauncher.launch(it) }
     }
