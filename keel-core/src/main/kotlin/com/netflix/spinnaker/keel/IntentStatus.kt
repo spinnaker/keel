@@ -33,9 +33,11 @@ enum class IntentStatus {
 
   fun shouldSchedule() = scheduleValues().contains(this)
   fun shouldIsolate() = isolateValues().contains(this)
+  fun shouldDeleteResource() = absentValues().contains(this)
 
   companion object {
     fun scheduleValues() = listOf(ACTIVE, ABSENT, ISOLATED_ACTIVE, ISOLATED_ABSENT)
     fun isolateValues() = listOf(ISOLATED_ACTIVE, ISOLATED_INACTIVE, ISOLATED_ABSENT)
+    fun absentValues() = listOf(ABSENT, ISOLATED_ABSENT)
   }
 }
