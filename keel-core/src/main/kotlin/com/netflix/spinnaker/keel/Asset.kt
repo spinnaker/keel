@@ -72,7 +72,7 @@ abstract class Asset<out S : AssetSpec>
 }
 
 /**
- * Allows an IntentSpec to provide the Intent ID.
+ * Allows an AssetSpec to provide the Asset ID.
  */
 interface AssetIdProvider {
   fun assetId(): String

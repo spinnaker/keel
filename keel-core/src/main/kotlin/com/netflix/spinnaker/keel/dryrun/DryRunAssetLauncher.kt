@@ -24,9 +24,9 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 /**
- * Plans, but does not apply, desired state intents.
+ * Plans, but does not apply, desired state assets.
  */
-@Component(value = "dryRunIntentLauncher")
+@Component(value = "dryRunAssetLauncher")
 class DryRunAssetLauncher
 @Autowired constructor(
   private val assetProcessors: List<AssetProcessor<*>>,
@@ -39,7 +39,7 @@ class DryRunAssetLauncher
   override fun launch(asset: Asset<AssetSpec>): DryRunLaunchedAssetResult {
     registry.counter(invocationsId).increment()
     applicationEventPublisher.publishEvent(BeforeAssetDryRunEvent(asset))
-    return intentProcessor(assetProcessors, asset).converge(asset).let {
+    return assetProcessor(assetProcessors, asset).converge(asset).let {
       DryRunLaunchedAssetResult(summary = it.changeSummary)
     }
   }

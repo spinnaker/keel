@@ -25,17 +25,17 @@ import com.netflix.spinnaker.keel.AssetSpec
 import org.springframework.context.ApplicationEvent
 
 enum class EventKind(val kind: String) {
-  BEFORE_ASSET_UPSERT("beforeIntentUpsert"),
-  AFTER_ASSET_UPSERT("afterIntentUpsert"),
-  BEFORE_ASSET_DELETE("beforeIntentDelete"),
-  AFTER_ASSET_DELETE("afterIntentDelete"),
-  BEFORE_ASSET_DRYRUN("beforeIntentDryRun"),
-  BEFORE_ASSET_SCHEDULE("beforeIntentSchedule"),
-  BEFORE_ASSET_CONVERGE("beforeIntentConverge"),
-  ASSET_CONVERGE_TIMEOUT("intentConvergeTimeout"),
-  ASSET_CONVERGE_NOT_FOUND("intentConvergeNotFound"),
-  ASSET_CONVERGE_SUCCESS("intentConvergeSuccess"),
-  ASSET_CONVERGE_FAILURE("intentConvergeFailure");
+  BEFORE_ASSET_UPSERT("beforeAssetUpsert"),
+  AFTER_ASSET_UPSERT("afterAssetUpsert"),
+  BEFORE_ASSET_DELETE("beforeAssetDelete"),
+  AFTER_ASSET_DELETE("afterAssetDelete"),
+  BEFORE_ASSET_DRYRUN("beforeAssetDryRun"),
+  BEFORE_ASSET_SCHEDULE("beforeAssetSchedule"),
+  BEFORE_ASSET_CONVERGE("beforeAssetConverge"),
+  ASSET_CONVERGE_TIMEOUT("assetConvergeTimeout"),
+  ASSET_CONVERGE_NOT_FOUND("assetConvergeNotFound"),
+  ASSET_CONVERGE_SUCCESS("assetConvergeSuccess"),
+  ASSET_CONVERGE_FAILURE("assetConvergeFailure");
 
   companion object {
     @JvmStatic @JsonCreator(mode = JsonCreator.Mode.DELEGATING)

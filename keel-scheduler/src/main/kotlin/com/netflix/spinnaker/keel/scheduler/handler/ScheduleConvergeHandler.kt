@@ -49,13 +49,13 @@ class ScheduleConvergeHandler
     log.info("Scheduling asset convergence work")
 
     try {
-      assetRepository.getIntents(statuses = AssetStatus.scheduleValues())
-        .also { log.info("Attempting to schedule ${it.size} active intents") }
-        .filter { intent ->
-          applicationEventPublisher.publishEvent(BeforeAssetScheduleEvent(intent))
-          return@filter filters.all { it.filter(intent) }
+      assetRepository.getAssets(statuses = AssetStatus.scheduleValues())
+        .also { log.info("Attempting to schedule ${it.size} active assets") }
+        .filter { asset ->
+          applicationEventPublisher.publishEvent(BeforeAssetScheduleEvent(asset))
+          return@filter filters.all { it.filter(asset) }
         }
-        .also { log.info("Scheduling ${it.size} active intents after filters") }
+        .also { log.info("Scheduling ${it.size} active assets after filters") }
         .forEach {
           scheduleService.converge(it)
         }

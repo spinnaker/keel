@@ -17,25 +17,25 @@ package com.netflix.spinnaker.keel
 
 interface AssetRepository {
 
-  fun upsertIntent(asset: Asset<AssetSpec>): Asset<AssetSpec>
+  fun upsertAsset(asset: Asset<AssetSpec>): Asset<AssetSpec>
 
-  fun getIntents(): List<Asset<AssetSpec>>
+  fun getAssets(): List<Asset<AssetSpec>>
 
-  fun getIntents(statuses: List<AssetStatus>): List<Asset<AssetSpec>>
+  fun getAssets(statuses: List<AssetStatus>): List<Asset<AssetSpec>>
 
-  fun getIntent(id: String): Asset<AssetSpec>?
+  fun getAsset(id: String): Asset<AssetSpec>?
 
   /**
-   * Deletes an asset. If [preserveHistory] is true, the Intent will be updated
+   * Deletes an asset. If [preserveHistory] is true, the Asset will be updated
    * to INACTIVE. If false, the record will be physically removed from the
    * persistence store.
    *
    * Does not perform any action against the underlying resource.
    */
-  fun deleteIntent(id: String, preserveHistory: Boolean = true)
+  fun deleteAsset(id: String, preserveHistory: Boolean = true)
 
   fun findByLabels(labels: Map<String, String>): List<Asset<AssetSpec>> =
-    getIntents().filter { intent ->
-      labels.all { intent.labels[it.key] == it.value  }
+    getAssets().filter { asset ->
+      labels.all { asset.labels[it.key] == it.value  }
     }
 }

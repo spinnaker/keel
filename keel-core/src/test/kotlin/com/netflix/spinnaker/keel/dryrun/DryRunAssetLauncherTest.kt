@@ -69,9 +69,9 @@ object DryRunAssetLauncherTest {
       changeSummary
     )
 
-    val intent = TestAsset("1", "Test", TestAssetSpec("hello!"))
+    val asset = TestAsset("1", "Test", TestAssetSpec("hello!"))
 
-    subject.launch(intent).let { result ->
+    subject.launch(asset).let { result ->
       result shouldMatch isA<DryRunLaunchedAssetResult>()
       result.summary shouldEqual changeSummary
     }

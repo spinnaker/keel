@@ -25,7 +25,7 @@ class ApplicationDeleteAssetProcessor : AssetProcessor<ApplicationAsset> {
   override fun supports(asset: Asset<AssetSpec>) =
     asset is ApplicationAsset && asset.status.shouldDeleteResource()
 
-  override fun converge(intent: ApplicationAsset): ConvergeResult {
+  override fun converge(asset: ApplicationAsset): ConvergeResult {
     throw UnsupportedOperationException("not implemented")
   }
 }

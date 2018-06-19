@@ -47,7 +47,7 @@ object EventNotificationListenerTest {
               EventKind.AFTER_ASSET_UPSERT to listOf(
                 EmailNotificationSpec(
                   to = listOf("example@example.com"),
-                  subject = "Intent was upserted",
+                  subject = "Asset was upserted",
                   body = "test:1 was upserted and you like to know about that"
                 ),
                 SlackNotificationSpec(
@@ -62,19 +62,19 @@ object EventNotificationListenerTest {
       )
     )
 
-    subject.onIntentAwareEvent(event)
+    subject.onAssetAwareEvent(event)
 
     verify(echoService).create(EchoService.Notification(
       notificationType = EchoService.Notification.Type.EMAIL,
       to = listOf("example@example.com"),
       cc = listOf(),
-      templateGroup = "keelIntent",
+      templateGroup = "keelAsset",
       severity = NotificationSeverity.NORMAL,
       source = EchoService.Notification.Source("keel"),
       additionalContext = mapOf(
-        "eventKind" to "afterIntentUpsert",
+        "eventKind" to "afterAssetUpsert",
         "assetId" to "test:test:1",
-        "subject" to "Intent was upserted",
+        "subject" to "Asset was upserted",
         "body" to "test:1 was upserted and you like to know about that"
       )
     ))
@@ -83,11 +83,11 @@ object EventNotificationListenerTest {
       notificationType = EchoService.Notification.Type.SLACK,
       to = listOf("my-channel"),
       cc = listOf(),
-      templateGroup = "keelIntent",
+      templateGroup = "keelAsset",
       severity = NotificationSeverity.NORMAL,
       source = EchoService.Notification.Source("keel"),
       additionalContext = mapOf(
-        "eventKind" to "afterIntentUpsert",
+        "eventKind" to "afterAssetUpsert",
         "assetId" to "test:test:1",
         "message" to "test:1 was upserted",
         "color" to "#ff0000"

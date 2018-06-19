@@ -50,7 +50,7 @@ object PipelineAssetProcessorTest {
   }
 
   @Test
-  fun `should support PipelineIntent`() {
+  fun `should support PipelineAsset`() {
     subject.supports(ApplicationAsset(mock())) shouldMatch equalTo(false)
     subject.supports(PipelineAsset(PipelineSpec(
       application = "foo",
@@ -76,7 +76,7 @@ object PipelineAssetProcessorTest {
     )
     whenever(front50Service.getPipelineConfigs("foo")) doReturn listOf<PipelineConfig>()
 
-    val intent = PipelineAsset(PipelineSpec(
+    val asset = PipelineAsset(PipelineSpec(
       application = "foo",
       name = "bar",
       stages = listOf(),
@@ -87,7 +87,7 @@ object PipelineAssetProcessorTest {
       properties = PipelineProperties()
     ))
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations.size shouldMatch equalTo(1)
     result.orchestrations[0].description shouldMatch equalTo("Create pipeline 'bar'")
@@ -103,7 +103,7 @@ object PipelineAssetProcessorTest {
     )
     whenever(front50Service.getPipelineConfigs("foo")) doReturn listOf<PipelineConfig>()
 
-    val intent = PipelineAsset(PipelineSpec(
+    val asset = PipelineAsset(PipelineSpec(
       application = "foo",
       name = "bar",
       stages = listOf(),
@@ -114,7 +114,7 @@ object PipelineAssetProcessorTest {
       properties = PipelineProperties()
     ))
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations.size shouldMatch equalTo(0)
     result.changeSummary shouldEqual ChangeSummary("Pipeline:foo:bar", mutableListOf(

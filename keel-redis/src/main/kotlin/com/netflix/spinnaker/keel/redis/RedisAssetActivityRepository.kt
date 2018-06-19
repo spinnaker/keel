@@ -35,33 +35,33 @@ class RedisAssetActivityRepository(
 
   private val log = LoggerFactory.getLogger(javaClass)
 
-  override val clientName = "intentActivity"
+  override val clientName = "assetActivity"
 
   @PostConstruct fun init() {
     log.info("Using ${javaClass.simpleName}")
   }
 
   override fun record(activity: ActivityRecord) {
-    logKey(activity.intentId).let { key ->
+    logKey(activity.assetId).let { key ->
       getClientForId(key).withCommandsClient { c ->
         c.rpush(key, objectMapper.writeValueAsString(activity))
 
         // Prune old log entries
-        c.ltrim(key, 0, keelProperties.maxConvergenceLogEntriesPerIntent - 1L)
+        c.ltrim(key, 0, keelProperties.maxConvergenceLogEntriesPerAsset - 1L)
       }
     }
   }
 
-  override fun getHistory(intentId: String, criteria: ListCriteria): List<ActivityRecord> =
-    logKey(intentId).let { key ->
+  override fun getHistory(assetId: String, criteria: ListCriteria): List<ActivityRecord> =
+    logKey(assetId).let { key ->
       getClientForId(key).withCommandsClient<List<ActivityRecord>> { c ->
         c.lrange(key, criteria.offset.toLong(), criteria.offset - 1L)
           .map { objectMapper.readValue<ActivityRecord>(it) }
       }
     }
 
-  override fun <T : ActivityRecord> getHistory(intentId: String, kind: Class<T>, criteria: ListCriteria): List<T> =
-    logKey(intentId).let { key ->
+  override fun <T : ActivityRecord> getHistory(assetId: String, kind: Class<T>, criteria: ListCriteria): List<T> =
+    logKey(assetId).let { key ->
       getClientForId(key).withCommandsClient<List<T>> { c ->
         c.lrange(key, 0, c.llen(key) - 1)
           .map { objectMapper.readValue<ActivityRecord>(it) }
@@ -84,4 +84,4 @@ class RedisAssetActivityRepository(
   }
 }
 
-internal fun logKey(intentId: String) = "log:$intentId"
+internal fun logKey(assetId: String) = "log:$assetId"

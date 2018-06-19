@@ -55,12 +55,12 @@ object AmazonSecurityGroupAssetProcessorTest {
       )
     )
   }
-  val intentRepository = mock<AssetRepository>()
+  val assetRepository = mock<AssetRepository>()
   val objectMapper = ObjectMapper()
   val converter = AmazonSecurityGroupConverter(clouddriverCache, objectMapper)
   val loader = AmazonSecurityGroupLoader(clouddriverService, clouddriverCache)
 
-  val subject = AmazonSecurityGroupAssetProcessor(intentRepository, objectMapper, converter, loader)
+  val subject = AmazonSecurityGroupAssetProcessor(assetRepository, objectMapper, converter, loader)
 
   @AfterEach
   fun cleanup() {
@@ -68,7 +68,7 @@ object AmazonSecurityGroupAssetProcessorTest {
   }
 
   @Test
-  fun `should support SecurityGroupIntents`() {
+  fun `should support SecurityGroupAssets`() {
     subject.supports(ApplicationAsset(mock())) shouldMatch equalTo(false)
     subject.supports(AmazonSecurityGroupAsset(mock())) shouldMatch equalTo(true)
   }
@@ -86,7 +86,7 @@ object AmazonSecurityGroupAssetProcessorTest {
         region = "us-west-2"
       )
 
-    val intent = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
+    val asset = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
       application = "keel",
       name = "keel",
       accountName = "test",
@@ -97,7 +97,7 @@ object AmazonSecurityGroupAssetProcessorTest {
       description = "app sg"
     ))
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations.size shouldMatch equalTo(1)
     result.orchestrations[0].name shouldMatch equalTo("Upsert security group")
@@ -128,7 +128,7 @@ object AmazonSecurityGroupAssetProcessorTest {
         region = "us-west-2"
       )
 
-    val intent = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
+    val asset = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
       application = "keel",
       name = "keel",
       accountName = "test",
@@ -139,7 +139,7 @@ object AmazonSecurityGroupAssetProcessorTest {
       description = "app sg"
     ))
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations.size shouldMatch equalTo(1)
     result.orchestrations[0].name shouldMatch equalTo("Upsert security group")
@@ -169,7 +169,7 @@ object AmazonSecurityGroupAssetProcessorTest {
         region = "us-west-2"
       )
 
-    val intent = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
+    val asset = AmazonSecurityGroupAsset(AmazonSecurityGroupRootSpec(
       application = "keel",
       name = "keel",
       accountName = "test",
@@ -180,7 +180,7 @@ object AmazonSecurityGroupAssetProcessorTest {
       description = "app sg"
     ))
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations shouldMatch isEmpty
     result.changeSummary.toString() shouldEqual changeSummary.toString()

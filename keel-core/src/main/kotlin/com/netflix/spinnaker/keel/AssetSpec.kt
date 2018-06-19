@@ -16,7 +16,7 @@
 package com.netflix.spinnaker.keel
 
 /**
- * A typed model of an Intent's configuration.
+ * A typed model of an Asset's configuration.
  */
 interface AssetSpec
 

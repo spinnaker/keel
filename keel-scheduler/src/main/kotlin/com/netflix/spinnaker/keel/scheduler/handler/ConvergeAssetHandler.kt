@@ -40,7 +40,7 @@ class ConvergeAssetHandler
 @Autowired constructor(
   override val queue: Queue,
   private val assetRepository: AssetRepository,
-  private val orcaIntentLauncher: OrcaAssetLauncher,
+  private val orcaAssetLauncher: OrcaAssetLauncher,
   private val clock: Clock,
   private val registry: Registry,
   private val applicationEventPublisher: ApplicationEventPublisher
@@ -54,33 +54,33 @@ class ConvergeAssetHandler
 
   override fun handle(message: ConvergeAsset) {
     if (clock.millis() > message.timeoutTtl) {
-      log.warn("Intent timed out, canceling converge for {}", value("asset", message.asset.id()))
+      log.warn("Asset timed out, canceling converge for {}", value("asset", message.asset.id()))
       applicationEventPublisher.publishEvent(AssetConvergeTimeoutEvent(message.asset))
 
       registry.counter(canceledId.withTags("kind", message.asset.kind, "reason", CANCELLATION_REASON_TIMEOUT))
       return
     }
 
-    val intent = getIntent(message)
-    if (intent == null) {
-      log.warn("Intent no longer exists, canceling converge for {}", value("asset", message.asset.id()))
+    val asset = getAsset(message)
+    if (asset == null) {
+      log.warn("Asset no longer exists, canceling converge for {}", value("asset", message.asset.id()))
       applicationEventPublisher.publishEvent(AssetConvergeNotFoundEvent(message.asset.id()))
 
       registry.counter(canceledId.withTags("kind", message.asset.kind, "reason", CANCELLATION_REASON_NOT_FOUND))
       return
     }
 
-    applicationEventPublisher.publishEvent(BeforeAssetConvergeEvent(intent))
+    applicationEventPublisher.publishEvent(BeforeAssetConvergeEvent(asset))
 
     try {
-      orcaIntentLauncher.launch(intent)
+      orcaAssetLauncher.launch(asset)
         .takeIf { it.orchestrationIds.isNotEmpty() }
         ?.also { result ->
-          applicationEventPublisher.publishEvent(AssetConvergeSuccessEvent(intent, result.orchestrationIds))
+          applicationEventPublisher.publishEvent(AssetConvergeSuccessEvent(asset, result.orchestrationIds))
 
-          if (intent.status.shouldIsolate()) {
-            intent.status = AssetStatus.ISOLATED_INACTIVE
-            assetRepository.upsertIntent(intent)
+          if (asset.status.shouldIsolate()) {
+            asset.status = AssetStatus.ISOLATED_INACTIVE
+            assetRepository.upsertAsset(asset)
           }
 
           // TODO rz - MonitorOrchestrations is deprecated. Reconsider if we want to totally remove it.
@@ -88,15 +88,15 @@ class ConvergeAssetHandler
         }
       registry.counter(invocationsId.withTags(message.asset.getMetricTags("result", "success")))
     } catch (t: Throwable) {
-      log.error("Failed launching asset: ${intent.id()}", t)
+      log.error("Failed launching asset: ${asset.id()}", t)
       applicationEventPublisher.publishEvent(
-        AssetConvergeFailureEvent(intent, t.message ?: "Could not determine reason", t)
+        AssetConvergeFailureEvent(asset, t.message ?: "Could not determine reason", t)
       )
       registry.counter(invocationsId.withTags(message.asset.getMetricTags("result", "failed")))
     }
   }
 
-  private fun getIntent(message: ConvergeAsset): Asset<AssetSpec>? {
+  private fun getAsset(message: ConvergeAsset): Asset<AssetSpec>? {
     if (clock.millis() <= message.stalenessTtl) {
       return message.asset
     }
@@ -104,7 +104,7 @@ class ConvergeAssetHandler
     log.debug("Refreshing asset state for {}", value("asset", message.asset.id()))
     registry.counter(refreshesId.withTags(message.asset.getMetricTags())).increment()
 
-    return assetRepository.getIntent(message.asset.id())
+    return assetRepository.getAsset(message.asset.id())
   }
 
   override val messageType = ConvergeAsset::class.java

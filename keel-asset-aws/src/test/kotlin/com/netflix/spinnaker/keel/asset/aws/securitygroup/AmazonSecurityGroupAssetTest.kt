@@ -41,7 +41,7 @@ object AmazonSecurityGroupAssetTest {
   )
 
   @Test
-  fun `can serialize root intent to expected JSON format`() {
+  fun `can serialize root asset to expected JSON format`() {
     val serialized = mapper.convertValue<Map<String, Any>>(rootSg)
     val deserialized = mapper.readValue<Map<String, Any>>(rootJson)
 
@@ -49,7 +49,7 @@ object AmazonSecurityGroupAssetTest {
   }
 
   @Test
-  fun `can deserialize root intent from expected JSON format`() {
+  fun `can deserialize root asset from expected JSON format`() {
     mapper.readValue<AmazonSecurityGroupAsset>(rootJson).apply {
       spec shouldEqual rootSg.spec
     }
@@ -116,7 +116,7 @@ object AmazonSecurityGroupAssetTest {
 """
 
   @Test
-  fun `can serialize rule intent to expected JSON format`() {
+  fun `can serialize rule asset to expected JSON format`() {
     val serialized = mapper.convertValue<Map<String, Any>>(ruleSg)
     val deserialized = mapper.readValue<Map<String, Any>>(ruleJson)
 
@@ -124,7 +124,7 @@ object AmazonSecurityGroupAssetTest {
   }
 
   @Test
-  fun `can deserialize rule intent from expected JSON format`() {
+  fun `can deserialize rule asset from expected JSON format`() {
     mapper.readValue<AmazonSecurityGroupAsset>(ruleJson).apply {
       spec shouldEqual ruleSg.spec
     }

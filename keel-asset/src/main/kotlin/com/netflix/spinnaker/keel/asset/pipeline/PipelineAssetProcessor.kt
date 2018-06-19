@@ -37,18 +37,18 @@ class PipelineAssetProcessor(
 
   override fun supports(asset: Asset<AssetSpec>) = asset is PipelineAsset
 
-  override fun converge(intent: PipelineAsset): ConvergeResult {
-    val changeSummary = ChangeSummary(intent.id())
+  override fun converge(asset: PipelineAsset): ConvergeResult {
+    val changeSummary = ChangeSummary(asset.id())
 
-    val currentState = getPipelineConfig(intent.spec.application, intent.spec.name)
+    val currentState = getPipelineConfig(asset.spec.application, asset.spec.name)
 
-    if (currentStateUpToDate(intent.id(), currentState, intent.spec, changeSummary)) {
+    if (currentStateUpToDate(asset.id(), currentState, asset.spec, changeSummary)) {
       changeSummary.addMessage(ConvergeReason.UNCHANGED.reason)
       return ConvergeResult(listOf(), changeSummary)
     }
 
-    if (missingApplication(intent.spec.application)) {
-      changeSummary.addMessage("The application this pipeline is meant for is missing: ${intent.spec.application}")
+    if (missingApplication(asset.spec.application)) {
+      changeSummary.addMessage("The application this pipeline is meant for is missing: ${asset.spec.application}")
       changeSummary.type = ChangeType.FAILED_PRECONDITIONS
       return ConvergeResult(listOf(), changeSummary)
     }
@@ -58,15 +58,15 @@ class PipelineAssetProcessor(
     return ConvergeResult(listOf(
       OrchestrationRequest(
         name = "Upsert pipeline",
-        application = intent.spec.application,
-        description = (if (currentState == null) "Create" else "Update") + " pipeline '${intent.spec.name}'",
-        job = pipelineConverter.convertToJob(ConvertPipelineToJob(intent.spec, currentState?.id), changeSummary),
-        trigger = OrchestrationTrigger(intent.id())
+        application = asset.spec.application,
+        description = (if (currentState == null) "Create" else "Update") + " pipeline '${asset.spec.name}'",
+        job = pipelineConverter.convertToJob(ConvertPipelineToJob(asset.spec, currentState?.id), changeSummary),
+        trigger = OrchestrationTrigger(asset.id())
       )
     ), changeSummary)
   }
 
-  private fun currentStateUpToDate(intentId: String,
+  private fun currentStateUpToDate(assetId: String,
                                    currentState: PipelineConfig?,
                                    desiredState: PipelineSpec,
                                    changeSummary: ChangeSummary): Boolean {
@@ -75,7 +75,7 @@ class PipelineAssetProcessor(
     if (currentState == null) return false
     val diff = StateInspector(objectMapper).run {
       getDiff(
-        intentId = intentId,
+        assetId = assetId,
         currentState = currentState,
         desiredState = desired,
         modelClass = PipelineConfig::class,

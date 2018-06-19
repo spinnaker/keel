@@ -44,29 +44,29 @@ open class KeelConfiguration {
 
   @Autowired lateinit var properties: KeelProperties
 
-  @Bean open fun intentSubTypeLocator() =
-    ClassSubtypeLocator(Asset::class.java, properties.intentPackages)
+  @Bean open fun assetSubTypeLocator() =
+    ClassSubtypeLocator(Asset::class.java, properties.assetPackages)
 
-  @Bean open fun intentSpecSubTypeLocator() =
-    ClassSubtypeLocator(AssetSpec::class.java, properties.intentSpecPackages)
+  @Bean open fun assetSpecSubTypeLocator() =
+    ClassSubtypeLocator(AssetSpec::class.java, properties.assetSpecPackages)
 
   @Bean open fun attributeSubTypeLocator() =
     ClassSubtypeLocator(Attribute::class.java, properties.attributePackages)
 
   @Bean
   @ConditionalOnMissingBean(AssetRepository::class)
-  open fun memoryIntentRepository(applicationEventPublisher: ApplicationEventPublisher): AssetRepository =
+  open fun memoryAssetRepository(applicationEventPublisher: ApplicationEventPublisher): AssetRepository =
     MemoryAssetRepository(applicationEventPublisher)
 
   @Bean
   @ConditionalOnMissingBean(AssetActivityRepository::class)
-  open fun memoryIntentActivityRepository(): AssetActivityRepository = MemoryAssetActivityRepository()
+  open fun memoryAssetActivityRepository(): AssetActivityRepository = MemoryAssetActivityRepository()
 
   @Bean open fun clock(): Clock = Clock.systemDefaultZone()
 
-  @Bean open fun applicationIntentGuard(registry: Registry, properties: ApplicationAssetGuardProperties) =
+  @Bean open fun applicationAssetGuard(registry: Registry, properties: ApplicationAssetGuardProperties) =
     ApplicationAssetGuard(registry, properties)
 
-  @Bean open fun kindIntentGuard(registry: Registry, properties: KindAssetGuardProperties) =
+  @Bean open fun kindAssetGuard(registry: Registry, properties: KindAssetGuardProperties) =
     KindAssetGuard(registry, properties)
 }

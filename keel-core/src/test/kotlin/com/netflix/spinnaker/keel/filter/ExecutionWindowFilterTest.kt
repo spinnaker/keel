@@ -35,7 +35,7 @@ class ExecutionWindowFilterTest {
 
   @ParameterizedTest
   @MethodSource("params1")
-  fun `intent should be filtered at #scheduledTime with time windows #timeWindows`(
+  fun `asset should be filtered at #scheduledTime with time windows #timeWindows`(
     scheduledTime: Instant,
     expectedResult: Boolean,
     timeWindows: List<TimeWindow>
@@ -44,11 +44,11 @@ class ExecutionWindowFilterTest {
       ExecutionWindowFilter.Configuration(),
       Clock.fixed(scheduledTime, systemDefault())
     )
-    val intent = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
+    val asset = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
       ExecutionWindowAttribute(ExecutionWindow(emptyList(), timeWindows))
     ))
 
-    subject.filter(intent) shouldMatch equalTo(expectedResult)
+    subject.filter(asset) shouldMatch equalTo(expectedResult)
   }
 
   @ParameterizedTest
@@ -63,11 +63,11 @@ class ExecutionWindowFilterTest {
       ExecutionWindowFilter.Configuration(),
       Clock.fixed(scheduledTime, systemDefault())
     )
-    val intent = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
+    val asset = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
       ExecutionWindowAttribute(ExecutionWindow(days, timeWindows))
     ))
 
-    subject.filter(intent) shouldMatch equalTo(expectedResult)
+    subject.filter(asset) shouldMatch equalTo(expectedResult)
   }
 
   @ParameterizedTest
@@ -82,11 +82,11 @@ class ExecutionWindowFilterTest {
       ExecutionWindowFilter.Configuration(),
       Clock.fixed(scheduledTime, systemDefault())
     )
-    val intent = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
+    val asset = TestAsset(GenericTestAssetSpec("1", emptyMap()), mutableMapOf(), mutableListOf(
       ExecutionWindowAttribute(ExecutionWindow(days, timeWindows))
     ))
 
-    subject.filter(intent) shouldMatch equalTo(expectedResult)
+    subject.filter(asset) shouldMatch equalTo(expectedResult)
   }
 
   companion object {

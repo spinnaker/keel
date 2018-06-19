@@ -34,7 +34,7 @@ class EnabledFilter
   override fun getOrder() = 10
 
   override fun filter(asset: Asset<AssetSpec>): Boolean {
-    // Intent-level overrides overrule all other settings
+    // Asset-level overrides overrule all other settings
     if (asset.getAttribute(EnabledAttribute::class).takeIf { it != null }?.value == false) {
       return false
     }

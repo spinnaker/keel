@@ -30,7 +30,7 @@ import com.netflix.spinnaker.keel.state.StateInspector
 import org.springframework.stereotype.Component
 
 /**
- * Handles both full security group intents, as well as individual security
+ * Handles both full security group assets, as well as individual security
  * group rules.
  *
  * Externally-defined security group rules can be created against a root
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component
  * different organizations to modify security group permissions independently
  * of each other, as well as incrementally convert to asset-based permissions.
  *
- * TODO rz - Root intents should be able to provide policies of who (or what)
+ * TODO rz - Root assets should be able to provide policies of who (or what)
  * can actually create rules against it, if anyone. By default, access will be
  * left open.
  */
@@ -52,14 +52,14 @@ class AmazonSecurityGroupAssetProcessor(
 
   override fun supports(asset: Asset<AssetSpec>) = asset is AmazonSecurityGroupAsset
 
-  override fun converge(intent: AmazonSecurityGroupAsset): ConvergeResult {
-    val changeSummary = ChangeSummary(intent.id())
-    val currentState = loader.load(intent.spec)
+  override fun converge(asset: AmazonSecurityGroupAsset): ConvergeResult {
+    val changeSummary = ChangeSummary(asset.id())
+    val currentState = loader.load(asset.spec)
 
     // This processor handles both root security groups, as well as individual rules. If a rule is passed in, we
     // need to source the root asset (or fake it out if it doesn't exist).
-    var rootIntent = getRootIntent(intent)
-    if (rootIntent == null) {
+    var rootAsset = getRootAsset(asset)
+    if (rootAsset == null) {
       // There's no technical reason we can't create a security group from a single rule asset, but that would mean
       // the description would not be set and could not change in the future.
       if (currentState == null) {
@@ -69,19 +69,19 @@ class AmazonSecurityGroupAssetProcessor(
       }
 
       val transientSpec = converter.convertFromState(currentState)
-        ?: throw DeclarativeException("Spec converted from current state was null for asset: ${intent.id()}")
+        ?: throw DeclarativeException("Spec converted from current state was null for asset: ${asset.id()}")
 
-      rootIntent = AmazonSecurityGroupAsset(transientSpec)
+      rootAsset = AmazonSecurityGroupAsset(transientSpec)
     }
 
-    val desiredRootIntent = mergeRootIntent(rootIntent, intent)
+    val desiredRootAsset = mergeRootAsset(rootAsset, asset)
 
-    if (currentStateUpToDate(intent.id(), currentState, desiredRootIntent.spec, changeSummary)) {
+    if (currentStateUpToDate(asset.id(), currentState, desiredRootAsset.spec, changeSummary)) {
       changeSummary.addMessage(ConvergeReason.UNCHANGED.reason)
       return ConvergeResult(listOf(), changeSummary)
     }
 
-    val missingGroups = missingUpstreamGroups(desiredRootIntent.spec)
+    val missingGroups = missingUpstreamGroups(desiredRootAsset.spec)
     if (missingGroups.isNotEmpty()) {
       changeSummary.addMessage("Some upstream security groups are missing: $missingGroups")
       changeSummary.type = ChangeType.FAILED_PRECONDITIONS
@@ -93,45 +93,45 @@ class AmazonSecurityGroupAssetProcessor(
     return ConvergeResult(listOf(
       OrchestrationRequest(
         name = "Upsert security group",
-        application = intent.spec.application,
-        description = "Converging on desired state for ${intent.id()}",
-        job = converter.convertToJob(DefaultConvertToJobCommand(desiredRootIntent.spec), changeSummary),
-        trigger = OrchestrationTrigger(intent.id())
+        application = asset.spec.application,
+        description = "Converging on desired state for ${asset.id()}",
+        job = converter.convertToJob(DefaultConvertToJobCommand(desiredRootAsset.spec), changeSummary),
+        trigger = OrchestrationTrigger(asset.id())
       )
     ), changeSummary)
   }
 
   /**
-   * Finds all intents that have a RuleSpec with a parent ID matching the root asset, and merges the intents into
+   * Finds all assets that have a RuleSpec with a parent ID matching the root asset, and merges the assets into
    * the root asset for the duration of the convergence.
    */
-  private fun mergeRootIntent(rootIntent: AmazonSecurityGroupAsset, thisIntent: AmazonSecurityGroupAsset): AmazonSecurityGroupAsset {
-    val childRules = getChildRules(rootIntent.id())
+  private fun mergeRootAsset(rootAsset: AmazonSecurityGroupAsset, thisAsset: AmazonSecurityGroupAsset): AmazonSecurityGroupAsset {
+    val childRules = getChildRules(rootAsset.id())
 
-    rootIntent.spec.inboundRules.addAll(childRules.map { it.spec.inboundRules }.flatten())
-    if (thisIntent.spec is AmazonSecurityGroupRuleSpec) {
-      rootIntent.spec.inboundRules.addAll(thisIntent.spec.inboundRules)
+    rootAsset.spec.inboundRules.addAll(childRules.map { it.spec.inboundRules }.flatten())
+    if (thisAsset.spec is AmazonSecurityGroupRuleSpec) {
+      rootAsset.spec.inboundRules.addAll(thisAsset.spec.inboundRules)
     }
 
     // TODO rz - outbound rules
 
-    return rootIntent
+    return rootAsset
   }
 
-  private fun getRootIntent(intent: AmazonSecurityGroupAsset): AmazonSecurityGroupAsset? {
-    val parentId = intent.parentId() ?: return intent
+  private fun getRootAsset(asset: AmazonSecurityGroupAsset): AmazonSecurityGroupAsset? {
+    val parentId = asset.parentId() ?: return asset
 
-    val root = assetRepository.getIntent(parentId)
+    val root = assetRepository.getAsset(parentId)
     if (root != null) {
       if (root !is AmazonSecurityGroupAsset) {
-        throw DeclarativeException("Resolved root asset is not an AmazonSecurityGroupIntent: ${root.kind}")
+        throw DeclarativeException("Resolved root asset is not an AmazonSecurityGroupAsset: ${root.kind}")
       }
       return root
     }
     return null
   }
 
-  private fun currentStateUpToDate(intentId: String,
+  private fun currentStateUpToDate(assetId: String,
                                    currentState: SecurityGroup?,
                                    desiredState: AmazonSecurityGroupSpec,
                                    changeSummary: ChangeSummary): Boolean {
@@ -140,7 +140,7 @@ class AmazonSecurityGroupAssetProcessor(
     }
 
     val diff = StateInspector(objectMapper).getDiff(
-      intentId = intentId,
+      assetId = assetId,
       currentState = currentState,
       desiredState = converter.convertToState(desiredState),
       modelClass = SecurityGroup::class,
@@ -167,8 +167,8 @@ class AmazonSecurityGroupAssetProcessor(
   /**
    * TODO rz - Not happy with this. The asset repository needs to have a much better filter capability
    */
-  private fun getChildRules(intentId: String): List<AmazonSecurityGroupAsset> =
-    assetRepository.findByLabels(mapOf(PARENT_INTENT_LABEL to intentId))
+  private fun getChildRules(assetId: String): List<AmazonSecurityGroupAsset> =
+    assetRepository.findByLabels(mapOf(PARENT_ASSET_LABEL to assetId))
       .filter { it.status == AssetStatus.ACTIVE }
       .filterIsInstance<AmazonSecurityGroupAsset>()
       .filter { it.spec is AmazonSecurityGroupRuleSpec }

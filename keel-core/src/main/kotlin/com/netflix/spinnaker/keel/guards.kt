@@ -56,7 +56,7 @@ abstract class WhitelistingAssetGuard(
   protected abstract fun extractValue(event: AssetAwareEvent): String?
 
   @EventListener(AssetAwareEvent::class)
-  fun onIntentAwareEvent(event: AssetAwareEvent) {
+  fun onAssetAwareEvent(event: AssetAwareEvent) {
     if (properties.enabled && matchesEventTypes(event)) {
       val value = extractValue(event)?.trim()?.toLowerCase()
       if (value != null && !whitelist.contains(value)) {

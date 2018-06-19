@@ -25,20 +25,20 @@ import retrofit.http.*
 
 interface Front50Service {
 
-  @GET("/intents")
-  fun getIntents(): List<Asset<AssetSpec>>
+  @GET("/assets")
+  fun getAssets(): List<Asset<AssetSpec>>
 
-  @GET("/intents")
-  fun getIntentsByStatus(@Query("status") statuses: List<AssetStatus>?): List<Asset<AssetSpec>>
+  @GET("/assets")
+  fun getAssetsByStatus(@Query("status") statuses: List<AssetStatus>?): List<Asset<AssetSpec>>
 
-  @GET("/intents/{id}")
-  fun getIntent(@Path("id") id: String): Asset<AssetSpec>
+  @GET("/assets/{id}")
+  fun getAsset(@Path("id") id: String): Asset<AssetSpec>
 
-  @POST("/intents")
-  fun upsertIntent(@Body asset: Asset<AssetSpec>): Asset<AssetSpec>
+  @POST("/assets")
+  fun upsertAsset(@Body asset: Asset<AssetSpec>): Asset<AssetSpec>
 
-  @DELETE("/intents/{id}")
-  fun deleteIntent(@Path("id") id: String): Response
+  @DELETE("/assets/{id}")
+  fun deleteAsset(@Path("id") id: String): Response
 
   @GET("/v2/applications/{applicationName}")
   fun getApplication(@Path("applicationName") applicationName: String): Application

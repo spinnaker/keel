@@ -20,7 +20,7 @@ import com.netflix.spinnaker.keel.AssetSpec
 import org.springframework.core.Ordered
 
 /**
- * A Filter can be used to intercept Intent scheduling. Filters can use Intent Attributes to perform more complex logic.
+ * A Filter can be used to intercept Asset scheduling. Filters can use Asset Attributes to perform more complex logic.
  */
 interface Filter : Ordered {
   fun filter(asset: Asset<AssetSpec>): Boolean

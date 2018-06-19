@@ -35,30 +35,30 @@ import java.time.ZoneId
 object ConvergeAssetHandlerTest {
 
   val queue = mock<Queue>()
-  val intentRepository = mock<AssetRepository>()
-  val orcaIntentLauncher = mock<OrcaAssetLauncher>()
+  val assetRepository = mock<AssetRepository>()
+  val orcaAssetLauncher = mock<OrcaAssetLauncher>()
   val clock = Clock.fixed(Instant.ofEpochSecond(500), ZoneId.systemDefault())
   val registry = NoopRegistry()
   val applicationEventPublisher = mock<ApplicationEventPublisher>()
 
-  val subject = ConvergeAssetHandler(queue, intentRepository, orcaIntentLauncher, clock, registry, applicationEventPublisher)
+  val subject = ConvergeAssetHandler(queue, assetRepository, orcaAssetLauncher, clock, registry, applicationEventPublisher)
 
   @AfterEach
   fun cleanup() {
-    reset(queue, intentRepository, orcaIntentLauncher, applicationEventPublisher)
+    reset(queue, assetRepository, orcaAssetLauncher, applicationEventPublisher)
   }
 
   @Test
-  fun `should timeout intent if after timeout ttl`() {
+  fun `should timeout asset if after timeout ttl`() {
     val message = ConvergeAsset(TestAsset(GenericTestAssetSpec("1", emptyMap())), 30000, 30000)
 
     subject.handle(message)
 
-    verifyZeroInteractions(queue, intentRepository, orcaIntentLauncher)
+    verifyZeroInteractions(queue, assetRepository, orcaAssetLauncher)
   }
 
   @Test
-  fun `should cancel converge if intent is stale and no longer exists`() {
+  fun `should cancel converge if asset is stale and no longer exists`() {
     val message = ConvergeAsset(
       TestAsset(GenericTestAssetSpec("1", emptyMap())),
       clock.instant().minusSeconds(30).toEpochMilli(),
@@ -67,12 +67,12 @@ object ConvergeAssetHandlerTest {
 
     subject.handle(message)
 
-    verify(intentRepository).getIntent("test:1")
-    verifyZeroInteractions(intentRepository)
+    verify(assetRepository).getAsset("test:1")
+    verifyZeroInteractions(assetRepository)
   }
 
   @Test
-  fun `should refresh intent state if stale`() {
+  fun `should refresh asset state if stale`() {
 
     val message = ConvergeAsset(
       TestAsset(GenericTestAssetSpec("1", mapOf("refreshed" to false))),
@@ -80,14 +80,14 @@ object ConvergeAssetHandlerTest {
       clock.instant().plusSeconds(30).toEpochMilli()
     )
 
-    val refreshedIntent = TestAsset(GenericTestAssetSpec("1", mapOf("refreshed" to true)))
-    whenever(intentRepository.getIntent("test:1")) doReturn refreshedIntent
-    whenever(orcaIntentLauncher.launch(refreshedIntent)) doReturn
+    val refreshedAsset = TestAsset(GenericTestAssetSpec("1", mapOf("refreshed" to true)))
+    whenever(assetRepository.getAsset("test:1")) doReturn refreshedAsset
+    whenever(orcaAssetLauncher.launch(refreshedAsset)) doReturn
       OrcaLaunchedAssetResult(listOf("one"), ChangeSummary("foo"))
 
     subject.handle(message)
 
-    verify(orcaIntentLauncher).launch(refreshedIntent)
-    verifyNoMoreInteractions(orcaIntentLauncher)
+    verify(orcaAssetLauncher).launch(refreshedAsset)
+    verifyNoMoreInteractions(orcaAssetLauncher)
   }
 }

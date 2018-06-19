@@ -36,8 +36,8 @@ object WhitelistingAssetGuardTest {
   fun `should match event types`() {
 
     ApplicationAssetGuard(NoopRegistry(), ApplicationAssetGuardProperties()).run {
-      assert(matchesEventTypes(BeforeAssetUpsertEvent(passingIntent)))
-      assert(!matchesEventTypes(AfterAssetUpsertEvent(passingIntent)))
+      assert(matchesEventTypes(BeforeAssetUpsertEvent(passingAsset)))
+      assert(!matchesEventTypes(AfterAssetUpsertEvent(passingAsset)))
     }
   }
 
@@ -50,10 +50,10 @@ object WhitelistingAssetGuardTest {
       }
     )
 
-    assertGuardConditionFailed(subject, BeforeAssetUpsertEvent(failingIntent))
+    assertGuardConditionFailed(subject, BeforeAssetUpsertEvent(failingAsset))
 
-    subject.onIntentAwareEvent(BeforeAssetUpsertEvent(passingIntent))
-    subject.onIntentAwareEvent(BeforeAssetUpsertEvent(ignoredIntent))
+    subject.onAssetAwareEvent(BeforeAssetUpsertEvent(passingAsset))
+    subject.onAssetAwareEvent(BeforeAssetUpsertEvent(ignoredAsset))
   }
 
   @Test
@@ -65,27 +65,27 @@ object WhitelistingAssetGuardTest {
       }
     )
 
-    subject.onIntentAwareEvent(AssetConvergeTimeoutEvent(failingIntent))
-    subject.onIntentAwareEvent(AssetConvergeTimeoutEvent(passingIntent))
-    subject.onIntentAwareEvent(AssetConvergeTimeoutEvent(ignoredIntent))
+    subject.onAssetAwareEvent(AssetConvergeTimeoutEvent(failingAsset))
+    subject.onAssetAwareEvent(AssetConvergeTimeoutEvent(passingAsset))
+    subject.onAssetAwareEvent(AssetConvergeTimeoutEvent(ignoredAsset))
   }
 
   private fun assertGuardConditionFailed(subject: WhitelistingAssetGuard, event: AssetAwareEvent) {
     assertThat(
-      { subject.onIntentAwareEvent(event) },
+      { subject.onAssetAwareEvent(event) },
       throws<GuardConditionFailed>()
     )
   }
 
-  val failingIntent = TestAsset(ApplicationAwareTestAssetSpec(
+  val failingAsset = TestAsset(ApplicationAwareTestAssetSpec(
     id = "id",
     application = "KEEL"
   ))
 
-  val passingIntent = TestAsset(ApplicationAwareTestAssetSpec(
+  val passingAsset = TestAsset(ApplicationAwareTestAssetSpec(
     id = "id",
     application = "spintest"
   ))
 
-  val ignoredIntent = TestAsset(GenericTestAssetSpec("id"))
+  val ignoredAsset = TestAsset(GenericTestAssetSpec("id"))
 }

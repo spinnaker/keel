@@ -30,31 +30,31 @@ class MemoryAssetRepository(
 
   private val log = LoggerFactory.getLogger(javaClass)
 
-  private val intents: MutableMap<String, Asset<AssetSpec>> = mutableMapOf()
+  private val assets: MutableMap<String, Asset<AssetSpec>> = mutableMapOf()
 
   init {
     log.info("Using ${javaClass.simpleName}")
   }
 
-  override fun upsertIntent(asset: Asset<AssetSpec>): Asset<AssetSpec> {
+  override fun upsertAsset(asset: Asset<AssetSpec>): Asset<AssetSpec> {
     applicationEventPublisher.publishEvent(BeforeAssetUpsertEvent(asset))
-    intents.put(asset.id(), asset)
+    assets.put(asset.id(), asset)
     applicationEventPublisher.publishEvent(AfterAssetUpsertEvent(asset))
     return asset
   }
 
-  override fun getIntents() = intents.values.toList()
+  override fun getAssets() = assets.values.toList()
 
-  override fun getIntents(statuses: List<AssetStatus>)
-    = intents.values.filter { statuses.contains(it.status) }.toList()
+  override fun getAssets(statuses: List<AssetStatus>)
+    = assets.values.filter { statuses.contains(it.status) }.toList()
 
-  override fun getIntent(id: String) = intents[id]
+  override fun getAsset(id: String) = assets[id]
 
-  override fun deleteIntent(id: String, preserveHistory: Boolean) {
+  override fun deleteAsset(id: String, preserveHistory: Boolean) {
     if (preserveHistory) {
-      getIntent(id)?.status = AssetStatus.ABSENT
+      getAsset(id)?.status = AssetStatus.ABSENT
     } else {
-      intents.remove(id)
+      assets.remove(id)
     }
   }
 }

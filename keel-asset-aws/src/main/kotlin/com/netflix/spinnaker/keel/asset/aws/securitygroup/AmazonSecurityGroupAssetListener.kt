@@ -17,7 +17,7 @@ package com.netflix.spinnaker.keel.asset.aws.securitygroup
 
 import com.netflix.spinnaker.keel.AssetRepository
 import com.netflix.spinnaker.keel.AssetStatus
-import com.netflix.spinnaker.keel.PARENT_INTENT_LABEL
+import com.netflix.spinnaker.keel.PARENT_ASSET_LABEL
 import com.netflix.spinnaker.keel.attribute.EnabledAttribute
 import com.netflix.spinnaker.keel.event.AssetAwareEvent
 import com.netflix.spinnaker.keel.event.BeforeAssetDryRunEvent
@@ -36,47 +36,47 @@ class AmazonSecurityGroupAssetListener(
   private val log = LoggerFactory.getLogger(AmazonSecurityGroupAssetListener::class.java)
 
   /**
-   * Adds an internal label on the asset linking security group rule intents
+   * Adds an internal label on the asset linking security group rule assets
    * to their parent asset, even if the parent does not exist yet.
    */
   @EventListener(BeforeAssetUpsertEvent::class, BeforeAssetDryRunEvent::class)
-  fun assignParentIntentLabel(event: AssetAwareEvent) {
-    val intent = event.asset as? AmazonSecurityGroupAsset ?: return
-    intent.parentId()
-      ?.also { intent.labels[PARENT_INTENT_LABEL] = it }
+  fun assignParentAssetLabel(event: AssetAwareEvent) {
+    val asset = event.asset as? AmazonSecurityGroupAsset ?: return
+    asset.parentId()
+      ?.also { asset.labels[PARENT_ASSET_LABEL] = it }
   }
 
   /**
    * Due to how [AmazonSecurityGroupAssetProcessor] converges security groups
-   * and individual rules, we shouldn't allow Security Group Rule Intents to be
+   * and individual rules, we shouldn't allow Security Group Rule Assets to be
    * converged on their own by the scheduler.
    *
    * This should only happen when Keel has an _active_ asset for the root SG.
    */
   @EventListener(BeforeAssetScheduleEvent::class)
-  fun disableRuleIntentsOnScheduledConverge(event: BeforeAssetScheduleEvent) {
-    val intent = event.asset as? AmazonSecurityGroupAsset ?: return
+  fun disableRuleAssetsOnScheduledConverge(event: BeforeAssetScheduleEvent) {
+    val asset = event.asset as? AmazonSecurityGroupAsset ?: return
     if (event.asset.spec !is AmazonSecurityGroupRuleSpec) {
       return
     }
 
-    val parentId = intent.parentId()
+    val parentId = asset.parentId()
     if (parentId == null) {
       // This is bad, but we don't need to throw an exception or anything here.
       // Just process the asset. It's unnecessary overhead, but not the end
       // of the world.
-      log.error("AmazonSecurityGroupIntent is a rule, but no parentId defined", kv("assetId", intent.id()))
+      log.error("AmazonSecurityGroupAsset is a rule, but no parentId defined", kv("assetId", asset.id()))
       return
     }
 
-    val rootIntent = assetRepository.getIntent(parentId)
-    if (rootIntent == null || rootIntent.status != AssetStatus.ACTIVE) {
+    val rootAsset = assetRepository.getAsset(parentId)
+    if (rootAsset == null || rootAsset.status != AssetStatus.ACTIVE) {
       return
     }
 
-    if (intent.hasAttribute(EnabledAttribute::class)) {
-      intent.attributes.removeIf { it is EnabledAttribute }
+    if (asset.hasAttribute(EnabledAttribute::class)) {
+      asset.attributes.removeIf { it is EnabledAttribute }
     }
-    intent.attributes.add(EnabledAttribute(false))
+    asset.attributes.add(EnabledAttribute(false))
   }
 }

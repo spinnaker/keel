@@ -32,7 +32,7 @@ private const val ACTION_PROCEED = "proceeding as if inside of execution window"
 private const val ACTION_HALT = "assuming outside of execution window"
 
 /**
- * Filters out Intents that are not in their defined execution windows (configured via the ExecutionWindowAttribute).
+ * Filters out Assets that are not in their defined execution windows (configured via the ExecutionWindowAttribute).
  */
 @Component
 @EnableConfigurationProperties(ExecutionWindowFilter.Configuration::class)

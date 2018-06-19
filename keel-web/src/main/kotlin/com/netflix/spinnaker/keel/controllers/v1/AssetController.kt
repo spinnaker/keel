@@ -31,10 +31,10 @@ import java.time.Instant
 import javax.ws.rs.QueryParam
 
 @RestController
-@RequestMapping("/v1/intents")
+@RequestMapping("/v1/assets")
 class AssetController
 @Autowired constructor(
-  private val dryRunIntentLauncher: DryRunAssetLauncher,
+  private val dryRunAssetLauncher: DryRunAssetLauncher,
   private val scheduleService: ScheduleService,
   private val assetRepository: AssetRepository,
   private val assetActivityRepository: AssetActivityRepository,
@@ -44,45 +44,45 @@ class AssetController
   private val log = LoggerFactory.getLogger(javaClass)
 
   @RequestMapping(method = [RequestMethod.GET])
-  fun getIntents(@QueryParam("status") statuses: Array<AssetStatus>? ): List<Asset<AssetSpec>> {
+  fun getAssets(@QueryParam("status") statuses: Array<AssetStatus>? ): List<Asset<AssetSpec>> {
     statuses?.let {
-      return assetRepository.getIntents(statuses.toList())
+      return assetRepository.getAssets(statuses.toList())
     }
-    return assetRepository.getIntents()
+    return assetRepository.getAssets()
   }
 
   @RequestMapping(value = ["/{id}"], method = [RequestMethod.GET])
-  fun getAsset(@PathVariable("id") id: String) = assetRepository.getIntent(id)
+  fun getAsset(@PathVariable("id") id: String) = assetRepository.getAsset(id)
 
   @RequestMapping(value = [""], method = [(RequestMethod.POST)])
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun upsertAsset(@RequestBody req: UpsertAssetRequest): Any {
-    // TODO rz - validate intents
+    // TODO rz - validate assets
     // TODO rz - calculate graph
 
     // TODO rz - add "notes" API property for history/audit
 
     if (req.dryRun) {
-      return req.assets.map { dryRunIntentLauncher.launch(it) }
+      return req.assets.map { dryRunAssetLauncher.launch(it) }
     }
 
     val assetList = mutableListOf<UpsertAssetResponse>()
 
-    req.assets.forEach { intent ->
-      if (intent.createdAt == null) {
-        intent.createdAt = Instant.now()
+    req.assets.forEach { asset ->
+      if (asset.createdAt == null) {
+        asset.createdAt = Instant.now()
       }
-      intent.updatedAt = Instant.now()
-      intent.lastUpdatedBy = AuthenticatedRequest.getSpinnakerUser().orElse("[anonymous]")
+      asset.updatedAt = Instant.now()
+      asset.lastUpdatedBy = AuthenticatedRequest.getSpinnakerUser().orElse("[anonymous]")
 
-      assetRepository.upsertIntent(intent)
+      assetRepository.upsertAsset(asset)
 
-      if (keelProperties.immediatelyRunIntents) {
-        log.info("Immediately scheduling asset {}", StructuredArguments.value("asset", intent.id()))
-        scheduleService.converge(intent)
+      if (keelProperties.immediatelyRunAssets) {
+        log.info("Immediately scheduling asset {}", StructuredArguments.value("asset", asset.id()))
+        scheduleService.converge(asset)
       }
 
-      assetList.add(UpsertAssetResponse(intent.id(), intent.status))
+      assetList.add(UpsertAssetResponse(asset.id(), asset.status))
     }
 
     return assetList
@@ -90,12 +90,12 @@ class AssetController
 
   @RequestMapping(value = ["/{id}"], method = [RequestMethod.DELETE])
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  fun deleteIntent(@PathVariable("id") id: String,
+  fun deleteAsset(@PathVariable("id") id: String,
                    @RequestParam("soft", defaultValue = "true", required = false) soft: Boolean) {
-    assetRepository.getIntent(id)
+    assetRepository.getAsset(id)
       .takeIf { it != null }
       ?.run {
-        assetRepository.deleteIntent(id, soft)
+        assetRepository.deleteAsset(id, soft)
       }
   }
 
@@ -115,6 +115,6 @@ class AssetController
 }
 
 data class UpsertAssetResponse(
-  val intentId: String,
+  val assetId: String,
   val assetStatus: AssetStatus
 )

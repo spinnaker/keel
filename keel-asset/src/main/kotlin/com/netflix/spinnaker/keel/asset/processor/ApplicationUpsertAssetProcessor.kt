@@ -44,12 +44,12 @@ class ApplicationUpsertAssetProcessor
   override fun supports(asset: Asset<AssetSpec>) =
     asset is ApplicationAsset && !asset.status.shouldDeleteResource()
 
-  override fun converge(intent: ApplicationAsset): ConvergeResult {
-    val changeSummary = ChangeSummary(intent.id())
+  override fun converge(asset: ApplicationAsset): ConvergeResult {
+    val changeSummary = ChangeSummary(asset.id())
 
-    val currentState = getApplication(intent.spec.name)
+    val currentState = getApplication(asset.spec.name)
 
-    if (currentStateUpToDate(intent.id(), currentState, intent.spec, changeSummary)) {
+    if (currentStateUpToDate(asset.id(), currentState, asset.spec, changeSummary)) {
       changeSummary.addMessage(ConvergeReason.UNCHANGED.reason)
       return ConvergeResult(listOf(), changeSummary)
     }
@@ -59,31 +59,31 @@ class ApplicationUpsertAssetProcessor
     return ConvergeResult(listOf(
       OrchestrationRequest(
         name = if (currentState == null) "Create application" else "Update application",
-        application = intent.spec.name,
+        application = asset.spec.name,
         description = "Converging on desired application state",
         job = listOf(
           Job(
             type = "upsertApplication",
             m = mutableMapOf(
-              "application" to objectMapper.convertValue(intent.spec, ANY_MAP_TYPE)
+              "application" to objectMapper.convertValue(asset.spec, ANY_MAP_TYPE)
             )
           )
         ),
-        trigger = OrchestrationTrigger(intent.id())
+        trigger = OrchestrationTrigger(asset.id())
       )
     ),
       changeSummary
     )
   }
 
-  private fun currentStateUpToDate(intentId: String,
+  private fun currentStateUpToDate(assetId: String,
                                    currentState: Application?,
                                    desiredState: BaseApplicationSpec,
                                    changeSummary: ChangeSummary): Boolean {
     if (currentState == null) return false
     val stateInspector = StateInspector(objectMapper)
     val diff = stateInspector.getDiff(
-      intentId = intentId,
+      assetId = assetId,
       currentState = currentState,
       desiredState = desiredState,
       modelClass = Application::class,

@@ -30,7 +30,7 @@ import java.time.Instant
   Type(AssetConvergenceRecord::class)
 )
 sealed class ActivityRecord {
-  abstract val intentId: String
+  abstract val assetId: String
   abstract val actor: String
   val timestamp: Instant = Instant.now()
 }
@@ -38,11 +38,11 @@ sealed class ActivityRecord {
 enum class AssetChangeAction { UPSERT, DELETE }
 
 /**
- * An activity record for whenever a change is made to [intentId]
+ * An activity record for whenever a change is made to [assetId]
  */
-@JsonTypeName("IntentChange")
+@JsonTypeName("AssetChange")
 data class AssetChangeRecord(
-  override val intentId: String,
+  override val assetId: String,
   override val actor: String,
   val action: AssetChangeAction,
   val value: Asset<AssetSpec>
@@ -51,9 +51,9 @@ data class AssetChangeRecord(
 /**
  * Activity record whenever an asset is converged.
  */
-@JsonTypeName("IntentConvergence")
+@JsonTypeName("AssetConvergence")
 data class AssetConvergenceRecord(
-  override val intentId: String,
+  override val assetId: String,
   override val actor: String,
   val result: ConvergeResult
 ) : ActivityRecord()
@@ -72,13 +72,13 @@ fun activityRecordClassForName(name: String): Class<ActivityRecord>? {
 }
 
 /**
- * Responsible for recording all activity related to intents. This is primarily meant for diagnostics and auditing.
+ * Responsible for recording all activity related to assets. This is primarily meant for diagnostics and auditing.
  */
 interface AssetActivityRepository {
 
   fun record(activity: ActivityRecord)
 
-  fun getHistory(intentId: String, criteria: ListCriteria): List<ActivityRecord>
+  fun getHistory(assetId: String, criteria: ListCriteria): List<ActivityRecord>
 
-  fun <T : ActivityRecord> getHistory(intentId: String, kind: Class<T>, criteria: ListCriteria): List<T>
+  fun <T : ActivityRecord> getHistory(assetId: String, kind: Class<T>, criteria: ListCriteria): List<T>
 }

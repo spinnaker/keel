@@ -34,25 +34,25 @@ class MemoryAssetActivityRepository : AssetActivityRepository {
   }
 
   override fun record(activity: ActivityRecord) {
-    ensureIntentLog(activity.intentId)
-    activities[activity.intentId]!!.add(activity)
+    ensureAssetLog(activity.assetId)
+    activities[activity.assetId]!!.add(activity)
   }
 
-  override fun getHistory(intentId: String, criteria: ListCriteria): List<ActivityRecord> {
-    ensureIntentLog(intentId)
-    return activities[intentId]!!.let { limitOffset(it, criteria) }
+  override fun getHistory(assetId: String, criteria: ListCriteria): List<ActivityRecord> {
+    ensureAssetLog(assetId)
+    return activities[assetId]!!.let { limitOffset(it, criteria) }
   }
 
-  override fun <T : ActivityRecord> getHistory(intentId: String, kind: Class<T>, criteria: ListCriteria): List<T> {
-    ensureIntentLog(intentId)
-    return activities[intentId]!!
+  override fun <T : ActivityRecord> getHistory(assetId: String, kind: Class<T>, criteria: ListCriteria): List<T> {
+    ensureAssetLog(assetId)
+    return activities[assetId]!!
       .filterIsInstance(kind)
       .let { limitOffset(it, criteria) }
   }
 
-  private fun ensureIntentLog(intentId: String) {
-    if (!activities.containsKey(intentId)) {
-      activities[intentId] = mutableListOf()
+  private fun ensureAssetLog(assetId: String) {
+    if (!activities.containsKey(assetId)) {
+      activities[assetId] = mutableListOf()
     }
   }
 

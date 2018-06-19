@@ -31,18 +31,18 @@ class ParrotAssetProcessor : AssetProcessor<ParrotAsset> {
 
   override fun supports(asset: Asset<AssetSpec>) = asset is ParrotAsset
 
-  override fun converge(intent: ParrotAsset): ConvergeResult {
-    val changeSummary = ChangeSummary(intent.id())
+  override fun converge(asset: ParrotAsset): ConvergeResult {
+    val changeSummary = ChangeSummary(asset.id())
     changeSummary.addMessage("Squawk!")
     return ConvergeResult(listOf(
       OrchestrationRequest(
         name = "Squawk!",
-        application = intent.spec.application,
-        description = intent.spec.description,
+        application = asset.spec.application,
+        description = asset.spec.description,
         job = listOf(
-          Job("wait", mutableMapOf("waitTime" to intent.spec.waitTime))
+          Job("wait", mutableMapOf("waitTime" to asset.spec.waitTime))
         ),
-        trigger = OrchestrationTrigger(intent.id())
+        trigger = OrchestrationTrigger(asset.id())
       )
     ), changeSummary)
   }

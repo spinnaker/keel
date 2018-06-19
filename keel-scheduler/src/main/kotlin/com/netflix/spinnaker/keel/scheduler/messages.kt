@@ -21,12 +21,12 @@ import com.netflix.spinnaker.keel.AssetSpec
 import com.netflix.spinnaker.q.Message
 
 // ScheduleConvergence is a singleton message, the consumer finding all active
-// intents and scheduling workers to consume individual convergence tasks. The
+// assets and scheduling workers to consume individual convergence tasks. The
 // consumer is responsible for rescheduling this message.
 @JsonTypeName(value = "scheduleConvergence")
 class ScheduleConvergence : Message()
 
-@JsonTypeName(value = "convergeIntent")
+@JsonTypeName(value = "convergeAsset")
 data class ConvergeAsset(
   val asset: Asset<AssetSpec>,
   // The timestamp of which the asset data should be considered stale. If
@@ -39,6 +39,6 @@ data class ConvergeAsset(
 
 @JsonTypeName(value = "monitorOrchestrations")
 data class MonitorOrchestrations(
-  val intentId: String,
+  val assetId: String,
   val kind: String
 ) : Message()

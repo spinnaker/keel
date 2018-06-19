@@ -16,7 +16,7 @@
 package com.netflix.spinnaker.keel.annotation
 
 /**
- * Flags IntentSpec parameters that cannot change once created without
+ * Flags AssetSpec parameters that cannot change once created without
  * recreating the asset.
  */
 @Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.FIELD)

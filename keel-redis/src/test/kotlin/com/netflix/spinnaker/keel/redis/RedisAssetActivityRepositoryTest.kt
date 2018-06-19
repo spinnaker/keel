@@ -43,7 +43,7 @@ object RedisAssetActivityRepositoryTest {
   val embeddedRedis = EmbeddedRedis.embed()
   val jedisPool = embeddedRedis.pool as JedisPool
   val keelProperties = KeelProperties().apply {
-    maxConvergenceLogEntriesPerIntent = 5
+    maxConvergenceLogEntriesPerAsset = 5
   }
   val mapper = configureObjectMapper(ObjectMapper(), keelProperties, listOf(
     ObjectMapperSubtypeConfigurer.ClassSubtypeLocator(Asset::class.java, listOf("com.netflix.spinnaker.keel"))
@@ -68,7 +68,7 @@ object RedisAssetActivityRepositoryTest {
   }
 
   @Test
-  fun `listing log for an intent returns ordered records`() {
+  fun `listing log for an asset returns ordered records`() {
     val aUpsertRecord = AssetChangeRecord("a", "rob", AssetChangeAction.UPSERT, TestAsset(GenericTestAssetSpec("a")))
     val aConvergeRecord = AssetConvergenceRecord("a", "keel", ConvergeResult(listOf(), ChangeSummary("a")))
     val bConvergeRecord = AssetConvergenceRecord("b", "keel", ConvergeResult(listOf(), ChangeSummary("b")))
@@ -84,11 +84,11 @@ object RedisAssetActivityRepositoryTest {
 
   @Test
   fun `only the specified number of convergence log messages should be kept`() {
-    val intentId = "Application:emilykeeltest"
+    val assetId = "Application:emilykeeltest"
 
     val recordFactory = {
       AssetConvergenceRecord(
-        intentId = intentId,
+        assetId = assetId,
         actor = "keel:scheduledConvergence",
         result = ConvergeResult(listOf(), ChangeSummary("a"))
       )
@@ -101,6 +101,6 @@ object RedisAssetActivityRepositoryTest {
     subject.record(recordFactory())
     subject.record(recordFactory())
 
-    subject.getHistory(intentId, PagingListCriteria()).size shouldEqual keelProperties.maxConvergenceLogEntriesPerIntent
+    subject.getHistory(assetId, PagingListCriteria()).size shouldEqual keelProperties.maxConvergenceLogEntriesPerAsset
   }
 }

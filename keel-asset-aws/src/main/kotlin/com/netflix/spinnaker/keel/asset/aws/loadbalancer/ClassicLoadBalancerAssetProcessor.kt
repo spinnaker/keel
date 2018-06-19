@@ -54,15 +54,15 @@ class ClassicLoadBalancerAssetProcessor
 
   override fun supports(asset: Asset<AssetSpec>) = asset.spec is ClassicLoadBalancerSpec
 
-  override fun converge(intent: LoadBalancerAsset): ConvergeResult {
-    val changeSummary = ChangeSummary(intent.id())
-    val spec = intent.spec as ClassicLoadBalancerSpec
+  override fun converge(asset: LoadBalancerAsset): ConvergeResult {
+    val changeSummary = ChangeSummary(asset.id())
+    val spec = asset.spec as ClassicLoadBalancerSpec
 
-    log.info("Converging state for {}", value("asset", intent.id()))
+    log.info("Converging state for {}", value("asset", asset.id()))
 
     val currentLoadBalancer = getLoadBalancer(spec)
 
-    if (currentStateUpToDate(intent.id(), currentLoadBalancer, spec, changeSummary)) {
+    if (currentStateUpToDate(asset.id(), currentLoadBalancer, spec, changeSummary)) {
       changeSummary.addMessage(ConvergeReason.UNCHANGED.reason)
       return ConvergeResult(listOf(), changeSummary)
     }
@@ -72,17 +72,17 @@ class ClassicLoadBalancerAssetProcessor
     return ConvergeResult(listOf(
         OrchestrationRequest(
           name = "Upsert Classic Load Balancer",
-          application = intent.spec.application,
+          application = asset.spec.application,
           description = "Converging Classic Load Balancer (${spec.accountName}:${spec.region}:${spec.name})",
           job = classicLoadBalancerConverter.convertToJob(DefaultConvertToJobCommand(spec), changeSummary),
-          trigger = OrchestrationTrigger(intent.id())
+          trigger = OrchestrationTrigger(asset.id())
         )
       ),
       changeSummary
     )
   }
 
-  private fun currentStateUpToDate(intentId: String,
+  private fun currentStateUpToDate(assetId: String,
                                    currentLoadBalancer: LoadBalancerDescription?,
                                    desiredState: ClassicLoadBalancerSpec,
                                    changeSummary: ChangeSummary): Boolean {
@@ -91,7 +91,7 @@ class ClassicLoadBalancerAssetProcessor
     val currentState = classicLoadBalancerConverter.convertFromState(currentLoadBalancer)
     val diff = StateInspector(objectMapper).run {
       getDiff(
-        intentId = intentId,
+        assetId = assetId,
         currentState = currentState,
         desiredState = desiredState,
         modelClass = ClassicLoadBalancerSpec::class,

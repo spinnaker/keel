@@ -25,7 +25,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.util.concurrent.TimeUnit
 
-@Component(value = "orcaIntentLauncher")
+@Component(value = "orcaAssetLauncher")
 open class OrcaAssetLauncher(
   private val assetProcessors: List<AssetProcessor<*>>,
   private val orcaService: OrcaService,
@@ -40,7 +40,7 @@ open class OrcaAssetLauncher(
 
   override fun launch(asset: Asset<AssetSpec>) =
     recordedTime(asset) {
-      val result = intentProcessor(assetProcessors, asset).converge(asset)
+      val result = assetProcessor(assetProcessors, asset).converge(asset)
 
 
       if (result.orchestrations.isEmpty()) {
@@ -58,7 +58,7 @@ open class OrcaAssetLauncher(
       }
 
       assetActivityRepository.record(AssetConvergenceRecord(
-        intentId = asset.id(),
+        assetId = asset.id(),
         actor = "keel:scheduledConverge",
         result = result
       ))

@@ -43,7 +43,7 @@ object ApplicationUpsertAssetProcessorTest {
   }
 
   @Test
-  fun `should support ApplicationIntents`() {
+  fun `should support ApplicationAssets`() {
     subject.supports(ParrotAsset(ParrotSpec("hello", "world", 5))) shouldMatch equalTo(false)
     subject.supports(ApplicationAsset(createApplicationSpec())) shouldMatch equalTo(true)
   }
@@ -52,9 +52,9 @@ object ApplicationUpsertAssetProcessorTest {
   fun `should create application when app is missing`() {
     whenever(front50Service.getApplication("keel")) doThrow httpError("", Response("http://stash.com", 404, "test reason", emptyList(), null), null, null)
 
-    val intent = ApplicationAsset(createApplicationSpec())
+    val asset = ApplicationAsset(createApplicationSpec())
 
-    val result = subject.converge(intent)
+    val result = subject.converge(asset)
 
     result.orchestrations.size shouldMatch equalTo(1)
     result.orchestrations[0].name shouldMatch equalTo("Create application")

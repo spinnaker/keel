@@ -26,7 +26,7 @@ interface AssetProcessor<in I : Asset<AssetSpec>> {
 
   fun supports(asset: Asset<AssetSpec>): Boolean
 
-  fun converge(intent: I): ConvergeResult
+  fun converge(asset: I): ConvergeResult
 }
 
 data class ConvergeResult(

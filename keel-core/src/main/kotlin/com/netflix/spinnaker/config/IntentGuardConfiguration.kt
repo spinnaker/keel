@@ -18,8 +18,8 @@ package com.netflix.spinnaker.config
 import com.netflix.spinnaker.keel.WhitelistingAssetGuardProperties
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-@ConfigurationProperties("intentGuard.application")
+@ConfigurationProperties("assetGuard.application")
 open class ApplicationAssetGuardProperties : WhitelistingAssetGuardProperties()
 
-@ConfigurationProperties("intentGuard.kind")
+@ConfigurationProperties("assetGuard.kind")
 open class KindAssetGuardProperties : WhitelistingAssetGuardProperties()

@@ -34,7 +34,7 @@ import org.springframework.stereotype.Component
 import java.util.concurrent.TimeUnit
 
 @Component
-@ConditionalOnExpression("\${front50.intentRepositoryEnabled:true}")
+@ConditionalOnExpression("\${front50.assetRepositoryEnabled:true}")
 class Front50AssetRepository(
   private val front50Service: Front50Service,
   private val registry: Registry,
@@ -52,33 +52,33 @@ class Front50AssetRepository(
     log.info("Using ${javaClass.simpleName}")
   }
 
-  override fun upsertIntent(asset: Asset<AssetSpec>): Asset<AssetSpec> {
+  override fun upsertAsset(asset: Asset<AssetSpec>): Asset<AssetSpec> {
     applicationEventPublisher.publishEvent(BeforeAssetUpsertEvent(asset))
     return rateLimited {
-      front50Service.upsertIntent(asset)
+      front50Service.upsertAsset(asset)
     }.also {
       applicationEventPublisher.publishEvent(AfterAssetUpsertEvent(it))
     }
   }
 
-  override fun getIntents() = rateLimited { front50Service.getIntents() }
+  override fun getAssets() = rateLimited { front50Service.getAssets() }
 
-  override fun getIntents(statuses: List<AssetStatus>) = rateLimited { front50Service.getIntentsByStatus(statuses) }
+  override fun getAssets(statuses: List<AssetStatus>) = rateLimited { front50Service.getAssetsByStatus(statuses) }
 
-  override fun getIntent(id: String) = rateLimited { front50Service.getIntent(id) }
+  override fun getAsset(id: String) = rateLimited { front50Service.getAsset(id) }
 
   @Suppress("IMPLICIT_CAST_TO_ANY")
-  override fun deleteIntent(id: String, preserveHistory: Boolean) {
+  override fun deleteAsset(id: String, preserveHistory: Boolean) {
     rateLimited {
-      getIntent(id).also { intent ->
-        applicationEventPublisher.publishEvent(BeforeAssetDeleteEvent(intent))
+      getAsset(id).also { asset ->
+        applicationEventPublisher.publishEvent(BeforeAssetDeleteEvent(asset))
         if (preserveHistory) {
-          intent.status = AssetStatus.INACTIVE
-          upsertIntent(intent)
+          asset.status = AssetStatus.INACTIVE
+          upsertAsset(asset)
         } else {
-          front50Service.deleteIntent(id)
+          front50Service.deleteAsset(id)
         }
-        applicationEventPublisher.publishEvent(AfterAssetDeleteEvent(intent))
+        applicationEventPublisher.publishEvent(AfterAssetDeleteEvent(asset))
       }
     }
   }

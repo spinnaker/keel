@@ -34,7 +34,7 @@ class EventNotificationListener(
   private val notificationsId = registry.createId("echo.notifications")
 
   @EventListener(AssetAwareEvent::class)
-  fun onIntentAwareEvent(event: AssetAwareEvent) {
+  fun onAssetAwareEvent(event: AssetAwareEvent) {
     event.asset.getAttribute(NotificationAttribute::class)
       ?.also { attribute ->
         attribute.value.subscriptions
@@ -46,27 +46,27 @@ class EventNotificationListener(
       }
   }
 
-  private fun sendNotification(intentId: String, eventKind: EventKind, notification: NotificationSpec) {
+  private fun sendNotification(assetId: String, eventKind: EventKind, notification: NotificationSpec) {
     try {
       echoService.create(EchoService.Notification(
         notificationType = notification.echoNotificationType,
         to = notification.to,
         cc = notification.cc,
         // TODO rz - Support other, non-generic templates
-        templateGroup = "keelIntent",
+        templateGroup = "keelAsset",
         severity = notification.severity,
         source = EchoService.Notification.Source("keel"),
         additionalContext = notification.getAdditionalContext().toMutableMap().let {
           it.putAll(mapOf(
             "eventKind" to eventKind.toValue(),
-            "assetId" to intentId
+            "assetId" to assetId
           ))
           it
         }
       ))
       registry.counter(notificationsId.withTag("result", "success"))
     } catch (e: Exception) {
-      log.error("Failed sending {} notification for {}", value("kind", eventKind), value("assetId", intentId), e)
+      log.error("Failed sending {} notification for {}", value("kind", eventKind), value("assetId", assetId), e)
       registry.counter(notificationsId.withTag("result", "failed"))
     }
   }
