@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.filter
+package com.netflix.spinnaker.keel.model
 
 import com.netflix.spinnaker.keel.Asset
 import com.netflix.spinnaker.keel.AssetSpec
-import org.springframework.core.Ordered
 
 /**
- * A Filter can be used to intercept Intent scheduling. Filters can use Intent Attributes to perform more complex logic.
+ * @param reason User-supplied reason of why the intent is changing.
+ * @param assets A list of all intents that are being submitted with this change unit.
+ * @param dryRun Whether or not to describe expected actions if applied, but wont' apply any changes.
  */
-interface Filter : Ordered {
-  fun filter(asset: Asset<AssetSpec>): Boolean
-}
+data class UpsertAssetRequest(
+  val reason: String?,
+  val assets: List<Asset<AssetSpec>>,
+  val dryRun: Boolean = false
+)

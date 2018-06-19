@@ -16,13 +16,11 @@
 package com.netflix.spinnaker.keel.echo
 
 import com.netflix.spectator.api.NoopRegistry
-import com.netflix.spinnaker.keel.event.AfterIntentUpsertEvent
+import com.netflix.spinnaker.keel.event.AfterAssetUpsertEvent
 import com.netflix.spinnaker.keel.event.EventKind
-import com.netflix.spinnaker.keel.test.GenericTestIntentSpec
-import com.netflix.spinnaker.keel.test.TestIntent
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.reset
-import com.nhaarman.mockito_kotlin.verify
+import com.netflix.spinnaker.keel.test.GenericTestAssetSpec
+import com.netflix.spinnaker.keel.test.TestAsset
+import com.nhaarman.mockito_kotlin.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
@@ -40,13 +38,13 @@ object EventNotificationListenerTest {
 
   @Test
   fun `should send notifications for each subscription`() {
-    val event = AfterIntentUpsertEvent(
-      TestIntent(
-        GenericTestIntentSpec("test:1", mapOf()),
+    val event = AfterAssetUpsertEvent(
+      TestAsset(
+        GenericTestAssetSpec("test:1", mapOf()),
         attributes = mutableListOf(
           NotificationAttribute(NotificationSubscriptions(
             subscriptions = mapOf(
-              EventKind.AFTER_INTENT_UPSERT to listOf(
+              EventKind.AFTER_ASSET_UPSERT to listOf(
                 EmailNotificationSpec(
                   to = listOf("example@example.com"),
                   subject = "Intent was upserted",
@@ -75,7 +73,7 @@ object EventNotificationListenerTest {
       source = EchoService.Notification.Source("keel"),
       additionalContext = mapOf(
         "eventKind" to "afterIntentUpsert",
-        "intentId" to "test:test:1",
+        "assetId" to "test:test:1",
         "subject" to "Intent was upserted",
         "body" to "test:1 was upserted and you like to know about that"
       )
@@ -90,7 +88,7 @@ object EventNotificationListenerTest {
       source = EchoService.Notification.Source("keel"),
       additionalContext = mapOf(
         "eventKind" to "afterIntentUpsert",
-        "intentId" to "test:test:1",
+        "assetId" to "test:test:1",
         "message" to "test:1 was upserted",
         "color" to "#ff0000"
       )

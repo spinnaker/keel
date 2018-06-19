@@ -17,9 +17,9 @@ package com.netflix.spinnaker.keel.scheduler.handler
 
 import com.netflix.spectator.api.BasicTag
 import com.netflix.spectator.api.Registry
-import com.netflix.spinnaker.keel.IntentRepository
-import com.netflix.spinnaker.keel.IntentStatus
-import com.netflix.spinnaker.keel.event.BeforeIntentScheduleEvent
+import com.netflix.spinnaker.keel.AssetRepository
+import com.netflix.spinnaker.keel.AssetStatus
+import com.netflix.spinnaker.keel.event.BeforeAssetScheduleEvent
 import com.netflix.spinnaker.keel.filter.Filter
 import com.netflix.spinnaker.keel.scheduler.ScheduleConvergence
 import com.netflix.spinnaker.keel.scheduler.ScheduleService
@@ -35,7 +35,7 @@ class ScheduleConvergeHandler
 @Autowired constructor(
   override val queue: Queue,
   private val scheduleService: ScheduleService,
-  private val intentRepository: IntentRepository,
+  private val assetRepository: AssetRepository,
   private val filters: List<Filter>,
   private val registry: Registry,
   private val applicationEventPublisher: ApplicationEventPublisher
@@ -49,10 +49,10 @@ class ScheduleConvergeHandler
     log.info("Scheduling intent convergence work")
 
     try {
-      intentRepository.getIntents(status = IntentStatus.scheduleValues())
+      assetRepository.getIntents(statuses = AssetStatus.scheduleValues())
         .also { log.info("Attempting to schedule ${it.size} active intents") }
         .filter { intent ->
-          applicationEventPublisher.publishEvent(BeforeIntentScheduleEvent(intent))
+          applicationEventPublisher.publishEvent(BeforeAssetScheduleEvent(intent))
           return@filter filters.all { it.filter(intent) }
         }
         .also { log.info("Scheduling ${it.size} active intents after filters") }

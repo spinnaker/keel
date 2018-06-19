@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.netflix.spinnaker.keel.IntentIdProvider
+import com.netflix.spinnaker.keel.AssetIdProvider
 import com.netflix.spinnaker.keel.intent.LoadBalancerSpec
 import com.netflix.spinnaker.keel.intent.aws.jackson.AvailabilityZoneConfigDeserializer
 import com.netflix.spinnaker.keel.intent.aws.jackson.AvailabilityZoneConfigSerializer
@@ -41,11 +41,11 @@ data class ClassicLoadBalancerSpec(
   val scheme: Scheme?,
   val listeners: Set<ClassicListener>,
   val healthCheck: HealthCheckSpec
-) : LoadBalancerSpec(), IntentIdProvider {
+) : LoadBalancerSpec(), AssetIdProvider {
 
   override fun cloudProvider() = "aws"
 
-  override fun intentId() = "LoadBalancer:aws:$accountName:$region:$name"
+  override fun assetId() = "LoadBalancer:aws:$accountName:$region:$name"
 }
 
 data class HealthCheckSpec(

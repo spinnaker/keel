@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.filter
-
-import com.netflix.spinnaker.keel.Asset
-import com.netflix.spinnaker.keel.AssetSpec
-import org.springframework.core.Ordered
+package com.netflix.spinnaker.keel
 
 /**
- * A Filter can be used to intercept Intent scheduling. Filters can use Intent Attributes to perform more complex logic.
+ * A typed model of an Intent's configuration.
  */
-interface Filter : Ordered {
-  fun filter(asset: Asset<AssetSpec>): Boolean
+interface AssetSpec
+
+interface ApplicationAwareAssetSpec : AssetSpec {
+  val application: String
 }

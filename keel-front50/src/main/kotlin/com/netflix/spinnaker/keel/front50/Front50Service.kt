@@ -15,32 +15,27 @@
  */
 package com.netflix.spinnaker.keel.front50
 
-import com.netflix.spinnaker.keel.Intent
-import com.netflix.spinnaker.keel.IntentSpec
-import com.netflix.spinnaker.keel.IntentStatus
+import com.netflix.spinnaker.keel.Asset
+import com.netflix.spinnaker.keel.AssetSpec
+import com.netflix.spinnaker.keel.AssetStatus
 import com.netflix.spinnaker.keel.front50.model.Application
 import com.netflix.spinnaker.keel.front50.model.PipelineConfig
 import retrofit.client.Response
-import retrofit.http.Body
-import retrofit.http.DELETE
-import retrofit.http.GET
-import retrofit.http.POST
-import retrofit.http.Path
-import retrofit.http.Query
+import retrofit.http.*
 
 interface Front50Service {
 
   @GET("/intents")
-  fun getIntents(): List<Intent<IntentSpec>>
+  fun getIntents(): List<Asset<AssetSpec>>
 
   @GET("/intents")
-  fun getIntentsByStatus(@Query("status") status: List<IntentStatus>?): List<Intent<IntentSpec>>
+  fun getIntentsByStatus(@Query("status") statuses: List<AssetStatus>?): List<Asset<AssetSpec>>
 
   @GET("/intents/{id}")
-  fun getIntent(@Path("id") id: String): Intent<IntentSpec>
+  fun getIntent(@Path("id") id: String): Asset<AssetSpec>
 
   @POST("/intents")
-  fun upsertIntent(@Body intent: Intent<IntentSpec>): Intent<IntentSpec>
+  fun upsertIntent(@Body asset: Asset<AssetSpec>): Asset<AssetSpec>
 
   @DELETE("/intents/{id}")
   fun deleteIntent(@Path("id") id: String): Response

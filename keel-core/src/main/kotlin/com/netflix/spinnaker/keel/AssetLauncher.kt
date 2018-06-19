@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.filter
+package com.netflix.spinnaker.keel
 
-import com.netflix.spinnaker.keel.Asset
-import com.netflix.spinnaker.keel.AssetSpec
-import org.springframework.core.Ordered
+import com.netflix.spinnaker.keel.exceptions.DeclarativeException
 
-/**
- * A Filter can be used to intercept Intent scheduling. Filters can use Intent Attributes to perform more complex logic.
- */
-interface Filter : Ordered {
-  fun filter(asset: Asset<AssetSpec>): Boolean
+interface AssetLauncher<out R : LaunchedAssetResult> {
+
+  fun launch(asset: Asset<AssetSpec>): R
+
+  fun <I : Asset<AssetSpec>> intentProcessor(assetProcessors: List<AssetProcessor<*>>, intent: I)
+    = assetProcessors.find { it.supports(intent) }.let {
+    if (it == null) {
+      throw DeclarativeException("Could not find processor for intent ${intent.javaClass.simpleName}")
+    }
+    // TODO rz - GROSS AND WRONG
+    return@let it as AssetProcessor<I>
+  }
 }
+
+interface LaunchedAssetResult

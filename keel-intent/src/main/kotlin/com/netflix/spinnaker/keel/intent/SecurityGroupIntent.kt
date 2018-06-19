@@ -17,11 +17,11 @@ package com.netflix.spinnaker.keel.intent
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import com.netflix.spinnaker.keel.ApplicationAwareIntentSpec
+import com.netflix.spinnaker.keel.ApplicationAwareAssetSpec
 import java.util.*
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
-abstract class SecurityGroupSpec : ApplicationAwareIntentSpec {
+abstract class SecurityGroupSpec : ApplicationAwareAssetSpec {
   abstract val name: String
   abstract val cloudProvider: String
   abstract val accountName: String

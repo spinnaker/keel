@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Netflix, Inc.
+ * Copyright 2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.filter
+package com.netflix.spinnaker.keel.intent.processor
 
 import com.netflix.spinnaker.keel.Asset
+import com.netflix.spinnaker.keel.AssetProcessor
 import com.netflix.spinnaker.keel.AssetSpec
-import org.springframework.core.Ordered
+import com.netflix.spinnaker.keel.ConvergeResult
+import com.netflix.spinnaker.keel.intent.ApplicationAsset
 
-/**
- * A Filter can be used to intercept Intent scheduling. Filters can use Intent Attributes to perform more complex logic.
- */
-interface Filter : Ordered {
-  fun filter(asset: Asset<AssetSpec>): Boolean
+class ApplicationDeleteAssetProcessor : AssetProcessor<ApplicationAsset> {
+  override fun supports(asset: Asset<AssetSpec>) =
+    asset is ApplicationAsset && asset.status.shouldDeleteResource()
+
+  override fun converge(intent: ApplicationAsset): ConvergeResult {
+    throw UnsupportedOperationException("not implemented")
+  }
 }

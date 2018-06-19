@@ -15,21 +15,21 @@
  */
 package com.netflix.spinnaker.keel.intent
 
-import com.netflix.spinnaker.keel.IntentSpec
+import com.netflix.spinnaker.keel.AssetSpec
 import com.netflix.spinnaker.keel.dryrun.ChangeSummary
 import com.netflix.spinnaker.keel.model.Job
 
-interface SpecConverter<I : IntentSpec, S : Any> {
+interface SpecConverter<I : AssetSpec, S : Any> {
 
   fun convertToState(spec: I): S
   fun convertFromState(state: S): I?
   fun <C : ConvertToJobCommand<I>> convertToJob(command: C, changeSummary: ChangeSummary): List<Job>
 }
 
-interface ConvertToJobCommand<out S : IntentSpec> {
+interface ConvertToJobCommand<out S : AssetSpec> {
   val spec: S
 }
 
-data class DefaultConvertToJobCommand<out S : IntentSpec>(
+data class DefaultConvertToJobCommand<out S : AssetSpec>(
   override val spec: S
 ) : ConvertToJobCommand<S>

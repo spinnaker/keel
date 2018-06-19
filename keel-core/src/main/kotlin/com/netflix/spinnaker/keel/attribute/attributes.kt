@@ -18,7 +18,7 @@ package com.netflix.spinnaker.keel.attribute
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import com.netflix.spinnaker.keel.IntentPriority
+import com.netflix.spinnaker.keel.AssetPriority
 
 /**
  * An Attribute is a strictly typed key/value pair. They're attached as a collection of metadata on Intents and used
@@ -35,7 +35,7 @@ abstract class Attribute<out T>
  * Defines the namespace-specific priority of an intent.
  */
 @JsonTypeName("Priority")
-class PriorityAttribute(value: IntentPriority) : Attribute<IntentPriority>("Priority", value)
+class PriorityAttribute(value: AssetPriority) : Attribute<AssetPriority>("Priority", value)
 
 /**
  * Defines whether or not an Intent's desired state should be getting actively converged. Release valve.
