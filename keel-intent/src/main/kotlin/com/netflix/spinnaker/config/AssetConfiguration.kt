@@ -15,20 +15,20 @@
  */
 package com.netflix.spinnaker.config
 
-import com.netflix.spinnaker.keel.intent.SecurityGroupRule
-import com.netflix.spinnaker.keel.intent.pipeline.Trigger
+import com.netflix.spinnaker.keel.asset.SecurityGroupRule
+import com.netflix.spinnaker.keel.asset.pipeline.Trigger
 import com.netflix.spinnaker.kork.jackson.ObjectMapperSubtypeConfigurer.ClassSubtypeLocator
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ComponentScan(basePackages = ["com.netflix.spinnaker.keel.intent"])
+@ComponentScan(basePackages = ["com.netflix.spinnaker.keel.asset"])
 open class AssetConfiguration {
 
   @Bean open fun pipelineTriggerSubTypeLocator() =
-    ClassSubtypeLocator(Trigger::class.java, listOf("com.netflix.spinnaker.keel.intent"))
+    ClassSubtypeLocator(Trigger::class.java, listOf("com.netflix.spinnaker.keel.asset"))
 
   @Bean open fun securityGroupSubTypeLocator() =
-    ClassSubtypeLocator(SecurityGroupRule::class.java, listOf("com.netflix.spinnaker.keel.intent"))
+    ClassSubtypeLocator(SecurityGroupRule::class.java, listOf("com.netflix.spinnaker.keel.asset"))
 }

@@ -19,7 +19,7 @@ import com.netflix.spinnaker.keel.dryrun.ChangeSummary
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 
 /**
- * Processes an specific desired state intent, producing a ConvergeResult, which can then be converted into a
+ * Processes an specific desired state asset, producing a ConvergeResult, which can then be converted into a
  * human-/api-friendly plan, or into actual Spinnaker tasks & executions.
  */
 interface AssetProcessor<in I : Asset<AssetSpec>> {

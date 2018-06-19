@@ -57,7 +57,7 @@ class ExecutionWindowFilter
     }
 
     val executionWindow = asset.getAttribute(ExecutionWindowAttribute::class)!!
-    log.info("Calculating scheduled time for {}; $executionWindow", value("intent", asset.id()))
+    log.info("Calculating scheduled time for {}; $executionWindow", value("asset", asset.id()))
 
     val now = Date.from(clock.instant())
     val scheduledTime: Date
@@ -69,7 +69,7 @@ class ExecutionWindowFilter
       return config.allowExecutionOnFailure
     }
 
-    log.debug("Calculated schedule time for {}: $scheduledTime", value("intent", asset.id()))
+    log.debug("Calculated schedule time for {}: $scheduledTime", value("asset", asset.id()))
 
     return now >= scheduledTime
   }

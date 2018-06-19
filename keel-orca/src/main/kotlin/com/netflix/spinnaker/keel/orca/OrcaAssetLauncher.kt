@@ -35,8 +35,8 @@ open class OrcaAssetLauncher(
 ) : AssetLauncher<OrcaLaunchedAssetResult> {
 
   private val log = LoggerFactory.getLogger(javaClass)
-  private val invocationsId = registry.createId("intent.invocations", listOf(BasicTag("launcher", "orca")))
-  private val invocationTimeId = registry.createId("intent.invocationTime", listOf(BasicTag("launcher", "orca")))
+  private val invocationsId = registry.createId("asset.invocations", listOf(BasicTag("launcher", "orca")))
+  private val invocationTimeId = registry.createId("asset.invocationTime", listOf(BasicTag("launcher", "orca")))
 
   override fun launch(asset: Asset<AssetSpec>) =
     recordedTime(asset) {
@@ -44,7 +44,7 @@ open class OrcaAssetLauncher(
 
 
       if (result.orchestrations.isEmpty()) {
-        log.info("State matches desired intent for {}", value("assetId", asset.id()))
+        log.info("State matches desired asset for {}", value("assetId", asset.id()))
         registry.counter(invocationsId
           .withTags(asset.getMetricTags())
           .withTag("change", result.changeSummary.type.toString())
@@ -64,7 +64,7 @@ open class OrcaAssetLauncher(
       ))
 
       log.info(
-        "Launched orchestrations {} for intent {}",
+        "Launched orchestrations {} for asset {}",
         value("orchestrations", orchestrationIds),
         value("assetId", asset.id())
       )

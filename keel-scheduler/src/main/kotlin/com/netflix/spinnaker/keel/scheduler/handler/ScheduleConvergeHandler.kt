@@ -46,7 +46,7 @@ class ScheduleConvergeHandler
   private val invocations = registry.createId("scheduler.invocations", listOf(BasicTag("type", "convergence")))
 
   override fun handle(message: ScheduleConvergence) {
-    log.info("Scheduling intent convergence work")
+    log.info("Scheduling asset convergence work")
 
     try {
       assetRepository.getIntents(statuses = AssetStatus.scheduleValues())

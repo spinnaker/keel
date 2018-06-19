@@ -49,7 +49,7 @@ data class AssetChangeRecord(
 ) : ActivityRecord()
 
 /**
- * Activity record whenever an intent is converged.
+ * Activity record whenever an asset is converged.
  */
 @JsonTypeName("IntentConvergence")
 data class AssetConvergenceRecord(

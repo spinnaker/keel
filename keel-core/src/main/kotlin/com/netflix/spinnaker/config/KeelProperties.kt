@@ -23,7 +23,7 @@ class KeelProperties {
   var immediatelyRunIntents: Boolean = true
   var maxConvergenceLogEntriesPerIntent: Int = 1000
 
-  var intentPackages: List<String> = listOf("com.netflix.spinnaker.keel.intent")
-  var intentSpecPackages: List<String> = listOf("com.netflix.spinnaker.keel.intent")
+  var intentPackages: List<String> = listOf("com.netflix.spinnaker.keel.asset")
+  var intentSpecPackages: List<String> = listOf("com.netflix.spinnaker.keel.asset")
   var attributePackages: List<String> = listOf("com.netflix.spinnaker.keel.attribute")
 }

@@ -19,7 +19,7 @@ import com.netflix.spinnaker.keel.Asset
 import com.netflix.spinnaker.keel.AssetSpec
 
 /**
- * @param reason User-supplied reason of why the intent is changing.
+ * @param reason User-supplied reason of why the asset is changing.
  * @param assets A list of all intents that are being submitted with this change unit.
  * @param dryRun Whether or not to describe expected actions if applied, but wont' apply any changes.
  */

@@ -78,7 +78,7 @@ class AssetController
       assetRepository.upsertIntent(intent)
 
       if (keelProperties.immediatelyRunIntents) {
-        log.info("Immediately scheduling intent {}", StructuredArguments.value("intent", intent.id()))
+        log.info("Immediately scheduling asset {}", StructuredArguments.value("asset", intent.id()))
         scheduleService.converge(intent)
       }
 

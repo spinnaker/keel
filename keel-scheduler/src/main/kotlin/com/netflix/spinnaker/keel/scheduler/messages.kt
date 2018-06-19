@@ -29,7 +29,7 @@ class ScheduleConvergence : Message()
 @JsonTypeName(value = "convergeIntent")
 data class ConvergeAsset(
   val asset: Asset<AssetSpec>,
-  // The timestamp of which the intent data should be considered stale. If
+  // The timestamp of which the asset data should be considered stale. If
   // stale, the worker should just go to the datastore to refresh state
   // rather than erroring out.
   val stalenessTtl: Long,

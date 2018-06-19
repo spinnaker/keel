@@ -81,7 +81,7 @@ class StateInspector(
     )
 
     if (fields.isNotEmpty()) {
-      log.debug("Actual state has diverged from desired state: $fields (intent: $intentId)")
+      log.debug("Actual state has diverged from desired state: $fields (asset: $intentId)")
     }
     return fields.toSet()
   }

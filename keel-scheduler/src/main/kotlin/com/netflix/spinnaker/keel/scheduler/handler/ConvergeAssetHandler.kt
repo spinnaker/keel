@@ -48,13 +48,13 @@ class ConvergeAssetHandler
 
   private val log = LoggerFactory.getLogger(javaClass)
 
-  private val invocationsId = registry.createId("intent.invocations")
-  private val canceledId = registry.createId("intent.cancellations")
-  private val refreshesId = registry.createId("intent.refreshes")
+  private val invocationsId = registry.createId("asset.invocations")
+  private val canceledId = registry.createId("asset.cancellations")
+  private val refreshesId = registry.createId("asset.refreshes")
 
   override fun handle(message: ConvergeAsset) {
     if (clock.millis() > message.timeoutTtl) {
-      log.warn("Intent timed out, canceling converge for {}", value("intent", message.asset.id()))
+      log.warn("Intent timed out, canceling converge for {}", value("asset", message.asset.id()))
       applicationEventPublisher.publishEvent(AssetConvergeTimeoutEvent(message.asset))
 
       registry.counter(canceledId.withTags("kind", message.asset.kind, "reason", CANCELLATION_REASON_TIMEOUT))
@@ -63,7 +63,7 @@ class ConvergeAssetHandler
 
     val intent = getIntent(message)
     if (intent == null) {
-      log.warn("Intent no longer exists, canceling converge for {}", value("intent", message.asset.id()))
+      log.warn("Intent no longer exists, canceling converge for {}", value("asset", message.asset.id()))
       applicationEventPublisher.publishEvent(AssetConvergeNotFoundEvent(message.asset.id()))
 
       registry.counter(canceledId.withTags("kind", message.asset.kind, "reason", CANCELLATION_REASON_NOT_FOUND))
@@ -84,11 +84,11 @@ class ConvergeAssetHandler
           }
 
           // TODO rz - MonitorOrchestrations is deprecated. Reconsider if we want to totally remove it.
-//          queue.push(MonitorOrchestrations(intent.id(), intent.kind), Duration.ofMillis(10000))
+//          queue.push(MonitorOrchestrations(asset.id(), asset.kind), Duration.ofMillis(10000))
         }
       registry.counter(invocationsId.withTags(message.asset.getMetricTags("result", "success")))
     } catch (t: Throwable) {
-      log.error("Failed launching intent: ${intent.id()}", t)
+      log.error("Failed launching asset: ${intent.id()}", t)
       applicationEventPublisher.publishEvent(
         AssetConvergeFailureEvent(intent, t.message ?: "Could not determine reason", t)
       )
@@ -101,7 +101,7 @@ class ConvergeAssetHandler
       return message.asset
     }
 
-    log.debug("Refreshing intent state for {}", value("intent", message.asset.id()))
+    log.debug("Refreshing asset state for {}", value("asset", message.asset.id()))
     registry.counter(refreshesId.withTags(message.asset.getMetricTags())).increment()
 
     return assetRepository.getIntent(message.asset.id())

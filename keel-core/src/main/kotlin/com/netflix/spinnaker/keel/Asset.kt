@@ -23,17 +23,17 @@ import java.time.Instant
 import kotlin.reflect.KClass
 
 /**
- * @param schema The base intent wrapper version.
- * @param kind The cloudProvider-/config-agnostic intent kind.
- * @param spec The static config for the intent kind.
- * @param status The current status of the intent (active or deleted).
+ * @param schema The base asset wrapper version.
+ * @param kind The cloudProvider-/config-agnostic asset kind.
+ * @param spec The static config for the asset kind.
+ * @param status The current status of the asset (active or deleted).
  * @param labels A user-defined key/value string pair used for indexing & filtering.
  * @param attributes User-land specific metadata and extension data.
- * @param policies User-defined behavioral policies specific to the intent.
+ * @param policies User-defined behavioral policies specific to the asset.
  * @param cas An optional ID-granular pessimistic lock.
- * @param createdAt Timestamp of when the intent was created.
- * @param updatedAt Timestamp of when the intent was last updated.
- * @param lastUpdatedBy Identifier of who or what last updated the intent.
+ * @param createdAt Timestamp of when the asset was created.
+ * @param updatedAt Timestamp of when the asset was last updated.
+ * @param lastUpdatedBy Identifier of who or what last updated the asset.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "kind")
 @JsonInclude(JsonInclude.Include.NON_NULL)

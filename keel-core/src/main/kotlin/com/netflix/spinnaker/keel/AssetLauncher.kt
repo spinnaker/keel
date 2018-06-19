@@ -24,7 +24,7 @@ interface AssetLauncher<out R : LaunchedAssetResult> {
   fun <I : Asset<AssetSpec>> intentProcessor(assetProcessors: List<AssetProcessor<*>>, intent: I)
     = assetProcessors.find { it.supports(intent) }.let {
     if (it == null) {
-      throw DeclarativeException("Could not find processor for intent ${intent.javaClass.simpleName}")
+      throw DeclarativeException("Could not find processor for asset ${intent.javaClass.simpleName}")
     }
     // TODO rz - GROSS AND WRONG
     return@let it as AssetProcessor<I>

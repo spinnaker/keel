@@ -26,7 +26,7 @@ interface AssetRepository {
   fun getIntent(id: String): Asset<AssetSpec>?
 
   /**
-   * Deletes an intent. If [preserveHistory] is true, the Intent will be updated
+   * Deletes an asset. If [preserveHistory] is true, the Intent will be updated
    * to INACTIVE. If false, the record will be physically removed from the
    * persistence store.
    *

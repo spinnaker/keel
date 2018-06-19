@@ -34,7 +34,7 @@ class DryRunAssetLauncher
   private val applicationEventPublisher: ApplicationEventPublisher
 ): AssetLauncher<DryRunLaunchedAssetResult> {
 
-  private val invocationsId = registry.createId("intent.invocations", listOf(BasicTag("launcher", "dryRun")))
+  private val invocationsId = registry.createId("asset.invocations", listOf(BasicTag("launcher", "dryRun")))
 
   override fun launch(asset: Asset<AssetSpec>): DryRunLaunchedAssetResult {
     registry.counter(invocationsId).increment()
