@@ -33,7 +33,7 @@ class AmazonSecurityGroupAsset
   schema = CURRENT_SCHEMA,
   spec = spec
 ) {
-  @JsonIgnore override val id = spec.intentId()
+  @JsonIgnore override val id = spec.assetId()
 
   @JsonIgnore fun parentId(): String? {
     if (spec is AmazonSecurityGroupRootSpec) {
@@ -54,7 +54,7 @@ abstract class AmazonSecurityGroupSpec : SecurityGroupSpec() {
   abstract val outboundRules: MutableSet<SecurityGroupRule>
   abstract val description: String
 
-  abstract fun intentId(): String
+  abstract fun assetId(): String
 }
 
 @JsonTypeName("aws")
@@ -69,7 +69,7 @@ data class AmazonSecurityGroupRootSpec(
   override val description: String
 ) : AmazonSecurityGroupSpec() {
   @JsonIgnore override val cloudProvider = "aws"
-  @JsonIgnore override fun intentId() = "$KIND:$cloudProvider:$accountName:$region:$name"
+  @JsonIgnore override fun assetId() = "$KIND:$cloudProvider:$accountName:$region:$name"
 }
 
 /**
@@ -92,7 +92,7 @@ data class SelfReferencingAmazonSecurityGroupRuleSpec(
   override val description: String
 ) : AmazonSecurityGroupSpec(), AmazonSecurityGroupRuleSpec {
   @JsonIgnore override val cloudProvider = "aws"
-  @JsonIgnore override fun intentId() = "$KIND:aws:$accountName:$region:$name:self:$label"
+  @JsonIgnore override fun assetId() = "$KIND:aws:$accountName:$region:$name:self:$label"
 }
 
 @JsonTypeName("aws.remote")
@@ -110,7 +110,7 @@ data class RemoteAmazonSecurityGroupRuleSpec(
 ) : AmazonSecurityGroupSpec(), AmazonSecurityGroupRuleSpec {
   @JsonIgnore override val cloudProvider = "aws"
   @JsonIgnore override val application = sourceApplication
-  @JsonIgnore override fun intentId() = "$KIND:aws:$accountName:$region:$name:remote[$sourceApplication:$targetApplication]:$label"
+  @JsonIgnore override fun assetId() = "$KIND:aws:$accountName:$region:$name:remote[$sourceApplication:$targetApplication]:$label"
 }
 
 @JsonTypeName("crossAccountRef")

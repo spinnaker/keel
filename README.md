@@ -110,14 +110,14 @@ environment promotion workflows based on application type and other knobs. Pipel
 overall workflow can be tuned on a per-application/-account level.
 * A standard declarative jsonnet library to help write and compose `.spinnaker` files.
 
-[1]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/Intent.kt
-[2]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/IntentProcessor.kt
+[1]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/Asset.kt
+[2]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/AssetProcessor.kt
 [3]: https://github.com/spinnaker/keiko
 [4]: https://github.com/spinnaker/keel/blob/master/keel-scheduler/src/main/kotlin/com/netflix/spinnaker/keel/scheduler/handler/ScheduleConvergeHandler.kt
-[5]: https://github.com/spinnaker/keel/blob/master/keel-scheduler/src/main/kotlin/com/netflix/spinnaker/keel/scheduler/handler/ConvergeIntentHandler.kt
-[6]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/dryrun/DryRunIntentLauncher.kt
+[5]: https://github.com/spinnaker/keel/blob/master/keel-scheduler/src/main/kotlin/com/netflix/spinnaker/keel/scheduler/handler/ConvergeAssetHandler.kt
+[6]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/dryrun/DryRunAssetLauncher.kt
 [7]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/tracing/TraceRepository.kt
-[8]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/IntentSpec.kt
-[9]: https://github.com/spinnaker/keel/blob/master/keel-intent/src/main/kotlin/com/netflix/spinnaker/keel/intents/ApplicationIntent.kt#L162
-[10]: https://github.com/spinnaker/keel/blob/master/keel-intent/src/main/kotlin/com/netflix/spinnaker/keel/intents/ApplicationIntent.kt#L134
+[8]: https://github.com/spinnaker/keel/blob/master/keel-core/src/main/kotlin/com/netflix/spinnaker/keel/AssetSpec.kt
+[9]: https://github.com/spinnaker/keel/blob/master/keel-asset/src/main/kotlin/com/netflix/spinnaker/keel/intents/ApplicationAsset.kt#L162
+[10]: https://github.com/spinnaker/keel/blob/master/keel-asset/src/main/kotlin/com/netflix/spinnaker/keel/intents/ApplicationAsset.kt#L134
 
