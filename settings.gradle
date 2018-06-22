@@ -15,6 +15,7 @@
  */
 
 include "keel-core",
+  "keel-api",
   "keel-test",
   "keel-retrofit",
   "keel-eureka",

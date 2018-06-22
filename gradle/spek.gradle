@@ -1,0 +1,15 @@
+repositories {
+  maven { url "https://dl.bintray.com/jetbrains/spek/"}
+}
+
+dependencies {
+  testCompile "org.jetbrains.spek:spek-api:+"
+  testRuntime "org.jetbrains.spek:spek-junit-platform-engine:+"
+  testRuntime "org.junit.platform:junit-platform-launcher:+"
+}
+
+test {
+  useJUnitPlatform {
+    includeEngines "spek"
+  }
+}
