@@ -1,0 +1,10 @@
+apply from: "$rootDir/gradle/grpc.gradle"
+apply from: "$rootDir/gradle/spek.gradle"
+
+dependencies {
+  compile project(":keel-api")
+
+  compile spinnaker.dependency("awsObjectMapper")
+
+  testCompile project(":keel-api-test")
+}

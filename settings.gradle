@@ -17,6 +17,7 @@
 include "keel-core",
   "keel-api",
   "keel-api-test",
+  "keel-aws",
   "keel-test",
   "keel-retrofit",
   "keel-eureka",

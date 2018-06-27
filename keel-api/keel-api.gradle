@@ -14,40 +14,9 @@
  * limitations under the License.
  */
 
-buildscript {
-  repositories {
-    jcenter()
-  }
-  dependencies {
-    classpath "com.google.protobuf:protobuf-gradle-plugin:0.8.5"
-  }
-}
-
-apply plugin: "com.google.protobuf"
+apply from: "$rootDir/gradle/grpc.gradle"
 apply from: "$rootDir/gradle/spek.gradle"
 
 dependencies {
-  compile "io.grpc:grpc-netty:+"
-  compile "io.grpc:grpc-protobuf:+"
-  compile "io.grpc:grpc-stub:+"
-
   testCompile project(":keel-api-test")
-}
-
-protobuf {
-  protoc {
-    artifact = "com.google.protobuf:protoc:+"
-  }
-  plugins {
-    grpc {
-      artifact = "io.grpc:protoc-gen-grpc-java:+"
-    }
-  }
-  generateProtoTasks {
-    all().each { task ->
-      task.plugins {
-        grpc {}
-      }
-    }
-  }
 }
