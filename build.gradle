@@ -37,8 +37,19 @@ allprojects {
     exclude group: "org.slf4j", module: "slf4j-simple"
   }
 
-  dependencyLocking {
-    lockAllConfigurations()
+  configurations {
+    compileClasspath {
+      resolutionStrategy.activateDependencyLocking()
+    }
+    runtimeClasspath {
+      resolutionStrategy.activateDependencyLocking()
+    }
+    testCompileClasspath {
+      resolutionStrategy.activateDependencyLocking()
+    }
+    testRuntimeClasspath {
+      resolutionStrategy.activateDependencyLocking()
+    }
   }
 }
 
