@@ -26,5 +26,4 @@ buildscript {
 dependencies {
   compile project(":keel-api")
   compile "org.jetbrains.spek:spek-api:1.1.5"
-  compile "io.strikt:strikt-core:+"
 }

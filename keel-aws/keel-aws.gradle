@@ -1,10 +1,12 @@
+apply plugin: "java-library"
 apply from: "$rootDir/gradle/grpc.gradle"
 apply from: "$rootDir/gradle/spek.gradle"
 
 dependencies {
-  compile project(":keel-api")
+  implementation project(":keel-api")
+  implementation project(":keel-clouddriver")
 
-  compile spinnaker.dependency("awsObjectMapper")
-
-  testCompile project(":keel-api-test")
+  testImplementation "io.strikt:strikt-core:+"
+  testImplementation project(":keel-api-test")
 }
+

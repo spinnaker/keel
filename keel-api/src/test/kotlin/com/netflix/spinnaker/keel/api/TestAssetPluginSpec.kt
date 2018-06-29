@@ -8,10 +8,18 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 internal object TestAssetPluginSpec
-  : AssetPluginSpek<TestAssetPlugin, AssetPluginBlockingStub>(
-  ::TestAssetPlugin,
+  : AssetPluginSpek<AssetPluginBlockingStub>(
   AssetPluginGrpc::newBlockingStub,
   {
+
+    beforeGroup {
+      startServer {
+        addService(TestAssetPlugin())
+      }
+    }
+
+    afterGroup(::stopServer)
+
     describe("a generic gRPC service") {
       it("supports a Test request") {
         val request = TypeMetadata
