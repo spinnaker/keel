@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.aws
 
-import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import com.google.protobuf.Internal
 import com.google.protobuf.Message
@@ -12,6 +11,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Moniker
 import com.netflix.spinnaker.keel.clouddriver.model.Network
+import com.netflix.spinnaker.keel.proto.AnyMessage
 import com.netflix.spinnaker.keel.proto.pack
 import com.nhaarman.mockito_kotlin.*
 import org.jetbrains.spek.api.dsl.describe
@@ -131,13 +131,13 @@ internal object AmazonAssetPluginSpec : AssetPluginSpek<AssetPluginBlockingStub>
   }
 )
 
-fun Assertion<Any>.isEmpty() {
+fun Assertion<AnyMessage>.isEmpty() {
   passesIf("is empty") {
     value == ByteString.EMPTY
   }
 }
 
-inline fun <reified T : Message> Assertion<Any>.unpacksTo(): Assertion<Any> =
+inline fun <reified T : Message> Assertion<AnyMessage>.unpacksTo(): Assertion<AnyMessage> =
   assert("unpacks to %s", Internal.getDefaultInstance(T::class.java).descriptorForType.fullName) {
     if (subject.`is`(T::class.java)) {
       pass()
@@ -146,5 +146,5 @@ inline fun <reified T : Message> Assertion<Any>.unpacksTo(): Assertion<Any> =
     }
   }
 
-inline fun <reified T : Message> Assertion<Any>.unpack(): Assertion<T> =
+inline fun <reified T : Message> Assertion<AnyMessage>.unpack(): Assertion<T> =
   map { unpack(T::class.java) }
