@@ -1,12 +1,11 @@
 package com.netflix.spinnaker.keel.api
 
 import com.netflix.spinnaker.keel.proto.shutdownWithin
-import io.grpc.*
+import io.grpc.ManagedChannel
+import io.grpc.ManagedChannelBuilder
+import io.grpc.Server
+import io.grpc.ServerBuilder
 import io.grpc.stub.AbstractStub
-import org.spekframework.spek2.Spek
-import org.spekframework.spek2.dsl.GroupBody
-import org.spekframework.spek2.dsl.Root
-import org.spekframework.spek2.dsl.TestBody
 import java.util.concurrent.TimeUnit.SECONDS
 
 class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel) -> S) {
