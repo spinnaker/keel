@@ -3,39 +3,25 @@ package com.netflix.spinnaker.keel.api
 import com.netflix.spinnaker.keel.proto.shutdownWithin
 import io.grpc.*
 import io.grpc.stub.AbstractStub
-import org.jetbrains.spek.api.Spek
-import org.jetbrains.spek.api.dsl.Spec
+import org.spekframework.spek2.Spek
+import org.spekframework.spek2.dsl.GroupBody
+import org.spekframework.spek2.dsl.Root
+import org.spekframework.spek2.dsl.TestBody
 import java.util.concurrent.TimeUnit.SECONDS
 
-abstract class AssetPluginSpek<S : AbstractStub<S>>(
-  newStub: (ManagedChannel) -> S,
-  private val dsl: AssetPluginSpec<S>.() -> Unit
-) : Spek({
-  dsl(AssetPluginSpecImpl(newStub, this))
-})
-
-interface AssetPluginSpec<S : AbstractStub<S>> : Spec {
-  fun startServer(config: ServerBuilder<*>.() -> Unit)
-  fun stopServer()
-  fun withChannel(block: (S) -> Unit)
-}
-
-internal class AssetPluginSpecImpl<S : AbstractStub<S>>(
-  private val newStub: (ManagedChannel) -> S,
-  private val root: Spec
-) : AssetPluginSpec<S>, Spec by root {
+class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel) -> S) {
   private var server: Server? = null
 
-  override fun startServer(config: ServerBuilder<*>.() -> Unit) {
+  fun startServer(config: ServerBuilder<*>.() -> Unit) {
     server = ServerBuilder.forPort(0).apply(config).build()
       .apply { start() }
   }
 
-  override fun stopServer() {
+  fun stopServer() {
     server?.shutdownWithin(5, SECONDS)
   }
 
-  override fun withChannel(block: (S) -> Unit) {
+  fun withChannel(block: (S) -> Unit) {
     server?.let { server ->
       val channel = ManagedChannelBuilder
         .forTarget("localhost:${server.port}")
@@ -50,5 +36,4 @@ internal class AssetPluginSpecImpl<S : AbstractStub<S>>(
       }
     } ?: throw IllegalStateException("You need to start the server before opening a channel")
   }
-
 }

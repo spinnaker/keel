@@ -23,7 +23,13 @@ buildscript {
   }
 }
 
+repositories {
+  maven { url "https://dl.bintray.com/spekframework/spek-dev" }
+}
+
 dependencies {
   compile project(":keel-api")
-  compile "org.jetbrains.spek:spek-api:1.1.5"
+  compile("org.spekframework.spek2:spek-dsl-jvm:+") {
+    exclude group: "org.jetbrains.kotlin"
+  }
 }
