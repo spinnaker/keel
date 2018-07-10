@@ -42,39 +42,46 @@ class AmazonAssetPlugin(
     val asset = when {
       request.spec.isA<SecurityGroup>() -> {
         val spec: SecurityGroup = request.spec.unpack()
-        cloudDriverService.getSecurityGroup(
-          spec.accountName,
-          CLOUD_PROVIDER,
-          spec.name,
-          spec.region,
-          spec.vpcName?.let { cloudDriverCache.networkBy(it, spec.accountName, spec.region).id }
-        )
+        cloudDriverService.getSecurityGroup(spec)
       }
       else -> null
     }
 
     with(responseObserver) {
       if (asset != null) {
-        onNext(Asset.newBuilder()
-          .apply {
-            typeMetadata = request.typeMetadata
-            spec = SecurityGroup.newBuilder()
-              .apply {
-                name = asset.name
-                accountName = asset.accountName
-                region = asset.region
-                vpcName = asset.vpcId?.let { cloudDriverCache.networkBy(it).name }
-                description = asset.description
-              }
-              .build()
-              .pack()
-          }
-          .build()
-        )
+        onNext(asset.toProto(request))
       } else {
         onNext(null)
       }
       onCompleted()
     }
   }
+
+  // TODO: feels like these things should be further extracted / abstracted out of this class (as and when needed elsewhere)
+
+  private fun CloudDriverService.getSecurityGroup(spec: SecurityGroup): com.netflix.spinnaker.keel.clouddriver.model.SecurityGroup =
+    getSecurityGroup(
+      spec.accountName,
+      CLOUD_PROVIDER,
+      spec.name,
+      spec.region,
+      spec.vpcName?.let { cloudDriverCache.networkBy(it, spec.accountName, spec.region).id }
+    )
+
+  private fun com.netflix.spinnaker.keel.clouddriver.model.SecurityGroup.toProto(request: Asset): Asset =
+    Asset.newBuilder()
+      .apply {
+        typeMetadata = request.typeMetadata
+        spec = SecurityGroup.newBuilder()
+          .also {
+            it.name = name
+            it.accountName = accountName
+            it.region = region
+            it.vpcName = vpcId?.let { cloudDriverCache.networkBy(it).name }
+            it.description = description
+          }
+          .build()
+          .pack()
+      }
+      .build()
 }
