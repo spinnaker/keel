@@ -35,10 +35,10 @@ com.netflix.spinnaker.keiko:keiko-core:2.9.0
 com.netflix.spinnaker.keiko:keiko-redis-spring:2.9.0
 com.netflix.spinnaker.keiko:keiko-redis:2.9.0
 com.netflix.spinnaker.keiko:keiko-spring:2.9.0
-com.netflix.spinnaker.kork:kork-core:1.137.4
-com.netflix.spinnaker.kork:kork-exceptions:1.137.4
-com.netflix.spinnaker.kork:kork-security:1.137.4
-com.netflix.spinnaker.kork:kork-web:1.137.4
+com.netflix.spinnaker.kork:kork-core:1.137.6
+com.netflix.spinnaker.kork:kork-exceptions:1.137.6
+com.netflix.spinnaker.kork:kork-security:1.137.6
+com.netflix.spinnaker.kork:kork-web:1.137.6
 com.netflix.spinnaker.moniker:moniker:0.2.0
 com.squareup.okhttp3:okhttp:3.10.0
 com.squareup.okhttp:okhttp-apache:2.7.5

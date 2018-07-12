@@ -10,6 +10,8 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Moniker
 import com.netflix.spinnaker.keel.clouddriver.model.Network
+import com.netflix.spinnaker.keel.model.OrchestrationRequest
+import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.proto.AnyMessage
 import com.netflix.spinnaker.keel.proto.pack
 import com.nhaarman.mockito_kotlin.*
@@ -17,6 +19,7 @@ import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
 import strikt.api.Assertion
 import strikt.api.expect
+import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import java.util.*
 
@@ -26,10 +29,11 @@ internal object AmazonAssetPluginSpec : Spek({
 
   val cloudDriverService = mock<CloudDriverService>()
   val cloudDriverCache = mock<CloudDriverCache>()
+  val orcaService = mock<OrcaService>()
 
   beforeGroup {
     grpc.startServer {
-      addService(AmazonAssetPlugin(cloudDriverService, cloudDriverCache))
+      addService(AmazonAssetPlugin(cloudDriverService, cloudDriverCache, orcaService))
     }
   }
 
@@ -122,6 +126,38 @@ internal object AmazonAssetPluginSpec : Spek({
                 .isEqualTo(securityGroup)
             }
           }
+        }
+      }
+
+      describe("converging a security group") {
+
+        it("upserts the security group via Orca") {
+          val request = Asset
+            .newBuilder()
+            .apply {
+              typeMetadataBuilder.apply {
+                kind = "aws.SecurityGroup"
+                apiVersion = "1.0"
+              }
+              spec = securityGroup.pack()
+            }
+            .build()
+
+          grpc.withChannel { stub ->
+            val response = stub.converge(request)
+
+            argumentCaptor<OrchestrationRequest>().apply {
+              verify(orcaService).orchestrate(capture())
+              expect(firstValue) {
+                map(OrchestrationRequest::application).isEqualTo(securityGroup.application)
+                map(OrchestrationRequest::job).hasSize(1)
+              }
+            }
+          }
+        }
+
+        afterGroup {
+          reset(cloudDriverService, orcaService)
         }
       }
     }
