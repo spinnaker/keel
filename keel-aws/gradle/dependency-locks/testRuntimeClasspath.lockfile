@@ -22,7 +22,7 @@ com.google.code.gson:gson:2.7
 com.google.errorprone:error_prone_annotations:2.1.2
 com.google.guava:guava:20.0
 com.google.inject:guice:4.1.0
-com.google.protobuf:protobuf-java:3.5.1
+com.google.protobuf:protobuf-java:3.6.0
 com.natpryce:hamkrest:1.4.2.2
 com.netflix.archaius:archaius-core:0.7.6
 com.netflix.eureka:eureka-client:1.9.2
@@ -77,6 +77,7 @@ io.netty:netty-transport:4.1.25.Final
 io.opencensus:opencensus-api:0.12.3
 io.opencensus:opencensus-contrib-grpc-metrics:0.12.3
 io.strikt:strikt-core:0.9.0
+io.strikt:strikt-protobuf:0.9.0
 javax.inject:javax.inject:1
 javax.validation:validation-api:1.1.0.Final
 javax.ws.rs:jsr311-api:1.1.1

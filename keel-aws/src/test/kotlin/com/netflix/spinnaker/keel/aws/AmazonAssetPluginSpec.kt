@@ -1,8 +1,5 @@
 package com.netflix.spinnaker.keel.aws
 
-import com.google.protobuf.ByteString
-import com.google.protobuf.Internal
-import com.google.protobuf.Message
 import com.netflix.spinnaker.keel.api.Asset
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.GrpcStubManager
@@ -12,15 +9,16 @@ import com.netflix.spinnaker.keel.clouddriver.model.Moniker
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.proto.AnyMessage
 import com.netflix.spinnaker.keel.proto.pack
 import com.nhaarman.mockito_kotlin.*
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
-import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import strikt.protobuf.isEmpty
+import strikt.protobuf.unpack
+import strikt.protobuf.unpacksTo
 import java.util.*
 
 internal object AmazonAssetPluginSpec : Spek({
@@ -163,21 +161,3 @@ internal object AmazonAssetPluginSpec : Spek({
     }
   }
 })
-
-fun Assertion<AnyMessage>.isEmpty() {
-  passesIf("is empty") {
-    value == ByteString.EMPTY
-  }
-}
-
-inline fun <reified T : Message> Assertion<AnyMessage>.unpacksTo(): Assertion<AnyMessage> =
-  assert("unpacks to %s", Internal.getDefaultInstance(T::class.java).descriptorForType.fullName) {
-    if (subject.`is`(T::class.java)) {
-      pass()
-    } else {
-      fail(actual = subject.typeUrl)
-    }
-  }
-
-inline fun <reified T : Message> Assertion<AnyMessage>.unpack(): Assertion<T> =
-  map { unpack(T::class.java) }
