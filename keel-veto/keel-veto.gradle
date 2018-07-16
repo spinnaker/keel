@@ -1,0 +1,11 @@
+apply plugin: "java-library"
+apply from: "$rootDir/gradle/spek2.gradle"
+
+dependencies {
+  implementation project(":keel-api")
+  implementation "com.netflix.spinnaker.kork:kork-core:+"
+
+  testImplementation "io.strikt:strikt-protobuf:+"
+  testImplementation project(":keel-api-test")
+}
+

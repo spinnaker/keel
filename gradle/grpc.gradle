@@ -2,7 +2,7 @@ apply plugin: "com.google.protobuf"
 
 dependencies {
   implementation "io.grpc:grpc-netty:+"
-  implementation "io.grpc:grpc-protobuf:+"
+  api "io.grpc:grpc-protobuf:+"
   api "io.grpc:grpc-stub:+"
 }
 

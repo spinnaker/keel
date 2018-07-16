@@ -29,6 +29,7 @@ include "keel-core",
   "keel-scheduler",
   "keel-redis",
   "keel-echo",
+  "keel-veto",
   "keel-web"
 
 rootProject.name = "keel"
