@@ -169,10 +169,10 @@ com.netflix.spectator:spectator-ext-aws:0.70.2
 com.netflix.spectator:spectator-ext-gc:0.70.2
 com.netflix.spectator:spectator-ext-jvm:0.70.2
 com.netflix.spectator:spectator-web-spring:0.70.2
-com.netflix.spinnaker.kork:kork-core:1.137.6
-com.netflix.spinnaker.kork:kork-exceptions:1.137.6
-com.netflix.spinnaker.kork:kork-security:1.137.6
-com.netflix.spinnaker.kork:kork-web:1.137.6
+com.netflix.spinnaker.kork:kork-core:2.0.0
+com.netflix.spinnaker.kork:kork-exceptions:2.0.0
+com.netflix.spinnaker.kork:kork-security:2.0.0
+com.netflix.spinnaker.kork:kork-web:2.0.0
 com.netflix.spinnaker.moniker:moniker:0.2.0
 com.nhaarman:mockito-kotlin:1.5.0
 com.squareup.okhttp3:okhttp:3.10.0
