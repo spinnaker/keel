@@ -3,9 +3,9 @@ apply from: "$rootDir/gradle/spek2.gradle"
 
 dependencies {
   implementation project(":keel-api")
-  implementation "com.netflix.spinnaker.kork:kork-core:+"
+  implementation "com.netflix.spinnaker.kork:kork-core:$korkVersion"
 
-  testImplementation "io.strikt:strikt-protobuf:+"
+  testImplementation "io.strikt:strikt-protobuf:$striktVersion"
   testImplementation project(":keel-api-test")
 }
 

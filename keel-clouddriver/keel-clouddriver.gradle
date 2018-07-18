@@ -1,7 +1,7 @@
 dependencies {
   compile project(":keel-retrofit")
-  compile "com.netflix.spinnaker.moniker:moniker:+"
+  compile "com.netflix.spinnaker.moniker:moniker:$monikerVersion"
 
   testCompile project(":keel-test")
-  testCompile "com.squareup.retrofit:retrofit-mock:1.9.+"
+  testCompile "com.squareup.retrofit:retrofit-mock:$retrofitVersion"
 }

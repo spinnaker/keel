@@ -7,7 +7,7 @@ dependencies {
   implementation project(":keel-clouddriver")
   implementation project(":keel-orca")
 
-  testImplementation "io.strikt:strikt-protobuf:+"
+  testImplementation "io.strikt:strikt-protobuf:$striktVersion"
   testImplementation project(":keel-api-test")
 }
 
