@@ -4,7 +4,7 @@ dependencies {
   implementation "io.grpc:grpc-netty:$grpcVersion"
   api "io.grpc:grpc-protobuf:$grpcVersion"
   api "io.grpc:grpc-stub:$grpcVersion"
-  implementation "org.lognet:grpc-spring-boot-starter:2.4.0"
+  api "org.lognet:grpc-spring-boot-starter:2.4.0"
 }
 
 protobuf {

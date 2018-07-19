@@ -12,7 +12,9 @@ import com.netflix.spinnaker.keel.proto.isA
 import com.netflix.spinnaker.keel.proto.pack
 import com.netflix.spinnaker.keel.proto.unpack
 import io.grpc.stub.StreamObserver
+import org.lognet.springboot.grpc.GRpcService
 
+@GRpcService
 class AmazonAssetPlugin(
   private val cloudDriverService: CloudDriverService,
   private val cloudDriverCache: CloudDriverCache,

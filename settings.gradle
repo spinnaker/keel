@@ -14,23 +14,14 @@
  * limitations under the License.
  */
 
-include "keel-core",
-  "keel-api",
+include "keel-api",
   "keel-api-test",
   "keel-aws",
-  "keel-test",
   "keel-retrofit",
-  "keel-eureka",
-  "keel-front50",
   "keel-orca",
   "keel-clouddriver",
-  "keel-asset",
-  "keel-asset-aws",
-  "keel-scheduler",
-  "keel-redis",
-  "keel-echo",
-  "keel-veto",
-  "keel-web"
+  "keel-grpc",
+  "keel-veto"
 
 rootProject.name = "keel"
 

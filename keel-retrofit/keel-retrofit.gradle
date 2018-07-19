@@ -15,8 +15,6 @@
  */
 
 dependencies {
-  compile project(":keel-core")
-
   compile "com.squareup.retrofit:retrofit:$retrofitVersion"
   compile "com.squareup.okhttp:okhttp-urlconnection:$okHttpVersion"
   compile "com.squareup.okhttp:okhttp-apache:$okHttpVersion"
