@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.proto.pack
 import com.nhaarman.mockito_kotlin.*
 import org.spekframework.spek2.Spek
-import org.spekframework.spek2.style.specification.describe
+import org.spekframework.spek2.style.gherkin.Feature
 import strikt.api.expect
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
@@ -37,125 +37,123 @@ internal object AmazonAssetPluginSpec : Spek({
 
   afterGroup(grpc::stopServer)
 
-  describe("Amazon asset plugin") {
+  val vpc = Network(CLOUD_PROVIDER, UUID.randomUUID().toString(), "vpc1", "prod", "us-west-3")
+  beforeGroup {
+    whenever(cloudDriverCache.networkBy(vpc.name, vpc.account, vpc.region)) doReturn vpc
+    whenever(cloudDriverCache.networkBy(vpc.id)) doReturn vpc
+  }
 
-    val vpc = Network(CLOUD_PROVIDER, UUID.randomUUID().toString(), "vpc1", "prod", "us-west-3")
-    beforeGroup {
-      whenever(cloudDriverCache.networkBy(vpc.name, vpc.account, vpc.region)) doReturn vpc
-      whenever(cloudDriverCache.networkBy(vpc.id)) doReturn vpc
+  afterGroup {
+    reset(cloudDriverCache)
+  }
+
+  val securityGroup = SecurityGroup.newBuilder()
+    .apply {
+      name = "fnord"
+      accountName = vpc.account
+      region = vpc.region
+      vpcName = vpc.name
     }
+    .build()
 
-    afterGroup {
-      reset(cloudDriverCache)
-    }
-
-    describe("Security groups") {
-      val securityGroup = SecurityGroup.newBuilder()
-        .apply {
-          name = "fnord"
-          accountName = vpc.account
-          region = vpc.region
-          vpcName = vpc.name
-        }
-        .build()
-
-      describe("getting the current state of a security group") {
-        describe("no matching security group exists") {
-          beforeGroup {
-            securityGroup.apply {
-              whenever(cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpc.id)) doThrow RETROFIT_NOT_FOUND
-            }
-          }
-
-          afterGroup {
-            reset(cloudDriverService)
-          }
-
-          it("returns null") {
-            val request = Asset
-              .newBuilder()
-              .apply {
-                typeMetadataBuilder.apply {
-                  kind = "aws.SecurityGroup"
-                  apiVersion = "1.0"
-                }
-                specBuilder.apply {
-                  value = securityGroup.toByteString()
-                }
-              }
-              .build()
-
-            grpc.withChannel { stub ->
-              expect(stub.current(request).spec).isEmpty()
-            }
-          }
-        }
-
-        describe("a matching security group exists") {
-          beforeGroup {
-            securityGroup.apply {
-              whenever(cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpc.id)) doReturn com.netflix.spinnaker.keel.clouddriver.model.SecurityGroup(
-                CLOUD_PROVIDER, UUID.randomUUID().toString(), name, description, accountName, region, vpc.id, emptySet(), Moniker(application)
-              )
-            }
-          }
-
-          afterGroup {
-            reset(cloudDriverService)
-          }
-
-          it("returns the existing security group") {
-            val request = Asset
-              .newBuilder()
-              .apply {
-                typeMetadataBuilder.apply {
-                  kind = "aws.SecurityGroup"
-                  apiVersion = "1.0"
-                }
-                spec = securityGroup.pack()
-              }
-              .build()
-
-            grpc.withChannel { stub ->
-              val response = stub.current(request)
-              expect(response.spec)
-                .unpacksTo<SecurityGroup>()
-                .unpack<SecurityGroup>()
-                .isEqualTo(securityGroup)
-            }
-          }
+  Feature("Fetch security group status") {
+    Scenario("no matching security group exists") {
+      beforeGroup {
+        securityGroup.apply {
+          whenever(cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpc.id)) doThrow RETROFIT_NOT_FOUND
         }
       }
 
-      describe("converging a security group") {
+      afterGroup {
+        reset(cloudDriverService)
+      }
 
-        it("upserts the security group via Orca") {
-          val request = Asset
-            .newBuilder()
-            .apply {
-              typeMetadataBuilder.apply {
-                kind = "aws.SecurityGroup"
-                apiVersion = "1.0"
-              }
-              spec = securityGroup.pack()
-            }
-            .build()
-
-          grpc.withChannel { stub ->
-            val response = stub.converge(request)
-
-            argumentCaptor<OrchestrationRequest>().apply {
-              verify(orcaService).orchestrate(capture())
-              expect(firstValue) {
-                map(OrchestrationRequest::application).isEqualTo(securityGroup.application)
-                map(OrchestrationRequest::job).hasSize(1)
-              }
-            }
+      val request = Asset
+        .newBuilder()
+        .apply {
+          typeMetadataBuilder.apply {
+            kind = "aws.SecurityGroup"
+            apiVersion = "1.0"
+          }
+          specBuilder.apply {
+            value = securityGroup.toByteString()
           }
         }
+        .build()
 
-        afterGroup {
-          reset(cloudDriverService, orcaService)
+      Then("returns null") {
+        grpc.withChannel { stub ->
+          expect(stub.current(request).spec).isEmpty()
+        }
+      }
+    }
+
+    Scenario("a matching security group exists") {
+      beforeGroup {
+        securityGroup.apply {
+          whenever(cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpc.id)) doReturn com.netflix.spinnaker.keel.clouddriver.model.SecurityGroup(
+            CLOUD_PROVIDER, UUID.randomUUID().toString(), name, description, accountName, region, vpc.id, emptySet(), Moniker(application)
+          )
+        }
+      }
+
+      afterGroup {
+        reset(cloudDriverService)
+      }
+
+      val request = Asset
+        .newBuilder()
+        .apply {
+          typeMetadataBuilder.apply {
+            kind = "aws.SecurityGroup"
+            apiVersion = "1.0"
+          }
+          spec = securityGroup.pack()
+        }
+        .build()
+
+      Then("returns the existing security group") {
+        grpc.withChannel { stub ->
+          val response = stub.current(request)
+          expect(response.spec)
+            .unpacksTo<SecurityGroup>()
+            .unpack<SecurityGroup>()
+            .isEqualTo(securityGroup)
+        }
+      }
+    }
+  }
+
+  Feature("converging a security group") {
+
+    Scenario("") {
+
+      afterGroup {
+        reset(cloudDriverService, orcaService)
+      }
+
+      val request = Asset
+        .newBuilder()
+        .apply {
+          typeMetadataBuilder.apply {
+            kind = "aws.SecurityGroup"
+            apiVersion = "1.0"
+          }
+          spec = securityGroup.pack()
+        }
+        .build()
+
+      Then("upserts the security group via Orca") {
+        grpc.withChannel { stub ->
+          val response = stub.converge(request)
+
+          argumentCaptor<OrchestrationRequest>().apply {
+            verify(orcaService).orchestrate(capture())
+            expect(firstValue) {
+              map{application}.isEqualTo(securityGroup.application)
+              map{job}.hasSize(1)
+            }
+          }
         }
       }
     }
