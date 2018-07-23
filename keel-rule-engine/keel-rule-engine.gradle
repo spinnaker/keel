@@ -1,0 +1,12 @@
+apply plugin: "java-library"
+apply from: "$rootDir/gradle/grpc.gradle"
+apply from: "$rootDir/gradle/spek2.gradle"
+
+dependencies {
+  implementation project(":keel-api")
+  implementation "org.springframework.cloud:spring-cloud-starter-eureka:+"
+
+  testImplementation "io.strikt:strikt-protobuf:$striktVersion"
+  testImplementation project(":keel-api-test")
+}
+
