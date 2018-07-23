@@ -7,12 +7,14 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Moniker
 import com.netflix.spinnaker.keel.clouddriver.model.Network
+import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.proto.pack
 import com.nhaarman.mockito_kotlin.*
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
+import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
@@ -81,10 +83,12 @@ internal object AmazonAssetPluginSpec : Spek({
         }
         .build()
 
+      val response by memoized {
+        grpc.withChannel { stub -> stub.current(request) }
+      }
+
       Then("returns null") {
-        grpc.withChannel { stub ->
-          expect(stub.current(request).spec).isEmpty()
-        }
+        expect(response.spec).isEmpty()
       }
     }
 
@@ -112,14 +116,15 @@ internal object AmazonAssetPluginSpec : Spek({
         }
         .build()
 
+      val response by memoized {
+        grpc.withChannel { stub -> stub.current(request) }
+      }
+
       Then("returns the existing security group") {
-        grpc.withChannel { stub ->
-          val response = stub.current(request)
-          expect(response.spec)
-            .unpacksTo<SecurityGroup>()
-            .unpack<SecurityGroup>()
-            .isEqualTo(securityGroup)
-        }
+        expect(response.spec)
+          .unpacksTo<SecurityGroup>()
+          .unpack<SecurityGroup>()
+          .isEqualTo(securityGroup)
       }
     }
   }
@@ -143,19 +148,27 @@ internal object AmazonAssetPluginSpec : Spek({
         }
         .build()
 
-      Then("upserts the security group via Orca") {
+      When("the converge request is sent") {
         grpc.withChannel { stub ->
-          val response = stub.converge(request)
+          stub.converge(request)
+        }
+      }
 
-          argumentCaptor<OrchestrationRequest>().apply {
-            verify(orcaService).orchestrate(capture())
-            expect(firstValue) {
-              map{application}.isEqualTo(securityGroup.application)
-              map{job}.hasSize(1)
-            }
+      Then("upserts the security group via Orca") {
+        argumentCaptor<OrchestrationRequest>().apply {
+          verify(orcaService).orchestrate(capture())
+          expect(firstValue) {
+            application.isEqualTo(securityGroup.application)
+            job.hasSize(1)
           }
         }
       }
     }
   }
 })
+
+private val Assertion<OrchestrationRequest>.application: Assertion<String>
+  get() = map(OrchestrationRequest::application)
+
+private val Assertion<OrchestrationRequest>.job: Assertion<List<Job>>
+  get() = map(OrchestrationRequest::job)

@@ -20,7 +20,7 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
     server?.shutdownWithin(5, SECONDS)
   }
 
-  fun withChannel(block: (S) -> Unit) {
+  fun <R> withChannel(block: (S) -> R) : R =
     server?.let { server ->
       val channel = ManagedChannelBuilder
         .forTarget("localhost:${server.port}")
@@ -34,5 +34,4 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
         channel.shutdownWithin(5, SECONDS)
       }
     } ?: throw IllegalStateException("You need to start the server before opening a channel")
-  }
 }
