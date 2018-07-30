@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package com.netflix.spinnaker.keel.api;
+
+option java_multiple_files = true;
+option java_package = "com.netflix.spinnaker.keel.api";
+
+service Registry {
+  rpc registerAssetPlugin(RegisterRequest) returns (RegisterResponse);
+}
+
+message RegisterRequest {
+  string name = 1;
+}
+
+message RegisterResponse {
+  bool succeeded = 1;
+}

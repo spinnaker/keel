@@ -5,9 +5,12 @@ package com.netflix.spinnaker.keel.api;
 option java_multiple_files = true;
 option java_package = "com.netflix.spinnaker.keel.api";
 
+import "google/protobuf/empty.proto";
 import "Asset.proto";
 
 service AssetPlugin {
+  rpc supported(google.protobuf.Empty) returns (SupportedResponse);
+
   rpc supports(TypeMetadata) returns (SupportsResponse);
 
   rpc current(Asset) returns (Asset);
@@ -15,6 +18,10 @@ service AssetPlugin {
   rpc plan(Asset) returns (PlanResponse);
 
   rpc converge(Asset) returns (ConvergeResponse);
+}
+
+message SupportedResponse {
+  repeated TypeMetadata types = 1;
 }
 
 message SupportsResponse {

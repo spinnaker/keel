@@ -34,4 +34,7 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
         channel.shutdownWithin(5, SECONDS)
       }
     } ?: throw IllegalStateException("You need to start the server before opening a channel")
+
+  val port: Int
+    get() = server?.port ?: throw IllegalStateException("server is not started")
 }
