@@ -1,18 +1,18 @@
 package com.netflix.spinnaker.keel.plugins
 
-import com.google.protobuf.Empty
 import com.netflix.appinfo.InstanceInfo
 import com.netflix.discovery.EurekaClient
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginBlockingStub
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginImplBase
 import com.netflix.spinnaker.keel.api.GrpcStubManager
-import com.netflix.spinnaker.keel.api.RegisterRequest
-import com.netflix.spinnaker.keel.api.RegisterResponse
-import com.netflix.spinnaker.keel.api.SupportedResponse
 import com.netflix.spinnaker.keel.api.TypeMetadata
+import com.netflix.spinnaker.keel.api.engine.RegisterRequest
+import com.netflix.spinnaker.keel.api.engine.RegisterResponse
 import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.check
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.inOrder
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.reset
 import com.nhaarman.mockito_kotlin.verify
@@ -21,7 +21,9 @@ import com.nhaarman.mockito_kotlin.whenever
 import io.grpc.stub.StreamObserver
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
+import strikt.api.expect
 import strikt.api.throws
+import strikt.assertions.isTrue
 
 internal object RegistrySpec : Spek({
 
@@ -35,19 +37,7 @@ internal object RegistrySpec : Spek({
     .build()
 
   val grpc = GrpcStubManager(AssetPluginGrpc::newBlockingStub)
-  val plugin = object : AssetPluginImplBase() {
-    override fun supported(request: Empty, responseObserver: StreamObserver<SupportedResponse>) {
-      responseObserver.apply {
-        onNext(
-          SupportedResponse
-            .newBuilder()
-            .addTypes(type)
-            .build()
-        )
-        onCompleted()
-      }
-    }
-  }
+  val plugin = object : AssetPluginImplBase() {}
 
   beforeGroup {
     grpc.startServer {
@@ -91,12 +81,9 @@ internal object RegistrySpec : Spek({
 
     Scenario("a plugin is registered for an asset type") {
       val block: AssetPluginBlockingStub.() -> Unit = mock()
+      val responseHandler: StreamObserver<RegisterResponse> = mock()
 
-      beforeGroup {
-
-      }
-
-      afterGroup { reset(block) }
+      afterGroup { reset(block, responseHandler) }
 
       Given("a plugin was registered") {
         subject.registerAssetPlugin(
@@ -104,15 +91,10 @@ internal object RegistrySpec : Spek({
             .newBuilder()
             .apply {
               name = "aws-asset-plugin"
+              addTypes(type)
             }
             .build(),
-          object : StreamObserver<RegisterResponse> {
-            override fun onNext(value: RegisterResponse) {}
-
-            override fun onError(t: Throwable) {}
-
-            override fun onCompleted() {}
-          }
+          responseHandler
         )
       }
 
@@ -124,6 +106,15 @@ internal object RegistrySpec : Spek({
 
       Then("the callback is invoked") {
         verify(block).invoke(any())
+      }
+
+      Then("the registry responds") {
+        inOrder(responseHandler) {
+          verify(responseHandler).onNext(check {
+            expect(it.succeeded).isTrue()
+          })
+          verify(responseHandler).onCompleted()
+        }
       }
     }
   }

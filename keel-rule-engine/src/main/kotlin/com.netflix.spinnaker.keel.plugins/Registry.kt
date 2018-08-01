@@ -1,18 +1,17 @@
 package com.netflix.spinnaker.keel.plugins
 
-import com.google.protobuf.Empty
 import com.netflix.discovery.EurekaClient
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc
-import com.netflix.spinnaker.keel.api.RegisterRequest
-import com.netflix.spinnaker.keel.api.RegisterResponse
-import com.netflix.spinnaker.keel.api.RegistryGrpc.RegistryImplBase
 import com.netflix.spinnaker.keel.api.TypeMetadata
+import com.netflix.spinnaker.keel.api.engine.RegisterRequest
+import com.netflix.spinnaker.keel.api.engine.RegisterResponse
+import com.netflix.spinnaker.keel.api.engine.RegistryGrpc.RegistryImplBase
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 
 class Registry(
-  val eurekaClient: EurekaClient
+  private val eurekaClient: EurekaClient
 ) : RegistryImplBase() {
 
   private val log = LoggerFactory.getLogger(javaClass)
@@ -31,16 +30,7 @@ class Registry(
     } ?: throw UnsupportedAssetType(type)
 
   override fun registerAssetPlugin(request: RegisterRequest, responseObserver: StreamObserver<RegisterResponse>) {
-    val address = eurekaClient.getNextServerFromEureka(request.name, false)
-    ManagedChannelBuilder
-      .forAddress(address.ipAddr, address.port)
-      .usePlaintext()
-      .build()
-      .let { channel ->
-        AssetPluginGrpc
-          .newBlockingStub(channel)
-          .supported(Empty.getDefaultInstance())
-      }
+    request
       .typesList
       .forEach { type ->
         assetPlugins[type] = request.name
