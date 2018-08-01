@@ -3,10 +3,21 @@ package com.netflix.spinnaker.keel.plugins
 import com.google.protobuf.Empty
 import com.netflix.appinfo.InstanceInfo
 import com.netflix.discovery.EurekaClient
-import com.netflix.spinnaker.keel.api.*
+import com.netflix.spinnaker.keel.api.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginBlockingStub
 import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginImplBase
-import com.nhaarman.mockito_kotlin.*
+import com.netflix.spinnaker.keel.api.GrpcStubManager
+import com.netflix.spinnaker.keel.api.RegisterRequest
+import com.netflix.spinnaker.keel.api.RegisterResponse
+import com.netflix.spinnaker.keel.api.SupportedResponse
+import com.netflix.spinnaker.keel.api.TypeMetadata
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.reset
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.verifyZeroInteractions
+import com.nhaarman.mockito_kotlin.whenever
 import io.grpc.stub.StreamObserver
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
@@ -30,7 +41,7 @@ internal object RegistrySpec : Spek({
         onNext(
           SupportedResponse
             .newBuilder()
-            .apply { typesList.add(type) }
+            .addTypes(type)
             .build()
         )
         onCompleted()
@@ -96,9 +107,9 @@ internal object RegistrySpec : Spek({
             }
             .build(),
           object : StreamObserver<RegisterResponse> {
-            override fun onNext(value: RegisterResponse?) {}
+            override fun onNext(value: RegisterResponse) {}
 
-            override fun onError(t: Throwable?) {}
+            override fun onError(t: Throwable) {}
 
             override fun onCompleted() {}
           }

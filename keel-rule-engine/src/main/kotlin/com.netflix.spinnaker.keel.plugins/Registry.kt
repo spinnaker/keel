@@ -23,6 +23,7 @@ class Registry(
       val address = eurekaClient.getNextServerFromEureka(name, false)
       ManagedChannelBuilder
         .forAddress(address.ipAddr, address.port)
+        .usePlaintext()
         .build()
         .let { channel ->
           AssetPluginGrpc.newBlockingStub(channel).block()
@@ -33,6 +34,7 @@ class Registry(
     val address = eurekaClient.getNextServerFromEureka(request.name, false)
     ManagedChannelBuilder
       .forAddress(address.ipAddr, address.port)
+      .usePlaintext()
       .build()
       .let { channel ->
         AssetPluginGrpc
