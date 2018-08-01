@@ -2,13 +2,13 @@ package com.netflix.spinnaker.keel.plugins
 
 import com.netflix.appinfo.InstanceInfo
 import com.netflix.discovery.EurekaClient
-import com.netflix.spinnaker.keel.api.AssetPluginGrpc
-import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginBlockingStub
-import com.netflix.spinnaker.keel.api.AssetPluginGrpc.AssetPluginImplBase
 import com.netflix.spinnaker.keel.api.GrpcStubManager
 import com.netflix.spinnaker.keel.api.TypeMetadata
 import com.netflix.spinnaker.keel.api.engine.RegisterRequest
 import com.netflix.spinnaker.keel.api.engine.RegisterResponse
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginBlockingStub
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginImplBase
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.check
 import com.nhaarman.mockito_kotlin.doReturn

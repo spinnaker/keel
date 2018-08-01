@@ -1,11 +1,11 @@
 package com.netflix.spinnaker.keel.api
 
-import com.netflix.spinnaker.keel.proto.shutdownWithin
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.Server
 import io.grpc.ServerBuilder
 import io.grpc.stub.AbstractStub
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
 
 class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel) -> S) {
@@ -37,4 +37,22 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
 
   val port: Int
     get() = server?.port ?: throw IllegalStateException("server is not started")
+}
+
+fun Server.shutdownWithin(timeout: Long, unit: TimeUnit) {
+  shutdown()
+  try {
+    assert(awaitTermination(timeout, unit)) { "Server cannot be shut down gracefully" }
+  } finally {
+    shutdownNow()
+  }
+}
+
+fun ManagedChannel.shutdownWithin(timeout: Long, unit: TimeUnit) {
+  shutdown()
+  try {
+    assert(awaitTermination(timeout, unit)) { "Channel cannot be shut down gracefully" }
+  } finally {
+    shutdownNow()
+  }
 }

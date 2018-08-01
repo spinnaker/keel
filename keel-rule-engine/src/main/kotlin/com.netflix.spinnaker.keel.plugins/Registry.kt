@@ -1,11 +1,11 @@
 package com.netflix.spinnaker.keel.plugins
 
 import com.netflix.discovery.EurekaClient
-import com.netflix.spinnaker.keel.api.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.TypeMetadata
 import com.netflix.spinnaker.keel.api.engine.RegisterRequest
 import com.netflix.spinnaker.keel.api.engine.RegisterResponse
 import com.netflix.spinnaker.keel.api.engine.RegistryGrpc.RegistryImplBase
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory

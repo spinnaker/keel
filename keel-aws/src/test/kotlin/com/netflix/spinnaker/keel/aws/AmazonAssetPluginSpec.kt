@@ -1,8 +1,8 @@
 package com.netflix.spinnaker.keel.aws
 
 import com.netflix.spinnaker.keel.api.Asset
-import com.netflix.spinnaker.keel.api.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.GrpcStubManager
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Moniker
@@ -11,7 +11,13 @@ import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.proto.pack
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.argumentCaptor
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.doThrow
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.reset
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
 import strikt.api.Assertion

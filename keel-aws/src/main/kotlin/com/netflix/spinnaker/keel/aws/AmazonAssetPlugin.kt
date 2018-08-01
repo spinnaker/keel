@@ -1,7 +1,13 @@
 package com.netflix.spinnaker.keel.aws
 
-import com.netflix.spinnaker.keel.api.*
-import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.*
+import com.netflix.spinnaker.keel.api.Asset
+import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
+import com.netflix.spinnaker.keel.api.plugin.ConvergeResponse
+import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.CIDRRULE
+import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.HTTPRULE
+import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.REFERENCERULE
+import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.RULE_NOT_SET
+import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.SELFREFERENCINGRULE
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.model.Job
@@ -26,23 +32,6 @@ class AmazonAssetPlugin(
       "aws.SecurityGroup",
       "aws.ClassicLoadBalancer"
     )
-  }
-
-  override fun supports(
-    request: TypeMetadata,
-    responseObserver: StreamObserver<SupportsResponse>
-  ) {
-    with(responseObserver) {
-      onNext(
-        SupportsResponse
-          .newBuilder()
-          .apply {
-            supports = request.kind in SUPPORTED_KINDS
-          }
-          .build()
-      )
-      onCompleted()
-    }
   }
 
   override fun current(request: Asset, responseObserver: StreamObserver<Asset>) {
