@@ -9,20 +9,18 @@ import com.netflix.spinnaker.keel.api.engine.RegisterResponse
 import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
 import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginBlockingStub
 import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginImplBase
-import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.check
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.inOrder
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.reset
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.verifyZeroInteractions
 import com.nhaarman.mockito_kotlin.whenever
 import io.grpc.stub.StreamObserver
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
 import strikt.api.expect
 import strikt.api.throws
+import strikt.assertions.isA
 import strikt.assertions.isTrue
 
 internal object RegistrySpec : Spek({
@@ -37,11 +35,10 @@ internal object RegistrySpec : Spek({
     .build()
 
   val grpc = GrpcStubManager(AssetPluginGrpc::newBlockingStub)
-  val plugin = object : AssetPluginImplBase() {}
 
   beforeGroup {
     grpc.startServer {
-      addService(plugin)
+      addService(object : AssetPluginImplBase() {})
     }
 
     val instanceInfo = InstanceInfo.Builder
@@ -64,26 +61,17 @@ internal object RegistrySpec : Spek({
     }
 
     Scenario("no plugin is registered for an asset type") {
-      val block: AssetPluginBlockingStub.() -> Unit = mock()
-
-      afterGroup { reset(block) }
-
-      When("a client attempts to do something with an asset type") {
+      Then("an exception is thrown attempting to get a plugin for the asset type") {
         throws<UnsupportedAssetType> {
-          subject.withAssetPlugin(type, block)
+          subject.pluginFor(type)
         }
-      }
-
-      Then("the callback is not invoked") {
-        verifyZeroInteractions(block)
       }
     }
 
     Scenario("a plugin is registered for an asset type") {
-      val block: AssetPluginBlockingStub.() -> Unit = mock()
       val responseHandler: StreamObserver<RegisterResponse> = mock()
 
-      afterGroup { reset(block, responseHandler) }
+      afterGroup { reset(responseHandler) }
 
       Given("a plugin was registered") {
         subject.registerAssetPlugin(
@@ -98,22 +86,18 @@ internal object RegistrySpec : Spek({
         )
       }
 
-      When("a client attempts to do something with an asset type") {
-        throws<UnsupportedAssetType> {
-          subject.withAssetPlugin(type, block)
-        }
-      }
-
-      Then("the callback is invoked") {
-        verify(block).invoke(any())
-      }
-
-      Then("the registry responds") {
+      Then("the registration request succeeds") {
         inOrder(responseHandler) {
           verify(responseHandler).onNext(check {
             expect(it.succeeded).isTrue()
           })
           verify(responseHandler).onCompleted()
+        }
+      }
+
+      Then("the registry can now supply a stub for talking to the plugin") {
+        subject.pluginFor(type).let {
+          expect(it).isA<AssetPluginBlockingStub>()
         }
       }
     }

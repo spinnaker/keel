@@ -17,7 +17,7 @@ class Registry(
   private val log = LoggerFactory.getLogger(javaClass)
   private val assetPlugins: MutableMap<TypeMetadata, String> = mutableMapOf()
 
-  fun <R> withAssetPlugin(type: TypeMetadata, block: AssetPluginGrpc.AssetPluginBlockingStub.() -> R): R =
+  fun pluginFor(type: TypeMetadata): AssetPluginGrpc.AssetPluginBlockingStub =
     assetPlugins[type]?.let { name ->
       val address = eurekaClient.getNextServerFromEureka(name, false)
       ManagedChannelBuilder
@@ -25,7 +25,7 @@ class Registry(
         .usePlaintext()
         .build()
         .let { channel ->
-          AssetPluginGrpc.newBlockingStub(channel).block()
+          AssetPluginGrpc.newBlockingStub(channel)
         }
     } ?: throw UnsupportedAssetType(type)
 
