@@ -27,8 +27,9 @@ import io.grpc.stub.StreamObserver
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.gherkin.Feature
 import strikt.api.expect
-import strikt.api.throws
 import strikt.assertions.isA
+import strikt.assertions.isNotNull
+import strikt.assertions.isNull
 import strikt.assertions.isTrue
 
 internal object PluginRegistrationSpec : Spek({
@@ -70,9 +71,9 @@ internal object PluginRegistrationSpec : Spek({
     }
 
     Scenario("no plugin is registered for an asset type") {
-      Then("an exception is thrown attempting to get a plugin for the asset type") {
-        throws<UnsupportedAssetType> {
-          subject.pluginFor(type)
+      Then("no stub is returned for an unknown asset type") {
+        subject.pluginFor(type).let {
+          expect(it).isNull()
         }
       }
     }
@@ -106,7 +107,7 @@ internal object PluginRegistrationSpec : Spek({
 
       Then("the registry can now supply a stub for talking to the plugin") {
         subject.pluginFor(type).let {
-          expect(it).isA<AssetPluginBlockingStub>()
+          expect(it).isNotNull().isA<AssetPluginBlockingStub>()
         }
       }
     }

@@ -18,10 +18,10 @@ class AssetPluginRegistry(
   private val assetPlugins: MutableMap<TypeMetadata, String> = mutableMapOf()
   override val stubFactory = AssetPluginGrpc::newBlockingStub
 
-  fun pluginFor(type: TypeMetadata): AssetPluginBlockingStub =
+  fun pluginFor(type: TypeMetadata): AssetPluginBlockingStub? =
     assetPlugins[type]?.let { name ->
       stubFor(name)
-    } ?: throw UnsupportedAssetType(type)
+    }
 
   override fun register(
     request: RegisterAssetPluginRequest,

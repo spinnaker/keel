@@ -10,11 +10,14 @@ interface Registry<T : AbstractStub<T>> {
   val eurekaClient: EurekaClient
   val stubFactory: (ManagedChannel) -> T
 
-  fun stubFor(name: String): T {
-    val address = eurekaClient.getNextServerFromEureka(name, false)
-    return ManagedChannelBuilder.forAddress(address.ipAddr, address.port)
-      .usePlaintext()
-      .build()
-      .let(stubFactory)
-  }
+  fun stubFor(name: String): T =
+    eurekaClient
+      .getNextServerFromEureka(name, false)
+      .let { address ->
+        ManagedChannelBuilder
+          .forAddress(address.ipAddr, address.port)
+          .usePlaintext()
+          .build()
+          .let(stubFactory)
+      }
 }
