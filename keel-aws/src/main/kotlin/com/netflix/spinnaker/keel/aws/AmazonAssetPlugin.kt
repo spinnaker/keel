@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.aws
 
 import com.netflix.spinnaker.keel.api.Asset
-import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc
+import com.netflix.spinnaker.keel.api.TypeMetadata
 import com.netflix.spinnaker.keel.api.plugin.ConvergeResponse
 import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.CIDRRULE
 import com.netflix.spinnaker.keel.aws.SecurityGroupRule.RuleCase.HTTPRULE
@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.OrchestrationTrigger
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.plugin.AssetPlugin
 import com.netflix.spinnaker.keel.proto.isA
 import com.netflix.spinnaker.keel.proto.pack
 import com.netflix.spinnaker.keel.proto.unpack
@@ -25,13 +26,13 @@ class AmazonAssetPlugin(
   private val cloudDriverService: CloudDriverService,
   private val cloudDriverCache: CloudDriverCache,
   private val orcaService: OrcaService
-) : AssetPluginGrpc.AssetPluginImplBase() {
+) : AssetPlugin() {
 
-  companion object {
-    val SUPPORTED_KINDS = setOf(
-      "aws.SecurityGroup",
-      "aws.ClassicLoadBalancer"
-    )
+  override val supportedTypes: Iterable<TypeMetadata> = setOf(
+    "aws.SecurityGroup",
+    "aws.ClassicLoadBalancer"
+  ).map { kind ->
+    TypeMetadata.newBuilder().setApiVersion("1.0").setKind(kind).build()
   }
 
   override fun current(request: Asset, responseObserver: StreamObserver<Asset>) {
@@ -147,7 +148,7 @@ private fun portRangeRuleToJob(spec: SecurityGroup): JobRules {
         "endPort" to ports.endPort,
         "name" to if (rule.hasReferenceRule()) rule.referenceRule.name else spec.name
       )
-        // TODO: need to handle cross account something like this...
+      // TODO: need to handle cross account something like this...
 //      .let { m ->
 //        if (rule is CrossAccountReferenceSecurityGroupRule) {
 //          changeSummary.addMessage("Adding cross account reference support account ${rule.account}")

@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.api
 
+import com.netflix.appinfo.InstanceInfo
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.Server
@@ -12,15 +13,14 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
   private var server: Server? = null
 
   fun startServer(config: ServerBuilder<*>.() -> Unit) {
-    server = ServerBuilder.forPort(0).apply(config).build()
-      .apply { start() }
+    server = ServerBuilder.forPort(0).apply(config).build().start()
   }
 
   fun stopServer() {
     server?.shutdownWithin(5, SECONDS)
   }
 
-  fun <R> withChannel(block: (S) -> R) : R =
+  fun <R> withChannel(block: (S) -> R): R =
     server?.let { server ->
       val channel = ManagedChannelBuilder
         .forTarget("localhost:${server.port}")
@@ -33,10 +33,19 @@ class GrpcStubManager<S : AbstractStub<S>>(private val newStub: (ManagedChannel)
       } finally {
         channel.shutdownWithin(5, SECONDS)
       }
-    } ?: throw IllegalStateException("You need to start the server before opening a channel")
+    }
+      ?: throw IllegalStateException("You need to start the server before opening a channel")
 
   val port: Int
     get() = server?.port ?: throw IllegalStateException("server is not started")
+
+  val instanceInfo: InstanceInfo
+    get() = InstanceInfo.Builder
+      .newBuilder()
+      .setAppName("grpc")
+      .setIPAddr("localhost")
+      .setPort(port)
+      .build()
 }
 
 fun Server.shutdownWithin(timeout: Long, unit: TimeUnit) {

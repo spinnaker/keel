@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.plugins
 
-import com.netflix.appinfo.InstanceInfo
 import com.netflix.discovery.EurekaClient
 import com.netflix.spinnaker.keel.api.GrpcStubManager
 import com.netflix.spinnaker.keel.api.TypeMetadata
@@ -14,7 +13,7 @@ import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginBlocking
 import com.netflix.spinnaker.keel.api.plugin.AssetPluginGrpc.AssetPluginImplBase
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.check
-import com.nhaarman.mockito_kotlin.doAnswer
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.inOrder
 import com.nhaarman.mockito_kotlin.mock
@@ -50,14 +49,9 @@ internal object PluginRegistrationSpec : Spek({
       addService(object : AssetPluginImplBase() {})
     }
 
-    whenever(eurekaClient.getNextServerFromEureka(any(), eq(false))) doAnswer {
-      InstanceInfo.Builder
-        .newBuilder()
-        .setAppName(it.getArgument(0))
-        .setIPAddr("localhost")
-        .setPort(grpc.port)
-        .build()
-    }
+    val port = grpc.port
+
+    whenever(eurekaClient.getNextServerFromEureka(any(), eq(false))) doReturn grpc.instanceInfo
   }
 
   afterGroup {
