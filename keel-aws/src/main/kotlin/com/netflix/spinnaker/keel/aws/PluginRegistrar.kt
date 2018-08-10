@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.plugin.AssetPlugin
 import io.grpc.ManagedChannelBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import javax.annotation.PostConstruct
 
 @Component
 class PluginRegistrar(
@@ -15,6 +16,7 @@ class PluginRegistrar(
 ) {
   private val log = LoggerFactory.getLogger(javaClass)
 
+  @PostConstruct
   fun registerPlugins() {
     val stub = eurekaClient
       .getNextServerFromEureka("keel", false)
