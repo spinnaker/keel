@@ -16,9 +16,6 @@ class GrpcAssetService(
 ) : AssetService {
   // TODO: this would be ripe for a suspending function if not using gRPC blocking stub
   override fun current(assetContainer: AssetContainer): CurrentAssetPair {
-    if (assetContainer.asset == null) {
-      throw AssetRequired()
-    }
     val typeMetaData = assetContainer.asset.toTypeMetaData()
 
     val stub = registry
@@ -38,8 +35,6 @@ class GrpcAssetService(
   override fun converge(assetContainer: AssetContainer) {
     TODO("not implemented")
   }
-
-  private class AssetRequired : IllegalArgumentException("An asset must be provided to get its current state")
 
   private class PluginMissingDesiredState : RuntimeException("Plugin did not respond with desired asset object")
 }

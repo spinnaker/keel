@@ -86,7 +86,7 @@ fun PartialAsset.toTypeMetaData(): TypeMetadata =
  */
 fun AssetContainerProto.fromProto(): AssetContainer =
   AssetContainer(
-    asset = asset?.fromProto(),
+    asset = asset.fromProto(),
     partialAssets = partialAssetsList.map { it.fromProto() }.toSet()
   )
 
