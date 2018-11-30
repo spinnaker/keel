@@ -15,7 +15,6 @@
  */
 package com.netflix.spinnaker.keel
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.persistence.AssetRepository
 import com.netflix.spinnaker.keel.persistence.InMemoryAssetRepository
 import com.netflix.spinnaker.kork.PlatformComponents
@@ -25,28 +24,26 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Import
 import java.time.Clock
 import javax.annotation.PostConstruct
 
-object MainDefaults {
-  val PROPS = mapOf(
-    "netflix.environment" to "test",
-    "netflix.account" to "\${netflix.environment}",
-    "netflix.stack" to "test",
-    "spring.config.location" to "\${user.home}/.spinnaker/",
-    "spring.application.name" to "keel",
-    "spring.config.name" to "spinnaker,\${spring.application.name}",
-    "spring.profiles.active" to "\${netflix.environment},local"
-  )
-}
+private val DEFAULT_PROPS = mapOf(
+  "netflix.environment" to "test",
+  "netflix.account" to "\${netflix.environment}",
+  "netflix.stack" to "test",
+  "spring.config.location" to "\${user.home}/.spinnaker/",
+  "spring.application.name" to "keel",
+  "spring.config.name" to "spinnaker,\${spring.application.name}",
+  "spring.profiles.active" to "\${netflix.environment},local"
+)
 
-@SpringBootApplication
-@ComponentScan(basePackages = [
-  "com.netflix.spinnaker.config",
-  "com.netflix.spinnaker.keel"
-])
+@SpringBootApplication(
+  scanBasePackages = [
+    "com.netflix.spinnaker.config",
+    "com.netflix.spinnaker.keel"
+  ]
+)
 @Import(PlatformComponents::class)
 class RuleEngineApp {
 
@@ -63,9 +60,6 @@ class RuleEngineApp {
   @Autowired
   lateinit var assetRepository: AssetRepository
 
-  @Autowired
-  lateinit var objectMapper: ObjectMapper
-
   @PostConstruct
   fun initialStatus() {
     log.info("Using {} asset repository implementation", assetRepository.javaClass.simpleName)
@@ -74,7 +68,7 @@ class RuleEngineApp {
 
 fun main(vararg args: String) {
   SpringApplicationBuilder()
-    .properties(MainDefaults.PROPS)
+    .properties(DEFAULT_PROPS)
     .sources<RuleEngineApp>()
     .run(*args)
 }
