@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel
 
 import com.netflix.spinnaker.keel.persistence.AssetRepository
 import com.netflix.spinnaker.keel.persistence.InMemoryAssetRepository
+import com.netflix.spinnaker.keel.plugin.CustomResourceDefinitionLocator
 import com.netflix.spinnaker.keel.plugin.KeelPlugin
 import com.netflix.spinnaker.kork.PlatformComponents
 import org.slf4j.LoggerFactory
@@ -58,11 +59,15 @@ class KeelApplication {
   @ConditionalOnMissingBean
   fun assetRepository(clock: Clock): AssetRepository = InMemoryAssetRepository(clock)
 
+  @Bean
+  @ConditionalOnMissingBean(CustomResourceDefinitionLocator::class)
+  fun noCustomResourceDefinitions(): List<CustomResourceDefinitionLocator> = emptyList()
+
   @Autowired
   lateinit var assetRepository: AssetRepository
 
-  @Autowired
-  lateinit var plugins: List<KeelPlugin>
+  @Autowired(required = false)
+  var plugins: List<KeelPlugin> = emptyList()
 
   @PostConstruct
   fun initialStatus() {
