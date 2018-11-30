@@ -46,7 +46,7 @@ private val DEFAULT_PROPS = mapOf(
   ]
 )
 @Import(PlatformComponents::class)
-class RuleEngineApp {
+class KeelApplication {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -74,7 +74,7 @@ class RuleEngineApp {
 fun main(vararg args: String) {
   SpringApplicationBuilder()
     .properties(DEFAULT_PROPS)
-    .sources<RuleEngineApp>()
+    .sources<KeelApplication>()
     .run(*args)
 }
 
