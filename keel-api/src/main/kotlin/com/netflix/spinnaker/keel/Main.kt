@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel
 
 import com.netflix.spinnaker.keel.persistence.AssetRepository
 import com.netflix.spinnaker.keel.persistence.InMemoryAssetRepository
+import com.netflix.spinnaker.keel.plugin.KeelPlugin
 import com.netflix.spinnaker.kork.PlatformComponents
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -60,9 +61,13 @@ class RuleEngineApp {
   @Autowired
   lateinit var assetRepository: AssetRepository
 
+  @Autowired
+  lateinit var plugins: List<KeelPlugin>
+
   @PostConstruct
   fun initialStatus() {
     log.info("Using {} asset repository implementation", assetRepository.javaClass.simpleName)
+    log.info("Using plugins: {}", plugins.joinToString { it.name })
   }
 }
 
