@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.api.ec2.SecurityGroup
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.ec2.AmazonAssetHandler
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -52,6 +53,7 @@ class ClusterHandler(
             response.launchConfig.ebsOptimized,
             response.launchConfig.ramdiskId,
             response.launchConfig.userData,
+            response.asg.tags.associateBy(Tag::key, Tag::value),
             response.loadBalancers,
             response.let { asg -> asg.securityGroups.map { cloudDriverCache.securityGroupSummaryBy(response.accountName, asg.region, it).name } },
             response.targetGroups,

@@ -25,6 +25,7 @@ data class Cluster(
   val ebsOptimized: Boolean,
   val ramdiskId: String? = null,
   val base64UserData: String? = null,
+  val tags: Map<String, String> = emptyMap(),
 
   // dependencies
   val loadBalancerNames: Collection<String>,
