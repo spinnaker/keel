@@ -1,10 +1,8 @@
 dependencies {
   implementation project(":keel-retrofit")
   implementation "com.netflix.spinnaker.moniker:moniker:+"
-
   implementation "com.fasterxml.jackson.core:jackson-databind:[2.9.6,)"
   implementation "com.fasterxml.jackson.core:jackson-annotations:[2.9.6,)"
-
   implementation "com.fasterxml.jackson.module:jackson-module-kotlin:[2.9.6,)"
   implementation "com.github.jonpeterson:jackson-module-model-versioning:+"
   implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:[2.9.6,)"

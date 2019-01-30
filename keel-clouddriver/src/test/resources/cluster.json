@@ -1,642 +1,342 @@
 {
-  "name": "keel-test",
-  "type": "aws",
-  "accountName": "mgmttest",
-  "serverGroups": [
+  "name": "fletch_test-v000",
+  "region": "eu-west-1",
+  "zones": [
+    "eu-west-1b",
+    "eu-west-1c",
+    "eu-west-1a"
+  ],
+  "instances": [
     {
-      "name": "keel-test-v051",
-      "region": "us-west-2",
-      "zones": [
-        "us-west-2a",
-        "us-west-2b",
-        "us-west-2c"
-      ],
-      "instances": [],
-      "image": {
-        "virtualizationType": "hvm",
-        "imageId": "ami-043f38d940d310dcb",
-        "blockDeviceMappings": [
-          {
-            "deviceName": "/dev/sda1",
-            "ebs": {
-              "deleteOnTermination": true,
-              "snapshotId": "snap-0f94bc93573c27a1f",
-              "volumeSize": 10,
-              "volumeType": "standard",
-              "encrypted": false
-            }
-          },
-          {
-            "deviceName": "/dev/sdb",
-            "virtualName": "ephemeral0"
-          },
-          {
-            "deviceName": "/dev/sdc",
-            "virtualName": "ephemeral1"
-          },
-          {
-            "deviceName": "/dev/sdd",
-            "virtualName": "ephemeral2"
-          },
-          {
-            "deviceName": "/dev/sde",
-            "virtualName": "ephemeral3"
-          }
-        ],
-        "description": "name=keel, arch=x86_64, ancestor_name=xenialbase-x86_64-201811142132-ebs, ancestor_id=ami-0df2d8ccc90e77886, ancestor_version=nflx-base-5.308.0-h1044.b4b3f78",
-        "enaSupport": true,
-        "creationDate": "2018-12-12T10:29:58.000Z",
-        "ownerId": "179727101194",
-        "imageLocation": "179727101194/keel-0.102.0-h113.defc1f8-x86_64-20181212102759-xenial-hvm-sriov-ebs",
-        "rootDeviceType": "ebs",
-        "tags": [
-          {
-            "key": "appversion",
-            "value": "keel-0.102.0-h113.defc1f8/SPINNAKER-package-keel/113"
-          },
-          {
-            "key": "base_ami_version",
-            "value": "nflx-base-5.308.0-h1044.b4b3f78"
-          },
-          {
-            "key": "creation_time",
-            "value": "2018-12-12 10:29:59 UTC"
-          },
-          {
-            "key": "creator",
-            "value": "delivery-engineering@netflix.com"
-          },
-          {
-            "key": "build_host",
-            "value": "https://spinnaker.builds.test.netflix.net/"
-          }
-        ],
-        "public": false,
-        "sriovNetSupport": "simple",
-        "hypervisor": "xen",
-        "name": "keel-0.102.0-h113.defc1f8-x86_64-20181212102759-xenial-hvm-sriov-ebs",
-        "rootDeviceName": "/dev/sda1",
-        "productCodes": [],
-        "state": "available",
-        "imageType": "machine",
-        "architecture": "x86_64"
-      },
-      "launchConfig": {
-        "kernelId": "",
-        "ramdiskId": "",
-        "ebsOptimized": true,
-        "imageId": "ami-043f38d940d310dcb",
-        "userData": "TkVURkxJWF9BUFBfTUVUQURBVEE9ImFtaT1hbWktMDQzZjM4ZDk0MGQzMTBkY2ImYXNnPWtlZWwtdGVzdC12MDUxJnQ9MTU0NDYxMDY0MyZ0eXBlPWF3cyZ2ZXJzaW9uPTEiCk5FVEZMSVhfQVBQX01FVEFEQVRBX0I2ND0iWVcxcFBXRnRhUzB3TkRObU16aGtPVFF3WkRNeE1HUmpZaVpoYzJjOWEyVmxiQzEwWlhOMExYWXdOVEVtZEQweE5UUTBOakV3TmpRekpuUjVjR1U5WVhkekpuWmxjbk5wYjI0OU1RPT0iCk5FVEZMSVhfQVBQX01FVEFEQVRBX1NJRz0ic2lnPVZ1bFRONXpHdUE2Q294aGdGRE1FNzU5dVBRUFoxQWpaVFVKcGJBVGxlZmZQektwMXdLREVMNnJ0QUFMLTRITW5KV05nbmdkdEk2c2c3d0hMcXQtbHVkMlY5dExWQmNJaFE1eXRoQVNhRzBUWWNXdEVVNWhnUUx5ajd1WVFETERJblJ2UGRrbFdkZ09rN3dtbnFIWHBaVTFUOGRWS2loclVfX0U4ZFk2bWVSRzEtazA1bFhvMnFQbkFPb1hKUERyMGItUGRZZFFQdEhab2lGYXJTMVJpWDFqMWxIMlptMXRzQXo4LTVXaFdUZmoyYktMaDR0TGc0d2xDbjQxZ2pFVXlaNF9tOVZWV29EZnJXWHZyLWNla19scEk1dHBEUkZ2X3lFbTVOWFhkOUg2Z1l5T3RQUHduVG9QV2ltUGNZUTdDemJiNkkyUmJaRDFQUVZ3TW5pT3pUX1VVcG5jdDh5MTNmaVZSOUdOdk5kcHhhejVsVXlYRVIwX25GTVRrSkVTQWtvZE5KcWw1UV9KVi1rNlduVGZCb1E2al9KRHNRMXJsRlRBTkRYRnVYU3dSTlBWQUdpSFJhNVRSTXRjSTVpRlQwX2w3YVV0VjRjN3lOakNsTzZaSnJJUTlhdmpWNlJYeG9tMS1hME5FelFOd0dTcE1rUkw2cXo0a2FLLVEtUERBTElVWEFhM19ULUQwTnZQT01USWhhLUJETElQd3lMRXJYNWwxbVpYeHNRZ21jOVVxZkpzRDhwdkJBNnlEelNrQUFEWWdPMXByMW8wZjJrZnlvckJCMjl4MFFxb2dQdGRLVXFTTkctZGhtTjB4U2hWdG53dzA3b3BTOGU2Rmd6LS1wX2V5aC0tLVlNTXl0TUNzOGplV1NZZFE0a3U5OThTVXFQZFcxaTJySmU0JTNEJmtleUlEPTEmc0FsZz1TSEE1MTJ3aXRoUlNBYW5kTUdGMSIKTkVURkxJWF9BQ0NPVU5UPSJtZ210dGVzdCIKTkVURkxJWF9BQ0NPVU5UX1RZUEU9Im1nbXQiCk5FVEZMSVhfRU5WSVJPTk1FTlQ9InRlc3QiCk5FVEZMSVhfQVBQPSJrZWVsIgpORVRGTElYX0FQUFVTRVI9ImtlZWwiCk5FVEZMSVhfU1RBQ0s9InRlc3QiCk5FVEZMSVhfQ0xVU1RFUj0ia2VlbC10ZXN0IgpORVRGTElYX0RFVEFJTD0iIgpORVRGTElYX0FVVE9fU0NBTEVfR1JPVVA9ImtlZWwtdGVzdC12MDUxIgpORVRGTElYX0xBVU5DSF9DT05GSUc9ImtlZWwtdGVzdC12MDUxLTEyMTIyMDE4MTAzMDQzIgpFQzJfUkVHSU9OPSJ1cy13ZXN0LTIiCgo=",
-        "blockDeviceMappings": [
-          {
-            "deviceName": "/dev/sdb",
-            "ebs": {
-              "volumeSize": 40,
-              "volumeType": "standard"
-            }
-          }
-        ],
-        "classicLinkVPCSecurityGroups": [],
-        "instanceType": "m4.large",
-        "keyName": "nf-keypair-521597827845-us-west-2",
-        "launchConfigurationARN": "arn:aws:autoscaling:us-west-2:521597827845:launchConfiguration:5c0d9689-3ac6-40ee-84a8-b2fc2afb0128:launchConfigurationName/keel-test-v051-12122018103043",
-        "iamInstanceProfile": "keelInstanceProfile",
-        "launchConfigurationName": "keel-test-v051-12122018103043",
-        "createdTime": 1544610643840,
-        "securityGroups": [
-          "sg-0f1fd86b",
-          "sg-2f7f5a52"
-        ],
-        "instanceMonitoring": {
-          "enabled": false
-        }
-      },
-      "asg": {
-        "autoScalingGroupName": "keel-test-v051",
-        "autoScalingGroupARN": "arn:aws:autoscaling:us-west-2:521597827845:autoScalingGroup:9fa9cae8-e99f-4cb6-a197-d1188f69651c:autoScalingGroupName/keel-test-v051",
-        "launchConfigurationName": "keel-test-v051-12122018103043",
-        "minSize": 0,
-        "maxSize": 0,
-        "desiredCapacity": 0,
-        "defaultCooldown": 10,
-        "availabilityZones": [
-          "us-west-2a",
-          "us-west-2b",
-          "us-west-2c"
-        ],
-        "loadBalancerNames": [
-          "keel-test-vpc0"
-        ],
-        "targetGroupARNs": [],
-        "healthCheckType": "EC2",
-        "healthCheckGracePeriod": 600,
-        "instances": [],
-        "createdTime": 1544610644910,
-        "suspendedProcesses": [
-          {
-            "processName": "AddToLoadBalancer",
-            "suspensionReason": "User suspended at 2019-01-10T10:36:16Z"
-          },
-          {
-            "processName": "Launch",
-            "suspensionReason": "User suspended at 2019-01-10T10:36:16Z"
-          }
-        ],
-        "enabledMetrics": [],
-        "tags": [
-          {
-            "resourceId": "keel-test-v051",
-            "resourceType": "auto-scaling-group",
-            "key": "spinnaker:application",
-            "value": "keel",
-            "propagateAtLaunch": true
-          },
-          {
-            "resourceId": "keel-test-v051",
-            "resourceType": "auto-scaling-group",
-            "key": "spinnaker:stack",
-            "value": "test",
-            "propagateAtLaunch": true
-          }
-        ],
-        "terminationPolicies": [
-          "Default"
-        ],
-        "newInstancesProtectedFromScaleIn": false,
-        "serviceLinkedRoleARN": "arn:aws:iam::521597827845:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-        "vpczoneIdentifier": "subnet-3dbb1258,subnet-237dfa7a,subnet-46b57a31"
-      },
-      "scalingPolicies": [],
-      "scheduledActions": [],
-      "buildInfo": {
-        "package_name": "keel",
-        "version": "0.102.0",
-        "commit": "defc1f8",
-        "jenkins": {
-          "name": "SPINNAKER-package-keel",
-          "number": "113",
-          "host": "https://spinnaker.builds.test.netflix.net/"
-        }
-      },
-      "vpcId": "vpc-00f82b65",
-      "type": "aws",
-      "cloudProvider": "aws",
-      "targetGroups": [],
-      "createdTime": 1544610644910,
-      "loadBalancers": [
-        "keel-test-vpc0"
-      ],
-      "disabled": true,
-      "capacity": {
-        "min": 0,
-        "max": 0,
-        "desired": 0
-      },
-      "securityGroups": [
-        "sg-0f1fd86b",
-        "sg-2f7f5a52"
-      ],
-      "instanceCounts": {
-        "total": 0,
-        "up": 0,
-        "down": 0,
-        "unknown": 0,
-        "outOfService": 0,
-        "starting": 0
-      },
-      "serverGroupManagers": [],
-      "labels": {},
-      "moniker": {
-        "app": "keel",
-        "cluster": "keel-test",
-        "stack": "test",
-        "sequence": 51
-      },
-      "launchConfigName": "keel-test-v051-12122018103043"
-    },
-    {
-      "name": "keel-test-v052",
-      "region": "us-west-2",
-      "zones": [
-        "us-west-2a",
-        "us-west-2b",
-        "us-west-2c"
-      ],
-      "instances": [
+      "name": "i-04830c6aa5ce30567",
+      "launchTime": 1548881579000,
+      "health": [
         {
-          "name": "i-0f11c217acb47fd67",
-          "launchTime": 1548716060000,
-          "health": [
+          "type": "Amazon",
+          "healthClass": "platform",
+          "state": "Unknown"
+        }
+      ],
+      "providerType": "aws",
+      "cloudProvider": "aws",
+      "healthState": "Unknown",
+      "zone": "eu-west-1c",
+      "humanReadableName": "i-04830c6aa5ce30567",
+      "labels": {},
+      "subnetId": "subnet-08994551",
+      "virtualizationType": "hvm",
+      "amiLaunchIndex": 0,
+      "enaSupport": true,
+      "elasticInferenceAcceleratorAssociations": [],
+      "sourceDestCheck": true,
+      "hibernationOptions": {
+        "configured": false
+      },
+      "isHealthy": false,
+      "instanceId": "i-04830c6aa5ce30567",
+      "vpcId": "vpc-98b413fd",
+      "hypervisor": "xen",
+      "rootDeviceName": "/dev/sda1",
+      "productCodes": [],
+      "state": {
+        "code": 16,
+        "name": "running"
+      },
+      "architecture": "x86_64",
+      "ebsOptimized": false,
+      "imageId": "ami-05a878bfa321e03b4",
+      "blockDeviceMappings": [
+        {
+          "deviceName": "/dev/sda1",
+          "ebs": {
+            "attachTime": 1548881580000,
+            "deleteOnTermination": true,
+            "status": "attached",
+            "volumeId": "vol-0835924c147c83189"
+          }
+        }
+      ],
+      "stateTransitionReason": "",
+      "clientToken": "4735a282-252e-aad7-9d61-0afe725e4435_subnet-08994551_1",
+      "instanceType": "t2.nano",
+      "keyName": "nf-test-keypair-a",
+      "cpuOptions": {
+        "coreCount": 1,
+        "threadsPerCore": 1
+      },
+      "monitoring": {
+        "state": "disabled"
+      },
+      "publicDnsName": "",
+      "iamInstanceProfile": {
+        "arn": "arn:aws:iam::179727101194:instance-profile/fletch_testInstanceProfile",
+        "id": "AIPAIUYM46SJJBZMP3RLM"
+      },
+      "privateIpAddress": "100.66.151.231",
+      "rootDeviceType": "ebs",
+      "tags": [
+        {
+          "key": "spinnaker:application",
+          "value": "fletch_test"
+        },
+        {
+          "key": "aws:autoscaling:groupName",
+          "value": "fletch_test-v000"
+        }
+      ],
+      "elasticGpuAssociations": [],
+      "licenses": [],
+      "networkInterfaces": [
+        {
+          "attachment": {
+            "attachTime": 1548881579000,
+            "attachmentId": "eni-attach-0c01d6b0ec5017483",
+            "deleteOnTermination": true,
+            "deviceIndex": 0,
+            "status": "attached"
+          },
+          "description": "",
+          "groups": [
             {
-              "type": "Amazon",
-              "healthClass": "platform",
-              "state": "Unknown"
+              "groupName": "nf-datacenter",
+              "groupId": "sg-3b0c495e"
             },
             {
-              "loadBalancers": [
-                {
-                  "instanceId": "i-0f11c217acb47fd67",
-                  "loadBalancerType": "classic",
-                  "loadBalancerName": "keel-test-vpc0",
-                  "state": "InService",
-                  "reasonCode": "N/A",
-                  "description": "N/A",
-                  "healthState": "Up"
-                }
-              ],
-              "instanceId": "i-0f11c217acb47fd67",
-              "state": "Up",
-              "type": "LoadBalancer"
+              "groupName": "fletch_test",
+              "groupId": "sg-01be6e67944355aef"
             },
-            {
-              "eurekaAccountName": "eurekatest",
-              "hostName": "100.64.18.157",
-              "lastUpdatedTimestamp": 1548716196104,
-              "overriddenStatus": "UNKNOWN",
-              "healthCheckUrl": "http://100.64.18.157:7001/health",
-              "statusPageUrl": "http://100.64.18.157:7001/health",
-              "instanceType": "m4.large",
-              "vipAddress": "keel-test.netflix.net",
-              "secureVipAddress": "keel-test.netflix.net",
-              "ipAddress": "100.64.18.157",
-              "allowMultipleEurekaPerAccount": false,
-              "asgName": "keel-test-v052",
-              "type": "Discovery",
-              "availabilityZone": "us-west-2a",
-              "accountId": "521597827845",
-              "amiId": "ami-03226e0b4f071a2dc",
-              "instanceId": "i-0f11c217acb47fd67",
-              "application": "KEEL",
-              "eurekaStatus": "UP",
-              "state": "Up",
-              "discoveryType": "Eureka",
-              "status": "UP"
-            }
-          ],
-          "providerType": "aws",
-          "cloudProvider": "aws",
-          "healthState": "Up",
-          "zone": "us-west-2a",
-          "humanReadableName": "i-0f11c217acb47fd67",
-          "labels": {},
-          "subnetId": "subnet-46b57a31",
-          "virtualizationType": "hvm",
-          "amiLaunchIndex": 0,
-          "enaSupport": true,
-          "elasticInferenceAcceleratorAssociations": [],
-          "sourceDestCheck": true,
-          "hibernationOptions": {
-            "configured": false
-          },
-          "isHealthy": true,
-          "instanceId": "i-0f11c217acb47fd67",
-          "vpcId": "vpc-00f82b65",
-          "hypervisor": "xen",
-          "rootDeviceName": "/dev/sda1",
-          "productCodes": [],
-          "state": {
-            "code": 16,
-            "name": "running"
-          },
-          "architecture": "x86_64",
-          "ebsOptimized": true,
-          "imageId": "ami-03226e0b4f071a2dc",
-          "blockDeviceMappings": [
-            {
-              "deviceName": "/dev/sda1",
-              "ebs": {
-                "attachTime": 1548716061000,
-                "deleteOnTermination": true,
-                "status": "attached",
-                "volumeId": "vol-0f39cb5a5eb7aeec2"
-              }
-            },
-            {
-              "deviceName": "/dev/sdb",
-              "ebs": {
-                "attachTime": 1548716061000,
-                "deleteOnTermination": true,
-                "status": "attached",
-                "volumeId": "vol-0449d02f546178372"
-              }
-            }
-          ],
-          "stateTransitionReason": "",
-          "clientToken": "bea5a25a-aea0-27f0-0aaa-01a5b0f553d4_subnet-46b57a31_1",
-          "instanceType": "m4.large",
-          "keyName": "nf-keypair-521597827845-us-west-2",
-          "cpuOptions": {
-            "coreCount": 1,
-            "threadsPerCore": 2
-          },
-          "monitoring": {
-            "state": "disabled"
-          },
-          "publicDnsName": "",
-          "iamInstanceProfile": {
-            "arn": "arn:aws:iam::521597827845:instance-profile/keelInstanceProfile",
-            "id": "AIPAJE2AAMO2U5BE4Z53W"
-          },
-          "privateIpAddress": "100.64.18.157",
-          "rootDeviceType": "ebs",
-          "tags": [
-            {
-              "key": "aws:autoscaling:groupName",
-              "value": "keel-test-v052"
-            },
-            {
-              "key": "spinnaker:application",
-              "value": "keel"
-            },
-            {
-              "key": "spinnaker:stack",
-              "value": "test"
-            }
-          ],
-          "elasticGpuAssociations": [],
-          "licenses": [],
-          "networkInterfaces": [
-            {
-              "attachment": {
-                "attachTime": 1548716060000,
-                "attachmentId": "eni-attach-033354115c81b409a",
-                "deleteOnTermination": true,
-                "deviceIndex": 0,
-                "status": "attached"
-              },
-              "description": "",
-              "groups": [
-                {
-                  "groupName": "nf-infrastructure",
-                  "groupId": "sg-0f1fd86b"
-                },
-                {
-                  "groupName": "keel",
-                  "groupId": "sg-2f7f5a52"
-                }
-              ],
-              "ipv6Addresses": [],
-              "macAddress": "06:d4:93:84:f1:b8",
-              "networkInterfaceId": "eni-00ede0ab146562e1c",
-              "ownerId": "521597827845",
-              "privateDnsName": "ip-100-64-18-157.us-west-2.compute.internal",
-              "privateIpAddress": "100.64.18.157",
-              "privateIpAddresses": [
-                {
-                  "primary": true,
-                  "privateDnsName": "ip-100-64-18-157.us-west-2.compute.internal",
-                  "privateIpAddress": "100.64.18.157"
-                }
-              ],
-              "sourceDestCheck": true,
-              "status": "in-use",
-              "subnetId": "subnet-46b57a31",
-              "vpcId": "vpc-00f82b65"
-            }
-          ],
-          "privateDnsName": "ip-100-64-18-157.us-west-2.compute.internal",
-          "securityGroups": [
             {
               "groupName": "nf-infrastructure",
-              "groupId": "sg-0f1fd86b"
-            },
-            {
-              "groupName": "keel",
-              "groupId": "sg-2f7f5a52"
+              "groupId": "sg-3a0c495f"
             }
           ],
-          "placement": {
-            "availabilityZone": "us-west-2a",
-            "groupName": "",
-            "tenancy": "default"
-          }
+          "ipv6Addresses": [],
+          "macAddress": "0a:78:8f:f4:43:b0",
+          "networkInterfaceId": "eni-0e9b75269bc807674",
+          "ownerId": "179727101194",
+          "privateDnsName": "ip-100-66-151-231.eu-west-1.compute.internal",
+          "privateIpAddress": "100.66.151.231",
+          "privateIpAddresses": [
+            {
+              "primary": true,
+              "privateDnsName": "ip-100-66-151-231.eu-west-1.compute.internal",
+              "privateIpAddress": "100.66.151.231"
+            }
+          ],
+          "sourceDestCheck": true,
+          "status": "in-use",
+          "subnetId": "subnet-08994551",
+          "vpcId": "vpc-98b413fd"
         }
       ],
-      "image": {
-        "virtualizationType": "hvm",
-        "imageId": "ami-03226e0b4f071a2dc",
-        "blockDeviceMappings": [
-          {
-            "deviceName": "/dev/sda1",
-            "ebs": {
-              "deleteOnTermination": true,
-              "snapshotId": "snap-0df6830f296158c74",
-              "volumeSize": 10,
-              "volumeType": "standard",
-              "encrypted": false
-            }
-          },
-          {
-            "deviceName": "/dev/sdb",
-            "virtualName": "ephemeral0"
-          },
-          {
-            "deviceName": "/dev/sdc",
-            "virtualName": "ephemeral1"
-          },
-          {
-            "deviceName": "/dev/sdd",
-            "virtualName": "ephemeral2"
-          },
-          {
-            "deviceName": "/dev/sde",
-            "virtualName": "ephemeral3"
-          }
-        ],
-        "description": "name=keel, arch=x86_64, ancestor_name=xenialbase-x86_64-201812142107-ebs, ancestor_id=ami-0d029828d66eae718, ancestor_version=nflx-base-5.314.0-h1060.a5d98c6",
-        "enaSupport": true,
-        "creationDate": "2019-01-10T10:31:58.000Z",
-        "ownerId": "179727101194",
-        "imageLocation": "179727101194/keel-0.103.0-h114.02ae126-x86_64-20190110102957-xenial-hvm-sriov-ebs",
-        "rootDeviceType": "ebs",
-        "tags": [
-          {
-            "key": "build_host",
-            "value": "https://spinnaker.builds.test.netflix.net/"
-          },
-          {
-            "key": "appversion",
-            "value": "keel-0.103.0-h114.02ae126/SPINNAKER-package-keel/114"
-          },
-          {
-            "key": "creator",
-            "value": "delivery-engineering@netflix.com"
-          },
-          {
-            "key": "creation_time",
-            "value": "2019-01-10 10:31:59 UTC"
-          },
-          {
-            "key": "base_ami_version",
-            "value": "nflx-base-5.314.0-h1060.a5d98c6"
-          }
-        ],
-        "public": false,
-        "sriovNetSupport": "simple",
-        "hypervisor": "xen",
-        "name": "keel-0.103.0-h114.02ae126-x86_64-20190110102957-xenial-hvm-sriov-ebs",
-        "rootDeviceName": "/dev/sda1",
-        "productCodes": [],
-        "state": "available",
-        "imageType": "machine",
-        "architecture": "x86_64"
-      },
-      "launchConfig": {
-        "kernelId": "",
-        "ramdiskId": "",
-        "ebsOptimized": true,
-        "imageId": "ami-03226e0b4f071a2dc",
-        "userData": "TkVURkxJWF9BUFBfTUVUQURBVEE9ImFtaT1hbWktMDMyMjZlMGI0ZjA3MWEyZGMmYXNnPWtlZWwtdGVzdC12MDUyJnQ9MTU0NzExNjM1NyZ0eXBlPWF3cyZ2ZXJzaW9uPTEiCk5FVEZMSVhfQVBQX01FVEFEQVRBX0I2ND0iWVcxcFBXRnRhUzB3TXpJeU5tVXdZalJtTURjeFlUSmtZeVpoYzJjOWEyVmxiQzEwWlhOMExYWXdOVEltZEQweE5UUTNNVEUyTXpVM0puUjVjR1U5WVhkekpuWmxjbk5wYjI0OU1RPT0iCk5FVEZMSVhfQVBQX01FVEFEQVRBX1NJRz0ic2lnPXVVWUJleFhDZWJzTWZPWDJ5ZlBSdXJXbDRfenVWRTkwU3BtOWdBZU1KR3FCM0s4S2N6VjhzT2VEclBvWFVseG93UjExaUlGYXFMU2tVbk1iOTBFTzhWWDk0Mm1GR0JmNi1kM0l1MmJjWDlCWWpYa0xOOXhhUkpMZk5QMERtZWp2N1RhYmR0aGF6dzV1RzJZbUtXS1Y0UUxQd2UwWDRqNmpMUDBnTmFfQlhReEZhR2FyUEM4LWxQUV9ZTUMtQkV6UEMzT0hob09LNjdOdWJTWHU5U1BWUWRrQzhOemtPSUlZY25QaU4tT0VNVTE5LVdfMTlxeG1tWF9TZ0xsbkluOHpMeW1tSDFDb2lBUFN1RmlHY0ZyTlZkQlhNVnpvQmNBbTUtM0lnRlRtTHk3ZlhSdjN0X1lOZUJmMDJXRFVrOEpGbVM2Tnpnc2VzWkszUXYzaFJMN0JrNTkwQzVmMXlKOHhnOUw3ZHJETDlzZ1gxYy1HZzJ5NHR3VG5ZS0Q3WEI3akhoRktnNWc0OTI4Y2p6b2FfdHFOVkRzLVV6MW5JUkxXcFlZZldGRFRGcUxDZlhkWkFCZHFwa3BRbDVaN2x5SzV0VEtQUE9zc1Q1QWxuMFMtd2U2RG1IMTljY2xuVVJ4R1ROUTZtb3VzU3Vsa3RXTGhfNlFLVkpZai0wczEzdUI5NU1kd2VjOWtGUmtFeXNBMjlNTzRDc0F5aXNVRUhIVElhdkQtNU4zWXl0bTNNeFcwcmhqbDJ3STcwSWZRRng1QjFqdmh3enpocjN0emEtZmZaN1JmalBQMXlhcmZ3QlZ1ZG43bXJjQTB3N3daNUFCRXZqcERPYjkweE16RlpzRVYyNjNuMnZxck1YWW1GVVB5YWZkWW52Mzk1d0J5MkIwbmpFS0t0SHhmYTJzJTNEJmtleUlEPTEmc0FsZz1TSEE1MTJ3aXRoUlNBYW5kTUdGMSIKTkVURkxJWF9BQ0NPVU5UPSJtZ210dGVzdCIKTkVURkxJWF9BQ0NPVU5UX1RZUEU9Im1nbXQiCk5FVEZMSVhfRU5WSVJPTk1FTlQ9InRlc3QiCk5FVEZMSVhfQVBQPSJrZWVsIgpORVRGTElYX0FQUFVTRVI9ImtlZWwiCk5FVEZMSVhfU1RBQ0s9InRlc3QiCk5FVEZMSVhfQ0xVU1RFUj0ia2VlbC10ZXN0IgpORVRGTElYX0RFVEFJTD0iIgpORVRGTElYX0FVVE9fU0NBTEVfR1JPVVA9ImtlZWwtdGVzdC12MDUyIgpORVRGTElYX0xBVU5DSF9DT05GSUc9ImtlZWwtdGVzdC12MDUyLTAxMTAyMDE5MTAzMjM3IgpFQzJfUkVHSU9OPSJ1cy13ZXN0LTIiCgo=",
-        "blockDeviceMappings": [
-          {
-            "deviceName": "/dev/sdb",
-            "ebs": {
-              "volumeSize": 40,
-              "volumeType": "standard"
-            }
-          }
-        ],
-        "classicLinkVPCSecurityGroups": [],
-        "instanceType": "m4.large",
-        "keyName": "nf-keypair-521597827845-us-west-2",
-        "launchConfigurationARN": "arn:aws:autoscaling:us-west-2:521597827845:launchConfiguration:10b08bc9-7666-46d8-baf6-01e77bab67eb:launchConfigurationName/keel-test-v052-01102019103237",
-        "iamInstanceProfile": "keelInstanceProfile",
-        "launchConfigurationName": "keel-test-v052-01102019103237",
-        "createdTime": 1547116357700,
-        "securityGroups": [
-          "sg-0f1fd86b",
-          "sg-2f7f5a52"
-        ],
-        "instanceMonitoring": {
-          "enabled": false
-        }
-      },
-      "asg": {
-        "autoScalingGroupName": "keel-test-v052",
-        "autoScalingGroupARN": "arn:aws:autoscaling:us-west-2:521597827845:autoScalingGroup:8cd9a0fd-750e-4615-8d79-3bb46d68110d:autoScalingGroupName/keel-test-v052",
-        "launchConfigurationName": "keel-test-v052-01102019103237",
-        "minSize": 1,
-        "maxSize": 1,
-        "desiredCapacity": 1,
-        "defaultCooldown": 10,
-        "availabilityZones": [
-          "us-west-2a",
-          "us-west-2b",
-          "us-west-2c"
-        ],
-        "loadBalancerNames": [
-          "keel-test-vpc0"
-        ],
-        "targetGroupARNs": [],
-        "healthCheckType": "EC2",
-        "healthCheckGracePeriod": 600,
-        "instances": [
-          {
-            "instanceId": "i-0f11c217acb47fd67",
-            "availabilityZone": "us-west-2a",
-            "lifecycleState": "InService",
-            "healthStatus": "Healthy",
-            "launchConfigurationName": "keel-test-v052-01102019103237",
-            "protectedFromScaleIn": false
-          }
-        ],
-        "createdTime": 1547116358471,
-        "suspendedProcesses": [],
-        "enabledMetrics": [],
-        "tags": [
-          {
-            "resourceId": "keel-test-v052",
-            "resourceType": "auto-scaling-group",
-            "key": "spinnaker:application",
-            "value": "keel",
-            "propagateAtLaunch": true
-          },
-          {
-            "resourceId": "keel-test-v052",
-            "resourceType": "auto-scaling-group",
-            "key": "spinnaker:stack",
-            "value": "test",
-            "propagateAtLaunch": true
-          }
-        ],
-        "terminationPolicies": [
-          "Default"
-        ],
-        "newInstancesProtectedFromScaleIn": false,
-        "serviceLinkedRoleARN": "arn:aws:iam::521597827845:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-        "vpczoneIdentifier": "subnet-3dbb1258,subnet-237dfa7a,subnet-46b57a31"
-      },
-      "scalingPolicies": [],
-      "scheduledActions": [],
-      "buildInfo": {
-        "package_name": "keel",
-        "version": "0.103.0",
-        "commit": "02ae126",
-        "jenkins": {
-          "name": "SPINNAKER-package-keel",
-          "number": "114",
-          "host": "https://spinnaker.builds.test.netflix.net/"
-        }
-      },
-      "vpcId": "vpc-00f82b65",
-      "type": "aws",
-      "cloudProvider": "aws",
-      "targetGroups": [],
-      "createdTime": 1547116358471,
-      "loadBalancers": [
-        "keel-test-vpc0"
-      ],
-      "disabled": false,
-      "capacity": {
-        "min": 1,
-        "max": 1,
-        "desired": 1
-      },
+      "privateDnsName": "ip-100-66-151-231.eu-west-1.compute.internal",
       "securityGroups": [
-        "sg-0f1fd86b",
-        "sg-2f7f5a52"
+        {
+          "groupName": "nf-datacenter",
+          "groupId": "sg-3b0c495e"
+        },
+        {
+          "groupName": "fletch_test",
+          "groupId": "sg-01be6e67944355aef"
+        },
+        {
+          "groupName": "nf-infrastructure",
+          "groupId": "sg-3a0c495f"
+        }
       ],
-      "instanceCounts": {
-        "total": 1,
-        "up": 1,
-        "down": 0,
-        "unknown": 0,
-        "outOfService": 0,
-        "starting": 0
-      },
-      "serverGroupManagers": [],
-      "labels": {},
-      "moniker": {
-        "app": "keel",
-        "cluster": "keel-test",
-        "stack": "test",
-        "sequence": 52
-      },
-      "launchConfigName": "keel-test-v052-01102019103237"
+      "placement": {
+        "availabilityZone": "eu-west-1c",
+        "groupName": "",
+        "tenancy": "default"
+      }
     }
   ],
+  "image": {
+    "virtualizationType": "hvm",
+    "imageId": "ami-05a878bfa321e03b4",
+    "blockDeviceMappings": [
+      {
+        "deviceName": "/dev/sda1",
+        "ebs": {
+          "deleteOnTermination": true,
+          "snapshotId": "snap-0a5960c8aeb1fce61",
+          "volumeSize": 10,
+          "volumeType": "standard",
+          "encrypted": false
+        }
+      },
+      {
+        "deviceName": "/dev/sdb",
+        "virtualName": "ephemeral0"
+      },
+      {
+        "deviceName": "/dev/sdc",
+        "virtualName": "ephemeral1"
+      },
+      {
+        "deviceName": "/dev/sdd",
+        "virtualName": "ephemeral2"
+      },
+      {
+        "deviceName": "/dev/sde",
+        "virtualName": "ephemeral3"
+      }
+    ],
+    "description": "name=mimirdemo, arch=x86_64, ancestor_name=xenialbase-x86_64-201811142132-ebs, ancestor_id=ami-0fe383ecea7f75eac, ancestor_version=nflx-base-5.308.0-h1044.b4b3f78",
+    "enaSupport": true,
+    "creationDate": "2018-11-15T23:13:30.000Z",
+    "ownerId": "179727101194",
+    "imageLocation": "179727101194/mimirdemo-3.16.0-h205.121d4ac-x86_64-20181115184054-xenial-hvm-sriov-ebs-ebs-ebs",
+    "rootDeviceType": "ebs",
+    "tags": [
+      {
+        "key": "appversion",
+        "value": "mimirdemo-3.16.0-h205.121d4ac/ZZ-WAPP-mimirdemo/205"
+      },
+      {
+        "key": "creator",
+        "value": "ajordens@netflix.com"
+      },
+      {
+        "key": "base_ami_version",
+        "value": "nflx-base-5.308.0-h1044.b4b3f78"
+      },
+      {
+        "key": "creation_time",
+        "value": "2018-11-15 23:13:31 UTC"
+      },
+      {
+        "key": "build_host",
+        "value": "https://opseng.builds.test.netflix.net/"
+      },
+      {
+        "key": "stack",
+        "value": "test"
+      }
+    ],
+    "public": false,
+    "sriovNetSupport": "simple",
+    "hypervisor": "xen",
+    "name": "mimirdemo-3.16.0-h205.121d4ac-x86_64-20181115184054-xenial-hvm-sriov-ebs-ebs-ebs",
+    "rootDeviceName": "/dev/sda1",
+    "productCodes": [],
+    "state": "available",
+    "imageType": "machine",
+    "architecture": "x86_64"
+  },
+  "launchConfig": {
+    "kernelId": "",
+    "ramdiskId": "",
+    "ebsOptimized": false,
+    "imageId": "ami-05a878bfa321e03b4",
+    "userData": "TkVURkxJWF9BUFBfTUVUQURBVEE9ImFtaT1hbWktMDVhODc4YmZhMzIxZTAzYjQmYXNnPWZsZXRjaF90ZXN0LXYwMDAmdD0xNTQ0NjU2MTMzJnR5cGU9YXdzJnZlcnNpb249MSIKTkVURkxJWF9BUFBfTUVUQURBVEFfQjY0PSJZVzFwUFdGdGFTMHdOV0U0TnpoaVptRXpNakZsTUROaU5DWmhjMmM5Wm14bGRHTm9YM1JsYzNRdGRqQXdNQ1owUFRFMU5EUTJOVFl4TXpNbWRIbHdaVDFoZDNNbWRtVnljMmx2YmoweCIKTkVURkxJWF9BUFBfTUVUQURBVEFfU0lHPSJzaWc9VGhVRFhMa1VSRzhVODBoWmlyNl94ZHpmTmR0NzlmMTRwSUdUNUZMcHFYTmduYVhrelNOc2FWUFI3ZEJqamtHOUk4LU5ydUJZYmRqN3l3LUwtV251aGpWY2gwZ1A0T1ZQNktBd1pPUXRnNDMyTkE4Zzh4MlF1cDA2aVBKUERNUWlYNng0ekVWdjlkcERJemFLcXgxb0lUVjFQWGVvVTRjODYwNVZVUXY0TWFDZC1vdDhkRDZ1T3ZsYVppbXZEdXdERnFhZDF5NFZIWFNYQzJ6elZqX1RxT0M4d3dOU2hPRVZ5ZmhoT0dsblRJMmg2Zi1qSTFwa0s3alFGT2hJeVg4VnBQdGJUUm9Tb1BobU42X1hxdnk0cHhYOEdXaTNEV0t5U0VxZGpwWWJCUFJ0UXQxYnJPX1FSNVpIeVgxRGZ1MHdndjMtWmpOOGxVblUtZjJHTHRxQU9wbjBEc1VIcFhSTTRkWHQtYl9abFJmeEZDTFh5cG5KaWRjdHF1Vm82WWdQNDJDN2VqakNfM2NXN282SFctRWlENlVFQjg3THVDMnhsb3BXRkNSZFdXSVVDX2c4WjBfUzJaMWY4ckJ3Mmg4NHVIbmZQNDVYTnBoUjJTV2tKb0tWNjA5TmpCajkwSWwzZzBBR3ZmRjdxNFZadTlRc2VHUU5fVl9nRTZjZDBFQjAyRldVZmVFNFFhcmNjcHIyNXFaUDAwdW5GaU9USWRtUXJKY3FzcEtWM2VidXRxbnZmVzFDNDVqbGtkQzIxUE1uZE13cE5DRzVoa01GaGNrLTEwLWp2S2ZHejVSbFpITnVDcXR6djRMR3ZxVEpGcU1rTzZONDQySHkxUGdUaVd0ZkptWGpMdDZvbkR0N1YtMVJiYjNLdVpncWxQMU5SNHh3cWstUnlCQlFjZFElM0Qma2V5SUQ9MSZzQWxnPVNIQTUxMndpdGhSU0FhbmRNR0YxIgpORVRGTElYX0FDQ09VTlQ9InRlc3QiCk5FVEZMSVhfQUNDT1VOVF9UWVBFPSJtYWluIgpORVRGTElYX0VOVklST05NRU5UPSJ0ZXN0IgpORVRGTElYX0FQUD0iZmxldGNoX3Rlc3QiCk5FVEZMSVhfQVBQVVNFUj0iZmxldGNoX3Rlc3QiCk5FVEZMSVhfU1RBQ0s9IiIKTkVURkxJWF9DTFVTVEVSPSJmbGV0Y2hfdGVzdCIKTkVURkxJWF9ERVRBSUw9IiIKTkVURkxJWF9BVVRPX1NDQUxFX0dST1VQPSJmbGV0Y2hfdGVzdC12MDAwIgpORVRGTElYX0xBVU5DSF9DT05GSUc9ImZsZXRjaF90ZXN0LXYwMDAtMTIxMjIwMTgyMzA4NTIiCkVDMl9SRUdJT049ImV1LXdlc3QtMSIKCg==",
+    "blockDeviceMappings": [],
+    "classicLinkVPCSecurityGroups": [],
+    "instanceType": "t2.nano",
+    "keyName": "nf-test-keypair-a",
+    "launchConfigurationARN": "arn:aws:autoscaling:eu-west-1:179727101194:launchConfiguration:e26b5e8c-e107-4f16-87f3-15ca625f6d00:launchConfigurationName/fletch_test-v000-12122018230852",
+    "iamInstanceProfile": "fletch_testInstanceProfile",
+    "launchConfigurationName": "fletch_test-v000-12122018230852",
+    "createdTime": 1544656134371,
+    "securityGroups": [
+      "sg-01be6e67944355aef",
+      "sg-3a0c495f",
+      "sg-3b0c495e"
+    ],
+    "instanceMonitoring": {
+      "enabled": false
+    }
+  },
+  "asg": {
+    "autoScalingGroupName": "fletch_test-v000",
+    "autoScalingGroupARN": "arn:aws:autoscaling:eu-west-1:179727101194:autoScalingGroup:d3827687-6e62-4f1e-a689-e46ca20c6d40:autoScalingGroupName/fletch_test-v000",
+    "launchConfigurationName": "fletch_test-v000-12122018230852",
+    "minSize": 1,
+    "maxSize": 1,
+    "desiredCapacity": 1,
+    "defaultCooldown": 10,
+    "availabilityZones": [
+      "eu-west-1b",
+      "eu-west-1c",
+      "eu-west-1a"
+    ],
+    "loadBalancerNames": [],
+    "targetGroupARNs": [],
+    "healthCheckType": "EC2",
+    "healthCheckGracePeriod": 600,
+    "instances": [
+      {
+        "instanceId": "i-04830c6aa5ce30567",
+        "availabilityZone": "eu-west-1c",
+        "lifecycleState": "InService",
+        "healthStatus": "Healthy",
+        "launchConfigurationName": "fletch_test-v000-12122018230852",
+        "protectedFromScaleIn": false
+      }
+    ],
+    "createdTime": 1544656135184,
+    "suspendedProcesses": [],
+    "enabledMetrics": [],
+    "tags": [
+      {
+        "resourceId": "fletch_test-v000",
+        "resourceType": "auto-scaling-group",
+        "key": "spinnaker:application",
+        "value": "fletch_test",
+        "propagateAtLaunch": true
+      }
+    ],
+    "terminationPolicies": [
+      "Default"
+    ],
+    "newInstancesProtectedFromScaleIn": false,
+    "serviceLinkedRoleARN": "arn:aws:iam::179727101194:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+    "vpczoneIdentifier": "subnet-c378eba6,subnet-15e45f62,subnet-08994551"
+  },
+  "scalingPolicies": [],
+  "scheduledActions": [],
+  "buildInfo": {
+    "package_name": "mimirdemo",
+    "version": "3.16.0",
+    "commit": "121d4ac",
+    "jenkins": {
+      "name": "ZZ-WAPP-mimirdemo",
+      "number": "205",
+      "host": "https://opseng.builds.test.netflix.net/"
+    }
+  },
+  "vpcId": "vpc-98b413fd",
+  "type": "aws",
+  "cloudProvider": "aws",
   "targetGroups": [],
-  "loadBalancers": [
-    {
-      "account": "mgmttest",
-      "name": "keel-test-vpc0",
-      "region": "us-west-2",
-      "serverGroups": [],
-      "targetGroups": [],
-      "type": "aws",
-      "cloudProvider": "aws",
-      "moniker": {
-        "app": "keel",
-        "cluster": "keel-test-vpc0",
-        "detail": "vpc0",
-        "stack": "test"
-      },
-      "labels": {}
-    }
+  "createdTime": 1544656135184,
+  "disabled": false,
+  "loadBalancers": [],
+  "capacity": {
+    "min": 1,
+    "max": 1,
+    "desired": 1
+  },
+  "securityGroups": [
+    "sg-01be6e67944355aef",
+    "sg-3a0c495f",
+    "sg-3b0c495e"
   ],
+  "instanceCounts": {
+    "total": 1,
+    "up": 0,
+    "down": 0,
+    "unknown": 1,
+    "outOfService": 0,
+    "starting": 0
+  },
+  "serverGroupManagers": [],
+  "labels": {},
   "moniker": {
-    "app": "keel",
-    "cluster": "keel-test",
-    "stack": "test"
-  }
+    "app": "fletch_test",
+    "cluster": "fletch_test",
+    "sequence": 0
+  },
+  "launchConfigName": "fletch_test-v000-12122018230852",
+  "accountName": "test"
 }

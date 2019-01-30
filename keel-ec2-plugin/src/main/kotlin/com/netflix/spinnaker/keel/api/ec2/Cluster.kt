@@ -11,12 +11,12 @@ data class Cluster(
   // what
   val application: String,
   val name: String,
-  val packageName: String,
+  val imageId: String,
 
   // where
   val accountName: String,
-  val regions: Set<String>,
-  val availabilityZones: Map<String, Set<String>>?,
+  val region: String,
+  val availabilityZones: Collection<String>,
   val vpcName: String?,
 
   // instances
@@ -27,13 +27,13 @@ data class Cluster(
   val base64UserData: String? = null,
 
   // dependencies
-  val loadBalancerNames: Set<String>,
-  val securityGroupNames: Set<String>,
-  val targetGroups: Set<String> = emptySet(),
+  val loadBalancerNames: Collection<String>,
+  val securityGroupNames: Collection<String>,
+  val targetGroups: Collection<String> = emptySet(),
 
   // health
   val instanceMonitoring: Boolean,
-  val enabledMetrics: List<Metric>,
+  val enabledMetrics: Collection<Metric>,
   val cooldown: Duration = Duration.ofSeconds(10),
   val healthCheckGracePeriod: Duration = Duration.ofSeconds(600),
   val healthCheckType: HealthCheckType = EC2,
@@ -43,14 +43,7 @@ data class Cluster(
   val keyPair: String,
 
   // scaling
-  val suspendedProcesses: Set<ScalingProcess> = emptySet(),
-  val terminationPolicies: Set<TerminationPolicy> = setOf(OldestInstance),
-
-  val legacyUdf: Boolean = false,
-
-  // TODO: feels like these are really part of the deployment strategy rather than the cluster definition
-  val copySourceCustomBlockDeviceMappings: Boolean,
-  val useAmiBlockDeviceMappings: Boolean,
-  val targetHealthyDeployPercentage: Int = 100
+  val suspendedProcesses: Collection<ScalingProcess> = emptySet(),
+  val terminationPolicies: Collection<TerminationPolicy> = setOf(OldestInstance)
 )
 

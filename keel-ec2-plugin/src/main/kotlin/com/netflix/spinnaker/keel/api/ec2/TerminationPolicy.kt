@@ -1,5 +1,5 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 enum class TerminationPolicy {
-  OldestInstance, NewestInstance, OldestLaunchConfiguration, ClosestToNextInstanceHour
+  Default, OldestInstance, NewestInstance, OldestLaunchConfiguration, ClosestToNextInstanceHour
 }
