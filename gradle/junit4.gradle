@@ -19,11 +19,13 @@ repositories {
 }
 
 dependencies {
-  testCompile "org.junit.platform:junit-platform-runner:${spinnaker.version('junit5')}"
+  testImplementation platform("org.junit:junit-bom:${spinnaker.version('jupiter')}")
+
+  testCompile "org.junit.platform:junit-platform-runner"
   testCompile "com.nhaarman:mockito-kotlin:${spinnaker.version('mockitoKotlin')}"
 
-  testRuntime "org.junit.platform:junit-platform-launcher:${spinnaker.version('junit5')}"
-  testRuntime "org.junit.vintage:junit-vintage-engine:${spinnaker.version('junitVintage')}"
+  testRuntime "org.junit.platform:junit-platform-launcher"
+  testRuntime "org.junit.vintage:junit-vintage-engine"
 }
 
 test {

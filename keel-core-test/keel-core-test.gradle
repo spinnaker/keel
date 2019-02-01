@@ -2,7 +2,8 @@ apply plugin: "java-library"
 
 dependencies {
   implementation project(":keel-core")
-  implementation "org.junit.jupiter:junit-jupiter-api:${spinnaker.version('jupiter')}"
+  implementation platform("org.junit:junit-bom:${spinnaker.version('jupiter')}")
+  implementation "org.junit.jupiter:junit-jupiter-api"
   implementation "io.strikt:strikt-core:$striktVersion"
   implementation "com.nhaarman:mockito-kotlin:${spinnaker.version('mockitoKotlin')}"
   api "com.oneeyedmen:minutest:$minutestVersion"
