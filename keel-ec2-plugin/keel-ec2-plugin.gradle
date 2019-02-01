@@ -11,5 +11,5 @@ dependencies {
 
   testImplementation "io.strikt:strikt-core:$striktVersion"
   testImplementation "com.oneeyedmen:minutest:$minutestVersion"
-  testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${spinnaker.version('jackson')}"
+  testImplementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 }

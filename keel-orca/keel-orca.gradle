@@ -19,11 +19,11 @@ apply plugin: "java-library"
 dependencies {
   implementation project(":keel-retrofit")
   implementation project(":keel-clouddriver")
-  implementation "com.fasterxml.jackson.core:jackson-databind:${spinnaker.version('jackson')}"
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${spinnaker.version('jackson')}"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
   implementation "org.jetbrains.kotlin:kotlin-reflect"
 
-  api "com.fasterxml.jackson.module:jackson-module-kotlin:${spinnaker.version('jackson')}"
+  api "com.fasterxml.jackson.module:jackson-module-kotlin"
   api "com.github.jonpeterson:jackson-module-model-versioning:latest.release"
-  api "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${spinnaker.version('jackson')}"
+  api "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 }

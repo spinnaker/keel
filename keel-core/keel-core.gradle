@@ -19,10 +19,10 @@ apply from: "$rootDir/gradle/junit5.gradle"
 
 dependencies {
   implementation "com.google.guava:guava:${spinnaker.version('guava')}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${spinnaker.version('jackson')}"
-  implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${spinnaker.version('jackson')}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${spinnaker.version('jackson')}"
-  implementation "com.google.code.gson:gson:latest.release"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+  implementation "com.google.code.gson:gson"
 
   testImplementation project(":keel-core-test")
   testImplementation "io.strikt:strikt-core:$striktVersion"

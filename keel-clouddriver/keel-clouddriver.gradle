@@ -1,11 +1,11 @@
 dependencies {
   implementation project(":keel-retrofit")
-  implementation "com.netflix.spinnaker.moniker:moniker:+"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${spinnaker.version('jackson')}"
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${spinnaker.version('jackson')}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${spinnaker.version('jackson')}"
-  implementation "com.github.jonpeterson:jackson-module-model-versioning:+"
-  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${spinnaker.version('jackson')}"
+  implementation "com.netflix.spinnaker.moniker:moniker:latest.release"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+  implementation "com.github.jonpeterson:jackson-module-model-versioning:latest.release"
+  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 
   testImplementation "com.squareup.retrofit2:retrofit-mock:${spinnaker.version('retrofit2')}"
   testImplementation "com.squareup.okhttp3:mockwebserver:${spinnaker.version('okHttp3')}"
