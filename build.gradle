@@ -72,6 +72,7 @@ subprojects {
   
   dependencies {
     implementation platform("org.springframework.boot:spring-boot-dependencies:$bootVersion")
+    testImplementation platform("org.junit:junit-bom:${spinnaker.version('jupiter')}")
     components.all(JacksonAlignmentRule)
   }
 

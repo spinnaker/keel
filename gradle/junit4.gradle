@@ -19,8 +19,6 @@ repositories {
 }
 
 dependencies {
-  testImplementation platform("org.junit:junit-bom:${spinnaker.version('jupiter')}")
-
   testCompile "org.junit.platform:junit-platform-runner"
   testCompile "com.nhaarman:mockito-kotlin:${spinnaker.version('mockitoKotlin')}"
 
