@@ -24,6 +24,6 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-reflect"
 
   api "com.fasterxml.jackson.module:jackson-module-kotlin"
-  api "com.github.jonpeterson:jackson-module-model-versioning:latest.release"
+  api "com.github.jonpeterson:jackson-module-model-versioning:1.2.2"
   api "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
 }
