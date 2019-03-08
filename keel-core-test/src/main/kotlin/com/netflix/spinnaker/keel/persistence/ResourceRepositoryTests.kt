@@ -34,6 +34,7 @@ import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.verifyZeroInteractions
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.containsExactly
@@ -71,7 +72,9 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
 
     context("no resources exist") {
       test("allResources is a no-op") {
-        subject.allResources(callback)
+        runBlocking {
+          subject.allResources(callback)
+        }
 
         verifyZeroInteractions(callback)
       }
@@ -102,27 +105,38 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
       )
 
       before {
-        subject.store(resource)
+        runBlocking {
+          subject.store(resource)
+        }
       }
 
       test("it is returned by allResources") {
-        subject.allResources(callback)
+        runBlocking {
+          subject.allResources(callback)
+        }
 
         verify(callback).invoke(ResourceHeader(resource.metadata.uid, resource.metadata.name, resource.metadata.resourceVersion, resource.apiVersion, resource.kind))
       }
 
       test("it can be retrieved by name") {
-        val retrieved = subject.get<Map<String, Any>>(resource.metadata.name)
+        val retrieved = runBlocking {
+          subject.get<Map<String, Any>>(resource.metadata.name)
+        }
         expectThat(retrieved).isEqualTo(resource)
       }
 
       test("it can be retrieved by uid") {
-        val retrieved = subject.get<Map<String, Any>>(resource.metadata.uid)
+        val retrieved = runBlocking {
+          subject.get<Map<String, Any>>(resource.metadata.uid)
+        }
         expectThat(retrieved).isEqualTo(resource)
       }
 
       test("its state is unknown") {
-        expectThat(subject.lastKnownState(resource.metadata.uid))
+        val lastKnownState = runBlocking {
+          subject.lastKnownState(resource.metadata.uid)
+        }
+        expectThat(lastKnownState)
           .get { state }
           .isEqualTo(Unknown)
       }
@@ -140,11 +154,15 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         )
 
         before {
-          subject.store(anotherResource)
+          runBlocking {
+            subject.store(anotherResource)
+          }
         }
 
         test("it does not overwrite the first resource") {
-          subject.allResources(callback)
+          runBlocking {
+            subject.allResources(callback)
+          }
 
           argumentCaptor<ResourceHeader>().apply {
             verify(callback, times(2)).invoke(capture())
@@ -164,11 +182,16 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
 
         before {
           clock.incrementBy(ONE_SECOND)
-          subject.store(updatedResource)
+          runBlocking {
+            subject.store(updatedResource)
+          }
         }
 
         test("it replaces the original resource") {
-          expectThat(subject.get<Map<String, Any>>(resource.metadata.name))
+          val retrieved = runBlocking {
+            subject.get<Map<String, Any>>(resource.metadata.name)
+          }
+          expectThat(retrieved)
             .get(Resource<*>::spec)
             .isEqualTo(updatedResource.spec)
         }
@@ -177,17 +200,25 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
       context("updating the state of the resource") {
         before {
           clock.incrementBy(ONE_SECOND)
-          subject.updateState(resource.metadata.uid, Ok)
+          runBlocking {
+            subject.updateState(resource.metadata.uid, Ok)
+          }
         }
 
         test("it reports the new state") {
-          expectThat(subject.lastKnownState(resource.metadata.uid))
+          val lastKnownState = runBlocking {
+            subject.lastKnownState(resource.metadata.uid)
+          }
+          expectThat(lastKnownState)
             .get { state }
             .isEqualTo(Ok)
         }
 
         test("the new state is included in the history") {
-          expectThat(subject.stateHistory(resource.metadata.uid))
+          val history = runBlocking {
+            subject.stateHistory(resource.metadata.uid)
+          }
+          expectThat(history)
             .hasSize(2)
             .map { it.state }
             .containsExactly(Ok, Unknown)
@@ -196,17 +227,25 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         context("updating the state again") {
           before {
             clock.incrementBy(ONE_SECOND)
-            subject.updateState(resource.metadata.uid, Diff)
+            runBlocking {
+              subject.updateState(resource.metadata.uid, Diff)
+            }
           }
 
           test("it reports the newest state") {
-            expectThat(subject.lastKnownState(resource.metadata.uid))
+            val lastKnownState = runBlocking {
+              subject.lastKnownState(resource.metadata.uid)
+            }
+            expectThat(lastKnownState)
               .get { state }
               .isEqualTo(Diff)
           }
 
           test("the new state is included in the history") {
-            expectThat(subject.stateHistory(resource.metadata.uid))
+            val history = runBlocking {
+              subject.stateHistory(resource.metadata.uid)
+            }
+            expectThat(history)
               .hasSize(3)
               .map { it.state }
               .containsExactly(Diff, Ok, Unknown)
@@ -215,12 +254,17 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
 
         context("updating the state with the same value") {
           before {
-            clock.incrementBy(ONE_SECOND)
-            subject.updateState(resource.metadata.uid, Ok)
+            runBlocking {
+              clock.incrementBy(ONE_SECOND)
+              subject.updateState(resource.metadata.uid, Ok)
+            }
           }
 
           test("the new state is not added to the history") {
-            expectThat(subject.stateHistory(resource.metadata.uid))
+            val history = runBlocking {
+              subject.stateHistory(resource.metadata.uid)
+            }
+            expectThat(history)
               .hasSize(2)
               .map { it.state }
               .containsExactly(Ok, Unknown)
@@ -230,19 +274,25 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         context("after updating the resource") {
           before {
             clock.incrementBy(ONE_SECOND)
-            subject.store(resource.copy(
-              spec = randomData()
-            ))
+            runBlocking {
+              subject.store(resource.copy(spec = randomData()))
+            }
           }
 
           test("its state becomes unknown again") {
-            expectThat(subject.lastKnownState(resource.metadata.uid))
+            val lastKnownState = runBlocking {
+              subject.lastKnownState(resource.metadata.uid)
+            }
+            expectThat(lastKnownState)
               .get { state }
               .isEqualTo(Unknown)
           }
 
           test("the history shows the reversion to unknown state") {
-            expectThat(subject.stateHistory(resource.metadata.uid))
+            val history = runBlocking {
+              subject.stateHistory(resource.metadata.uid)
+            }
+            expectThat(history)
               .hasSize(3)
               .map { it.state }
               .containsExactly(Unknown, Ok, Unknown)
@@ -252,11 +302,15 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
 
       context("deleting the resource") {
         before {
-          subject.delete(resource.metadata.name)
+          runBlocking {
+            subject.delete(resource.metadata.name)
+          }
         }
 
         test("the resource is no longer returned when listing all resources") {
-          subject.allResources(callback)
+          runBlocking {
+            subject.allResources(callback)
+          }
 
           verify(callback, never()).invoke(eq(ResourceHeader(resource)))
         }

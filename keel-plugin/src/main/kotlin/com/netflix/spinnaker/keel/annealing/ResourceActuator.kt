@@ -23,7 +23,7 @@ class ResourceActuator(
 
   private val differ = ObjectDifferBuilder.buildDefault()
 
-  fun checkResource(name: ResourceName, apiVersion: ApiVersion, kind: String) {
+  suspend fun checkResource(name: ResourceName, apiVersion: ApiVersion, kind: String) {
     log.debug("Checking resource {}", name)
     val plugin = handlers.supporting(apiVersion, kind)
     val type = plugin.supportedKind.second

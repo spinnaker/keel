@@ -29,6 +29,10 @@ import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStateHistoryEntry
 import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.reactor.flux
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CREATED
@@ -46,6 +50,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 @RestController
 @RequestMapping(path = ["/resources"])
@@ -55,55 +61,68 @@ class ResourceController(
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+  private val scope: CoroutineScope
+    get() = CoroutineScope(IO)
 
   @PostMapping(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @ResponseStatus(CREATED)
-  fun create(@RequestBody submittedResource: SubmittedResource<*>): Resource<*> {
-    log.debug("Creating: $submittedResource")
-    return resourcePersister.handle(ResourceCreated(submittedResource))
-  }
+  fun create(@RequestBody submittedResource: SubmittedResource<*>): Mono<Resource<*>> =
+    scope.mono {
+      log.debug("Creating: $submittedResource")
+      resourcePersister.handle(ResourceCreated(submittedResource))
+    }
 
   @GetMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  fun get(@PathVariable("name") name: ResourceName): Resource<Any> {
-    log.debug("Getting: $name")
-    return resourceRepository.get(name)
-  }
+  fun get(@PathVariable("name") name: ResourceName): Mono<Resource<Any>> =
+    scope.mono {
+      log.debug("Getting: $name")
+      resourceRepository.get<Any>(name)
+    }
 
   @PutMapping(
     path = ["/{name}"],
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  fun update(@PathVariable("name") name: ResourceName, @RequestBody resource: Resource<Any>): Resource<out Any> {
-    log.debug("Updating: $resource")
-    return resourcePersister.handle(ResourceUpdated(resource))
-  }
+  fun update(
+    @PathVariable("name") name: ResourceName,
+    @RequestBody resource: Resource<Any>
+  ): Mono<Resource<out Any>> =
+    scope.mono {
+      log.debug("Updating: $resource")
+      resourcePersister.handle(ResourceUpdated(resource))
+    }
 
   @DeleteMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  fun delete(@PathVariable("name") name: ResourceName): Resource<*> {
-    log.debug("Deleting: $name")
-    return resourcePersister.handle(ResourceDeleted(name))
-  }
+  fun delete(@PathVariable("name") name: ResourceName): Mono<Resource<*>> =
+    scope.mono {
+      log.debug("Deleting: $name")
+      resourcePersister.handle(ResourceDeleted(name))
+    }
 
   @GetMapping(
     path = ["/{name}/history"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  fun history(@PathVariable("name") name: ResourceName): List<ResourceStateHistoryEntry> {
-    log.debug("Getting state history for: $name")
-    return resourceRepository.get(name, Any::class.java).let {
-      resourceRepository.stateHistory(it.metadata.uid)
+  fun history(@PathVariable("name") name: ResourceName): Flux<ResourceStateHistoryEntry> =
+    scope.flux {
+      log.debug("Getting state history for: $name")
+      resourceRepository.get(name, Any::class.java).let {
+        resourceRepository.stateHistory(it.metadata.uid).forEach {
+          send(it)
+        }
+        close()
+      }
     }
-  }
 
   @ExceptionHandler(NoSuchResourceException::class)
   @ResponseStatus(NOT_FOUND)
@@ -130,8 +149,8 @@ class ResourceController(
   fun onParseFailure(e: InvalidResourceStructureException): Map<String, Any?> {
     log.error(e.message)
     return mapOf(
-        "message" to e.message,
-        "cause" to e.cause.message
+      "message" to e.message,
+      "cause" to e.cause.message
     )
   }
 }

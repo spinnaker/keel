@@ -13,15 +13,17 @@ dependencies {
   implementation project(":keel-deliveryconfig-plugin")
 
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$coroutinesVersion"
   implementation "com.netflix.spinnaker.kork:kork-core:${spinnaker.version('kork')}"
   implementation "com.netflix.spinnaker.kork:kork-artifacts:${spinnaker.version('kork')}"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
-  implementation "org.springframework.boot:spring-boot-starter-web"
+  implementation "org.springframework.boot:spring-boot-starter-webflux"
   implementation "org.springframework.security:spring-security-config"
 
   testImplementation "io.strikt:strikt-jackson:$striktVersion"
   testImplementation project(":keel-core-test")
   testImplementation project(":keel-spring-test-support")
+  testImplementation "io.projectreactor:reactor-test"
 }
 
 mainClassName = "com.netflix.spinnaker.keel.MainKt"

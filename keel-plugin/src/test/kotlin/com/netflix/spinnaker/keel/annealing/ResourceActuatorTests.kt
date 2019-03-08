@@ -24,6 +24,7 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import kotlinx.coroutines.runBlocking
 
 internal object ResourceActuatorTests : JUnit5Minutests {
 
@@ -66,11 +67,16 @@ internal object ResourceActuatorTests : JUnit5Minutests {
       )
 
       before {
-        resourceRepository.store(resource)
+        runBlocking {
+          resourceRepository.store(resource)
+        }
       }
 
       test("before the actuator checks the resource its status is unknown") {
-        expectThat(resourceRepository.lastKnownState(resource.metadata.uid))
+        val lastKnownState = runBlocking {
+          resourceRepository.lastKnownState(resource.metadata.uid)
+        }
+        expectThat(lastKnownState)
           .get { state }
           .isEqualTo(Unknown)
       }
@@ -82,7 +88,9 @@ internal object ResourceActuatorTests : JUnit5Minutests {
           }
 
           with(resource) {
-            checkResource(metadata.name, apiVersion, kind)
+            runBlocking {
+              checkResource(metadata.name, apiVersion, kind)
+            }
           }
         }
 
@@ -97,7 +105,10 @@ internal object ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("the resource state is recorded") {
-          expectThat(resourceRepository.lastKnownState(resource.metadata.uid))
+          val lastKnownState = runBlocking {
+            resourceRepository.lastKnownState(resource.metadata.uid)
+          }
+          expectThat(lastKnownState)
             .get { state }
             .isEqualTo(Ok)
         }
@@ -110,7 +121,9 @@ internal object ResourceActuatorTests : JUnit5Minutests {
           }
 
           with(resource) {
-            checkResource(metadata.name, apiVersion, kind)
+            runBlocking {
+              checkResource(metadata.name, apiVersion, kind)
+            }
           }
         }
 
@@ -119,7 +132,10 @@ internal object ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("the resource state is recorded") {
-          expectThat(resourceRepository.lastKnownState(resource.metadata.uid))
+          val lastKnownState = runBlocking {
+            resourceRepository.lastKnownState(resource.metadata.uid)
+          }
+          expectThat(lastKnownState)
             .get { state }
             .isEqualTo(Missing)
         }
@@ -132,7 +148,9 @@ internal object ResourceActuatorTests : JUnit5Minutests {
           }
 
           with(resource) {
-            checkResource(metadata.name, apiVersion, kind)
+            runBlocking {
+              checkResource(metadata.name, apiVersion, kind)
+            }
           }
         }
 
@@ -141,7 +159,10 @@ internal object ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("the resource state is recorded") {
-          expectThat(resourceRepository.lastKnownState(resource.metadata.uid))
+          val lastKnownState = runBlocking {
+            resourceRepository.lastKnownState(resource.metadata.uid)
+          }
+          expectThat(lastKnownState)
             .get { state }
             .isEqualTo(Diff)
         }

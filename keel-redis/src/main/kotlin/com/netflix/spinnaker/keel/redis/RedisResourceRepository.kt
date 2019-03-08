@@ -45,7 +45,7 @@ class RedisResourceRepository(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun allResources(callback: (ResourceHeader) -> Unit) {
+  override suspend fun allResources(callback: (ResourceHeader) -> Unit) {
     redisClient.withCommandsClient<Unit> { redis: JedisCommands ->
       redis.smembers(INDEX_SET)
         .map(ULID::parseULID)
@@ -61,12 +61,12 @@ class RedisResourceRepository(
     }
   }
 
-  override fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> =
+  override suspend fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> =
     redisClient.withCommandsClient<Resource<T>> { redis: JedisCommands ->
       readResource(redis, uid, specType)
     }
 
-  override fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> =
+  override suspend fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> =
     redisClient.withCommandsClient<Resource<T>> { redis: JedisCommands ->
       redis.hget(NAME_TO_UID_HASH, name.value)
         ?.let(ULID::parseULID)
@@ -74,7 +74,7 @@ class RedisResourceRepository(
         ?: throw NoSuchResourceName(name)
     }
 
-  override fun store(resource: Resource<*>) {
+  override suspend fun store(resource: Resource<*>) {
     redisClient.withCommandsClient<Unit> { redis: JedisCommands ->
       redis.hmset(resource.metadata.uid.key, resource.toHash())
       redis.sadd(INDEX_SET, resource.metadata.uid.toString())
@@ -83,7 +83,7 @@ class RedisResourceRepository(
     }
   }
 
-  override fun delete(name: ResourceName) {
+  override suspend fun delete(name: ResourceName) {
     redisClient.withCommandsClient<Unit> { redis: JedisCommands ->
       val uid = redis.hget(NAME_TO_UID_HASH, name.value).let(ULID::parseULID)
       redis.del(uid.key)
@@ -92,21 +92,21 @@ class RedisResourceRepository(
     }
   }
 
-  override fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
+  override suspend fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
     redisClient.withCommandsClient<ResourceStateHistoryEntry> { redis: JedisCommands ->
       redis.lindex(uid.stateKey, 0)
         ?.let { objectMapper.readValue<ResourceStateHistoryEntry>(it) }
         ?: throw NoSuchResourceUID(uid)
     }
 
-  override fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
+  override suspend fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
     redisClient.withCommandsClient<List<ResourceStateHistoryEntry>> { redis: JedisCommands ->
       redis.lrange(uid.stateKey, 0, -1)
         .also { if (it.isEmpty()) throw NoSuchResourceUID(uid) }
         .map { objectMapper.readValue<ResourceStateHistoryEntry>(it) }
     }
 
-  override fun updateState(uid: UID, state: ResourceState) {
+  override suspend fun updateState(uid: UID, state: ResourceState) {
     redisClient.withCommandsClient<Unit> { redis: JedisCommands ->
       // TODO: probably not super thread safe
       redis.lindex(uid.stateKey, 0)

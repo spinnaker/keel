@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.annealing.ResourceActuator
 import com.netflix.spinnaker.keel.annealing.ResourceCheckQueue
 import com.netflix.spinnaker.keel.api.ResourceName
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
-import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.verifyBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,7 +31,9 @@ class SpringBasedResourceCheckQueueTests {
       .let { (name, apiVersion, kind) ->
         resourceCheckQueue.scheduleCheck(name, apiVersion, kind)
 
-        verify(resourceActuator).checkResource(name, apiVersion, kind)
+        verifyBlocking(resourceActuator) {
+          checkResource(name, apiVersion, kind)
+        }
       }
   }
 

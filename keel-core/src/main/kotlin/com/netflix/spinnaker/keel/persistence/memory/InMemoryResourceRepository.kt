@@ -34,7 +34,7 @@ class InMemoryResourceRepository(
   private val resources = mutableMapOf<UID, Resource<*>>()
   private val states = mutableMapOf<UID, MutableList<ResourceStateHistoryEntry>>()
 
-  override fun allResources(callback: (ResourceHeader) -> Unit) {
+  override suspend fun allResources(callback: (ResourceHeader) -> Unit) {
     resources.values.forEach {
       callback(ResourceHeader(it))
     }
@@ -43,13 +43,13 @@ class InMemoryResourceRepository(
   private val mapper = configuredObjectMapper()
 
   @Suppress("UNCHECKED_CAST")
-  override fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> =
+  override suspend fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> =
     resources.values.find { it.metadata.name == name }?.let {
       get(it.metadata.uid, specType)
     } ?: throw NoSuchResourceName(name)
 
   @Suppress("UNCHECKED_CAST")
-  override fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> =
+  override suspend fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> =
     resources[uid]?.let {
       if (specType.isAssignableFrom(it.spec.javaClass)) {
         it as Resource<T>
@@ -59,12 +59,12 @@ class InMemoryResourceRepository(
       }
     } ?: throw NoSuchResourceUID(uid)
 
-  override fun store(resource: Resource<*>) {
+  override suspend fun store(resource: Resource<*>) {
     resources[resource.metadata.uid] = resource
     updateState(resource.metadata.uid, Unknown)
   }
 
-  override fun delete(name: ResourceName) {
+  override suspend fun delete(name: ResourceName) {
     resources
       .values
       .filter { it.metadata.name == name }
@@ -76,13 +76,13 @@ class InMemoryResourceRepository(
       }
   }
 
-  override fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
+  override suspend fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
     states[uid]?.first() ?: throw NoSuchResourceUID(uid)
 
-  override fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
+  override suspend fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
     states[uid] ?: throw NoSuchResourceUID(uid)
 
-  override fun updateState(uid: UID, state: ResourceState) {
+  override suspend fun updateState(uid: UID, state: ResourceState) {
     states.computeIfAbsent(uid) {
       mutableListOf()
     }

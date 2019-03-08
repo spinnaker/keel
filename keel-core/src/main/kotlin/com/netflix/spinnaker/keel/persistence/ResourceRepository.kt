@@ -40,7 +40,7 @@ interface ResourceRepository {
   /**
    * Invokes [callback] once with each registered resource.
    */
-  fun allResources(callback: (ResourceHeader) -> Unit)
+  suspend fun allResources(callback: (ResourceHeader) -> Unit)
 
   /**
    * Retrieves a single resource by its unique [name].
@@ -48,7 +48,7 @@ interface ResourceRepository {
    * @return The resource represented by [name] or `null` if [name] is unknown.
    * @throws NoSuchResourceException if [name] does not map to a resource in the repository.
    */
-  fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T>
+  suspend fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T>
 
   /**
    * Retrieves a single resource by its unique [uid].
@@ -56,37 +56,37 @@ interface ResourceRepository {
    * @return The resource represented by [uid] or `null` if [uid] is unknown.
    * @throws NoSuchResourceException if [uid] does not map to a resource in the repository.
    */
-  fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T>
+  suspend fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T>
 
   /**
    * Persists a resource.
    *
    * @return the `uid` of the stored resource.
    */
-  fun store(resource: Resource<*>)
+  suspend fun store(resource: Resource<*>)
 
   /**
    * Deletes the resource represented by [name].
    */
-  fun delete(name: ResourceName)
+  suspend fun delete(name: ResourceName)
 
   /**
    * Retrieves the last known state of a resource.
    *
    * @return The last known state of the resource represented by [uid].
    */
-  fun lastKnownState(uid: UID): ResourceStateHistoryEntry
+  suspend fun lastKnownState(uid: UID): ResourceStateHistoryEntry
 
-  fun stateHistory(uid: UID): List<ResourceStateHistoryEntry>
+  suspend fun stateHistory(uid: UID): List<ResourceStateHistoryEntry>
 
   /**
    * Updates the last known state of the resource represented by [uid].
    */
-  fun updateState(uid: UID, state: ResourceState)
+  suspend fun updateState(uid: UID, state: ResourceState)
 }
 
-inline fun <reified T : Any> ResourceRepository.get(name: ResourceName): Resource<T> = get(name, T::class.java)
-inline fun <reified T : Any> ResourceRepository.get(uid: UID): Resource<T> = get(uid, T::class.java)
+suspend inline fun <reified T : Any> ResourceRepository.get(name: ResourceName): Resource<T> = get(name, T::class.java)
+suspend inline fun <reified T : Any> ResourceRepository.get(uid: UID): Resource<T> = get(uid, T::class.java)
 
 sealed class NoSuchResourceException(override val message: String?) : RuntimeException(message)
 

@@ -21,6 +21,7 @@ import com.nhaarman.mockitokotlin2.reset
 import com.nhaarman.mockitokotlin2.stub
 import com.nhaarman.mockitokotlin2.timeout
 import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.verifyBlocking
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expect
@@ -69,18 +70,19 @@ internal class SqsResourceCheckListenerTests : JUnit5Minutests {
       }
 
       test("invokes the actuator") {
-        verifyEventually(actuator)
-          .checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        verifyBlocking(actuator, timeout(1000)) {
+          checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        }
       }
 
       test("deletes the message from the queue") {
         verifyEventually(sqsClient)
           .deleteMessage(check {
-          expect {
-            that(it.queueUrl).isEqualTo("queueURL")
-            that(it.receiptHandle).isEqualTo("receiptHandle-0")
-          }
-        })
+            expect {
+              that(it.queueUrl).isEqualTo("queueURL")
+              that(it.receiptHandle).isEqualTo("receiptHandle-0")
+            }
+          })
       }
     }
 
@@ -96,8 +98,9 @@ internal class SqsResourceCheckListenerTests : JUnit5Minutests {
       }
 
       test("goes on to process the valid message") {
-        verifyEventually(actuator)
-          .checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        verifyBlocking(actuator, timeout(1000)) {
+          checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        }
       }
 
       test("deletes the valid message but not the bad one") {
@@ -118,15 +121,16 @@ internal class SqsResourceCheckListenerTests : JUnit5Minutests {
           } doReturn enqueuedMessages(message, message.copy(name = "ec2:security-group:prod:ap-south-1:keel", kind = "security-group")) doReturn enqueuedMessages()
         }
         actuator.stub {
-          on { checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind) } doThrow IllegalStateException("o noes")
+          onBlocking { checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind) } doThrow IllegalStateException("o noes")
         }
 
         onApplicationUp()
       }
 
       test("goes on to process the next message") {
-        verifyEventually(actuator)
-          .checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        verifyBlocking(actuator, timeout(1000)) {
+          checkResource(message.name.let(::ResourceName), message.apiVersion, message.kind)
+        }
       }
 
       test("deletes the successfully handled message but not the failed one") {

@@ -33,7 +33,7 @@ class SqlResourceRepository(
   private val instanceIdSupplier: InstanceIdSupplier
 ) : ResourceRepository {
 
-  override fun allResources(callback: (ResourceHeader) -> Unit) {
+  override suspend fun allResources(callback: (ResourceHeader) -> Unit) {
     jooq
       .select(
         field("uid"),
@@ -60,7 +60,7 @@ class SqlResourceRepository(
       }
   }
 
-  override fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> {
+  override suspend fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T> {
     return jooq
       .select(
         field("uid"),
@@ -83,7 +83,7 @@ class SqlResourceRepository(
       }
   }
 
-  override fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> {
+  override suspend fun <T : Any> get(name: ResourceName, specType: Class<T>): Resource<T> {
     return jooq
       .select(
         field("uid"),
@@ -106,7 +106,7 @@ class SqlResourceRepository(
       }
   }
 
-  override fun store(resource: Resource<*>) {
+  override suspend fun store(resource: Resource<*>) {
     jooq.inTransaction {
       val uid = resource.metadata.uid.toString()
       val updatePairs = mapOf(
@@ -141,7 +141,7 @@ class SqlResourceRepository(
     }
   }
 
-  override fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
+  override suspend fun lastKnownState(uid: UID): ResourceStateHistoryEntry =
     jooq
       .select(
         field("state"),
@@ -161,7 +161,7 @@ class SqlResourceRepository(
         }
       }
 
-  override fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
+  override suspend fun stateHistory(uid: UID): List<ResourceStateHistoryEntry> =
     jooq
       .select(
         field("state"),
@@ -183,7 +183,7 @@ class SqlResourceRepository(
         if (isEmpty()) throw NoSuchResourceUID(uid)
       }
 
-  override fun updateState(uid: UID, state: ResourceState) {
+  override suspend fun updateState(uid: UID, state: ResourceState) {
     // TODO: long term it may make more sense to use 2 tables
     // one storing the "latest" state and one storing the full
     // history. Can then do a single tx.
@@ -221,7 +221,7 @@ class SqlResourceRepository(
     }
   }
 
-  override fun delete(name: ResourceName) {
+  override suspend fun delete(name: ResourceName) {
     jooq.inTransaction {
       deleteFrom(RESOURCE)
         .where(field("name").eq(name.value))

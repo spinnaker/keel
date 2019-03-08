@@ -18,18 +18,18 @@ class ResourcePersister(
   private val handlers: List<ResourceHandler<*>>,
   private val queue: ResourceCheckQueue
 ) {
-  fun handle(event: ResourceEvent): Resource<*> {
+  suspend fun handle(event: ResourceEvent): Resource<*> {
     log.info("Received event {}", event)
     return when (event) {
       is ResourceCreated ->
         handlers.supporting(event.resource.apiVersion, event.resource.kind)
           .normalize(event.resource)
-          .also(resourceRepository::store)
+          .also { resourceRepository.store(it) }
           .also { queue.scheduleCheck(it) }
       is ResourceUpdated ->
         handlers.supporting(event.resource.apiVersion, event.resource.kind)
           .normalize(event.resource)
-          .also(resourceRepository::store)
+          .also { resourceRepository.store(it) }
           .also { queue.scheduleCheck(it) }
       is ResourceDeleted -> {
         resourceRepository.delete(event.name)
