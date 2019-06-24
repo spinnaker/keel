@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.events.CreateEvent
 import com.netflix.spinnaker.keel.events.DeleteEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.plugin.ResolvableResourceHandler
@@ -29,9 +30,16 @@ class ResourcePersister(
     handlers.supporting(resource.apiVersion, resource.kind)
       .normalize(resource)
       .also {
-        resourceRepository.store(it)
-        resourceRepository.appendHistory(ResourceCreated(it, clock))
-        publisher.publishEvent(CreateEvent(it.name))
+        try {
+          // If resource exists, we should update instead
+          val existing = resourceRepository.get(it.name, Any::class.java)
+          return update(existing.name, resource)
+        } catch (e: NoSuchResourceException) {
+          resourceRepository.store(it)
+          resourceRepository.appendHistory(ResourceCreated(it, clock))
+          publisher.publishEvent(CreateEvent(it.name))
+        }
+        return it
       }
 
   fun update(name: ResourceName, updated: SubmittedResource<Any>): Resource<out Any> {

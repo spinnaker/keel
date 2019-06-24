@@ -151,6 +151,29 @@ internal class ResourcePersisterTests : JUnit5Minutests {
               .isEmpty()
           }
         }
+
+        context("a second create is sent") {
+          before {
+            create(SubmittedResource(
+              apiVersion = SPINNAKER_API_V1.subApi("test"),
+              kind = "whatever",
+              spec = DummyResourceSpec("o hai")
+            ))
+
+            subject.update(resource.name, SubmittedResource(
+              apiVersion = resource.apiVersion,
+              kind = resource.kind,
+              spec = DummyResourceSpec("o bai")
+            ))
+          }
+
+          test("a second create becomes an update") {
+            expectThat(eventHistory())
+              .hasSize(2)
+              .first()
+              .isA<ResourceUpdated>()
+          }
+        }
       }
     }
   }
