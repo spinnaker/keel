@@ -127,6 +127,29 @@ internal class ResourceControllerTests {
   }
 
   @Test
+  fun `can't create a resource when unauthorized`() {
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns false
+
+    val request = post("/resources")
+      .accept(APPLICATION_JSON)
+      .contentType(APPLICATION_JSON)
+      .content(
+        """{
+          |  "apiVersion": "test.spinnaker.netflix.com/v1",
+          |  "kind": "whatever",
+          |  "metadata": {
+          |  "serviceAccount": "keel@spinnaker"
+          |  },
+          |  "spec": "o hai"
+          |}"""
+          .trimMargin()
+      )
+    mvc
+      .perform(request)
+      .andExpect(status().isForbidden)
+  }
+
+  @Test
   fun `can update a resource`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
     every { resourcePersister.update(resource.name, any()) } returns resource
