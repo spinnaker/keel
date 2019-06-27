@@ -26,23 +26,29 @@ class ResourcePersister(
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher
 ) {
+  fun upsert(resource: SubmittedResource<Any>): Resource<out Any> =
+    handlers.supporting(resource.apiVersion, resource.kind)
+      .normalize(resource)
+      .also {
+        if (it.name.isRegistered()) {
+          return update(it.name, resource)
+        } else {
+          return create(resource)
+        }
+      }
+
   fun create(resource: SubmittedResource<Any>): Resource<out Any> =
     handlers.supporting(resource.apiVersion, resource.kind)
       .normalize(resource)
       .also {
-        try {
-          // If resource exists, we should update instead
-          val existing = resourceRepository.get(it.name, Any::class.java)
-          return update(existing.name, resource)
-        } catch (e: NoSuchResourceException) {
-          resourceRepository.store(it)
-          resourceRepository.appendHistory(ResourceCreated(it, clock))
-          publisher.publishEvent(CreateEvent(it.name))
-        }
-        return it
+        log.debug("Creating $it")
+        resourceRepository.store(it)
+        resourceRepository.appendHistory(ResourceCreated(it, clock))
+        publisher.publishEvent(CreateEvent(it.name))
       }
 
   fun update(name: ResourceName, updated: SubmittedResource<Any>): Resource<out Any> {
+    log.debug("Updating $name")
     val handler = handlers.supporting(updated.apiVersion, updated.kind)
     val existing = resourceRepository.get(name, Any::class.java)
     val resource = existing.copy(spec = updated.spec)
@@ -70,6 +76,15 @@ class ResourcePersister(
         resourceRepository.delete(name)
         publisher.publishEvent(DeleteEvent(name))
       }
+
+  private fun ResourceName.isRegistered(): Boolean {
+    try {
+      resourceRepository.get(this, Any::class.java)
+      return true
+    } catch (e: NoSuchResourceException) {
+      return false
+    }
+  }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

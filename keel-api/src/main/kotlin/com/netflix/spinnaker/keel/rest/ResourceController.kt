@@ -27,7 +27,6 @@ import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.BAD_REQUEST
-import org.springframework.http.HttpStatus.CREATED
 import org.springframework.http.HttpStatus.NOT_FOUND
 import org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
@@ -37,7 +36,6 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -53,18 +51,6 @@ class ResourceController(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  @PostMapping(
-    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
-    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
-  )
-  @ResponseStatus(CREATED)
-  @PreAuthorize("@authorizationSupport.userCanModifySpec(#submittedResource.metadata.serviceAccount)")
-  fun create(@RequestBody submittedResource: SubmittedResource<Any>): Resource<out Any>
-  {
-    log.debug("Creating: $submittedResource")
-    return resourcePersister.create(submittedResource)
-  }
-
   @GetMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
@@ -75,14 +61,13 @@ class ResourceController(
   }
 
   @PutMapping(
-    path = ["/{name}"],
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @PreAuthorize("@authorizationSupport.userCanModifySpec(#resource.metadata.serviceAccount)")
-  fun update(@PathVariable("name") name: ResourceName, @RequestBody resource: SubmittedResource<Any>): Resource<out Any> {
-    log.debug("Updating: $resource")
-    return resourcePersister.update(name, resource)
+  fun upsert(@RequestBody resource: SubmittedResource<Any>): Resource<out Any> {
+    log.debug("Upserting: $resource")
+    return resourcePersister.upsert(resource)
   }
 
   @DeleteMapping(
