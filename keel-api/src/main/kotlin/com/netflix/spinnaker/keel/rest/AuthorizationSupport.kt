@@ -36,9 +36,8 @@ class AuthorizationSupport(
       val resource = resourceRepository.get(ResourceName(name), Any::class.java)
       return userCanModifySpec(resource.serviceAccount)
     } catch (e: NoSuchResourceException) {
-      // todo eb: should we say "unauthorized" if the resource doesn't exist?
-      // or, should we let someone see that it doesn't exist, because no action would happen?
-      return false
+      // If resource doesn't exist return true so a 404 is propagated from the controller.
+      return true
     }
   }
 

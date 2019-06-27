@@ -30,7 +30,7 @@ data class Resource<T : Any>(
     require(kind.isNotEmpty()) { "resource kind must be defined" }
     require(metadata["uid"].isValidULID()) { "resource uid must be a valid ULID" }
     require(metadata["name"].isValidName()) { "resource name must be a valid name" }
-    require(metadata["serviceAccount"].isValidServiceAccount()) { "serviceAccount must be a valid email" }
+    require(metadata["serviceAccount"].isValidServiceAccount()) { "serviceAccount must be a valid service account" }
   }
 
   constructor(resource: SubmittedResource<T>, metadata: Map<String, Any?>) :
@@ -80,6 +80,6 @@ private fun Any?.isValidName() =
 
 private fun Any?.isValidServiceAccount() =
   when (this) {
-    is String -> isNotBlank() && contains("@")
+    is String -> isNotBlank()
     else -> false
   }
