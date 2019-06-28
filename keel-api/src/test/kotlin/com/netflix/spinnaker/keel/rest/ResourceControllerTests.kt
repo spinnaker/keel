@@ -27,7 +27,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
@@ -79,7 +79,7 @@ internal class ResourceControllerTests {
     every { resourcePersister.upsert(any()) } returns resource
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
 
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
       .content(
@@ -103,7 +103,7 @@ internal class ResourceControllerTests {
     every { resourcePersister.upsert(any()) } returns resource
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
 
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_JSON)
       .contentType(APPLICATION_JSON)
       .content(
@@ -128,7 +128,7 @@ internal class ResourceControllerTests {
   fun `can't create a resource when unauthorized`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns false
 
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_JSON)
       .contentType(APPLICATION_JSON)
       .content(
@@ -152,7 +152,7 @@ internal class ResourceControllerTests {
     every { resourcePersister.upsert(any()) } returns resource
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
 
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
       .content(
@@ -176,7 +176,7 @@ internal class ResourceControllerTests {
     every { resourcePersister.upsert(any()) } throws NoSuchResourceName(resource.name)
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
 
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
       .content(
@@ -196,7 +196,7 @@ internal class ResourceControllerTests {
   @Test
   fun `an invalid request body results in an HTTP 400`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
-    val request = put("/resources")
+    val request = post("/resources")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
       .content(
