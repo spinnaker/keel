@@ -77,7 +77,7 @@ internal class ResourceControllerTests {
   @Test
   fun `can create a resource as YAML`() {
     every { resourcePersister.upsert(any()) } returns resource
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
 
     val request = post("/resources")
       .accept(APPLICATION_YAML)
@@ -101,7 +101,7 @@ internal class ResourceControllerTests {
   @Test
   fun `can create a resource as JSON`() {
     every { resourcePersister.upsert(any()) } returns resource
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
 
     val request = post("/resources")
       .accept(APPLICATION_JSON)
@@ -126,7 +126,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `can't create a resource when unauthorized`() {
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns false
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns false
 
     val request = post("/resources")
       .accept(APPLICATION_JSON)
@@ -150,7 +150,7 @@ internal class ResourceControllerTests {
   @Test
   fun `can update a resource`() {
     every { resourcePersister.upsert(any()) } returns resource
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
 
     val request = post("/resources")
       .accept(APPLICATION_YAML)
@@ -174,7 +174,7 @@ internal class ResourceControllerTests {
   @Test
   fun `attempting to update an unknown resource results in a 404`() {
     every { resourcePersister.upsert(any()) } throws NoSuchResourceName(resource.name)
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
 
     val request = post("/resources")
       .accept(APPLICATION_YAML)
@@ -195,7 +195,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `an invalid request body results in an HTTP 400`() {
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
     val request = post("/resources")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
@@ -250,7 +250,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `unknown resource name results in a 404`() {
-    every { authorizationSupport.userCanModifySpec("keel@spinnaker") } returns true
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
     val request = get("/resources/i-do-not-exist")
       .accept(APPLICATION_YAML)
     mvc
