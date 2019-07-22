@@ -13,6 +13,7 @@ import com.netflix.spinnaker.keel.events.TaskRef
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.plugin.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.plugin.supporting
+import com.netflix.spinnaker.keel.policy.PolicyEnforcer
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
 import com.netflix.spinnaker.keel.telemetry.ResourceChecked
 import com.netflix.spinnaker.keel.telemetry.ResourceState.Diff
@@ -30,11 +31,21 @@ import java.time.Clock
 class ResourceActuator(
   private val resourceRepository: ResourceRepository,
   private val handlers: List<ResolvableResourceHandler<*, *>>,
+  private val policyEnforcer: PolicyEnforcer,
   private val publisher: ApplicationEventPublisher,
   private val clock: Clock
 ) {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   suspend fun checkResource(name: ResourceName, apiVersion: ApiVersion, kind: String) {
     try {
+      val response = policyEnforcer.canCheck(name)
+      if (!response.allowed) {
+        log.debug("Skipping actuation for resource {} due to policy failure: {}", name, response.message)
+        publisher.publishEvent(ResourceCheckSkipped(apiVersion, kind, name))
+        return
+      }
+
       val plugin = handlers.supporting(apiVersion, kind)
 
       if (plugin.actuationInProgress(name)) {
@@ -131,6 +142,4 @@ class ResourceActuator(
   ): List<TaskRef> =
     update(resource as Resource<S>, resourceDiff as ResourceDiff<R>)
   // end type coercing extensions
-
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
