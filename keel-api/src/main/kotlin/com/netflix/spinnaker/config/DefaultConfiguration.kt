@@ -3,13 +3,18 @@ package com.netflix.spinnaker.config
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.fiat.shared.EnableFiatAutoConfig
 import com.netflix.spinnaker.filters.AuthenticatedRequestFilter
+import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceVersionTracker
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceVersionTracker
 import com.netflix.spinnaker.keel.plugin.ResolvableResourceHandler
+import com.netflix.spinnaker.keel.plugin.supporting
+import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import de.huxhorn.sulky.ulid.ULID
 import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE
@@ -18,7 +23,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Scope
-import org.springframework.core.Ordered
+import org.springframework.core.Ordered.HIGHEST_PRECEDENCE
 import java.time.Clock
 
 @EnableFiatAutoConfig
@@ -45,6 +50,13 @@ class DefaultConfiguration {
   fun artifactRepository(): ArtifactRepository = InMemoryArtifactRepository()
 
   @Bean
+  @ConditionalOnMissingBean
+  fun deliveryConfigRepository(
+    artifactRepository: ArtifactRepository
+  ): DeliveryConfigRepository =
+    InMemoryDeliveryConfigRepository(artifactRepository)
+
+  @Bean
   @ConditionalOnMissingBean(ResourceVersionTracker::class)
   fun resourceVersionTracker(): ResourceVersionTracker = InMemoryResourceVersionTracker()
 
@@ -53,9 +65,17 @@ class DefaultConfiguration {
   fun noResourcePlugins(): List<ResolvableResourceHandler<*, *>> = emptyList()
 
   @Bean
-  fun authenticatedRequestFilter(): FilterRegistrationBean<AuthenticatedRequestFilter> {
-    val frb = FilterRegistrationBean(AuthenticatedRequestFilter(true))
-    frb.order = Ordered.HIGHEST_PRECEDENCE
-    return frb
-  }
+  fun resourceTypeIdentifier(
+    handlers: List<ResolvableResourceHandler<*, *>>
+  ): ResourceTypeIdentifier =
+    object : ResourceTypeIdentifier {
+      override fun identify(apiVersion: ApiVersion, kind: String): Class<*> {
+        return handlers.supporting(apiVersion, kind).supportedKind.second
+      }
+    }
+
+  @Bean
+  fun authenticatedRequestFilter(): FilterRegistrationBean<AuthenticatedRequestFilter> =
+    FilterRegistrationBean(AuthenticatedRequestFilter(true))
+      .apply { order = HIGHEST_PRECEDENCE }
 }

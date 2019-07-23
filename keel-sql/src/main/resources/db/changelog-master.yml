@@ -1,28 +1,4 @@
 databaseChangeLog:
   - include:
-      file: changelog/20190227-initial-schema.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190313-add-instance-to-resource-status.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190320-create-lock-table.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190321-persist-metadata.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190412-resource-events.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190418-delivery-artifact.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190424-drop-resource-version.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190426-drop-artifact-provenance.yml
-      relativeToChangelogFile: true
-  - include:
-      file: changelog/20190515-add-last-checked-timestamp.yml
+      file: databaseChangeLog.yml
       relativeToChangelogFile: true

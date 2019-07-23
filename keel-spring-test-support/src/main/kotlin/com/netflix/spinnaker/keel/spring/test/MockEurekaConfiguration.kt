@@ -13,18 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.api.ec2.securityGroup
+package com.netflix.spinnaker.keel.spring.test
 
-import com.netflix.spinnaker.keel.model.Moniker
-import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
-import de.danielbechler.diff.introspection.ObjectDiffProperty
+import com.netflix.appinfo.InstanceInfo
+import com.netflix.discovery.EurekaClient
+import com.ninjasquad.springmockk.MockkBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 
-data class SecurityGroup(
-  val moniker: Moniker,
-  val accountName: String,
-  val region: String,
-  val vpcName: String?,
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
-  val description: String?,
-  val inboundRules: Set<SecurityGroupRule> = emptySet()
-)
+@Configuration
+class MockEurekaConfiguration {
+  @MockkBean
+  lateinit var eurekaClient: EurekaClient
+
+  @Bean
+  fun currentInstance(): InstanceInfo = InstanceInfo.Builder.newBuilder()
+    .run {
+      setAppName("keel")
+      setASGName("keel-local")
+      build()
+    }
+}

@@ -9,7 +9,6 @@ import com.netflix.spinnaker.keel.persistence.ResourceRepositoryTests
 import com.netflix.spinnaker.keel.persistence.randomData
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
-import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.initTcMysqlDatabase
 import dev.minutest.rootContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -22,7 +21,7 @@ import strikt.assertions.isEqualTo
 import java.time.Clock
 
 internal object SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResourceRepository>() {
-  private val testDatabase = initTcMysqlDatabase()
+  private val testDatabase = initTestDatabase()
   private val jooq = testDatabase.context
 
   override fun factory(clock: Clock): SqlResourceRepository {
@@ -54,8 +53,7 @@ internal object SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResource
 
     /**
      * I'd like to have this test in the superclass but the in-memory implementation is not designed
-     * to be thread safe and the Redis implementation needs too much work to make it thread safe
-     * given it's not our preferred target.
+     * to be thread safe.
      */
     context("many threads are checking simultaneously") {
       before {
@@ -80,7 +78,7 @@ internal object SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResource
           nextResults().let(results::addAll)
         }
 
-        expectThat(results).hasSize(1000)
+        expectThat(results).describedAs("number of unique resources processed").hasSize(1000)
       }
     }
 
