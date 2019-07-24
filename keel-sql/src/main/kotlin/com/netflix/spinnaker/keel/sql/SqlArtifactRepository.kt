@@ -15,34 +15,31 @@ class SqlArtifactRepository(
   private val jooq: DSLContext
 ) : ArtifactRepository {
   override fun register(artifact: DeliveryArtifact) {
-    jooq.inTransaction {
-      insertInto(DELIVERY_ARTIFACT)
-        .set(DELIVERY_ARTIFACT.UID, randomUID().toString())
-        .set(DELIVERY_ARTIFACT.NAME, artifact.name)
-        .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
-        .onDuplicateKeyIgnore()
-        .execute()
-        .also { count ->
-          if (count == 0) throw ArtifactAlreadyRegistered(artifact)
-        }
-    }
+    jooq.insertInto(DELIVERY_ARTIFACT)
+      .set(DELIVERY_ARTIFACT.UID, randomUID().toString())
+      .set(DELIVERY_ARTIFACT.NAME, artifact.name)
+      .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
+      .onDuplicateKeyIgnore()
+      .execute()
+      .also { count ->
+        if (count == 0) throw ArtifactAlreadyRegistered(artifact)
+      }
   }
 
-  override fun store(artifact: DeliveryArtifact, version: String): Boolean =
-    jooq.inTransaction {
-      val uid = select(DELIVERY_ARTIFACT.UID)
-        .from(DELIVERY_ARTIFACT)
-        .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-        .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
-        .fetchOne()
-        ?: throw NoSuchArtifactException(artifact)
+  override fun store(artifact: DeliveryArtifact, version: String): Boolean {
+    val uid = jooq.select(DELIVERY_ARTIFACT.UID)
+      .from(DELIVERY_ARTIFACT)
+      .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
+      .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+      .fetchOne()
+      ?: throw NoSuchArtifactException(artifact)
 
-      insertInto(DELIVERY_ARTIFACT_VERSION)
-        .set(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID, uid.value1())
-        .set(DELIVERY_ARTIFACT_VERSION.VERSION, version)
-        .onDuplicateKeyIgnore()
-        .execute() == 1
-    }
+    return jooq.insertInto(DELIVERY_ARTIFACT_VERSION)
+      .set(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID, uid.value1())
+      .set(DELIVERY_ARTIFACT_VERSION.VERSION, version)
+      .onDuplicateKeyIgnore()
+      .execute() == 1
+  }
 
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     jooq

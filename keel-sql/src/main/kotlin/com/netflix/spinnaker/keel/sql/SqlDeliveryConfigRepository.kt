@@ -29,43 +29,46 @@ class SqlDeliveryConfigRepository(
   private val mapper = configuredObjectMapper()
 
   override fun store(deliveryConfig: DeliveryConfig) {
-    jooq.inTransaction {
-      val uid = randomUID().toString()
-      with(deliveryConfig) {
-        insertInto(DELIVERY_CONFIG)
-          .set(DELIVERY_CONFIG.UID, uid)
-          .set(DELIVERY_CONFIG.NAME, name)
-          .set(DELIVERY_CONFIG.APPLICATION, application)
+    with(deliveryConfig) {
+      val uid = jooq
+        .select(DELIVERY_CONFIG.UID)
+        .from(DELIVERY_CONFIG)
+        .where(DELIVERY_CONFIG.NAME.eq(name))
+        .fetchOne(DELIVERY_CONFIG.UID)
+        ?: randomUID().toString()
+      jooq.insertInto(DELIVERY_CONFIG)
+        .set(DELIVERY_CONFIG.UID, uid)
+        .set(DELIVERY_CONFIG.NAME, name)
+        .set(DELIVERY_CONFIG.APPLICATION, application)
+        .onDuplicateKeyIgnore()
+        .execute()
+      artifacts.forEach { artifact ->
+        jooq.insertInto(DELIVERY_CONFIG_ARTIFACT)
+          .set(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID, uid)
+          .set(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID, jooq.select(DELIVERY_ARTIFACT.UID).from(DELIVERY_ARTIFACT).where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)))
           .onDuplicateKeyIgnore()
           .execute()
-        artifacts.forEach { artifact ->
-          insertInto(DELIVERY_ARTIFACT)
-            .set(DELIVERY_ARTIFACT.UID, randomUID().toString())
-            .set(DELIVERY_ARTIFACT.NAME, artifact.name)
-            .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
-            .onDuplicateKeyIgnore()
-            .execute()
-          insertInto(DELIVERY_CONFIG_ARTIFACT)
-            .set(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID, uid)
-            .set(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID, select(DELIVERY_ARTIFACT.UID).from(DELIVERY_ARTIFACT).where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)))
-            .onDuplicateKeyIgnore()
-            .execute()
-        }
-        environments.forEach { environment ->
-          val environmentUID = randomUID().toString()
-          insertInto(ENVIRONMENT)
-            .set(ENVIRONMENT.UID, environmentUID)
-            .set(ENVIRONMENT.DELIVERY_CONFIG_UID, uid)
-            .set(ENVIRONMENT.NAME, environment.name)
-            .onDuplicateKeyIgnore()
-            .execute()
-          environment.resources.forEach { resource ->
-            insertInto(ENVIRONMENT_RESOURCE)
-              .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUID)
-              .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, resource.uid.toString())
-              .onDuplicateKeyIgnore()
+      }
+      environments.forEach { environment ->
+        val environmentUID = jooq
+          .select(ENVIRONMENT.UID)
+          .from(ENVIRONMENT)
+          .where(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(uid))
+          .and(ENVIRONMENT.NAME.eq(environment.name))
+          .fetchOne(ENVIRONMENT.UID)
+          ?: randomUID().toString().also {
+            jooq.insertInto(ENVIRONMENT)
+              .set(ENVIRONMENT.UID, it)
+              .set(ENVIRONMENT.DELIVERY_CONFIG_UID, uid)
+              .set(ENVIRONMENT.NAME, environment.name)
               .execute()
           }
+        environment.resources.forEach { resource ->
+          jooq.insertInto(ENVIRONMENT_RESOURCE)
+            .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUID)
+            .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, resource.uid.toString())
+            .onDuplicateKeyIgnore()
+            .execute()
         }
       }
     }
@@ -92,6 +95,7 @@ class SqlDeliveryConfigRepository(
           .fetch { (name, type) ->
             DeliveryArtifact(name, ArtifactType.valueOf(type))
           }
+          .toSet()
           .let { artifacts ->
             jooq
               .select(ENVIRONMENT.UID, ENVIRONMENT.NAME)
@@ -100,7 +104,7 @@ class SqlDeliveryConfigRepository(
               .fetch { (environmentUid, name) ->
                 environmentUid to Environment(name, emptySet())
               }
-              .map { (environmentUid, environment) ->
+              .mapTo(mutableSetOf()) { (environmentUid, environment) ->
                 jooq
                   .select(
                     RESOURCE.API_VERSION,
@@ -125,8 +129,8 @@ class SqlDeliveryConfigRepository(
               }
               .let { environments ->
                 deliveryConfig.copy(
-                  artifacts = artifacts.toSet(),
-                  environments = environments.toSet()
+                  artifacts = artifacts,
+                  environments = environments
                 )
               }
           }

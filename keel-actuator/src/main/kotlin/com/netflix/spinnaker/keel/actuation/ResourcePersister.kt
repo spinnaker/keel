@@ -1,7 +1,11 @@
 package com.netflix.spinnaker.keel.actuation
 
+import com.netflix.spinnaker.keel.api.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceName
+import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.name
 import com.netflix.spinnaker.keel.diff.ResourceDiff
@@ -9,6 +13,8 @@ import com.netflix.spinnaker.keel.events.CreateEvent
 import com.netflix.spinnaker.keel.events.DeleteEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.get
@@ -17,27 +23,53 @@ import com.netflix.spinnaker.keel.plugin.supporting
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Propagation.REQUIRED
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 
 @Component
 class ResourcePersister(
+  private val deliveryConfigRepository: DeliveryConfigRepository,
+  private val artifactRepository: ArtifactRepository,
   private val resourceRepository: ResourceRepository,
   private val handlers: List<ResolvableResourceHandler<*, *>>,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher
 ) {
-  fun upsert(resource: SubmittedResource<Any>): Resource<out Any> =
+  @Transactional(propagation = REQUIRED)
+  fun upsert(deliveryConfig: SubmittedDeliveryConfig): DeliveryConfig =
+    DeliveryConfig(
+      name = deliveryConfig.name,
+      application = deliveryConfig.application,
+      artifacts = deliveryConfig.artifacts,
+      environments = deliveryConfig.environments.mapTo(mutableSetOf()) { env ->
+        Environment(
+          name = env.name,
+          resources = env.resources.mapTo(mutableSetOf()) { resource ->
+            upsert(resource)
+          }
+        )
+      }
+    )
+      .also {
+        it.artifacts.forEach { artifact ->
+          artifact.register()
+        }
+        deliveryConfigRepository.store(it)
+      }
+
+  fun upsert(resource: SubmittedResource<*>): Resource<out Any> =
     handlers.supporting(resource.apiVersion, resource.kind)
       .normalize(resource)
-      .also {
+      .let {
         if (it.name.isRegistered()) {
-          return update(it.name, resource)
+          update(it.name, resource)
         } else {
-          return create(resource)
+          create(resource)
         }
       }
 
-  fun create(resource: SubmittedResource<Any>): Resource<out Any> =
+  fun create(resource: SubmittedResource<*>): Resource<out Any> =
     handlers.supporting(resource.apiVersion, resource.kind)
       .normalize(resource)
       .also {
@@ -47,7 +79,7 @@ class ResourcePersister(
         publisher.publishEvent(CreateEvent(it.name))
       }
 
-  fun update(name: ResourceName, updated: SubmittedResource<Any>): Resource<out Any> {
+  fun update(name: ResourceName, updated: SubmittedResource<*>): Resource<out Any> {
     log.debug("Updating $name")
     val handler = handlers.supporting(updated.apiVersion, updated.kind)
     val existing = resourceRepository.get(name, Any::class.java)
@@ -77,12 +109,17 @@ class ResourcePersister(
         publisher.publishEvent(DeleteEvent(name))
       }
 
-  private fun ResourceName.isRegistered(): Boolean {
+  private fun ResourceName.isRegistered(): Boolean =
     try {
       resourceRepository.get(this, Any::class.java)
-      return true
+      true
     } catch (e: NoSuchResourceException) {
-      return false
+      false
+    }
+
+  private fun DeliveryArtifact.register() {
+    if (!artifactRepository.isRegistered(name, type)) {
+      artifactRepository.register(this)
     }
   }
 

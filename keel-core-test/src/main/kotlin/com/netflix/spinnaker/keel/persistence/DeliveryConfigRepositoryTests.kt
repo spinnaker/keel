@@ -13,21 +13,24 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
 import strikt.assertions.failed
+import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.succeeded
 
-abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : ResourceRepository> :
+abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
   JUnit5Minutests {
 
   abstract fun createDeliveryConfigRepository(resourceTypeIdentifier: ResourceTypeIdentifier): T
   abstract fun createResourceRepository(): R
+  abstract fun createArtifactRepository(): A
 
   open fun flush() {}
 
-  data class Fixture<T : DeliveryConfigRepository, R : ResourceRepository>(
+  data class Fixture<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository>(
     val deliveryConfigRepositoryProvider: (ResourceTypeIdentifier) -> T,
     val resourceRepositoryProvider: () -> R,
+    val artifactRepositoryProvider: () -> A,
     val deliveryConfig: DeliveryConfig = DeliveryConfig("keel", "keel")
   ) {
     private val resourceTypeIdentifier: ResourceTypeIdentifier =
@@ -43,6 +46,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
     private val repository: T = deliveryConfigRepositoryProvider(resourceTypeIdentifier)
     private val resourceRepository: R = resourceRepositoryProvider()
+    private val artifactRepository: A = artifactRepositoryProvider()
 
     fun getByName() = expectCatching {
       repository.get(deliveryConfig.name)
@@ -57,13 +61,20 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         resourceRepository.store(it)
       }
     }
+
+    fun storeArtifacts() {
+      deliveryConfig.artifacts.forEach {
+        artifactRepository.register(it)
+      }
+    }
   }
 
-  fun tests() = rootContext<Fixture<T, R>>() {
+  fun tests() = rootContext<Fixture<T, R, A>>() {
     fixture {
       Fixture(
         deliveryConfigRepositoryProvider = this@DeliveryConfigRepositoryTests::createDeliveryConfigRepository,
-        resourceRepositoryProvider = this@DeliveryConfigRepositoryTests::createResourceRepository
+        resourceRepositoryProvider = this@DeliveryConfigRepositoryTests::createResourceRepository,
+        artifactRepositoryProvider = this@DeliveryConfigRepositoryTests::createArtifactRepository
       )
     }
 
@@ -132,30 +143,48 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         )
       }
 
-      before {
-        storeResources()
-        store()
+      context("the environments did not previously exist") {
+        before {
+          storeArtifacts()
+          storeResources()
+          store()
+        }
+
+        test("the config can be retrieved by name") {
+          getByName()
+            .succeeded()
+            .and {
+              get { name }.isEqualTo(deliveryConfig.name)
+              get { application }.isEqualTo(deliveryConfig.application)
+            }
+        }
+
+        test("artifacts are attached") {
+          getByName()
+            .succeeded()
+            .get { artifacts }.isEqualTo(deliveryConfig.artifacts)
+        }
+
+        test("environments are attached") {
+          getByName()
+            .succeeded()
+            .get { environments }.isEqualTo(deliveryConfig.environments)
+        }
       }
 
-      test("the config can be retrieved by name") {
-        getByName()
-          .succeeded()
-          .and {
-            get { name }.isEqualTo(deliveryConfig.name)
-            get { application }.isEqualTo(deliveryConfig.application)
-          }
-      }
+      context("environments already existed") {
+        before {
+          storeArtifacts()
+          storeResources()
+          store()
+          store()
+        }
 
-      test("artifacts are attached") {
-        getByName()
-          .succeeded()
-          .get { artifacts }.isEqualTo(deliveryConfig.artifacts)
-      }
-
-      test("environments are attached") {
-        getByName()
-          .succeeded()
-          .get { environments }.isEqualTo(deliveryConfig.environments)
+        test("the environments are not duplicated") {
+          getByName()
+            .succeeded()
+            .get { environments }.hasSize(deliveryConfig.environments.size)
+        }
       }
     }
   }
