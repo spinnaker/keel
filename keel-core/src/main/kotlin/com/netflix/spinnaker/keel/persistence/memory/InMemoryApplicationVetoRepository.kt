@@ -15,18 +15,18 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.veto.application
+package com.netflix.spinnaker.keel.persistence.memory
 
+import com.netflix.spinnaker.keel.persistence.ApplicationVetoRepository
 import org.springframework.stereotype.Component
 
-// todo eb: make sql repo
 @Component
 class InMemoryApplicationVetoRepository : ApplicationVetoRepository {
 
   private val optedOut: MutableSet<String> = mutableSetOf()
 
-  override fun appEnabled(application: String): Boolean =
-    !optedOut.contains(application)
+  override fun appVetoed(application: String): Boolean =
+    optedOut.contains(application)
 
   override fun optOut(application: String) {
     optedOut.add(application)

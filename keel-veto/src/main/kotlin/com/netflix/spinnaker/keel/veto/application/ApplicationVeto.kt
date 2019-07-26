@@ -19,6 +19,7 @@ package com.netflix.spinnaker.keel.veto.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ResourceName
+import com.netflix.spinnaker.keel.persistence.ApplicationVetoRepository
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
 import com.netflix.spinnaker.keel.veto.exceptions.MalformedMessageException
@@ -32,10 +33,10 @@ class ApplicationVeto(
 
   override fun check(name: ResourceName): VetoResponse {
     val appName = name.toString().split(":").last().split("-").first()
-    if (applicationVetoRepository.appEnabled(appName)) {
-      return VetoResponse(allowed = true)
+    if (applicationVetoRepository.appVetoed(appName)) {
+      return VetoResponse(allowed = false, message = "Application $appName has been opted out.")
     }
-    return VetoResponse(allowed = false, message = "Application $appName has been opted out.")
+    return VetoResponse(allowed = true)
   }
 
   override fun messageFormat() =

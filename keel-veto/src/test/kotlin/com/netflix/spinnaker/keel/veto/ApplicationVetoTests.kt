@@ -18,9 +18,9 @@
 package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.ResourceName
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryApplicationVetoRepository
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.veto.application.ApplicationVeto
-import com.netflix.spinnaker.keel.veto.application.InMemoryApplicationVetoRepository
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat
