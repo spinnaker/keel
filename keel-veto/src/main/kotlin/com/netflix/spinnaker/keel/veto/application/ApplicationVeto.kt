@@ -15,27 +15,27 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy.application
+package com.netflix.spinnaker.keel.veto.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ResourceName
-import com.netflix.spinnaker.keel.policy.Policy
-import com.netflix.spinnaker.keel.policy.PolicyResponse
-import com.netflix.spinnaker.keel.policy.exceptions.MalformedMessageException
+import com.netflix.spinnaker.keel.veto.Veto
+import com.netflix.spinnaker.keel.veto.VetoResponse
+import com.netflix.spinnaker.keel.veto.exceptions.MalformedMessageException
 import org.springframework.stereotype.Component
 
 @Component
-class ApplicationOptOutPolicy(
-  val applicationOptOutRepository: ApplicationOptOutRepository,
+class ApplicationVeto(
+  val applicationVetoRepository: ApplicationVetoRepository,
   val objectMapper: ObjectMapper
-) : Policy {
+) : Veto {
 
-  override fun check(name: ResourceName): PolicyResponse {
+  override fun check(name: ResourceName): VetoResponse {
     val appName = name.toString().split(":").last().split("-").first()
-    if (applicationOptOutRepository.appEnabled(appName)) {
-      return PolicyResponse(allowed = true)
+    if (applicationVetoRepository.appEnabled(appName)) {
+      return VetoResponse(allowed = true)
     }
-    return PolicyResponse(allowed = false, message = "Application $name has been opted out.")
+    return VetoResponse(allowed = false, message = "Application $appName has been opted out.")
   }
 
   override fun messageFormat() =
@@ -48,9 +48,9 @@ class ApplicationOptOutPolicy(
     try {
       val appInfo = objectMapper.convertValue(message, MessageFormat::class.java)
       if (appInfo.optedOut) {
-        applicationOptOutRepository.optOut(appInfo.application)
+        applicationVetoRepository.optOut(appInfo.application)
       } else {
-        applicationOptOutRepository.optIn(appInfo.application)
+        applicationVetoRepository.optIn(appInfo.application)
       }
     } catch (e: IllegalArgumentException) {
       throw MalformedMessageException(this.javaClass.simpleName, messageFormat())
@@ -58,7 +58,7 @@ class ApplicationOptOutPolicy(
   }
 
   override fun currentRejections(): List<String> {
-    return applicationOptOutRepository.getAll().toList()
+    return applicationVetoRepository.getAll().toList()
   }
 }
 

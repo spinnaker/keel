@@ -15,10 +15,10 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy
+package com.netflix.spinnaker.keel.veto
 
-import com.netflix.spinnaker.keel.policy.exceptions.MalformedMessageException
-import com.netflix.spinnaker.keel.policy.exceptions.PolicyNotFoundException
+import com.netflix.spinnaker.keel.veto.exceptions.MalformedMessageException
+import com.netflix.spinnaker.keel.veto.exceptions.VetoNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -32,9 +32,9 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(path = ["/policies"])
-class PolicyController(
-  val policies: List<Policy>
+@RequestMapping(path = ["/vetos"])
+class VetoController(
+  val vetos: List<Veto>
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -42,21 +42,21 @@ class PolicyController(
   @GetMapping(
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
-  fun getActivePolicies(): List<String> = policies.map { it.name() }
+  fun getActiveVetos(): List<String> = vetos.map { it.name() }
 
   @GetMapping(
     path = ["/{name}/message-format"],
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
-  fun getPolicyMessageFormat(@PathVariable name: String): Map<String, Any> {
-    val policy = policies.find { it.name().equals(name, true) }
-    if (policy == null) {
-      throw PolicyNotFoundException(name)
+  fun getVetoMessageFormat(@PathVariable name: String): Map<String, Any> {
+    val veto = vetos.find { it.name().equals(name, true) }
+    if (veto == null) {
+      throw VetoNotFoundException(name)
     } else {
       return mapOf(
-        "messageURL" to "POST /policies/{name}",
+        "messageURL" to "POST /vetos/{name}",
         "name" to name,
-        "messageBodyFormat" to policy.messageFormat()
+        "messageBodyFormat" to veto.messageFormat()
       )
     }
   }
@@ -65,12 +65,12 @@ class PolicyController(
     path = ["/{name}/rejections"],
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
-  fun getPolicyRejections(@PathVariable name: String): List<String> {
-    val policy = policies.find { it.name().equals(name, ignoreCase = true) }
-    if (policy == null) {
-      throw PolicyNotFoundException(name)
+  fun getVetoRejections(@PathVariable name: String): List<String> {
+    val veto = vetos.find { it.name().equals(name, ignoreCase = true) }
+    if (veto == null) {
+      throw VetoNotFoundException(name)
     } else {
-      return policy.currentRejections()
+      return veto.currentRejections()
     }
   }
 
@@ -79,15 +79,15 @@ class PolicyController(
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
   fun passMessage(@PathVariable name: String, @RequestBody message: Map<String, Any>) =
-    policies.forEach { policy ->
-      if (policy.name().equals(name, ignoreCase = true)) {
-        policy.passMessage(message)
+    vetos.forEach { veto ->
+      if (veto.name().equals(name, ignoreCase = true)) {
+        veto.passMessage(message)
       }
     }
 
-  @ExceptionHandler(PolicyNotFoundException::class)
+  @ExceptionHandler(VetoNotFoundException::class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
-  fun onNotFound(e: PolicyNotFoundException): Map<String, Any?> {
+  fun onNotFound(e: VetoNotFoundException): Map<String, Any?> {
     log.error(e.message)
     return mapOf("message" to e.message)
   }

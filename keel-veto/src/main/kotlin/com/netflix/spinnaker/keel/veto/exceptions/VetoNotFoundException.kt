@@ -15,8 +15,8 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy.exceptions
+package com.netflix.spinnaker.keel.veto.exceptions
 
-class PolicyNotFoundException(
-  val policyName: String
-) : RuntimeException("Policy $policyName not found.")
+class VetoNotFoundException(
+  val vetoName: String
+) : RuntimeException("Veto $vetoName not found.")

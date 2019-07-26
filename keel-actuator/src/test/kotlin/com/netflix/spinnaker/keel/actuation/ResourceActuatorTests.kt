@@ -14,15 +14,15 @@ import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.TaskRef
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.plugin.ResolvableResourceHandler
-import com.netflix.spinnaker.keel.policy.Policy
-import com.netflix.spinnaker.keel.policy.PolicyEnforcer
-import com.netflix.spinnaker.keel.policy.PolicyResponse
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
 import com.netflix.spinnaker.keel.telemetry.ResourceChecked
 import com.netflix.spinnaker.keel.telemetry.ResourceState.Diff
 import com.netflix.spinnaker.keel.telemetry.ResourceState.Error
 import com.netflix.spinnaker.keel.telemetry.ResourceState.Missing
 import com.netflix.spinnaker.keel.telemetry.ResourceState.Ok
+import com.netflix.spinnaker.keel.veto.Veto
+import com.netflix.spinnaker.keel.veto.VetoEnforcer
+import com.netflix.spinnaker.keel.veto.VetoResponse
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.coEvery
@@ -46,8 +46,8 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     val plugin1 = mockk<ResolvableResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val plugin2 = mockk<ResolvableResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    val policyEnforcer = PolicyEnforcer(listOf(DummyPolicy()))
-    val subject = ResourceActuator(resourceRepository, listOf(plugin1, plugin2), policyEnforcer, publisher, Clock.systemDefaultZone())
+    val vetoEnforcer = VetoEnforcer(listOf(DummyVeto()))
+    val subject = ResourceActuator(resourceRepository, listOf(plugin1, plugin2), vetoEnforcer, publisher, Clock.systemDefaultZone())
   }
 
   fun tests() = rootContext<Fixture> {
@@ -282,7 +282,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           }
         }
 
-        context("the app badapp is denied by the policy") {
+        context("the app badapp is vetoed") {
           val badresource = Resource(
             apiVersion = SPINNAKER_API_V1.subApi("plugin1"),
             kind = "foo",
@@ -298,7 +298,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
             resourceRepository.appendHistory(ResourceCreated(badresource))
           }
 
-          test("that nothing happens") {
+          test("checking skipped") {
             with(badresource) {
               runBlocking {
                 subject.checkResource(name, apiVersion, kind)
@@ -326,12 +326,12 @@ internal data class DummyResourceSpec(
   val data: String = "some data"
 )
 
-internal class DummyPolicy : Policy {
-  override fun check(name: ResourceName): PolicyResponse {
+internal class DummyVeto : Veto {
+  override fun check(name: ResourceName): VetoResponse {
     if (name.toString().contains("badapp")) {
-      return PolicyResponse(false, "this is a badapp and can't be checked")
+      return VetoResponse(false, "this is a badapp and can't be checked")
     }
-    return PolicyResponse(true)
+    return VetoResponse(true)
   }
 
   override fun messageFormat() = mapOf("no" to "format")

@@ -15,45 +15,45 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy
+package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.ResourceName
 
 /**
- * Implement this interface to create a policy that will be consulted
+ * Implement this interface to create a veto that will be consulted
  * before a resource is checked.
  *
  * todo emjburns: how do we get metrics on this? we should have something moniterable
  */
-interface Policy {
+interface Veto {
 
   /**
-   * The name of the policy
+   * The name of the veto
    */
   fun name(): String = javaClass.simpleName
 
   /**
-   * Check whether the resource (identified by name) can be checked according to this policy
+   * Check whether the resource (identified by name) can be checked according to this veto
    */
-  fun check(name: ResourceName): PolicyResponse
+  fun check(name: ResourceName): VetoResponse
 
   /**
-   * The message format a policy accepts
+   * The message format a veto accepts
    */
   fun messageFormat(): Map<String, Any>
 
   /**
-   * Pass a message to a policy
+   * Pass a message to a veto
    */
   fun passMessage(message: Map<String, Any>)
 
   /**
-   * What's currently being rejected
+   * What's currently being vetoed
    */
   fun currentRejections(): List<String>
 }
 
-data class PolicyResponse(
+data class VetoResponse(
   val allowed: Boolean,
   val message: String? = null
 )

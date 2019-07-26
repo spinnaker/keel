@@ -30,7 +30,6 @@ include(
   "keel-mahe",
   "keel-orca",
   "keel-plugin",
-  "keel-policy",
   "keel-retrofit",
   "keel-retrofit-test-support",
   "keel-spring-test-support",

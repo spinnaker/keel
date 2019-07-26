@@ -6,7 +6,7 @@ plugins {
 dependencies {
   api(project(":keel-core"))
   api(project(":keel-plugin"))
-  api(project(":keel-policy"))
+  api(project(":keel-veto"))
 
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   implementation("org.springframework:spring-tx")

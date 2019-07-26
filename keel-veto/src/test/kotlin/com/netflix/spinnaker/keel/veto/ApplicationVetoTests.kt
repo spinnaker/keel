@@ -15,12 +15,12 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy
+package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.ResourceName
-import com.netflix.spinnaker.keel.policy.application.ApplicationOptOutPolicy
-import com.netflix.spinnaker.keel.policy.application.InMemoryApplicationOptOutRepository
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.veto.application.ApplicationVeto
+import com.netflix.spinnaker.keel.veto.application.InMemoryApplicationVetoRepository
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat
@@ -29,15 +29,15 @@ import strikt.assertions.hasSize
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-class ApplicationOptOutPolicyTests : JUnit5Minutests {
+class ApplicationVetoTests : JUnit5Minutests {
   val appName = "keeldemo"
   val resourceName = ResourceName("ec2:securityGroup:test:us-west-2:keeldemo-managed")
 
   internal
 
   class Fixture {
-    val applicationOptOutRepository = InMemoryApplicationOptOutRepository()
-    val subject = ApplicationOptOutPolicy(applicationOptOutRepository, configuredObjectMapper())
+    val vetoRepository = InMemoryApplicationVetoRepository()
+    val subject = ApplicationVeto(vetoRepository, configuredObjectMapper())
   }
 
   fun tests() = rootContext<Fixture> {
@@ -45,7 +45,7 @@ class ApplicationOptOutPolicyTests : JUnit5Minutests {
 
     context("testing opt in flow") {
       after {
-        applicationOptOutRepository.flush()
+        vetoRepository.flush()
       }
 
       test("when no applications are opted out we allow any app") {

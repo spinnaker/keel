@@ -16,32 +16,29 @@
  *
  */
 
-package com.netflix.spinnaker.keel.policy
+package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.ResourceName
 import org.springframework.stereotype.Component
 
 /**
- * The policy enforcer picks up all policies, and given a resource name
- * it looks at each policy to decide if we can check that resource.
+ * The veto enforcer picks up all vetos, and given a resource name
+ * it looks at each veto to decide if we can check that resource.
  *
  * One "false" overrides all "true"s
  */
 @Component
-class PolicyEnforcer(
-  val policies: List<Policy>
+class VetoEnforcer(
+  val vetos: List<Veto>
 ) {
 
-  fun canCheck(name: ResourceName): PolicyResponse {
-    policies.forEach { policy ->
-      val response = policy.check(name)
+  fun canCheck(name: ResourceName): VetoResponse {
+    vetos.forEach { veto ->
+      val response = veto.check(name)
       if (!response.allowed) {
         return response
       }
     }
-    return PolicyResponse(allowed = true)
+    return VetoResponse(allowed = true)
   }
-
-  fun registeredPolicies() =
-    policies.map { it.name() }
 }

@@ -15,9 +15,9 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy.exceptions
+package com.netflix.spinnaker.keel.veto.exceptions
 
 class MalformedMessageException(
-  val policyName: String,
+  val vetoName: String,
   val structure: Map<String, Any>
-) : RuntimeException("Malformed message sent to policy $policyName, correct structure is: $structure")
+) : RuntimeException("Malformed message sent to veto $vetoName, correct structure is: $structure")

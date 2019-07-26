@@ -15,13 +15,13 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy.application
+package com.netflix.spinnaker.keel.veto.application
 
 import org.springframework.stereotype.Component
 
 // todo eb: make sql repo
 @Component
-class InMemoryApplicationOptOutRepository : ApplicationOptOutRepository {
+class InMemoryApplicationVetoRepository : ApplicationVetoRepository {
 
   private val optedOut: MutableSet<String> = mutableSetOf()
 

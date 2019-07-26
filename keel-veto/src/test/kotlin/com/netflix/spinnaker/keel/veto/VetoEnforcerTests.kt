@@ -15,26 +15,26 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy
+package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.ResourceName
-import com.netflix.spinnaker.keel.policy.application.ApplicationOptOutPolicy
-import com.netflix.spinnaker.keel.policy.application.InMemoryApplicationOptOutRepository
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.veto.application.ApplicationVeto
+import com.netflix.spinnaker.keel.veto.application.InMemoryApplicationVetoRepository
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-class PolicyEnforcerTests : JUnit5Minutests {
+class VetoEnforcerTests : JUnit5Minutests {
 
   val appName = "myapp"
 
   internal class Fixture {
-    val applicationOptOutRepository = InMemoryApplicationOptOutRepository()
-    val applicationOptOutPolicy = ApplicationOptOutPolicy(applicationOptOutRepository, configuredObjectMapper())
-    val subject = PolicyEnforcer(listOf(applicationOptOutPolicy))
+    val applicationVetoRepository = InMemoryApplicationVetoRepository()
+    val applicationVeto = ApplicationVeto(applicationVetoRepository, configuredObjectMapper())
+    val subject = VetoEnforcer(listOf(applicationVeto))
   }
 
   fun tests() = rootContext<Fixture> {
@@ -42,16 +42,16 @@ class PolicyEnforcerTests : JUnit5Minutests {
 
     context("enforcing things") {
       after {
-        applicationOptOutRepository.flush()
+        applicationVetoRepository.flush()
       }
 
-      test("no configured policies means it's allowed") {
+      test("no vetos means it's allowed") {
         val response = subject.canCheck(ResourceName(appName))
         expectThat(response.allowed).isTrue()
       }
 
       test("when we have one deny we deny overall") {
-        applicationOptOutPolicy.passMessage(
+        applicationVeto.passMessage(
           mapOf(
             "application" to appName,
             "optedOut" to true

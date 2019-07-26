@@ -15,12 +15,12 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.policy.application
+package com.netflix.spinnaker.keel.veto.application
 
 /**
  * Stores which applications have opted out of resource checking
  */
-interface ApplicationOptOutRepository {
+interface ApplicationVetoRepository {
 
   fun appEnabled(application: String): Boolean
 
