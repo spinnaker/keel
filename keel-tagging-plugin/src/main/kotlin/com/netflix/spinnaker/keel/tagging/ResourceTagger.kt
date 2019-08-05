@@ -93,10 +93,12 @@ class ResourceTagger(
   fun onDeleteEvent(event: DeleteEvent) {
     if (event.resourceName.shouldTag()) {
       log.debug("Persisting no tag desired for resource {} because it is no longer managed", event.resourceName.toString())
+      val entityRef = event.resourceName.toEntityRef()
       val spec = KeelTagSpec(
         keelId = event.resourceName.toString(),
-        entityRef = event.resourceName.toEntityRef(),
-        tagState = TagNotDesired(startTime = clock.millis())
+        entityRef = entityRef,
+        tagState = TagNotDesired(startTime = clock.millis()),
+        application = entityRef.application
       )
       persistTagState(spec)
     }
@@ -162,7 +164,8 @@ class ResourceTagger(
     KeelTagSpec(
       toString(),
       toEntityRef(),
-      generateTagDesired()
+      generateTagDesired(),
+      toEntityRef().application
     )
 
   private fun ResourceName.generateTagDesired() =

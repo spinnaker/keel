@@ -2,6 +2,8 @@ package com.netflix.spinnaker.keel.plugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ApiVersion
+import com.netflix.spinnaker.keel.api.Applicationed
+import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceName
@@ -60,10 +62,17 @@ interface ResolvableResourceHandler<S : Any, R : Any> : KeelPlugin {
         e
       )
     }
+    val app = when (spec) {
+      is Monikered -> spec.moniker.app
+      is Applicationed -> spec.application
+      else -> "noapp" // todo eb: is this the right way to handle this?
+    }
+
     val metadata = mapOf(
       "name" to generateName(spec).toString(),
       "uid" to randomUID().toString(),
-      "serviceAccount" to resource.metadata.serviceAccount
+      "serviceAccount" to resource.metadata.serviceAccount,
+      "application" to app
     )
     val hydratedResource = Resource(
       apiVersion = resource.apiVersion,

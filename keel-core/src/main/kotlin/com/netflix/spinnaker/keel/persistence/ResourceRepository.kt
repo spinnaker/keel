@@ -61,6 +61,11 @@ interface ResourceRepository {
   fun <T : Any> get(uid: UID, specType: Class<T>): Resource<T>
 
   /**
+   * Fetches resources for a given application.
+   */
+  fun getByApplication(application: String): List<String>
+
+  /**
    * Persists a resource.
    *
    * @return the `uid` of the stored resource.

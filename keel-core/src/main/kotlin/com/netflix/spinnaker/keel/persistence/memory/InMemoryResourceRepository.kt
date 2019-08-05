@@ -18,6 +18,7 @@ package com.netflix.spinnaker.keel.persistence.memory
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceName
 import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.name
 import com.netflix.spinnaker.keel.api.uid
 import com.netflix.spinnaker.keel.events.ResourceEvent
@@ -62,6 +63,16 @@ class InMemoryResourceRepository(
         (it as Resource<Any>).copy(spec = convertedSpec) as Resource<T>
       }
     } ?: throw NoSuchResourceUID(uid)
+
+  override fun getByApplication(application: String): List<String> {
+    val matches = mutableListOf<String>()
+    resources.forEach { (_, resource) ->
+      if (resource.application == application) {
+        matches.add(resource.name.toString())
+      }
+    }
+    return matches
+  }
 
   override fun store(resource: Resource<*>) {
     resources[resource.uid] = resource

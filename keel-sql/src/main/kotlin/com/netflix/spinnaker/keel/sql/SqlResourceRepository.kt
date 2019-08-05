@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceName
 import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.name
 import com.netflix.spinnaker.keel.api.uid
 import com.netflix.spinnaker.keel.events.ResourceEvent
@@ -73,6 +74,15 @@ class SqlResourceRepository(
       } ?: throw NoSuchResourceName(name)
   }
 
+  override fun getByApplication(application: String): List<String> {
+    return jooq
+      .select(RESOURCE.NAME)
+      .from(RESOURCE)
+      .where(RESOURCE.APPLICATION.eq(application))
+      .fetchArray(RESOURCE.NAME)
+      .toList()
+  }
+
   override fun store(resource: Resource<*>) {
     val uid = resource.uid.toString()
     val updatePairs = mapOf(
@@ -80,7 +90,8 @@ class SqlResourceRepository(
       RESOURCE.KIND to resource.kind,
       RESOURCE.NAME to resource.name.value,
       RESOURCE.METADATA to objectMapper.writeValueAsString(resource.metadata),
-      RESOURCE.SPEC to objectMapper.writeValueAsString(resource.spec)
+      RESOURCE.SPEC to objectMapper.writeValueAsString(resource.spec),
+      RESOURCE.APPLICATION to resource.application
     )
     val insertPairs = updatePairs + (RESOURCE.UID to uid)
     jooq.insertInto(
@@ -115,14 +126,14 @@ class SqlResourceRepository(
 
   override fun appendHistory(event: ResourceEvent) {
     jooq.insertInto(RESOURCE_EVENT)
-        .columns(RESOURCE_EVENT.UID, RESOURCE_EVENT.TIMESTAMP, RESOURCE_EVENT.JSON)
-        .values(
-          event.uid.toString(),
-          event.timestamp.atZone(clock.zone).toLocalDateTime(),
-          objectMapper.writeValueAsString(event)
-        )
-        .execute()
-    }
+      .columns(RESOURCE_EVENT.UID, RESOURCE_EVENT.TIMESTAMP, RESOURCE_EVENT.JSON)
+      .values(
+        event.uid.toString(),
+        event.timestamp.atZone(clock.zone).toLocalDateTime(),
+        objectMapper.writeValueAsString(event)
+      )
+      .execute()
+  }
 
   override fun delete(name: ResourceName) {
     val uid = jooq.select(RESOURCE.UID)
