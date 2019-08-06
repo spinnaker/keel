@@ -64,6 +64,15 @@ class InMemoryResourceRepository(
       }
     } ?: throw NoSuchResourceUID(uid)
 
+  override fun hasManagedResources(application: String): Boolean {
+    resources.forEach { (_, resource) ->
+      if (resource.application == application) {
+        return true
+      }
+    }
+    return false
+  }
+
   override fun getByApplication(application: String): List<String> {
     val matches = mutableListOf<String>()
     resources.forEach { (_, resource) ->

@@ -74,6 +74,20 @@ class SqlResourceRepository(
       } ?: throw NoSuchResourceName(name)
   }
 
+  override fun hasManagedResources(application: String): Boolean {
+    jooq
+      .select(RESOURCE.NAME)
+      .from(RESOURCE)
+      .where(RESOURCE.APPLICATION.eq(application))
+      .fetchArray(RESOURCE.NAME)
+      .let { results ->
+        if (results.isNotEmpty()) {
+          return true
+        }
+      }
+    return false
+  }
+
   override fun getByApplication(application: String): List<String> {
     return jooq
       .select(RESOURCE.NAME)

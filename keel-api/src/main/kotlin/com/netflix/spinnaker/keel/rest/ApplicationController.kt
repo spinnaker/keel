@@ -26,23 +26,25 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(path = ["/info"])
-class InfoController(
+@RequestMapping(path = ["/application"])
+class ApplicationController(
   private val resourceRepository: ResourceRepository
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @GetMapping(
-    path = ["/{application}"],
+    path = ["/{application}/managed"],
     produces = [APPLICATION_JSON_VALUE]
   )
-  fun get(@PathVariable("application") applicaton: String): ApplicationInfo {
-    val resources = resourceRepository.getByApplication(applicaton).filter { !it.startsWith("tag:keel-tag") }
-    return ApplicationInfo(resources.isNotEmpty(), resources)
+  fun get(@PathVariable("application") application: String): Boolean {
+    return resourceRepository.hasManagedResources(application)
+  }
+
+  @GetMapping(
+    path = ["/{application}/resources"],
+    produces = [APPLICATION_JSON_VALUE]
+  )
+  fun getResources(@PathVariable("application") application: String): List<String> {
+    return resourceRepository.getByApplication(application).filter { !it.startsWith("tag:keel-tag") }
   }
 }
-
-data class ApplicationInfo(
-  val hasManagedResources: Boolean,
-  val managedResourceNames: List<String>
-)
