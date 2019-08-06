@@ -75,17 +75,12 @@ class SqlResourceRepository(
   }
 
   override fun hasManagedResources(application: String): Boolean {
-    jooq
-      .select(RESOURCE.NAME)
+    return jooq
+      .selectCount()
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
-      .fetchArray(RESOURCE.NAME)
-      .let { results ->
-        if (results.isNotEmpty()) {
-          return true
-        }
-      }
-    return false
+      .fetchOne()
+      .value1() > 0
   }
 
   override fun getByApplication(application: String): List<String> {
@@ -93,8 +88,7 @@ class SqlResourceRepository(
       .select(RESOURCE.NAME)
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
-      .fetchArray(RESOURCE.NAME)
-      .toList()
+      .fetch(RESOURCE.NAME)
   }
 
   override fun store(resource: Resource<*>) {
