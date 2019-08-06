@@ -45,6 +45,7 @@ class ApplicationController(
     produces = [APPLICATION_JSON_VALUE]
   )
   fun getResources(@PathVariable("application") application: String): List<String> {
-    return resourceRepository.getByApplication(application).filter { !it.startsWith("tag:keel-tag") }
+    return resourceRepository.getByApplication(application)
+      .filter { !it.startsWith("tag:keel-tag") }
   }
 }
