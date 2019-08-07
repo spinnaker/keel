@@ -23,6 +23,7 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -33,19 +34,21 @@ class ApplicationController(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @GetMapping(
-    path = ["/{application}/managed"],
+    path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE]
   )
-  fun get(@PathVariable("application") application: String): Boolean {
-    return resourceRepository.hasManagedResources(application)
-  }
-
-  @GetMapping(
-    path = ["/{application}/resources"],
-    produces = [APPLICATION_JSON_VALUE]
-  )
-  fun getResources(@PathVariable("application") application: String): List<String> {
-    return resourceRepository.getByApplication(application)
-      .filter { !it.startsWith("tag:keel-tag") }
+  fun get(
+    @PathVariable("application") application: String,
+    @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean
+  ): Map<String, Any> {
+    if (includeDetails) {
+      val resources = resourceRepository.getByApplication(application)
+        .filter { !it.startsWith("tag:keel-tag") }
+      return mapOf(
+        "hasManagedResources" to resources.isNotEmpty(),
+        "resources" to resources
+      )
+    }
+    return mapOf("hasManagedResources" to resourceRepository.hasManagedResources(application))
   }
 }
