@@ -51,7 +51,7 @@ class ClassicLoadBalancerHandler(
   )
 
   override suspend fun current(resource: Resource<ClassicLoadBalancer>): ClassicLoadBalancer? =
-    cloudDriverService.getClassicLoadBalancer(resource.spec)
+    cloudDriverService.getClassicLoadBalancer(resource.spec, resource.serviceAccount)
 
   override suspend fun upsert(
     resource: Resource<ClassicLoadBalancer>,
@@ -109,10 +109,11 @@ class ClassicLoadBalancerHandler(
   override suspend fun actuationInProgress(name: ResourceName) =
     orcaService.getCorrelatedExecutions(name.value).isNotEmpty()
 
-  private fun CloudDriverService.getClassicLoadBalancer(spec: ClassicLoadBalancer): ClassicLoadBalancer? =
+  private fun CloudDriverService.getClassicLoadBalancer(spec: ClassicLoadBalancer, serviceAccount: String): ClassicLoadBalancer? =
     runBlocking {
       try {
         getClassicLoadBalancer(
+          serviceAccount,
           CLOUD_PROVIDER,
           spec.location.accountName,
           spec.location.region,

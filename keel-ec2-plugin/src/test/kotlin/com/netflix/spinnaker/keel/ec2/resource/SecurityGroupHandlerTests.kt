@@ -477,7 +477,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private fun CurrentFixture.cloudDriverSecurityGroupReturns() {
     with(cloudDriverResponse) {
       coEvery {
-        cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpcId)
+        cloudDriverService.getSecurityGroup(any(), accountName, CLOUD_PROVIDER, name, region, vpcId)
       } returns this
     }
   }
@@ -485,7 +485,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private fun CurrentFixture.cloudDriverSecurityGroupNotFound() {
     with(cloudDriverResponse) {
       coEvery {
-        cloudDriverService.getSecurityGroup(accountName, CLOUD_PROVIDER, name, region, vpcId)
+        cloudDriverService.getSecurityGroup(any(), accountName, CLOUD_PROVIDER, name, region, vpcId)
       } throws RETROFIT_NOT_FOUND
     }
   }

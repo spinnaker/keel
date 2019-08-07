@@ -54,7 +54,7 @@ class ImageHandler(
       val artifact = DeliveryArtifact(spec.artifactName, DEB)
       val latestVersion = artifact.findLatestVersion()
       val baseImage = baseImageCache.getBaseImage(spec.baseOs, spec.baseLabel)
-      val baseAmi = findBaseAmi(baseImage)
+      val baseAmi = findBaseAmi(baseImage, resource.serviceAccount)
       Image(
         baseAmiVersion = baseAmi,
         appVersion = latestVersion,
@@ -124,8 +124,8 @@ class ImageHandler(
       .getCorrelatedExecutions(name.value)
       .isNotEmpty()
 
-  private suspend fun findBaseAmi(baseImage: String): String {
-    return cloudDriver.namedImages(baseImage, "test")
+  private suspend fun findBaseAmi(baseImage: String, serviceAccount: String): String {
+    return cloudDriver.namedImages(serviceAccount, baseImage, "test")
       .lastOrNull()
       ?.let { namedImage ->
         val tags = namedImage

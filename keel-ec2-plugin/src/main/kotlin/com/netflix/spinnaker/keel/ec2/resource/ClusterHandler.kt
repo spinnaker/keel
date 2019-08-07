@@ -130,7 +130,7 @@ class ClusterHandler(
     }
 
   override suspend fun current(resource: Resource<ClusterSpec>): Cluster? =
-    cloudDriverService.getCluster(resource.spec)
+    cloudDriverService.getCluster(resource.spec, resource.serviceAccount)
 
   override suspend fun upsert(
     resource: Resource<ClusterSpec>,
@@ -138,8 +138,8 @@ class ClusterHandler(
   ): List<TaskRef> {
     val spec = resourceDiff.desired
     val job = when {
-      resourceDiff.isCapacityOnly() -> spec.resizeServerGroupJob()
-      else -> spec.createServerGroupJob()
+      resourceDiff.isCapacityOnly() -> spec.resizeServerGroupJob(resource.serviceAccount)
+      else -> spec.createServerGroupJob(resource.serviceAccount)
     }
 
     log.info("Upserting cluster using task: {}", job)
@@ -170,7 +170,7 @@ class ClusterHandler(
   private fun ResourceDiff<Cluster>.isCapacityOnly(): Boolean =
     current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
 
-  private suspend fun Cluster.createServerGroupJob(): Map<String, Any?> =
+  private suspend fun Cluster.createServerGroupJob(serviceAccount: String): Map<String, Any?> =
     mutableMapOf(
       "application" to moniker.app,
       "credentials" to location.accountName,
@@ -227,7 +227,7 @@ class ClusterHandler(
       "targetGroups" to dependencies.targetGroups,
       "account" to location.accountName
     ).also { job ->
-      cloudDriverService.getAncestorServerGroup(this)
+      cloudDriverService.getAncestorServerGroup(this, serviceAccount)
         ?.let { ancestorServerGroup ->
           job["source"] = mapOf(
             "account" to location.accountName,
@@ -238,8 +238,8 @@ class ClusterHandler(
         }
     }
 
-  private suspend fun Cluster.resizeServerGroupJob(): Map<String, Any?> =
-    cloudDriverService.getAncestorServerGroup(this)
+  private suspend fun Cluster.resizeServerGroupJob(serviceAccount: String): Map<String, Any?> =
+    cloudDriverService.getAncestorServerGroup(this, serviceAccount)
       ?.let { currentServerGroup ->
         mapOf(
           "type" to "resizeServerGroup",
@@ -267,9 +267,10 @@ class ClusterHandler(
     TODO("not implemented")
   }
 
-  private suspend fun CloudDriverService.getAncestorServerGroup(spec: Cluster): ClusterActiveServerGroup? =
+  private suspend fun CloudDriverService.getAncestorServerGroup(spec: Cluster, serviceAccount: String): ClusterActiveServerGroup? =
     try {
       activeServerGroup(
+        serviceAccount,
         spec.moniker.app,
         spec.location.accountName,
         spec.moniker.name,
@@ -284,9 +285,10 @@ class ClusterHandler(
       }
     }
 
-  private suspend fun CloudDriverService.getCluster(spec: ClusterSpec): Cluster? {
+  private suspend fun CloudDriverService.getCluster(spec: ClusterSpec, serviceAccount: String): Cluster? {
     try {
       return activeServerGroup(
+        serviceAccount,
         spec.moniker.app,
         spec.location.accountName,
         spec.moniker.name,

@@ -68,7 +68,7 @@ class SecurityGroupHandler(
   )
 
   override suspend fun current(resource: Resource<SecurityGroup>): SecurityGroup? =
-    cloudDriverService.getSecurityGroup(resource.spec)
+    cloudDriverService.getSecurityGroup(resource.spec, resource.serviceAccount)
 
   override suspend fun create(
     resource: Resource<SecurityGroup>,
@@ -131,9 +131,10 @@ class SecurityGroupHandler(
       .getCorrelatedExecutions(name.value)
       .isNotEmpty()
 
-  private suspend fun CloudDriverService.getSecurityGroup(spec: SecurityGroup): SecurityGroup? =
+  private suspend fun CloudDriverService.getSecurityGroup(spec: SecurityGroup, serviceAccount: String): SecurityGroup? =
     try {
       getSecurityGroup(
+        serviceAccount,
         spec.accountName,
         CLOUD_PROVIDER,
         spec.moniker.name,

@@ -283,6 +283,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   }
 
   private suspend fun CloudDriverService.activeServerGroup() = activeServerGroup(
+    "keel@spinnaker",
     spec.moniker.app,
     spec.location.accountName,
     spec.moniker.name,
