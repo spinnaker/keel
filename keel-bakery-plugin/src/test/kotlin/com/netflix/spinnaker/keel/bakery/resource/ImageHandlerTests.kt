@@ -226,7 +226,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
       test("artifact is attached to the trigger") {
         val request = slot<OrchestrationRequest>()
-        coEvery { orcaService.orchestrate(capture(request)) } returns randomTaskRef()
+        coEvery { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
 
         runBlocking {
           handler.upsert(resource, ResourceDiff(image, null))

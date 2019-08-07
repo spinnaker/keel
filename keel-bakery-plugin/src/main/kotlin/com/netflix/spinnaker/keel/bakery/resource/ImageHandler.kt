@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceName
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.name
+import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.api.ImageSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -84,6 +85,7 @@ class ImageHandler(
     val artifact = igorService.getArtifact(application, version)
     log.info("baking new image for {}", resource.spec.artifactName)
     val taskRef = orcaService.orchestrate(
+      resource.serviceAccount,
       OrchestrationRequest(
         name = "Bake ${resourceDiff.desired.appVersion}",
         application = "keel", // TODO: revisit if/when we have a way to tie resources to applications

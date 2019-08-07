@@ -148,7 +148,7 @@ internal class KeelTagHandlerTests : JUnit5Minutests {
     }
 
     before {
-      coEvery { orcaService.orchestrate(any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
+      coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
     }
 
     after {
@@ -178,7 +178,7 @@ internal class KeelTagHandlerTests : JUnit5Minutests {
           runBlocking { upsert(resourceWithTag, diff) }
 
           val slot = slot<OrchestrationRequest>()
-          coVerify { orcaService.orchestrate(capture(slot)) }
+          coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("upsertEntityTags")
           }
@@ -228,7 +228,7 @@ internal class KeelTagHandlerTests : JUnit5Minutests {
         runBlocking { upsert(resourceWithTag, diff) }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("deleteEntityTags")
         }

@@ -158,7 +158,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         every { securityGroupByName(vpc.account, vpc.region, sg1.name) } returns sg1
       }
 
-      coEvery { orcaService.orchestrate(any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
+      coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
     }
 
     after {
@@ -178,7 +178,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("upsertLoadBalancer")
@@ -228,7 +228,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("upsertLoadBalancer")

@@ -25,6 +25,7 @@ import com.netflix.spinnaker.keel.api.ec2.image.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.image.JenkinsJobImageProvider
 import com.netflix.spinnaker.keel.api.ec2.image.LatestFromPackageImageProvider
 import com.netflix.spinnaker.keel.api.name
+import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
@@ -144,13 +145,15 @@ class ClusterHandler(
     log.info("Upserting cluster using task: {}", job)
 
     return orcaService
-      .orchestrate(OrchestrationRequest(
-        "Upsert cluster ${spec.moniker.name} in ${spec.location.accountName}/${spec.location.region}",
-        spec.moniker.app,
-        "Upsert cluster ${spec.moniker.name} in ${spec.location.accountName}/${spec.location.region}",
-        listOf(Job(job["type"].toString(), job)),
-        OrchestrationTrigger(resource.name.toString())
-      ))
+      .orchestrate(
+        resource.serviceAccount,
+        OrchestrationRequest(
+          "Upsert cluster ${spec.moniker.name} in ${spec.location.accountName}/${spec.location.region}",
+          spec.moniker.app,
+          "Upsert cluster ${spec.moniker.name} in ${spec.location.accountName}/${spec.location.region}",
+          listOf(Job(job["type"].toString(), job)),
+          OrchestrationTrigger(resource.name.toString())
+        ))
       .also { log.info("Started task {} to upsert cluster", it.ref) }
       // TODO: ugleee
       .let { listOf(TaskRef(it.ref)) }

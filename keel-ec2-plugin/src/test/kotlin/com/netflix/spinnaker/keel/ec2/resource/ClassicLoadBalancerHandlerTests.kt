@@ -147,7 +147,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         every { securityGroupByName(vpc.account, vpc.region, sg3.name) } returns sg3
       }
 
-      coEvery { orcaService.orchestrate(any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
+      coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
     }
 
     after {
@@ -174,7 +174,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("upsertLoadBalancer")
@@ -193,7 +193,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
           get("securityGroups").isEqualTo(setOf("nondefault-elb"))
@@ -225,7 +225,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
       }
     }
   }

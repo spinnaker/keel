@@ -172,7 +172,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         every { securityGroupByName(spec.location.accountName, spec.location.region, sg2.name) } returns sg2
       }
 
-      coEvery { orcaService.orchestrate(any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
+      coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
     }
 
     after {
@@ -197,7 +197,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
 
         val slot = slot<OrchestrationRequest>()
-        coVerify { orcaService.orchestrate(capture(slot)) }
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("createServerGroup")
@@ -238,7 +238,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           }
 
           val slot = slot<OrchestrationRequest>()
-          coVerify { orcaService.orchestrate(capture(slot)) }
+          coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("resizeServerGroup")
@@ -265,7 +265,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           }
 
           val slot = slot<OrchestrationRequest>()
-          coVerify { orcaService.orchestrate(capture(slot)) }
+          coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("createServerGroup")
