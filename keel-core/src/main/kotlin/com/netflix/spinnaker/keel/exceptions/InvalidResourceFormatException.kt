@@ -15,11 +15,12 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.exceptions
 
 /**
- * An object which is associated with an application by the field application
+ * An exception to indicate that a resource does not meet keel assumptions.
  */
-interface Applicationed {
-  val application: String
-}
+class InvalidResourceFormatException(
+  val plugin: String,
+  val reason: String
+) : RuntimeException("Plugin $plugin has a malformed resource definition: $reason")

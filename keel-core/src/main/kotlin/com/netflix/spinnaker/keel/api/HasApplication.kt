@@ -17,15 +17,10 @@
  */
 package com.netflix.spinnaker.keel.api
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.netflix.spinnaker.keel.model.Moniker
-
 /**
- * An object which has a moniker
+ * An object which is associated with an application.
+ * All specs (incoming resource definitions) must be associated with an application.
  */
-interface Monikered : HasApplication {
-  val moniker: Moniker
-
-  override val application: String
-    @JsonIgnore get() = moniker.app
+interface HasApplication {
+  val application: String
 }

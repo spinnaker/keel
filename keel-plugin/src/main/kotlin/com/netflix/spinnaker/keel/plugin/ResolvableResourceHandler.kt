@@ -2,8 +2,7 @@ package com.netflix.spinnaker.keel.plugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ApiVersion
-import com.netflix.spinnaker.keel.api.Applicationed
-import com.netflix.spinnaker.keel.api.Monikered
+import com.netflix.spinnaker.keel.api.HasApplication
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceName
@@ -12,6 +11,7 @@ import com.netflix.spinnaker.keel.api.name
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.TaskRef
+import com.netflix.spinnaker.keel.exceptions.InvalidResourceFormatException
 import com.netflix.spinnaker.keel.exceptions.InvalidResourceStructureException
 import org.slf4j.Logger
 
@@ -63,9 +63,8 @@ interface ResolvableResourceHandler<S : Any, R : Any> : KeelPlugin {
       )
     }
     val app = when (spec) {
-      is Monikered -> spec.moniker.app
-      is Applicationed -> spec.application
-      else -> "noapp" // todo eb: is this the right way to handle this?
+      is HasApplication -> spec.application
+      else -> throw InvalidResourceFormatException(this.apiVersion.toString(), "Spec has no application association.")
     }
 
     val metadata = mapOf(

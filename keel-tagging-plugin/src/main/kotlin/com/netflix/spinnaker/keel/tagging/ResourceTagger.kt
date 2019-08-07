@@ -97,8 +97,7 @@ class ResourceTagger(
       val spec = KeelTagSpec(
         keelId = event.resourceName.toString(),
         entityRef = entityRef,
-        tagState = TagNotDesired(startTime = clock.millis()),
-        application = entityRef.application
+        tagState = TagNotDesired(startTime = clock.millis())
       )
       persistTagState(spec)
     }

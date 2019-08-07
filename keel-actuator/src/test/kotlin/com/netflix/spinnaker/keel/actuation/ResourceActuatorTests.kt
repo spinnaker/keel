@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.actuation
 
+import com.netflix.spinnaker.keel.api.HasApplication
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceName
@@ -325,8 +326,9 @@ internal data class DummyResource(
 
 internal data class DummyResourceSpec(
   val state: String,
-  val data: String = "some data"
-)
+  val data: String = "some data",
+  override val application: String = "someapp"
+) : HasApplication
 
 internal class DummyVeto : Veto {
   override fun check(name: ResourceName): VetoResponse {
