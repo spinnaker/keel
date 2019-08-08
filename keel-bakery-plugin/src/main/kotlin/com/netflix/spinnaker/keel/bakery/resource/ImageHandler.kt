@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceName
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.name
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
@@ -88,7 +89,7 @@ class ImageHandler(
       resource.serviceAccount,
       OrchestrationRequest(
         name = "Bake ${resourceDiff.desired.appVersion}",
-        application = "keel", // TODO: revisit if/when we have a way to tie resources to applications
+        application = resource.application,
         description = "Bake ${resourceDiff.desired.appVersion}",
         job = listOf(
           Job(
