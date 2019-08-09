@@ -53,9 +53,9 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
         .isA<IllegalArgumentException>()
     }
 
-    test("an environment without the constraint is allowed to promote") {
-      expectThat(subject.canPromote(artifact, "1.1", manifest, previousEnvironment.name))
-        .isTrue()
+    test("an environment without the constraint throws an exception (don't pass it to this method)") {
+      expectCatching { subject.canPromote(artifact, "1.1", manifest, previousEnvironment.name) }
+        .failed()
     }
 
     context("the requested version is not in the required environment") {

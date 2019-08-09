@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.PromotionRepository
@@ -23,11 +24,16 @@ class EnvironmentPromotionChecker(
             versions.first()
           } else {
             versions.first { v ->
-              constraints.all { it.canPromote(artifact, v, deliveryConfig, environment.name) }
+              constraints.all { constraintEvaluator ->
+                !environment.hasSupportedConstraint(constraintEvaluator) || constraintEvaluator.canPromote(artifact, v, deliveryConfig, environment.name)
+              }
             }
           }
           promotionRepository.approveVersionFor(deliveryConfig, artifact, version, environment.name)
         }
       }
   }
+
+  private fun Environment.hasSupportedConstraint(constraintEvaluator: ConstraintEvaluator<*>) =
+    constraints.any { it.javaClass.isAssignableFrom(constraintEvaluator.constraintType) }
 }

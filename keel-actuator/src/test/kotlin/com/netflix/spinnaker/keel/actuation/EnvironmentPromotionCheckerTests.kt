@@ -24,7 +24,9 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
   ) {
     val artifactRepository = mockk<ArtifactRepository>()
     val promotionRepository = mockk<PromotionRepository>(relaxUnitFun = true)
-    val constraintEvaluator = mockk<ConstraintEvaluator<*>>()
+    val constraintEvaluator = mockk<ConstraintEvaluator<*>>() {
+      every { constraintType } returns DependsOnConstraint::class.java
+    }
     val subject = EnvironmentPromotionChecker(
       artifactRepository,
       promotionRepository,

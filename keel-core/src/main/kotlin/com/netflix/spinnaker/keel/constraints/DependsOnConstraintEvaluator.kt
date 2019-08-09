@@ -27,18 +27,19 @@ class DependsOnConstraintEvaluator(
     val constraint = target
       .constraints
       .filterIsInstance<DependsOnConstraint>()
-      .firstOrNull()
+      .first()
 
-    return if (constraint == null) {
-      true
-    } else {
-      val requiredEnvironment = deliveryConfig
-        .environments
-        .firstOrNull { it.name == constraint.environment }
-      requireNotNull(requiredEnvironment) {
-        "No environment named ${constraint.environment} exists in the configuration ${deliveryConfig.name}"
-      }
-      promotionRepository.wasSuccessfullyDeployedTo(deliveryConfig, artifact, version, requiredEnvironment.name)
+    val requiredEnvironment = deliveryConfig
+      .environments
+      .firstOrNull { it.name == constraint.environment }
+    requireNotNull(requiredEnvironment) {
+      "No environment named ${constraint.environment} exists in the configuration ${deliveryConfig.name}"
     }
+    return promotionRepository.wasSuccessfullyDeployedTo(
+      deliveryConfig,
+      artifact,
+      version,
+      requiredEnvironment.name
+    )
   }
 }
