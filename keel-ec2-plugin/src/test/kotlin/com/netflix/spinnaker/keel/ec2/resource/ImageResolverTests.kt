@@ -184,8 +184,8 @@ internal class ImageResolverTests : JUnit5Minutests {
           promotionRepository.approveVersionFor(deliveryConfig, artifact, "1.1.0", "test")
           coEvery {
             cloudDriverService.namedImages(any(), any(), any())
-          } answers { (_, invocation, _, _) ->
-            val name = invocation.args[1]
+          } answers {
+            val name = secondArg<String>()
             images.filter { it.appVersion == name }
           }
         }
@@ -228,8 +228,8 @@ internal class ImageResolverTests : JUnit5Minutests {
           promotionRepository.approveVersionFor(deliveryConfig, artifact, "1.1.0", "test")
           coEvery {
             cloudDriverService.namedImages(any(), any(), any())
-          } answers { (_, invocation, _, _) ->
-            val name = invocation.args[1]
+          } answers {
+            val name = secondArg<String>()
             images.filter { it.appVersion == name }
           }
         }
