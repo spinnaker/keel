@@ -38,6 +38,8 @@ internal class SpringStartupTests {
 
   @Test
   fun `the application starts successfully`() {
-    verify { applicationReadyListener.onApplicationEvent(ofType()) }
+    verify(timeout = 2000) {
+      applicationReadyListener.onApplicationEvent(ofType())
+    }
   }
 }
