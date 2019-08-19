@@ -23,12 +23,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class],
-  properties = [
-    "clouddriver.base-url=https://localhost:8081",
-    "orca.base-url=https://localhost:8082",
-    "front50.base-url=https://localhost:8083",
-    "igor.base-url=http://localhost:8081"
-  ],
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc

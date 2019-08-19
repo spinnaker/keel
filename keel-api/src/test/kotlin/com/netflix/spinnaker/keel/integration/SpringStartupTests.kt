@@ -20,11 +20,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension
   properties = [
     "sql.enabled=true",
     "keel.plugins.ec2.enabled=true",
-    "clouddriver.enabled=true",
-    "clouddriver.base-url=http://localhost:8080",
-    "igor.base-url=http://localhost:8081",
-    "orca.enabled=true",
-    "orca.base-url=http://localhost:8082",
     "sql.connection-pools.default.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
     "sql.migration.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver"

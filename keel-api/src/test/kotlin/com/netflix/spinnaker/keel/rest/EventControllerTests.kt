@@ -50,12 +50,6 @@ import java.time.Instant
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class, MockTimeConfiguration::class],
-  properties = [
-    "clouddriver.base-url=https://localhost:8081",
-    "orca.base-url=https://localhost:8082",
-    "front50.base-url=https://localhost:8083",
-    "igor.base-url=https://localhost:8084"
-  ],
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc

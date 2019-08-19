@@ -25,11 +25,6 @@ import strikt.assertions.isNotNull
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class],
-  properties = [
-    "clouddriver.enabled=true",
-    "clouddriver.base-url=http://localhost:8080",
-    "igor.base-url=http://localhost:8081"
-  ],
   webEnvironment = MOCK
 )
 internal class AuthPropagationTests : JUnit5Minutests {
