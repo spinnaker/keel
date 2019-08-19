@@ -24,7 +24,8 @@ import strikt.assertions.isA
     "sql.enabled=true",
     "sql.connection-pools.default.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
     "sql.migration.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
-    "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver"
+    "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
+    "igor.base-url=http://localhost:8081"
   ]
 )
 internal class SpringStartupTests {

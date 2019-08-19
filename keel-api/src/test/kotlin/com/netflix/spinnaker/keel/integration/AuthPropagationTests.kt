@@ -27,7 +27,8 @@ import strikt.assertions.isNotNull
   classes = [KeelApplication::class],
   properties = [
     "clouddriver.enabled=true",
-    "clouddriver.base-url=http://localhost:8080"
+    "clouddriver.base-url=http://localhost:8080",
+    "igor.base-url=http://localhost:8081"
   ],
   webEnvironment = MOCK
 )

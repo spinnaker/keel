@@ -45,14 +45,20 @@ class ArtifactListener(
 
   @EventListener(ArtifactRegisteredEvent::class)
   fun onArtifactRegisteredEvent(event: ArtifactRegisteredEvent) {
+    val artifact = event.artifact
+    if (artifactRepository.isRegistered(artifact.name, artifact.type)) {
+      log.debug("Artifact {} is already registered", artifact)
+      return
+    }
+    artifactRepository.register(artifact)
     runBlocking {
       artifactService
-        .getVersions(event.name)
+        .getVersions(artifact.name)
         .firstOrNull()
         ?.let { firstVersion ->
-          val version = "${event.name}-$firstVersion"
-          log.debug("Registering latest version {} for newly registered artifact {} {}", version, event.name, event.type)
-          artifactRepository.store(DeliveryArtifact(event.name, event.type), version)
+          val version = "${artifact.name}-$firstVersion"
+          log.debug("Registering latest version {} for newly registered artifact {}", version, artifact)
+          artifactRepository.store(artifact, version)
         }
     }
   }

@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.events
 
-import com.netflix.spinnaker.keel.api.ArtifactType
+import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.kork.artifacts.model.Artifact
 
 data class ArtifactEvent(
@@ -9,6 +9,5 @@ data class ArtifactEvent(
 )
 
 data class ArtifactRegisteredEvent(
-  val name: String,
-  val type: ArtifactType
+  val artifact: DeliveryArtifact
 )

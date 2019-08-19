@@ -21,7 +21,10 @@ import java.util.concurrent.TimeUnit
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, ThreadCapturingEventListener::class],
-  webEnvironment = MOCK
+  webEnvironment = MOCK,
+  properties = [
+    "igor.base-url=http://localhost:8081"
+  ]
 )
 internal class ApplicationEventTests {
 

@@ -51,9 +51,10 @@ import java.time.Instant
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class, MockTimeConfiguration::class],
   properties = [
-    "clouddriver.baseUrl=https://localhost:8081",
-    "orca.baseUrl=https://localhost:8082",
-    "front50.baseUrl=https://localhost:8083"
+    "clouddriver.base-url=https://localhost:8081",
+    "orca.base-url=https://localhost:8082",
+    "front50.base-url=https://localhost:8083",
+    "igor.base-url=https://localhost:8084"
   ],
   webEnvironment = MOCK
 )

@@ -53,8 +53,7 @@ class ArtifactController(
   @ResponseStatus(CREATED)
   fun register(@RequestBody artifact: DeliveryArtifact) {
     log.debug("Registering {} artifact {}", artifact.type, artifact.name)
-    publisher.publishEvent(ArtifactRegisteredEvent(name = artifact.name, type = artifact.type))
-    artifactRepository.register(artifact)
+    publisher.publishEvent(ArtifactRegisteredEvent(artifact))
   }
 
   @GetMapping(
