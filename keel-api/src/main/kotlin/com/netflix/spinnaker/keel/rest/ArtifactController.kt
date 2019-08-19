@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.rest
 import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.events.ArtifactEvent
+import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.persistence.ArtifactAlreadyRegistered
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
@@ -52,6 +53,7 @@ class ArtifactController(
   @ResponseStatus(CREATED)
   fun register(@RequestBody artifact: DeliveryArtifact) {
     log.debug("Registering {} artifact {}", artifact.type, artifact.name)
+    publisher.publishEvent(ArtifactRegisteredEvent(name = artifact.name, type = artifact.type))
     artifactRepository.register(artifact)
   }
 
