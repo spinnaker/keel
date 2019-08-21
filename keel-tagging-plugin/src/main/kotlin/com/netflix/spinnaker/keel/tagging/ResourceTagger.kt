@@ -19,8 +19,8 @@
 package com.netflix.spinnaker.keel.tagging
 
 import com.netflix.spinnaker.keel.actuation.ResourcePersister
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.ResourceName
+import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SubmittedMetadata
 import com.netflix.spinnaker.keel.api.SubmittedResource
@@ -31,6 +31,7 @@ import com.netflix.spinnaker.keel.events.ResourceDeleted
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.tags.EntityRef
 import com.netflix.spinnaker.keel.tags.EntityTag
 import com.netflix.spinnaker.keel.tags.KEEL_TAG_NAME
@@ -118,7 +119,7 @@ class ResourceTagger(
 
   private fun tagExists(tagResourceName: ResourceName): Boolean =
     try {
-      resourceRepository.get(tagResourceName, KeelTagSpec::class.java)
+      resourceRepository.get<KeelTagSpec>(tagResourceName)
       true
     } catch (e: NoSuchResourceException) {
       false
@@ -129,7 +130,7 @@ class ResourceTagger(
     log.info("Cleaning up old keel tags")
     resourceRepository.allResources { resourceHeader ->
       if (resourceHeader.apiVersion == SPINNAKER_API_V1.subApi("tag")) {
-        val tagResource = resourceRepository.get(resourceHeader.name, KeelTagSpec::class.java)
+        val tagResource = resourceRepository.get<KeelTagSpec>(resourceHeader.name)
         if (tagResource.spec.tagState is TagNotDesired) {
           val tagState = tagResource.spec.tagState as TagNotDesired
           if (tagState.startTime < clock.millis() - Duration.ofHours(removedTagRetentionHours).toMillis()) {
@@ -140,7 +141,7 @@ class ResourceTagger(
     }
   }
 
-  @Scheduled(fixedDelayString = "\${keel.resource-tagger.account-sync-frequency:PT600S}")
+  @Scheduled(fixedDelayString = "\${keel.resource-tagger.account-sync-frequency:PT600S}", initialDelay = 30000)
   private fun syncAccounts() {
     val now = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
     if (now - accountsUpdateFrequencyS > accountsUpdateTimeS) {

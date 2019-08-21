@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.bakery.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
@@ -18,6 +19,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -28,6 +30,7 @@ import com.netflix.spinnaker.keel.plugin.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.plugin.ResourceNormalizer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 
 class ImageHandler(
   override val objectMapper: ObjectMapper,
@@ -37,6 +40,7 @@ class ImageHandler(
   private val orcaService: OrcaService,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
+  private val publisher: ApplicationEventPublisher,
   override val normalizers: List<ResourceNormalizer<*>>
 ) : ResolvableResourceHandler<ImageSpec, Image> {
 
@@ -50,6 +54,12 @@ class ImageHandler(
   override suspend fun desired(resource: Resource<ImageSpec>): Image =
     with(resource) {
       val artifact = DeliveryArtifact(spec.artifactName, DEB)
+
+      if (!artifactRepository.isRegistered(artifact.name, artifact.type)) {
+        // we clearly care about this artifact, let's register it.
+        publisher.publishEvent(ArtifactRegisteredEvent(artifact))
+      }
+
       val latestVersion = artifact.findLatestVersion()
       val baseImage = baseImageCache.getBaseImage(spec.baseOs, spec.baseLabel)
       val baseAmi = findBaseAmi(baseImage, resource.serviceAccount)
@@ -74,13 +84,11 @@ class ImageHandler(
     resource: Resource<ImageSpec>,
     resourceDiff: ResourceDiff<Image>
   ): List<Task> {
-    val (_, application, version) = resourceDiff.desired.appVersion.let { appVersion ->
-      Regex("([\\w_]+)-(.+)")
-        .find(appVersion)
-        ?.groupValues
-        ?: throw IllegalStateException("Could not parse app version $appVersion")
-    }
-    val artifact = igorService.getArtifact(application, version)
+    val appVersion = AppVersion.parseName(resourceDiff.desired.appVersion)
+    val packageName = appVersion.packageName
+    val version = resourceDiff.desired.appVersion.substringAfter("$packageName-")
+    val artifact = igorService.getArtifact(packageName, version)
+
     log.info("baking new image for {}", resource.spec.artifactName)
     val description = "Bake ${resourceDiff.desired.appVersion}"
     val taskRef = orcaService.orchestrate(
