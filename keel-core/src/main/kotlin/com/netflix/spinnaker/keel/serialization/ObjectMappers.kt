@@ -1,10 +1,14 @@
 package com.netflix.spinnaker.keel.serialization
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_WITH_ZONE_ID
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_KEYS_AS_TIMESTAMPS
+import com.fasterxml.jackson.databind.deser.std.StringDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
@@ -32,6 +36,19 @@ private fun <T : ObjectMapper> T.configureMe(): T =
       .registerULIDModule()
       .registerModule(JavaTimeModule())
       .configureSaneDateTimeRepresentation()
+      .registerModule(object : SimpleModule() {
+        init {
+          addDeserializer(String::class.java, object : JsonDeserializer<String?>() {
+            override fun deserialize(parser: JsonParser, context: DeserializationContext): String? =
+              StringDeserializer
+                .instance
+                .deserialize(parser, context)
+                .let {
+                  if (it.isNullOrEmpty()) null else it
+                }
+          })
+        }
+      })
   }
 
 private fun ObjectMapper.registerULIDModule(): ObjectMapper =

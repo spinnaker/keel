@@ -65,13 +65,13 @@ fun <T : ResourceSpec> resource(
 
 data class DummyResourceSpec(
   override val id: String = randomString(),
-  val data: String = randomString(),
+  val data: String? = null,
   override val application: String = "fnord"
 ) : ResourceSpec
 
 data class DummyResource(
   val id: String = randomString(),
-  val data: String = randomString()
+  val data: String? = randomString()
 ) {
   constructor(spec: DummyResourceSpec) : this(spec.id, spec.data)
 }

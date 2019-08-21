@@ -61,6 +61,12 @@ interface ResolvableResourceHandler<S : ResourceSpec, R : Any> : KeelPlugin {
   }
 
   /**
+   * Generate a unique name for a resource based on its spec.
+   */
+  private fun generateName(apiVersion: ApiVersion, kind: String, spec: ResourceSpec): ResourceName =
+    "${apiVersion.prefix}:$kind:${spec.name}".let(::ResourceName)
+
+  /**
    * Validates the resource and applies any defaults / normalization.
    *
    * @return [resource] or a copy of [resource] that may have been changed, for example in order to

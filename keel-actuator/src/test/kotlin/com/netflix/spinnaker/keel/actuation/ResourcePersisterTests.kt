@@ -40,6 +40,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
 import strikt.assertions.startsWith
 import strikt.assertions.succeeded
@@ -311,6 +312,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
               .isEqualTo(resource.spec)
               .isA<DummyResourceSpec>()
               .get { data }
+              .isNotNull()
               .startsWith("updated")
           }
         }

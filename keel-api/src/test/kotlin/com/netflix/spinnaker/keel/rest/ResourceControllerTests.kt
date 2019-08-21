@@ -123,6 +123,38 @@ internal class ResourceControllerTests {
   }
 
   @Test
+  fun `empty string fields are normalized to null`() {
+    every { resourcePersister.upsert<DummyResourceSpec>(any()) } returns resource
+    every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
+
+    val request = post("/resources")
+      .accept(APPLICATION_JSON)
+      .contentType(APPLICATION_JSON)
+      .content(
+        """{
+          |  "apiVersion": "test.spinnaker.netflix.com/v1",
+          |  "kind": "whatever",
+          |  "metadata": {
+          |    "serviceAccount": "keel@spinnaker"
+          |  },
+          |  "spec": {
+          |    "data": ""
+          |  }
+          |}"""
+          .trimMargin()
+      )
+    mvc
+      .perform(request)
+      .andExpect(status().isOk)
+
+    verify {
+      resourcePersister.upsert<DummyResourceSpec>(match {
+        it.spec.data == null
+      })
+    }
+  }
+
+  @Test
   fun `can't create a resource when unauthorized`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns false
 
