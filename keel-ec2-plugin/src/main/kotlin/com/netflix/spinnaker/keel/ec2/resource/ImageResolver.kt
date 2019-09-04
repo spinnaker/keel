@@ -37,7 +37,7 @@ class ImageResolver(
         val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.uid)
         val environment = deliveryConfigRepository.environmentFor(resource.uid)
         val artifact = imageProvider.deliveryArtifact
-        val artifactName = if (deliveryConfig != null && environment != null) {
+        var artifactName = if (deliveryConfig != null && environment != null) {
           artifactRepository.latestVersionApprovedIn(
             deliveryConfig,
             artifact,
@@ -46,6 +46,10 @@ class ImageResolver(
         } else {
           artifact.name
         }
+
+        // image names have _ instead of ~
+        artifactName = artifactName.replace("~", "_")
+
         val account = dynamicConfigService.getConfig("images.default-account", "test")
         val namedImage = imageService
           .getLatestNamedImage(artifactName, account, region) ?: throw NoImageFound(artifactName)
