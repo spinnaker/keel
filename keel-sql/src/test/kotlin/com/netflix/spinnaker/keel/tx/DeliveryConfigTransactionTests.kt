@@ -143,27 +143,6 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
       }
     }
 
-    context("an artifact attached to the delivery config fails to persist") {
-      before {
-        every { artifactRepository.register(any()) } throws DataAccessException("o noes")
-
-        expectCatching { resourcePersister.upsert(submittedManifest) }
-          .failed()
-          .isA<DataAccessException>()
-      }
-
-      test("the delivery config is not persisted") {
-        expectCatching { deliveryConfigRepository.get("keel-manifest") }
-          .failed()
-          .isA<NoSuchDeliveryConfigName>()
-      }
-
-      test("the resources are not persisted") {
-        expectThat(resourceRepository.allResourceNames())
-          .isEmpty()
-      }
-    }
-
     context("the delivery config itself fails to persist") {
       before {
         every { deliveryConfigRepository.store(any()) } throws DataAccessException("o noes")
@@ -176,11 +155,6 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
       test("the resources are not persisted") {
         expectThat(resourceRepository.allResourceNames())
           .isEmpty()
-      }
-
-      test("the artifact not persisted") {
-        expectThat(artifactRepository.isRegistered("keel", DEB))
-          .isFalse()
       }
     }
   }

@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.api.SubmittedMetadata
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.resources
+import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.persistence.get
@@ -40,7 +41,6 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
-import strikt.assertions.isTrue
 import strikt.assertions.startsWith
 import strikt.assertions.succeeded
 import java.time.Clock
@@ -229,7 +229,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
         }
 
         test("artifacts are persisted") {
-          expectThat(artifactRepository.isRegistered("keel", DEB)).isTrue()
+          verify { publisher.publishEvent(ArtifactRegisteredEvent(DeliveryArtifact("keel", DEB))) }
         }
 
         test("individual resources are persisted") {
