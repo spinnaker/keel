@@ -134,6 +134,7 @@ class ResourcePersister(
 
   private fun DeliveryArtifact.register() {
     if (!artifactRepository.isRegistered(name, type)) {
+      artifactRepository.register(this)
       publisher.publishEvent(ArtifactRegisteredEvent(this))
     }
   }

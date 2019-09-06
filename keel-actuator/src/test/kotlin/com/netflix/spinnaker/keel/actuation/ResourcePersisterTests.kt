@@ -41,6 +41,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isTrue
 import strikt.assertions.startsWith
 import strikt.assertions.succeeded
 import java.time.Clock
@@ -229,6 +230,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
         }
 
         test("artifacts are persisted") {
+          expectThat(artifactRepository.isRegistered("keel", DEB)).isTrue()
           verify { publisher.publishEvent(ArtifactRegisteredEvent(DeliveryArtifact("keel", DEB))) }
         }
 
