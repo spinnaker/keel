@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.DIFF
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
@@ -108,6 +109,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
     return when {
       history.isHappy() -> HAPPY
       history.isUnhappy() -> UNHAPPY
+      history.isDiff() -> DIFF
       history.isActuating() -> ACTUATING
       history.isError() -> ERROR
       history.isCreated() -> CREATED
@@ -120,7 +122,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
   }
 
   private fun List<ResourceEvent>.isActuating(): Boolean {
-    return first() is ResourceActuationLaunched || first() is ResourceDeltaDetected || first() is ResourceMissing
+    return first() is ResourceActuationLaunched
   }
 
   private fun List<ResourceEvent>.isError(): Boolean {
@@ -129,6 +131,10 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
 
   private fun List<ResourceEvent>.isCreated(): Boolean {
     return first() is ResourceCreated
+  }
+
+  private fun List<ResourceEvent>.isDiff(): Boolean {
+    return first() is ResourceDeltaDetected || first() is ResourceMissing
   }
 
   /**
@@ -158,5 +164,5 @@ sealed class NoSuchResourceException(override val message: String?) : RuntimeExc
 class NoSuchResourceId(id: ResourceId) : NoSuchResourceException("No resource with id $id exists in the repository")
 
 enum class ResourceStatus {
-  HAPPY, ACTUATING, UNHAPPY, ERROR, UNKNOWN, CREATED
+  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, UNKNOWN
 }

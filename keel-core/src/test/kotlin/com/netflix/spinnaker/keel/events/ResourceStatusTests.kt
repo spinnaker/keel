@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.exceptions.InvalidResourceFormatException
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.DIFF
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
@@ -66,8 +67,8 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(missingEvent)
       }
 
-      test("returns actuating") {
-        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(ACTUATING)
+      test("returns diff") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
 
@@ -77,8 +78,8 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(deltaDetectedEvent)
       }
 
-      test("returns returns actuating") {
-        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(ACTUATING)
+      test("returns returns diff") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
 
