@@ -78,12 +78,18 @@ class VetoController(
     path = ["/{name}"],
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
-  fun passMessage(@PathVariable name: String, @RequestBody message: Map<String, Any>) =
-    vetos.forEach { veto ->
-      if (veto.name().equals(name, ignoreCase = true)) {
-        veto.passMessage(message)
+  fun passMessage(@PathVariable name: String, @RequestBody message: Map<String, Any>) {
+    val veto = vetos.find { it.name().equals(name, true) }
+    if (veto == null) {
+      throw VetoNotFoundException(name)
+    } else {
+      vetos.forEach { veto ->
+        if (veto.name().equals(name, ignoreCase = true)) {
+          veto.passMessage(message)
+        }
       }
     }
+  }
 
   @ExceptionHandler(VetoNotFoundException::class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
