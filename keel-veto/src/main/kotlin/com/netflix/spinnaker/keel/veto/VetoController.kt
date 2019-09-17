@@ -49,16 +49,12 @@ class VetoController(
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
   fun getVetoMessageFormat(@PathVariable name: String): Map<String, Any> {
-    val veto = vetos.find { it.name().equals(name, true) }
-    if (veto == null) {
-      throw VetoNotFoundException(name)
-    } else {
-      return mapOf(
-        "messageURL" to "POST /vetos/{name}",
-        "name" to name,
-        "messageBodyFormat" to veto.messageFormat()
-      )
-    }
+    val veto = vetos.find { it.name().equals(name, true) } ?: throw VetoNotFoundException(name)
+    return mapOf(
+      "messageURL" to "POST /vetos/{name}",
+      "name" to name,
+      "messageBodyFormat" to veto.messageFormat()
+    )
   }
 
   @GetMapping(
@@ -66,12 +62,8 @@ class VetoController(
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
   fun getVetoRejections(@PathVariable name: String): List<String> {
-    val veto = vetos.find { it.name().equals(name, ignoreCase = true) }
-    if (veto == null) {
-      throw VetoNotFoundException(name)
-    } else {
-      return veto.currentRejections()
-    }
+    val veto = vetos.find { it.name().equals(name, true) } ?: throw VetoNotFoundException(name)
+    return veto.currentRejections()
   }
 
   @PostMapping(
@@ -79,16 +71,8 @@ class VetoController(
     produces = [MediaType.APPLICATION_JSON_VALUE]
   )
   fun passMessage(@PathVariable name: String, @RequestBody message: Map<String, Any>) {
-    val veto = vetos.find { it.name().equals(name, true) }
-    if (veto == null) {
-      throw VetoNotFoundException(name)
-    } else {
-      vetos.forEach { veto ->
-        if (veto.name().equals(name, ignoreCase = true)) {
-          veto.passMessage(message)
-        }
-      }
-    }
+    val veto = vetos.find { it.name().equals(name, true) } ?: throw VetoNotFoundException(name)
+    veto.passMessage(message)
   }
 
   @ExceptionHandler(VetoNotFoundException::class)
