@@ -28,7 +28,6 @@ interface ArtifactRepository {
     artifact: DeliveryArtifact,
     statuses: List<ArtifactStatus> = enumValues<ArtifactStatus>().toList()
   ): List<String>
-  // todo eb: if the list matches the default value, should we also include nulls? probably.
 
   /**
    * @return the latest version of [artifact] approved for use in [targetEnvironment],
