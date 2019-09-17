@@ -39,13 +39,13 @@ class ArtifactController(
   @ResponseStatus(ACCEPTED)
   fun submitArtifact(@RequestBody echoArtifactEvent: EchoArtifactEvent) {
     log.debug(
-      "Received artifact events {} for {}",
       echoArtifactEvent.eventName,
       echoArtifactEvent.payload.artifacts.map { it.name }
     )
     publisher.publishEvent(echoArtifactEvent.payload)
   }
 
+  // todo eb: do we need this endpoint anymore? we auto-register.
   @PostMapping(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]

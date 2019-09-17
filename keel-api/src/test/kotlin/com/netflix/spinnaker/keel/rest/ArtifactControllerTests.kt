@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.KeelApplication
+import com.netflix.spinnaker.keel.api.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
@@ -59,9 +60,9 @@ internal class ArtifactControllerTests {
     val artifact = DeliveryArtifact("fnord", DEB)
     with(artifactRepository) {
       register(artifact)
-      store(artifact, "fnord-1.0.0-41595c4")
-      store(artifact, "fnord-2.0.0-608bd90")
-      store(artifact, "fnord-2.1.0-18ed1dc")
+      store(artifact, "fnord-1.0.0-41595c4", FINAL)
+      store(artifact, "fnord-2.0.0-608bd90", FINAL)
+      store(artifact, "fnord-2.1.0-18ed1dc", FINAL)
     }
 
     val request = get("/artifacts/${artifact.name}/${artifact.type}")
