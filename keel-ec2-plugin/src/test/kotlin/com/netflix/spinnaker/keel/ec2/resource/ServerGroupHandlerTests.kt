@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.ec2.Capacity
-import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
+import com.netflix.spinnaker.keel.api.ec2.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
 import com.netflix.spinnaker.keel.api.ec2.Metric
 import com.netflix.spinnaker.keel.api.ec2.ScalingProcess
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
-import com.netflix.spinnaker.keel.api.ec2.cluster.Cluster
+import com.netflix.spinnaker.keel.api.ec2.cluster.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.cluster.Dependencies
 import com.netflix.spinnaker.keel.api.ec2.cluster.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.cluster.Location
@@ -17,8 +17,8 @@ import com.netflix.spinnaker.keel.api.ec2.image.IdImageProvider
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.AutoScalingGroup
-import com.netflix.spinnaker.keel.clouddriver.model.ClusterActiveServerGroup
-import com.netflix.spinnaker.keel.clouddriver.model.ClusterImage
+import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
+import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceMonitoring
 import com.netflix.spinnaker.keel.clouddriver.model.LaunchConfig
 import com.netflix.spinnaker.keel.clouddriver.model.Network
@@ -53,7 +53,7 @@ import strikt.assertions.isNull
 import java.time.Clock
 import java.util.UUID
 
-internal class ClusterHandlerTests : JUnit5Minutests {
+internal class ServerGroupHandlerTests : JUnit5Minutests {
 
   val vpc = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")
   val sg1 = SecurityGroupSummary("keel", "sg-325234532")
@@ -61,7 +61,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val subnet1 = Subnet("subnet-1", vpc.id, vpc.account, vpc.region, "${vpc.region}a", "internal (vpc0)")
   val subnet2 = Subnet("subnet-2", vpc.id, vpc.account, vpc.region, "${vpc.region}b", "internal (vpc0)")
   val subnet3 = Subnet("subnet-3", vpc.id, vpc.account, vpc.region, "${vpc.region}c", "internal (vpc0)")
-  val spec = ClusterSpec(
+  val spec = ServerGroupSpec(
     moniker = Moniker(app = "keel", stack = "test"),
     location = Location(
       accountName = vpc.account,
@@ -84,7 +84,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     )
   )
 
-  val cluster = Cluster(
+  val serverGroup = ServerGroup(
     moniker = spec.moniker,
     location = spec.location,
     launchConfiguration = spec.launchConfiguration.generateLaunchConfiguration("i-123543254134", "keel-0.252.0-h168.35fe253/SPINNAKER-rocket-package-keel/168"),
@@ -94,14 +94,14 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
   val resource = resource(
     apiVersion = SPINNAKER_API_V1,
-    kind = "cluster",
+    kind = "server-group",
     spec = spec
   )
-  val activeServerGroupResponse = ClusterActiveServerGroup(
+  val activeServerGroupResponse = ActiveServerGroup(
     "keel-test-v069",
     spec.location.region,
     spec.location.availabilityZones,
-    ClusterImage(
+    ActiveServerGroupImage(
       (spec.launchConfiguration.imageProvider as IdImageProvider).imageId,
       "keel-0.252.0-h168.35fe253"
     ),
@@ -140,12 +140,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val orcaService = mockk<OrcaService>()
   val imageResolver = mockk<ImageResolver>()
   val objectMapper = ObjectMapper().registerKotlinModule()
-  val normalizers = emptyList<ResourceNormalizer<Cluster>>()
+  val normalizers = emptyList<ResourceNormalizer<ServerGroup>>()
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
 
-  fun tests() = rootContext<ClusterHandler> {
+  fun tests() = rootContext<ServerGroupHandler> {
     fixture {
-      ClusterHandler(
+      ServerGroupHandler(
         cloudDriverService,
         cloudDriverCache,
         orcaService,
@@ -190,7 +190,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       test("annealing a diff creates a new server group") {
         runBlocking {
-          upsert(resource, ResourceDiff(cluster, null))
+          upsert(resource, ResourceDiff(serverGroup, null))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -207,26 +207,26 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         coEvery { cloudDriverService.activeServerGroup() } returns activeServerGroupResponse
       }
 
-      derivedContext<Cluster?>("fetching the current cluster state") {
+      derivedContext<ServerGroup?>("fetching the current server group state") {
         deriveFixture {
           runBlocking {
             current(resource)
           }
         }
 
-        test("the current model is converted to a cluster") {
+        test("the current model is converted to a server group") {
           expectThat(this).isNotNull()
         }
 
-        test("the cluster name is derived correctly") {
+        test("the server group name is derived correctly") {
           expectThat(this).isNotNull().get { moniker }.isEqualTo(spec.moniker)
         }
       }
 
       context("the diff is only in capacity") {
 
-        val modified = cluster.withDoubleCapacity()
-        val diff = ResourceDiff(cluster, modified)
+        val modified = serverGroup.withDoubleCapacity()
+        val diff = ResourceDiff(serverGroup, modified)
 
         test("annealing resizes the current server group") {
           runBlocking {
@@ -252,8 +252,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       context("the diff is something other than just capacity") {
 
-        val modified = cluster.withDoubleCapacity().withDifferentInstanceType()
-        val diff = ResourceDiff(cluster, modified)
+        val modified = serverGroup.withDoubleCapacity().withDifferentInstanceType()
+        val diff = ResourceDiff(serverGroup, modified)
 
         test("annealing clones the current server group") {
           runBlocking {
@@ -288,7 +288,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   )
 }
 
-private fun Cluster.withDoubleCapacity(): Cluster =
+private fun ServerGroup.withDoubleCapacity(): ServerGroup =
   copy(
     capacity = Capacity(
       min = capacity.min * 2,
@@ -297,7 +297,7 @@ private fun Cluster.withDoubleCapacity(): Cluster =
     )
   )
 
-private fun Cluster.withDifferentInstanceType(): Cluster =
+private fun ServerGroup.withDifferentInstanceType(): ServerGroup =
   copy(
     launchConfiguration = launchConfiguration.copy(
       instanceType = "r4.16xlarge"
