@@ -86,19 +86,22 @@ class SqlArtifactRepository(
     targetEnvironment: String,
     statuses: List<ArtifactStatus>
   ): String? {
+    val status = statuses.map { it.toString() }
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
-    val approvedVersions = jooq
-      .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
-      .from(ENVIRONMENT_ARTIFACT_VERSIONS)
-      .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environment)))
-      .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+    val envUid = deliveryConfig.getUidFor(environment)
+    val artifactId = artifact.uid
+    return jooq
+      .select(DELIVERY_ARTIFACT_VERSION.VERSION)
+      .from(ENVIRONMENT_ARTIFACT_VERSIONS
+        .innerJoin(DELIVERY_ARTIFACT_VERSION)
+        .on(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID)))
+      .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
+      .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(DELIVERY_ARTIFACT_VERSION.VERSION))
+      .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifactId))
+      .and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*status.toTypedArray()))
       .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT.desc())
-      .fetch()
-      .getValues(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
-    val versionsWithCorrectStatus = versions(artifact, statuses)
-
-    // return the latest version that has been approved with the correct status
-    return approvedVersions.intersect(versionsWithCorrectStatus).firstOrNull()
+      .limit(1)
+      .fetchOne(0, String::class.java)
   }
 
   override fun approveVersionFor(
