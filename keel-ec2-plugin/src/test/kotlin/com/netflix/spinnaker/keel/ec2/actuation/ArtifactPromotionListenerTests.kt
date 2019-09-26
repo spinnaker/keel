@@ -6,15 +6,18 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
-import com.netflix.spinnaker.keel.api.ec2.ServerGroupSpec
-import com.netflix.spinnaker.keel.api.ec2.ServerGroup
-import com.netflix.spinnaker.keel.api.ec2.LaunchConfiguration
-import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
-import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ClusterRegion
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.Locations
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.IdImageProvider
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroup
+import com.netflix.spinnaker.keel.api.ec2.resolve
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
+import com.netflix.spinnaker.keel.clouddriver.model.appVersion
+import com.netflix.spinnaker.keel.ec2.resource.ResolvedImages
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
@@ -67,63 +70,82 @@ internal class ArtifactPromotionListenerTests : JUnit5Minutests {
       )
     )
 
-    val nonArtifactServerGroup = resource(
+    val nonArtifactCluster = resource(
       apiVersion = SPINNAKER_API_V1.subApi("ec2"),
-      kind = "server-group",
-      spec = ServerGroupSpec(
+      kind = "cluster",
+      spec = ClusterSpec(
         moniker = Moniker("fnord", "api"),
-        location = Location("test", "ap-south-1", "internal (vpc0)", setOf("ap-south1-a", "ap-south1-b", "ap-south1-c")),
-        launchConfiguration = LaunchConfigurationSpec(
-          imageProvider = IdImageProvider(
-            imageId = imageId
-          ),
-          instanceType = "m4.2xlarge",
-          ebsOptimized = true,
-          iamRole = "fnordInstanceProfile",
-          keyPair = "fnordKeyPair"
+        imageProvider = IdImageProvider(
+          imageId = imageId
+        ),
+        locations = Locations(
+          accountName = "test",
+          regions = setOf(
+            ClusterRegion(
+              region = "ap-south-1",
+              subnet = "internal (vpc0)",
+              availabilityZones = setOf("ap-south1-a", "ap-south1-b", "ap-south1-c")
+            )
+          )
+        ),
+        _defaults = ServerGroupSpec(
+          launchConfiguration = LaunchConfigurationSpec(
+            instanceType = "m4.2xlarge",
+            ebsOptimized = true,
+            iamRole = "fnordInstanceProfile",
+            keyPair = "fnordKeyPair"
+          )
         )
       )
     )
 
-    val artifactServerGroup = resource(
+    val artifactCluster = resource(
       apiVersion = SPINNAKER_API_V1.subApi("ec2"),
-      kind = "server-group",
-      spec = ServerGroupSpec(
+      kind = "cluster",
+      spec = ClusterSpec(
         moniker = Moniker("fnord", "api"),
-        location = Location("test", "ap-south-1", "internal (vpc0)", setOf("ap-south1-a", "ap-south1-b", "ap-south1-c")),
-        launchConfiguration = LaunchConfigurationSpec(
-          imageProvider = ArtifactImageProvider(
-            deliveryArtifact = artifact
-          ),
-          instanceType = "m4.2xlarge",
-          ebsOptimized = true,
-          iamRole = "fnordInstanceProfile",
-          keyPair = "fnordKeyPair"
+        imageProvider = ArtifactImageProvider(
+          deliveryArtifact = artifact
+        ),
+        locations = Locations(
+          accountName = "test",
+          regions = setOf(
+            ClusterRegion(
+              region = "ap-south-1",
+              subnet = "internal (vpc0)",
+              availabilityZones = setOf("ap-south1-a", "ap-south1-b", "ap-south1-c")
+            )
+          )
+        ),
+        _defaults = ServerGroupSpec(
+          launchConfiguration = LaunchConfigurationSpec(
+            instanceType = "m4.2xlarge",
+            ebsOptimized = true,
+            iamRole = "fnordInstanceProfile",
+            keyPair = "fnordKeyPair"
+          )
         )
-      )
-    )
-
-    private fun ServerGroupSpec.toCurrent() = ServerGroup(
-      moniker,
-      location,
-      LaunchConfiguration(
-        imageId,
-        appVersion,
-        launchConfiguration.instanceType,
-        launchConfiguration.ebsOptimized,
-        launchConfiguration.iamRole,
-        launchConfiguration.keyPair
       )
     )
 
     fun triggerEvent(resource: Resource<*>) {
+      @Suppress("IMPLICIT_CAST_TO_ANY")
       val current = when (val spec = resource.spec) {
         is SecurityGroup -> spec
-        is ServerGroupSpec -> spec.toCurrent()
+        is ClusterSpec -> spec.resolve(ami.toResolvedImages())
         else -> error("Unsupported spec type ${spec.javaClass.simpleName}")
       }
       subject.onDeltaResolved(ResourceDeltaResolved(resource, current))
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun NamedImage.toResolvedImages() =
+      ResolvedImages(
+        appVersion,
+        amis
+          .mapValues { (_, v) -> v?.first() }
+          .filterValues { it != null } as Map<String, String>
+      )
 
     val deliveryConfig = DeliveryConfig(
       name = "manifest",
@@ -132,7 +154,7 @@ internal class ArtifactPromotionListenerTests : JUnit5Minutests {
       environments = setOf(
         Environment(
           name = "test",
-          resources = setOf(securityGroup, nonArtifactServerGroup, artifactServerGroup)
+          resources = setOf(securityGroup, nonArtifactCluster, artifactCluster)
         )
       )
     ).also {
@@ -142,7 +164,7 @@ internal class ArtifactPromotionListenerTests : JUnit5Minutests {
 
   fun tests() = rootContext<Fixture> {
     fixture { Fixture }
-    context("delta is resolved on a non-server group resource") {
+    context("delta is resolved on a non-cluster resource") {
       before {
         triggerEvent(securityGroup)
       }
@@ -152,9 +174,9 @@ internal class ArtifactPromotionListenerTests : JUnit5Minutests {
       }
     }
 
-    context("delta is resolved on a server group that does not use an artifact") {
+    context("delta is resolved on a cluster that does not use an artifact") {
       before {
-        triggerEvent(nonArtifactServerGroup)
+        triggerEvent(nonArtifactCluster)
       }
 
       test("nothing is done with artifact promotion") {
@@ -162,9 +184,9 @@ internal class ArtifactPromotionListenerTests : JUnit5Minutests {
       }
     }
 
-    context("delta is resolved on a server group that uses an artifact") {
+    context("delta is resolved on a cluster that uses an artifact") {
       before {
-        triggerEvent(artifactServerGroup)
+        triggerEvent(artifactCluster)
       }
 
       test("the artifact version is marked as deployed") {

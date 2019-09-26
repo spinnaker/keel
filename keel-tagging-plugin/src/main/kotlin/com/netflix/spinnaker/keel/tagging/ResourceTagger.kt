@@ -71,16 +71,11 @@ class ResourceTagger(
 
   private val entityTypeTransforms = mapOf(
     "classic-load-balancer" to "loadbalancer",
-    "application-load-balancer" to "loadbalancer",
-    "server-group" to "cluster" // this is a hack
+    "application-load-balancer" to "loadbalancer"
   )
-  // we need tags to show up on a server group when we're managing a server group, but our definition of the
-  // resource doesn't have the version number because it's auto generated
-  // mapping server-group -> cluster is a hack to get the UI bits showing up, but this needs to be
-  // re though because it falls apart when one region is managed by keel and one region is not.
 
   private val taggableResources = listOf(
-    "server-group",
+    "cluster",
     "security-group",
     "classic-load-balancer",
     "application-load-balancer"
@@ -191,7 +186,7 @@ class ResourceTagger(
   }
 
   private fun ResourceId.toEntityRef(): EntityRef {
-    val (pluginGroup, resourceType, account, region, resourceId) = toString().toLowerCase().split(":")
+    val (plugin, kind, account, suffix) = toString().toLowerCase().split(":")
     val accountId = try {
       val fullAccount = accounts.first { a -> a.name == account }
       fullAccount.attributes.getOrDefault("accountId", account).toString()
@@ -200,14 +195,20 @@ class ResourceTagger(
       account
     }
 
+    val (region, resourceId) = if (suffix.contains(":")) {
+      suffix.split(":", limit = 2).toList()
+    } else {
+      listOf("*", suffix)
+    }
+
     return EntityRef(
-      entityType = entityTypeTransforms.getOrDefault(resourceType, resourceType),
+      entityType = entityTypeTransforms.getOrDefault(kind, kind),
       entityId = resourceId,
       application = resourceId.substringBefore("-"),
       region = region,
       account = account,
       accountId = accountId,
-      cloudProvider = transforms.getOrDefault(pluginGroup, pluginGroup)
+      cloudProvider = transforms.getOrDefault(plugin, plugin)
     )
   }
 }
