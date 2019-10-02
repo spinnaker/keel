@@ -31,5 +31,6 @@ data class OrchestrationTrigger(
   val correlationId: String,
   val type: String = "keel",
   val user: String = "keel",
-  val artifacts: List<Artifact> = emptyList()
+  val artifacts: List<Artifact> = emptyList(),
+  val notifications: List<EchoNotification> = emptyList()
 )
