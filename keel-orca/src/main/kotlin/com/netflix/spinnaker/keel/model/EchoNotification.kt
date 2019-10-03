@@ -45,7 +45,7 @@ enum class NotificationEvent {
   },
   ORCHESTRATION_FAILED {
     override fun text(): String = "orchestration.failed"
-    override fun notificationMessage(): NotificationMessage = NotificationMessage("$RAINBOW Managed update failed")
+    override fun notificationMessage(): NotificationMessage = NotificationMessage("$THUNDERCLOUD Managed update failed")
   };
 
   abstract fun text(): String
@@ -57,6 +57,7 @@ data class NotificationMessage(
 )
 
 const val RAINBOW = "\uD83C\uDF08"
+const val THUNDERCLOUD = "\u26c8\ufe0f"
 
 fun NotificationConfig.toEchoNotification() =
   EchoNotification(

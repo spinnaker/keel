@@ -85,6 +85,8 @@ class ApplicationLoadBalancerHandler(
     val description = "Delete load balancer ${resource.spec.moniker.name} in " +
       "${resource.spec.location.accountName}/${resource.spec.location.region}"
 
+    val notifications = environmentResolver.getNotificationsFor(resource.id)
+
     val taskRef =
       resource.spec.let { spec ->
         orcaService
@@ -95,7 +97,7 @@ class ApplicationLoadBalancerHandler(
               spec.moniker.app,
               description,
               listOf(spec.toDeleteJob()),
-              OrchestrationTrigger(resource.id.toString())
+              OrchestrationTrigger(correlationId = resource.id.toString(), notifications = emptyList())
             )
           )
       }

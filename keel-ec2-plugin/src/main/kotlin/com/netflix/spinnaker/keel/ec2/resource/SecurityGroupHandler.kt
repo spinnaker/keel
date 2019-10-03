@@ -71,6 +71,9 @@ class SecurityGroupHandler(
     resource: Resource<SecurityGroup>,
     resourceDiff: ResourceDiff<SecurityGroup>
   ): List<Task> {
+
+    val notifications = environmentResolver.getNotificationsFor(resource.id)
+
     val description: String
     val taskRef = resource.spec.let { spec ->
       description = "Create security group ${spec.moniker.name} in ${spec.accountName}/${spec.region}"
@@ -82,7 +85,7 @@ class SecurityGroupHandler(
             spec.moniker.app,
             description,
             listOf(spec.toCreateJob()),
-            OrchestrationTrigger(resource.id.toString())
+            OrchestrationTrigger(correlationId = resource.id.toString(), notifications = notifications)
           ))
     }
     log.info("Started task {} to create security group", taskRef.ref)
@@ -113,6 +116,7 @@ class SecurityGroupHandler(
   }
 
   override suspend fun delete(resource: Resource<SecurityGroup>) {
+    val notifications = environmentResolver.getNotificationsFor(resource.id)
     val taskRef = resource.spec.let { spec ->
       orcaService
         .orchestrate(
@@ -122,7 +126,7 @@ class SecurityGroupHandler(
             spec.moniker.app,
             "Delete security group ${spec.moniker.name} in ${spec.accountName}/${spec.region}",
             listOf(spec.toDeleteJob()),
-            OrchestrationTrigger(resource.id.toString())
+            OrchestrationTrigger(correlationId = resource.id.toString(), notifications = notifications)
           ))
     }
     log.info("Started task {} to upsert security group", taskRef.ref)
