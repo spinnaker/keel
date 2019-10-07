@@ -1,14 +1,13 @@
 package com.netflix.spinnaker.keel.ec2.normalizers
 
-import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.plugin.Resolver
 import org.springframework.stereotype.Component
 
-import com.netflix.spinnaker.keel.plugin.Resolver
 @Component
 class ClusterAvailabilityZonesResolver(
   private val cloudDriverCache: CloudDriverCache
@@ -27,10 +26,8 @@ class ClusterAvailabilityZonesResolver(
     }
     return resource.copy(
       spec = resource.spec.copy(
-        locations = Locations(
-          accountName = resource.spec.locations.accountName,
-          regions = regions.toSet()
-        )
+        locations = resource.spec.locations.copy(
+          regions = regions.toSet())
       )
     )
   }

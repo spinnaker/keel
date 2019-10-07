@@ -24,19 +24,7 @@ interface Locatable {
   val locations: Locations<out RegionSpec>
 }
 
-open class Locations<T : RegionSpec>(
+data class Locations<T : RegionSpec>(
   val accountName: String,
   val regions: Set<T>
-) {
-  override fun equals(other: Any?): Boolean {
-    return other is Locations<*> &&
-      accountName == other.accountName &&
-      regions == other.regions
-  }
-
-  override fun hashCode(): Int {
-    var result = accountName.hashCode()
-    result = 31 * result + regions.hashCode()
-    return result
-  }
-}
+)
