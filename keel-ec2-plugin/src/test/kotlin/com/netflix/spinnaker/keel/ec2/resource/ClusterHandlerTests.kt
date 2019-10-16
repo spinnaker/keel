@@ -2,8 +2,8 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
@@ -36,7 +36,7 @@ import com.netflix.spinnaker.keel.ec2.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.ec2.image.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
-import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
@@ -94,12 +94,13 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
   val spec = ClusterSpec(
     moniker = Moniker(app = "keel", stack = "test"),
-    locations = Locations(
-      accountName = vpcWest.account,
+    locations = SubnetAwareLocations(
+      account = vpcWest.account,
+      vpc = "vpc0",
+      subnet = subnet1West.purpose!!,
       regions = listOf(vpcWest, vpcEast).map { subnet ->
         SubnetAwareRegionSpec(
-          region = subnet.region,
-          subnet = subnet.name!!,
+          name = subnet.region,
           availabilityZones = listOf("a", "b", "c").map { "${subnet.region}$it" }.toSet()
         )
       }.toSet()
@@ -177,7 +178,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         capacity.let { ServerGroupCapacity(it.min, it.max, it.desired) },
         CLOUD_PROVIDER,
         securityGroups.map(SecurityGroupSummary::id).toSet(),
-        location.accountName,
+        location.account,
         parseMoniker("$name-v$sequence")
       )
     }
@@ -414,7 +415,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   private suspend fun CloudDriverService.activeServerGroup(region: String) = activeServerGroup(
     serviceAccount = "keel@spinnaker",
     app = spec.moniker.app,
-    account = spec.locations.accountName,
+    account = spec.locations.account,
     cluster = spec.moniker.name,
     region = region,
     cloudProvider = CLOUD_PROVIDER

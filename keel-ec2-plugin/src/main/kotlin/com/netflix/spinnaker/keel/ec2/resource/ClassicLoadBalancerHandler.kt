@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceKind
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancer
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerHealthCheck
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerListener
@@ -17,6 +16,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
+import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
@@ -40,7 +40,7 @@ class ClassicLoadBalancerHandler(
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<ClassicLoadBalancerSpec, Map<String, ClassicLoadBalancer>>(objectMapper, resolvers) {
 
-  override val apiVersion = SPINNAKER_API_V1.subApi("ec2")
+  override val apiVersion = SPINNAKER_EC2_API_V1
   override val supportedKind = ResourceKind(
     apiVersion.group,
     "classic-load-balancer",
@@ -52,9 +52,14 @@ class ClassicLoadBalancerHandler(
       locations.regions.map {
         ClassicLoadBalancer(
           moniker,
-          Location(locations.accountName, it.region, it.subnet, it.availabilityZones),
+          Location(
+            locations.account,
+            it.name,
+            locations.vpc ?: error("No VPC name supplied or resolved"),
+            locations.subnet ?: error("No subnet purpose supplied or resolved"),
+            it.availabilityZones
+          ),
           internal,
-          vpcName,
           dependencies,
           listeners,
           healthCheck,
@@ -83,7 +88,7 @@ class ClassicLoadBalancerHandler(
           }
 
           val description = "$action ${resource.kind} load balancer ${desired.moniker.name} in " +
-            "${desired.location.accountName}/${desired.location.region}"
+            "${desired.location.account}/${desired.location.region}"
 
           val notifications = environmentResolver.getNotificationsFor(resource.id)
 
@@ -119,14 +124,14 @@ class ClassicLoadBalancerHandler(
             getClassicLoadBalancer(
               serviceAccount,
               CLOUD_PROVIDER,
-              spec.locations.accountName,
-              region.region,
+              spec.locations.account,
+              region.name,
               spec.moniker.name
             )
               .firstOrNull()
               ?.let { lb ->
                 val securityGroupNames = lb.securityGroups.map {
-                  cloudDriverCache.securityGroupById(spec.locations.accountName, region.region, it).name
+                  cloudDriverCache.securityGroupById(spec.locations.account, region.name, it).name
                 }.toMutableSet()
 
                 /***
@@ -148,10 +153,11 @@ class ClassicLoadBalancerHandler(
                     Moniker(app = parsedNamed[0], stack = parsedNamed.getOrNull(1), detail = parsedNamed.getOrNull(2))
                   },
                   location = Location(
-                    accountName = spec.locations.accountName,
-                    region = region.region,
-                    availabilityZones = lb.availabilityZones,
-                    subnet = cloudDriverCache.subnetBy(lb.subnets.first()).purpose
+                    account = spec.locations.account,
+                    region = region.name,
+                    vpc = lb.vpcId.let { cloudDriverCache.networkBy(it).name } ?: error("Keel does not support load balancers that are not in a VPC subnet"),
+                    subnet = cloudDriverCache.subnetBy(lb.subnets.first()).purpose ?: error("Keel does not support load balancers that are not in a VPC subnet"),
+                    availabilityZones = lb.availabilityZones
                   ),
                   internal = lb.scheme != null && lb.scheme!!.contains("internal", ignoreCase = true),
                   healthCheck = ClassicLoadBalancerHealthCheck(
@@ -162,7 +168,6 @@ class ClassicLoadBalancerHandler(
                     timeout = Duration.ofSeconds(lb.healthCheck.timeout.toLong())
                   ),
                   idleTimeout = Duration.ofSeconds(lb.idleTimeout.toLong()),
-                  vpcName = lb.vpcId.let { cloudDriverCache.networkBy(it).name },
                   listeners = lb.listenerDescriptions.map {
                     ClassicLoadBalancerListener(
                       externalProtocol = it.listener.protocol,
@@ -202,13 +207,13 @@ class ClassicLoadBalancerHandler(
         "upsertLoadBalancer",
         mapOf(
           "application" to moniker.app,
-          "credentials" to location.accountName,
+          "credentials" to location.account,
           "cloudProvider" to CLOUD_PROVIDER,
           "name" to moniker.name,
           "region" to location.region,
           "availabilityZones" to mapOf(location.region to location.availabilityZones),
           "loadBalancerType" to loadBalancerType.toString().toLowerCase(),
-          "vpcId" to cloudDriverCache.networkBy(vpcName, location.accountName, location.region).id,
+          "vpcId" to cloudDriverCache.networkBy(location.vpc, location.account, location.region).id,
           "subnetType" to location.subnet,
           "isInternal" to internal,
           "healthCheck" to healthCheck.target,

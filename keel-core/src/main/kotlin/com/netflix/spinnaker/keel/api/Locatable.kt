@@ -18,13 +18,34 @@
 package com.netflix.spinnaker.keel.api
 
 /**
- * An object which is located in an account and region
+ * A resource spec which is located in an account and one or more regions.
  */
-interface Locatable<T : RegionSpec> : ResourceSpec {
-  val locations: Locations<T>
+interface Locatable<T : Locations<*>> : ResourceSpec {
+  val locations: T
 }
 
-data class Locations<T : RegionSpec>(
-  val accountName: String,
+interface Locations<T : RegionSpec> {
+  val account: String
+  /**
+   * If not specified here, this should be derived from the [SubnetAwareLocations.subnet] (if
+   * present) or use a default VPC name.
+   */
+  val vpc: String?
   val regions: Set<T>
-)
+}
+
+data class SubnetAwareLocations(
+  override val account: String,
+  override val vpc: String?,
+  /**
+   * If not specified here, this should be derived from a default subnet purpose using [vpc].
+   */
+  val subnet: String?,
+  override val regions: Set<SubnetAwareRegionSpec>
+) : Locations<SubnetAwareRegionSpec>
+
+data class SimpleLocations(
+  override val account: String,
+  override val vpc: String?,
+  override val regions: Set<SimpleRegionSpec>
+) : Locations<SimpleRegionSpec>

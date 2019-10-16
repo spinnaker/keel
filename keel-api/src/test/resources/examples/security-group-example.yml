@@ -9,14 +9,14 @@ spec:
     stack: example
     detail: ec2v1
   locations:
-    accountName: test
+    account: test
+    vpc: vpc0
     regions:
-      - us-west-2
-      - us-east-1
-  vpcName: vpc0
+    - name: us-west-2
+    - name: us-east-1
   description: Managed Security Group for keeldemo example
   inboundRules:
-    - protocol: TCP
-      portRange:
-        startPort: 7001
-        endPort: 7001
+  - protocol: TCP
+    portRange:
+      startPort: 7001
+      endPort: 7001

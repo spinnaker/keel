@@ -2,12 +2,12 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.ec2.get
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
-import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.plugin.supporting
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -19,25 +19,25 @@ import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 
-internal abstract class AvailabilityZonesResolverTests<T : Locatable<SubnetAwareRegionSpec>> : JUnit5Minutests {
+internal abstract class AvailabilityZonesResolverTests<T : Locatable<SubnetAwareLocations>> : JUnit5Minutests {
 
   abstract fun createFixture(
     eastAvailabilityZones: Set<String>?,
     westAvailabilityZones: Set<String>?
   ): Fixture<T>
 
-  abstract class Fixture<T : Locatable<SubnetAwareRegionSpec>>(val resource: Resource<T>) {
+  abstract class Fixture<T : Locatable<SubnetAwareLocations>>(val resource: Resource<T>) {
     val cloudDriverService = mockk<CloudDriverService>()
 
     abstract val subject: AvailabilityZonesResolver<T>
 
-    private val vpcEast = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.accountName, "us-east-1")
-    private val vpcWest = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.accountName, "us-west-2")
+    private val vpcEast = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.account, "us-east-1")
+    private val vpcWest = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.account, "us-west-2")
     private val usEastSubnets = setOf("c", "d", "e").map {
       Subnet(
         id = "subnet-${randomHex()}",
         vpcId = vpcEast.id,
-        account = resource.spec.locations.accountName,
+        account = resource.spec.locations.account,
         region = "us-east-1",
         availabilityZone = "us-east-1$it",
         purpose = "internal (vpc0)"
@@ -47,7 +47,7 @@ internal abstract class AvailabilityZonesResolverTests<T : Locatable<SubnetAware
       Subnet(
         id = "subnet-${randomHex()}",
         vpcId = vpcWest.id,
-        account = resource.spec.locations.accountName,
+        account = resource.spec.locations.account,
         region = "us-west-2",
         availabilityZone = "us-west-2$it",
         purpose = "internal (vpc0)"

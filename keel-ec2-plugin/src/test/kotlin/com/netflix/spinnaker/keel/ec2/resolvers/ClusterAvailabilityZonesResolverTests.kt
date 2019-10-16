@@ -1,17 +1,17 @@
 package com.netflix.spinnaker.keel.ec2.resolvers
 
-import com.netflix.spinnaker.keel.api.ArtifactType
+import com.netflix.spinnaker.keel.api.ArtifactType.DEB
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.Locations
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
 import com.netflix.spinnaker.keel.clouddriver.MemoryCloudDriverCache
+import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.model.Moniker
-import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.test.resource
 import org.apache.commons.lang3.RandomStringUtils
 import java.time.Duration
@@ -23,25 +23,25 @@ internal class ClusterAvailabilityZonesResolverTests : AvailabilityZonesResolver
   ): Fixture<ClusterSpec> =
     object : Fixture<ClusterSpec>(
       resource(
-        apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+        apiVersion = SPINNAKER_EC2_API_V1,
         kind = "cluster",
         spec = ClusterSpec(
           moniker = Moniker(
             app = "fnord",
             stack = "test"
           ),
-          imageProvider = ArtifactImageProvider(DeliveryArtifact("fnord", ArtifactType.DEB)),
-          locations = Locations(
-            accountName = "test",
+          imageProvider = ArtifactImageProvider(DeliveryArtifact("fnord", DEB)),
+          locations = SubnetAwareLocations(
+            account = "test",
+            vpc = "vpc0",
+            subnet = "internal (vpc0)",
             regions = setOf(
               SubnetAwareRegionSpec(
-                region = "us-east-1",
-                subnet = "internal (vpc0)",
+                name = "us-east-1",
                 availabilityZones = eastAvailabilityZones ?: emptySet()
               ),
               SubnetAwareRegionSpec(
-                region = "us-west-2",
-                subnet = "internal (vpc0)",
+                name = "us-west-2",
                 availabilityZones = westAvailabilityZones ?: emptySet()
               )
             )

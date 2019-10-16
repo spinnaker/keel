@@ -7,24 +7,23 @@ import com.netflix.spinnaker.keel.api.ArtifactType.DEB
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.NoImageFound
 import com.netflix.spinnaker.keel.api.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.api.NoImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
-import com.netflix.spinnaker.keel.api.ec2.get
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
+import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.model.Moniker
-import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.test.resource
@@ -114,17 +113,18 @@ internal class ImageResolverTests : JUnit5Minutests {
     val artifact = DeliveryArtifact("fnord", DEB)
 
     val resource = resource(
-      apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+      apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
       spec = ClusterSpec(
         moniker = Moniker("fnord"),
         imageProvider = imageProvider,
-        locations = Locations(
-          accountName = account,
+        locations = SubnetAwareLocations(
+          account = account,
+          vpc = "vpc0",
+          subnet = "internal (vpc0)",
           regions = setOf(
             SubnetAwareRegionSpec(
-              region = resourceRegion,
-              subnet = "internal (vpc0)",
+              name = resourceRegion,
               availabilityZones = setOf()
             )
           )

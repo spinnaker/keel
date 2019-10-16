@@ -9,14 +9,13 @@ spec:
     stack: example
     detail: clbec2v1
   locations:
-    accountName: test
+    account: test
+    vpc: vpc0
+    subnet: internal (vpc0)
     regions:
-    - region: us-east-1
-      subnet: internal (vpc0)
-    - region: us-west-2
-      subnet: internal (vpc0)
+    - name: us-east-1
+    - name: us-west-2
   internal: true
-  vpcName: vpc0
   securityGroupNames: []
   idleTimeout: 60
   listeners:

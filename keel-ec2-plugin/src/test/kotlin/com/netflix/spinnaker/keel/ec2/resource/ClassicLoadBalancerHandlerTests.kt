@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -15,6 +14,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
+import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.ec2.resolvers.ClassicLoadBalancerSecurityGroupsResolver
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -71,14 +71,14 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
     |  stack: managedogge
     |  detail: wow
     |locations:
-    |  accountName: test
+    |  account: test
+    |  vpc: vpc0
+    |  subnet: internal (vpc0)
     |  regions:
-    |  - region: us-east-1
-    |    subnet: internal (vpc0)
+    |  - name: us-east-1
     |    availabilityZones:
     |    - us-east-1c
     |    - us-east-1d
-    |vpcName: vpc0
     |healthCheck:
     |  target: HTTP:7001/health
     |listeners:
@@ -90,7 +90,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val spec = yamlMapper.readValue(yaml, ClassicLoadBalancerSpec::class.java)
   private val resource = resource(
-    apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+    apiVersion = SPINNAKER_EC2_API_V1,
     kind = "classic-load-balancer",
     spec = spec
   )

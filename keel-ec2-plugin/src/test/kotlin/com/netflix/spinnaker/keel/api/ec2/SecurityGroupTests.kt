@@ -22,10 +22,10 @@ internal object SecurityGroupTests : JUnit5Minutests {
           stack = "ext"
         ),
         location = SecurityGroup.Location(
-          accountName = "prod",
+          account = "prod",
+          vpc = "vpc0",
           region = "us-north-2"
         ),
-        vpcName = "vpc0",
         description = "I can see the fnords",
         inboundRules = setOf(
           SelfReferenceRule(TCP, PortRange(7001, 7002)),
@@ -49,9 +49,14 @@ internal object SecurityGroupTests : JUnit5Minutests {
     derivedContext<ResourceDiff<SecurityGroup>>("security groups that differ in basic fields") {
       deriveFixture {
         ResourceDiff(this,
-          copy(location = SecurityGroup.Location(
-            accountName = location.accountName,
-            region = "ap-south-1")))
+          copy(
+            location = SecurityGroup.Location(
+              account = location.account,
+              vpc = "vpc0",
+              region = "ap-south-1"
+            )
+          )
+        )
       }
 
       test("diff contains changes") {
@@ -79,7 +84,8 @@ internal object SecurityGroupTests : JUnit5Minutests {
       deriveFixture {
         ResourceDiff(this, copy(
           location = SecurityGroup.Location(
-            accountName = location.accountName,
+            account = location.account,
+            vpc = "vpc0",
             region = "ap-south-1"
           ),
           description = "We can't actually make changes to this so it should be ignored by the diff"

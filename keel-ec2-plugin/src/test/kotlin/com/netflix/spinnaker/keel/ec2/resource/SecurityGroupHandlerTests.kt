@@ -16,9 +16,10 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.SimpleLocations
+import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.PortRange
@@ -40,7 +41,6 @@ import com.netflix.spinnaker.keel.ec2.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
-import com.netflix.spinnaker.keel.model.SimpleRegionSpec
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
@@ -116,11 +116,11 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           app = "keel",
           stack = "fnord"
         ),
-        locations = Locations(
-          accountName = vpcRegion1.account,
+        locations = SimpleLocations(
+          account = vpcRegion1.account,
+          vpc = vpcRegion1.name!!,
           regions = setOf(SimpleRegionSpec(vpcRegion1.region), SimpleRegionSpec(vpcRegion2.region))
         ),
-        vpcName = vpcRegion1.name,
         description = "dummy security group"
       ),
     override val securityGroupBase: SecurityGroup =
@@ -130,22 +130,28 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           stack = "fnord"
         ),
         location = SecurityGroup.Location(
-          accountName = vpcRegion1.account,
+          account = vpcRegion1.account,
+          vpc = vpcRegion1.name!!,
           region = "placeholder"
         ),
-        vpcName = vpcRegion1.name,
         description = "dummy security group"
       ),
     override val regionalSecurityGroups: Map<String, SecurityGroup> =
       mapOf(
         "us-west-3" to securityGroupBase.copy(
           location = SecurityGroup.Location(
-            accountName = securityGroupBase.location.accountName,
-            region = "us-west-3")),
+            account = securityGroupBase.location.account,
+            vpc = securityGroupBase.location.vpc,
+            region = "us-west-3"
+          )
+        ),
         "us-east-17" to securityGroupBase.copy(
           location = SecurityGroup.Location(
-            accountName = securityGroupBase.location.accountName,
-            region = "us-east-17"))
+            account = securityGroupBase.location.account,
+            vpc = securityGroupBase.location.vpc,
+            region = "us-east-17"
+          )
+        )
       ),
     val cloudDriverResponse1: ClouddriverSecurityGroup =
       ClouddriverSecurityGroup(
@@ -193,11 +199,11 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           app = "keel",
           stack = "fnord"
         ),
-        locations = Locations(
-          accountName = vpcRegion1.account,
+        locations = SimpleLocations(
+          account = vpcRegion1.account,
+          vpc = vpcRegion1.name!!,
           regions = setOf(SimpleRegionSpec(vpcRegion1.region), SimpleRegionSpec(vpcRegion2.region))
         ),
-        vpcName = vpcRegion1.name,
         description = "dummy security group"
       ),
     override val securityGroupBase: SecurityGroup =
@@ -207,22 +213,28 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           stack = "fnord"
         ),
         location = SecurityGroup.Location(
-          accountName = vpcRegion1.account,
+          account = vpcRegion1.account,
+          vpc = vpcRegion1.name!!,
           region = "placeholder"
         ),
-        vpcName = vpcRegion1.name,
         description = "dummy security group"
       ),
     override val regionalSecurityGroups: Map<String, SecurityGroup> =
       mapOf(
         "us-west-3" to securityGroupBase.copy(
           location = SecurityGroup.Location(
-            accountName = securityGroupBase.location.accountName,
-            region = "us-west-3")),
+            account = securityGroupBase.location.account,
+            vpc = securityGroupBase.location.vpc,
+            region = "us-west-3"
+          )
+        ),
         "us-east-17" to securityGroupBase.copy(
           location = SecurityGroup.Location(
-            accountName = securityGroupBase.location.accountName,
-            region = "us-east-17"))
+            account = securityGroupBase.location.account,
+            vpc = securityGroupBase.location.vpc,
+            region = "us-east-17"
+          )
+        )
       )
   ) : Fixture
 
@@ -386,7 +398,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
                     protocol = TCP,
                     account = "test",
                     name = "otherapp",
-                    vpcName = "vpc1",
+                    vpc = "vpc1",
                     portRange = PortRange(startPort = 443, endPort = 443)
                   )
                 )
@@ -396,7 +408,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
           before {
             securityGroupSpec.locations.regions.forEach { region ->
-              Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "test", region.region)
+              Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "test", region.name)
                 .also {
                   every { cloudDriverCache.networkBy(it.id) } returns it
                   every { cloudDriverCache.networkBy(it.name, it.account, it.region) } returns it
@@ -628,7 +640,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
                 protocol = TCP,
                 account = "test",
                 name = "otherapp",
-                vpcName = "vpc1",
+                vpc = "vpc1",
                 portRange = PortRange(startPort = 443, endPort = 443)
               )
             )
@@ -646,9 +658,13 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           val onlyInEast = resource
             .copy(
               spec = resource.spec.copy(
-                locations = Locations(
-                  accountName = securityGroupSpec.locations.accountName,
-                  regions = setOf(SimpleRegionSpec("us-east-17")))))
+                locations = SimpleLocations(
+                  account = securityGroupSpec.locations.account,
+                  vpc = securityGroupSpec.locations.vpc,
+                  regions = setOf(SimpleRegionSpec("us-east-17"))
+                )
+              )
+            )
 
           handler.update(
             resource,

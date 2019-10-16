@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceKind
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.PortRange
@@ -36,14 +35,15 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupModel
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
+import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.OrchestrationTrigger
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.Resolver
+import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -58,7 +58,7 @@ class SecurityGroupHandler(
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<SecurityGroupSpec, Map<String, SecurityGroup>>(objectMapper, resolvers) {
 
-  override val apiVersion = SPINNAKER_API_V1.subApi("ec2")
+  override val apiVersion = SPINNAKER_EC2_API_V1
   override val supportedKind = ResourceKind(
     apiVersion.group,
     "security-group",
@@ -67,14 +67,16 @@ class SecurityGroupHandler(
 
   override suspend fun toResolvedType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     with(resource.spec) {
-      locations.regions.map { simpleRegionSpec ->
-        simpleRegionSpec.region to SecurityGroup(
+      locations.regions.map { region ->
+        region.name to SecurityGroup(
           moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
-          location = SecurityGroup.Location(accountName = locations.accountName, region = simpleRegionSpec.region
+          location = SecurityGroup.Location(
+            account = locations.account,
+            vpc = locations.vpc ?: error("No VPC name supplied or resolved"),
+            region = region.name
           ),
-          vpcName = overrides[simpleRegionSpec.region]?.vpcName ?: vpcName,
-          description = overrides[simpleRegionSpec.region]?.description ?: description,
-          inboundRules = overrides[simpleRegionSpec.region]?.inboundRules ?: inboundRules
+          description = overrides[region.name]?.description ?: description,
+          inboundRules = overrides[region.name]?.inboundRules ?: inboundRules
         )
       }.toMap()
     }
@@ -109,7 +111,7 @@ class SecurityGroupHandler(
           log.info("${verb.first} security group using task: $job")
 
           val description = "${verb.first} security group ${spec.moniker.name} in " +
-            "${spec.location.accountName}/${spec.location.region}"
+            "${spec.location.account}/${spec.location.region}"
           val notifications = environmentResolver.getNotificationsFor(resource.id)
 
           async {
@@ -152,11 +154,11 @@ class SecurityGroupHandler(
           try {
             getSecurityGroup(
               serviceAccount,
-              spec.locations.accountName,
+              spec.locations.account,
               CLOUD_PROVIDER,
               spec.moniker.name,
-              region.region,
-              spec.vpcName?.let { cloudDriverCache.networkBy(it, spec.locations.accountName, region.region).id }
+              region.name,
+              cloudDriverCache.networkBy(spec.locations.vpc, spec.locations.account, region.name).id
             )
               .toSecurityGroup()
           } catch (e: HttpException) {
@@ -176,14 +178,10 @@ class SecurityGroupHandler(
     SecurityGroup(
       moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
       location = SecurityGroup.Location(
-        accountName,
+        account = accountName,
+        vpc = vpcId?.let { cloudDriverCache.networkBy(it).name } ?: error("Only security groups in a VPC are supported"),
         region = region
       ),
-      vpcName = if (vpcId != null) {
-        cloudDriverCache.networkBy(vpcId!!).name
-      } else {
-        null
-      },
       description = description,
       inboundRules = inboundRules.flatMap { rule ->
         val ingressGroup = rule.securityGroup
@@ -232,11 +230,11 @@ class SecurityGroupHandler(
       "upsertSecurityGroup",
       mapOf(
         "application" to moniker.app,
-        "credentials" to location.accountName,
+        "credentials" to location.account,
         "cloudProvider" to CLOUD_PROVIDER,
         "name" to moniker.name,
         "regions" to listOf(location.region),
-        "vpcId" to cloudDriverCache.networkBy(vpcName, location.accountName, location.region).id,
+        "vpcId" to cloudDriverCache.networkBy(location.vpc, location.account, location.region).id,
         "description" to description,
         "securityGroupIngress" to inboundRules
           // we have to do a 2-phase create for self-referencing ingress rules as the referenced
@@ -249,7 +247,7 @@ class SecurityGroupHandler(
         "ipIngress" to inboundRules.mapNotNull {
           it.cidrRuleToJob()
         },
-        "accountName" to location.accountName
+        "accountName" to location.account
       )
     )
 
@@ -258,11 +256,11 @@ class SecurityGroupHandler(
       "upsertSecurityGroup",
       mapOf(
         "application" to moniker.app,
-        "credentials" to location.accountName,
+        "credentials" to location.account,
         "cloudProvider" to CLOUD_PROVIDER,
         "name" to moniker.name,
         "regions" to listOf(location.region),
-        "vpcId" to cloudDriverCache.networkBy(vpcName, location.accountName, location.region).id,
+        "vpcId" to cloudDriverCache.networkBy(location.vpc, location.account, location.region).id,
         "description" to description,
         "securityGroupIngress" to inboundRules.mapNotNull {
           it.referenceRuleToJob(this)
@@ -270,7 +268,7 @@ class SecurityGroupHandler(
         "ipIngress" to inboundRules.mapNotNull {
           it.cidrRuleToJob()
         },
-        "accountName" to location.accountName
+        "accountName" to location.account
       )
     )
 
@@ -296,7 +294,7 @@ class SecurityGroupHandler(
         "accountName" to account,
         "crossAccountEnabled" to true,
         "vpcId" to cloudDriverCache.networkBy(
-          vpcName,
+          vpc,
           account,
           securityGroup.location.region
         ).id

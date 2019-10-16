@@ -1,20 +1,24 @@
 package com.netflix.spinnaker.keel.ec2.resolvers
 
 import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
-import com.netflix.spinnaker.keel.model.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.plugin.Resolver
 
-abstract class AvailabilityZonesResolver<T : Locatable<SubnetAwareRegionSpec>>(
+abstract class AvailabilityZonesResolver<T : Locatable<SubnetAwareLocations>>(
   private val cloudDriverCache: CloudDriverCache
 ) : Resolver<T> {
 
   override fun invoke(resource: Resource<T>): Resource<T> {
     val regions = resource.spec.locations.regions.map { region ->
       if (region.availabilityZones.isEmpty()) {
-        region.copy(availabilityZones = cloudDriverCache.resolveAvailabilityZones(resource.spec.locations.accountName, region))
+        region.copy(availabilityZones = cloudDriverCache.resolveAvailabilityZones(
+          account = resource.spec.locations.account,
+          subnet = resource.spec.locations.subnet ?: error("No subnet purpose specified or resolved"),
+          region = region
+        ))
       } else {
         region
       }
@@ -24,12 +28,16 @@ abstract class AvailabilityZonesResolver<T : Locatable<SubnetAwareRegionSpec>>(
     }
   }
 
-  protected abstract fun T.withLocations(locations: Locations<SubnetAwareRegionSpec>): T
+  protected abstract fun T.withLocations(locations: SubnetAwareLocations): T
 }
 
-private fun CloudDriverCache.resolveAvailabilityZones(accountName: String, region: SubnetAwareRegionSpec) =
+private fun CloudDriverCache.resolveAvailabilityZones(account: String, subnet: String, region: SubnetAwareRegionSpec) =
   availabilityZonesBy(
-    accountName,
-    subnetBy(accountName, region.region, region.subnet).vpcId,
-    region.region
+    account,
+    subnetBy(
+      account,
+      region.name,
+      subnet
+    ).vpcId,
+    region.name
   ).toSet()
