@@ -30,6 +30,8 @@ dependencies {
   api("org.springframework.boot:spring-boot-autoconfigure")
   api("com.netflix.frigga:frigga")
 
+  implementation("io.swagger:swagger-annotations:1.5.20")
+
   testImplementation(project(":keel-test"))
   testImplementation(project (":keel-core-test"))
   testImplementation("io.strikt:strikt-jackson")

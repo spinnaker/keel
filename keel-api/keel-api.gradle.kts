@@ -24,10 +24,9 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-actuator")
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.security:spring-security-config")
-
+  implementation("com.netflix.spinnaker.kork:kork-swagger")
   implementation("com.netflix.spinnaker.fiat:fiat-api:${property("fiatVersion")}")
   implementation("com.netflix.spinnaker.fiat:fiat-core:${property("fiatVersion")}")
-
   implementation("net.logstash.logback:logstash-logback-encoder")
 
   testImplementation("io.strikt:strikt-jackson")

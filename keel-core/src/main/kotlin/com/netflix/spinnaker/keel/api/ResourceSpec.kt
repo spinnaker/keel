@@ -1,8 +1,12 @@
 package com.netflix.spinnaker.keel.api
 
+import io.swagger.annotations.ApiModel
+import io.swagger.annotations.ApiModelProperty
+
 /**
  * Implemented by all resource specs.
  */
+@ApiModel(description = "the specification of a resource")
 interface ResourceSpec {
 
   /**
@@ -13,6 +17,7 @@ interface ResourceSpec {
    * latter remember to annotate the overridden property with
    * [com.fasterxml.jackson.annotation.JsonIgnore].
    */
+  @get:ApiModelProperty(hidden = true)
   val id: String
 
   /**
@@ -22,5 +27,6 @@ interface ResourceSpec {
    * latter remember to annotate the overridden property with
    * [com.fasterxml.jackson.annotation.JsonIgnore].
    */
+  @get:ApiModelProperty(hidden = true)
   val application: String
 }

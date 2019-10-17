@@ -27,6 +27,8 @@ import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.plugin.UnsupportedKind
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.NOT_FOUND
@@ -46,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping(path = ["/resources"])
+@Api()
 class ResourceController(
   private val resourceRepository: ResourceRepository,
   private val resourcePersister: ResourcePersister,
@@ -58,6 +61,7 @@ class ResourceController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @ApiOperation(value = "Gets the resource identified by _id_")
   fun get(@PathVariable("id") id: ResourceId): Resource<*> {
     log.debug("Getting: $id")
     return resourceRepository.get(id)
