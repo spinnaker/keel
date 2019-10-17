@@ -76,7 +76,6 @@ data class SubmittedResource<T : ResourceSpec>(
   @ApiModelProperty(
     "the API version the spec schema belongs to",
     required = true,
-    dataType = "java.lang.String",
     example = "ec2.keel.spinnaker.io/v1"
   )
   val apiVersion: ApiVersion,

@@ -93,8 +93,7 @@ private fun ClusterSpec.resolveHealth(region: String): Health {
 
 @ApiModel(
   description = "a cluster consisting of server groups in one or more regions",
-  parent = ResourceSpec::class,
-  discriminator = "kind"
+  parent = ResourceSpec::class
 )
 data class ClusterSpec(
   override val moniker: Moniker,
@@ -114,10 +113,10 @@ data class ClusterSpec(
 
   /**
    * I have no idea why, but if I annotate the constructor property with @get:JsonUnwrapped, the
-   * @JsonCreator constructor below nulls out everything in the ClusterServerGroupSpec some time
-   * very late in parsing. Using a debugger I can see it assigning the object correctly but then it
-   * seems to overwrite it. This is a bit nasty but I think having the cluster-wide defaults at the
-   * top level in the cluster spec YAML / JSON is nicer for the user.
+   * @JsonCreator constructor below nulls out everything in the ServerGroupSpec some time very late
+   * in parsing. Using a debugger I can see it assigning the object correctly but then it seems to
+   * overwrite it. This is a bit nasty but I think having the cluster-wide defaults at the top level
+   * in the cluster spec YAML / JSON is nicer for the user.
    */
   val defaults: ServerGroupSpec
     @JsonUnwrapped get() = _defaults
