@@ -6,7 +6,9 @@ import io.swagger.annotations.ApiModelProperty
 /**
  * Implemented by all resource specs.
  */
-@ApiModel(description = "the specification of a resource")
+@ApiModel(
+  description = "the specification of a resource"
+)
 interface ResourceSpec {
 
   /**

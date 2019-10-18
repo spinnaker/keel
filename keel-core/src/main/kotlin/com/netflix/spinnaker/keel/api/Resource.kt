@@ -68,7 +68,7 @@ data class Resource<T : ResourceSpec>(
 @JsonDeserialize(using = SubmittedResourceDeserializer::class)
 data class SubmittedResource<T : ResourceSpec>(
   @ApiModelProperty(
-    "metadata which must include a valid serviceAccount",
+    "metadata which must include a valid 'serviceAccount'. 'id', 'uid', and 'application' are reserved keys that must not appear",
     required = true
   )
   val metadata: Map<String, Any?>,
