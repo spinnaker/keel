@@ -50,6 +50,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
+import com.netflix.spinnaker.keel.core.name
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
@@ -165,7 +166,7 @@ class TitusClusterHandler(
     )
 
     val spec = TitusClusterSpec(
-      moniker = exportable.moniker,
+      name = exportable.moniker.name,
       locations = locations,
       _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf()

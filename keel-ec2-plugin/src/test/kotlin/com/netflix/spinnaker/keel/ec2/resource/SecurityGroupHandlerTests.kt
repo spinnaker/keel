@@ -128,10 +128,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
-        moniker = Moniker(
-          app = "keel",
-          stack = "fnord"
-        ),
+        name = "keel-fnord",
         locations = SimpleLocations(
           account = vpcRegion1.account,
           vpc = vpcRegion1.name!!,
@@ -215,10 +212,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
       SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, normalizers),
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
-        moniker = Moniker(
-          app = "keel",
-          stack = "fnord"
-        ),
+        name = "keel-fnord",
         locations = SimpleLocations(
           account = vpcRegion1.account,
           vpc = vpcRegion1.name!!,

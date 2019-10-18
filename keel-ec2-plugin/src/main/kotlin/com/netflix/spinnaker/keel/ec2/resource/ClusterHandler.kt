@@ -49,6 +49,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
+import com.netflix.spinnaker.keel.core.name
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
@@ -344,7 +345,7 @@ class ClusterHandler(
     ).withDefaultsOmitted()
 
     val spec = ClusterSpec(
-      moniker = exportable.moniker,
+      name = exportable.moniker.name,
       imageProvider = if (base.buildInfo?.packageName != null) {
         ReferenceArtifactImageProvider(reference = base.buildInfo.packageName.toString())
       } else {

@@ -21,10 +21,7 @@ internal object ApplicationLoadBalancerSpecTests : JUnit5Minutests {
         Fixture(
           yaml = """
             |---
-            |moniker:
-            |  app: testapp
-            |  stack: managedogge
-            |  detail: wow
+            |name: testapp-managedogge-wow
             |locations:
             |  account: test
             |  vpc: vpc0

@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.core.name
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
@@ -139,7 +140,7 @@ class ApplicationLoadBalancerHandler(
 
     val base = albs.values.first()
     val spec = ApplicationLoadBalancerSpec(
-      moniker = base.moniker,
+      name = base.moniker.name,
       locations = SubnetAwareLocations(
         account = exportable.account,
         vpc = base.location.vpc,

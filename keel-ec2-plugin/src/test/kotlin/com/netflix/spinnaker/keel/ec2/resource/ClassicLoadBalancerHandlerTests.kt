@@ -84,10 +84,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val yaml = """
     |---
-    |moniker:
-    |  app: testapp
-    |  stack: managedogge
-    |  detail: wow
+    |name: testapp-managedogge-wow
     |locations:
     |  account: test
     |  vpc: vpc0

@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.LocationConstants.DEFAULT_SUBNET_PURPOSE
 import com.netflix.spinnaker.keel.api.LocationConstants.DEFAULT_VPC_NAME
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RegionSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
@@ -243,10 +242,7 @@ internal class ClusterNetworkResolverTests : NetworkResolverTests<ClusterSpec>()
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
       spec = ClusterSpec(
-        moniker = Moniker(
-          app = "fnord",
-          stack = "test"
-        ),
+        name = "fnord-test",
         imageProvider = ArtifactImageProvider(DebianArtifact("fnord")),
         locations = locations,
         _defaults = ServerGroupSpec(
@@ -276,10 +272,7 @@ internal class ClassicLoadBalancerNetworkResolverTests : NetworkResolverTests<Cl
     apiVersion = SPINNAKER_EC2_API_V1,
     kind = "classic-load-balancer",
     spec = ClassicLoadBalancerSpec(
-      moniker = Moniker(
-        app = "fnord",
-        stack = "test"
-      ),
+      name = "fnord-test",
       locations = locations,
       healthCheck = ClassicLoadBalancerHealthCheck(
         target = "HTTP:7001/health"
@@ -295,10 +288,7 @@ internal class ApplicationLoadBalancerNetworkResolverTests : NetworkResolverTest
     apiVersion = SPINNAKER_EC2_API_V1,
     kind = "application-load-balancer",
     spec = ApplicationLoadBalancerSpec(
-      moniker = Moniker(
-        app = "fnord",
-        stack = "test"
-      ),
+      name = "fnord-test",
       locations = locations,
       listeners = emptySet(),
       targetGroups = emptySet()

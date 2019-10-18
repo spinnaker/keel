@@ -1,11 +1,8 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -81,7 +78,6 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val cloudDriverService = mockk<CloudDriverService>()
   val cloudDriverCache = mockk<CloudDriverCache>()
   val orcaService = mockk<OrcaService>()
-  val objectMapper = ObjectMapper().registerKotlinModule()
   val normalizers = emptyList<Resolver<ClusterSpec>>()
   val clock = Clock.systemDefaultZone()
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
@@ -108,7 +104,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val targetTrackingPolicyName = "keel-test-target-tracking-policy"
 
   val spec = ClusterSpec(
-    moniker = Moniker(app = "keel", stack = "test"),
+    name = "keel-test",
     locations = SubnetAwareLocations(
       account = vpcWest.account,
       vpc = "vpc0",

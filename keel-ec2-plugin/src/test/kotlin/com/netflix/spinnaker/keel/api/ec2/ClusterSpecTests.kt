@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -115,10 +114,7 @@ object Fixture {
   val usWestImageId = "ami-6271051"
 
   val spec: ClusterSpec = ClusterSpec(
-    moniker = Moniker(
-      app = "fnord",
-      stack = "test"
-    ),
+    name = "fnord-test",
     imageProvider = ArtifactImageProvider(DebianArtifact("fnord")),
     locations = SubnetAwareLocations(
       account = "test",

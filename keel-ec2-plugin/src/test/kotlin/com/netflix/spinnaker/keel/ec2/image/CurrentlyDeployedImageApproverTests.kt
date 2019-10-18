@@ -19,7 +19,6 @@ package com.netflix.spinnaker.keel.ec2.image
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -70,7 +69,7 @@ internal class CurrentlyDeployedImageApproverTests : JUnit5Minutests {
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
       spec = ClusterSpec(
-        moniker = Moniker("fnord", "api"),
+        name = "fnord-api",
         locations = SubnetAwareLocations(
           account = "test",
           vpc = "vpc0",
@@ -102,7 +101,7 @@ internal class CurrentlyDeployedImageApproverTests : JUnit5Minutests {
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
       spec = ClusterSpec(
-        moniker = Moniker("fnord", "api"),
+        name = "fnord-api",
         imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
         locations = SubnetAwareLocations(
           account = "test",

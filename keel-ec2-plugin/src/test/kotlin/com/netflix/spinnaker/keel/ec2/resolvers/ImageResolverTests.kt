@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -112,7 +111,7 @@ internal class ImageResolverTests : JUnit5Minutests {
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
       spec = ClusterSpec(
-        moniker = Moniker("fnord"),
+        name = "fnord",
         imageProvider = imageProvider,
         locations = SubnetAwareLocations(
           account = account,

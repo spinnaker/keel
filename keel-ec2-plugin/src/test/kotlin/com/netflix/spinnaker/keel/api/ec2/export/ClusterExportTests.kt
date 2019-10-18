@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.api.ec2.export
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -87,7 +86,7 @@ internal class ClusterExportTests : JUnit5Minutests {
   val targetTrackingPolicyName = "keel-test-target-tracking-policy"
 
   val spec = ClusterSpec(
-    moniker = Moniker(app = "keel", stack = "test"),
+    name = "keel-test",
     locations = SubnetAwareLocations(
       account = vpcWest.account,
       vpc = "vpc0",

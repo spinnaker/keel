@@ -207,7 +207,7 @@ class ApiTests : JUnit5Minutests {
       at("/components/schemas/ClusterSpec/required")
         .isArray()
         .map { it.textValue() }
-        .containsExactlyInAnyOrder("imageProvider", "locations", "moniker")
+        .containsExactlyInAnyOrder("imageProvider", "locations", "name")
     }
 
     test("duration properties are duration format strings") {

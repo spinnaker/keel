@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -18,6 +17,7 @@ import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.RedBlack
+import com.netflix.spinnaker.keel.core.parseMoniker
 import java.time.Duration
 
 /**
@@ -110,7 +110,7 @@ private fun ClusterSpec.resolveHealth(region: String): Health {
 }
 
 data class ClusterSpec(
-  override val moniker: Moniker,
+  override val name: String,
   val imageProvider: ImageProvider? = null,
   val deployWith: ClusterDeployStrategy = RedBlack(),
   override val locations: SubnetAwareLocations,
@@ -127,8 +127,11 @@ data class ClusterSpec(
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = Duration.ZERO
 ) : Monikered, Locatable<SubnetAwareLocations>, VersionedArtifact, UnhappyControl {
+
+  override val moniker = parseMoniker(name)
+
   @JsonIgnore
-  override val id = "${locations.account}:$moniker"
+  override val id = "${locations.account}:$name"
 
   /**
    * I have no idea why, but if I annotate the constructor property with @get:JsonUnwrapped, the
@@ -142,7 +145,7 @@ data class ClusterSpec(
 
   @JsonCreator
   constructor(
-    moniker: Moniker,
+    name: String,
     imageProvider: ImageProvider,
     deployWith: ClusterDeployStrategy = RedBlack(),
     locations: SubnetAwareLocations,
@@ -156,7 +159,7 @@ data class ClusterSpec(
     @JsonInclude(NON_EMPTY)
     overrides: Map<String, ServerGroupSpec> = emptyMap()
   ) : this(
-    moniker,
+    name,
     imageProvider,
     deployWith,
     locations,

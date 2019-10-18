@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.titus.resource
 
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.plugins.Resolver
@@ -73,7 +72,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
   )
 
   val spec = TitusClusterSpec(
-    moniker = Moniker(app = "keel", stack = "test"),
+    name = "keel-test",
     locations = SimpleLocations(
       account = titusAccount,
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))

@@ -21,6 +21,8 @@ package com.netflix.spinnaker.keel.api
  * A resource that has a moniker-compliant name.
  */
 interface Monikered : ResourceSpec {
+  val name: String
+
   val moniker: Moniker
 
   /**

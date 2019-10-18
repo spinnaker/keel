@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.titus.image
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
@@ -44,7 +43,7 @@ internal class CurrentlyDeployedDockerImageApproverTests : JUnit5Minutests {
       apiVersion = SPINNAKER_TITUS_API_V1,
       kind = "cluster",
       spec = TitusClusterSpec(
-        moniker = Moniker("waffles", "api"),
+        name = "waffles-api",
         locations = SimpleLocations(account = "test", regions = setOf(SimpleRegionSpec("us-east-1"))),
         _defaults = TitusServerGroupSpec(
           container = ReferenceProvider(
@@ -58,7 +57,7 @@ internal class CurrentlyDeployedDockerImageApproverTests : JUnit5Minutests {
       apiVersion = SPINNAKER_TITUS_API_V1,
       kind = "cluster",
       spec = TitusClusterSpec(
-        moniker = Moniker("waffles", "api"),
+        name = "waffles-api",
         locations = SimpleLocations(account = "test", regions = setOf(SimpleRegionSpec("us-east-1"))),
         _defaults = TitusServerGroupSpec(
           container = DigestProvider(

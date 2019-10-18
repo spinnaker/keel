@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
@@ -36,6 +35,7 @@ import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.RedBlack
+import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import java.time.Duration
@@ -45,7 +45,7 @@ import java.time.Duration
  * https://github.com/Netflix/titus-api-definitions/blob/master/src/main/proto/netflix/titus/titus_job_api.proto
  */
 data class TitusClusterSpec(
-  override val moniker: Moniker,
+  override val name: String,
   val deployWith: ClusterDeployStrategy = RedBlack(),
   override val locations: SimpleLocations,
   private val _defaults: TitusServerGroupSpec,
@@ -62,15 +62,17 @@ data class TitusClusterSpec(
   override val unhappyWaitTime: Duration? = Duration.ZERO
 ) : Monikered, Locatable<SimpleLocations>, VersionedArtifact, UnhappyControl {
 
+  override val moniker = parseMoniker(name)
+
   @JsonIgnore
-  override val id = "${locations.account}:$moniker"
+  override val id = "${locations.account}:$name"
 
   val defaults: TitusServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
   @JsonCreator
   constructor(
-    moniker: Moniker,
+    name: String,
     deployWith: ClusterDeployStrategy = RedBlack(),
     locations: SimpleLocations,
     container: ContainerProvider,
@@ -87,7 +89,7 @@ data class TitusClusterSpec(
     tags: Map<String, String>?,
     overrides: Map<String, TitusServerGroupSpec> = emptyMap()
   ) : this(
-    moniker,
+    name,
     deployWith,
     locations,
     TitusServerGroupSpec(

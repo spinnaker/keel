@@ -4,10 +4,7 @@ kind: cluster
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:
-  moniker:
-    app: keeldemo
-    stack: examples
-    detail: ec2v1
+  name: keeldemo-examples-ec2v1
   imageProvider:
     deliveryArtifact:
       name: keeldemo

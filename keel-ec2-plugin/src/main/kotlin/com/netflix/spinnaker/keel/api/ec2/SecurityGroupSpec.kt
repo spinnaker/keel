@@ -19,22 +19,25 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SimpleLocations
+import com.netflix.spinnaker.keel.core.parseMoniker
 import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
 import de.danielbechler.diff.introspection.ObjectDiffProperty
 
 data class SecurityGroupSpec(
-  override val moniker: Moniker,
+  override val name: String,
   override val locations: SimpleLocations,
   val description: String?,
   val inboundRules: Set<SecurityGroupRule> = emptySet(),
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, SecurityGroupOverride> = emptyMap()
 ) : Monikered, Locatable<SimpleLocations> {
+
+  override val moniker = parseMoniker(name)
+
   @JsonIgnore
-  override val id = "${locations.account}:$moniker"
+  override val id = "${locations.account}:$name"
 }
 
 data class SecurityGroupOverride(
