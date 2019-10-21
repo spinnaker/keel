@@ -37,7 +37,7 @@ data class TitusServerGroup(
   val name: String,
   val container: Container,
   val location: Location,
-  val containerOptions: ContainerOptions,
+  val runtimeOptions: RuntimeOptions,
   val capacity: Capacity,
   val tags: Map<String, String> = emptyMap(),
   val dependencies: ClusterDependencies = ClusterDependencies(),
