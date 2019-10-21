@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
+import com.netflix.spinnaker.keel.swagger.KotlinOptionalityModelPropertyBuilderPlugin
 import org.reflections.Reflections
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
@@ -17,6 +18,7 @@ import springfox.documentation.schema.AlternateTypeRule
 import springfox.documentation.schema.AlternateTypeRuleConvention
 import springfox.documentation.schema.AlternateTypeRules.newRule
 import springfox.documentation.spi.DocumentationType.SWAGGER_2
+import springfox.documentation.spi.schema.ModelPropertyBuilderPlugin
 import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger2.annotations.EnableSwagger2
 
@@ -63,6 +65,10 @@ class SwaggerConfiguration {
 
       override fun getOrder(): Int = HIGHEST_PRECEDENCE
     }
+
+  @Bean
+  fun kotlinSwaggerPlugin(resolver: TypeResolver): ModelPropertyBuilderPlugin =
+    KotlinOptionalityModelPropertyBuilderPlugin()
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
