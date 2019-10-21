@@ -10,11 +10,9 @@ import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.MultiRegion
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.model.Moniker
-import io.swagger.annotations.ApiModel
 import java.time.Duration
 
 /**
@@ -91,10 +89,6 @@ private fun ClusterSpec.resolveHealth(region: String): Health {
   )
 }
 
-@ApiModel(
-  description = "a cluster consisting of server groups in one or more regions",
-  parent = ResourceSpec::class
-)
 data class ClusterSpec(
   override val moniker: Moniker,
   val imageProvider: ImageProvider? = null,

@@ -17,8 +17,6 @@ package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.netflix.spinnaker.keel.serialization.SubmittedResourceDeserializer
-import io.swagger.annotations.ApiModel
-import io.swagger.annotations.ApiModelProperty
 
 /**
  * Internal representation of a resource.
@@ -64,34 +62,11 @@ data class Resource<T : ResourceSpec>(
 /**
  * External representation of a resource that would be submitted to the API
  */
-@ApiModel(description = "a resource")
 @JsonDeserialize(using = SubmittedResourceDeserializer::class)
 data class SubmittedResource<T : ResourceSpec>(
-  @ApiModelProperty(
-    "metadata which must include a valid 'serviceAccount'. 'id', 'uid', and 'application' are reserved keys that must not appear",
-    required = true
-  )
   val metadata: Map<String, Any?>,
-
-  @ApiModelProperty(
-    "the API version the spec schema belongs to",
-    required = true,
-    example = "ec2.keel.spinnaker.io/v1"
-  )
   val apiVersion: ApiVersion,
-
-  @ApiModelProperty(
-    "the type of resource represented by spec",
-    required = true,
-    example = "cluster"
-  )
   val kind: String,
-
-  @ApiModelProperty(
-    "the resource specification",
-    required = true,
-    dataType = "com.netflix.spinnaker.keel.api.ResourceSpec"
-  )
   val spec: T
 ) {
   init {

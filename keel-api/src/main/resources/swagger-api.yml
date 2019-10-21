@@ -1,0 +1,33 @@
+swagger.api:
+  models:
+    ApplicationLoadBalancerSpec:
+      description: the specification of an EC2 application load balancer (ALB)
+
+    ClassicLoadBalancerHealthCheck:
+      description: health check configuration for an EC2 classic load balancer
+
+    ClusterSpec:
+      description: a cluster consisting of server groups in one or more regions
+
+    ResourceSpec:
+      description: the specification of a resource
+      properties:
+        id:
+          hidden: true
+        application:
+          hidden: true
+
+    SubmittedResource:
+      description: a resource as submitted to the API
+      properties:
+        metadata:
+          description: metadata which must include a valid 'serviceAccount'. 'id', 'uid', and 'application' are reserved keys that must not appear
+        apiVersion:
+          description: the API version the spec schema belongs to
+          example: ec2.keel.spinnaker.io/v1
+        kind:
+          description: the type of resource represented by spec (unique within the apiVersion)
+          example: cluster
+        spec:
+          description: the resource specification
+          dataType: com.netflix.spinnaker.keel.api.ResourceSpec
