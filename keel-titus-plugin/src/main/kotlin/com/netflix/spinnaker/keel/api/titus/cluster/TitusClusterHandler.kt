@@ -177,16 +177,16 @@ class TitusClusterHandler(
           "desired" to capacity.desired
         ),
         "targetHealthyDeployPercentage" to 100, // TODO: any reason to do otherwise?
-        "iamProfile" to runtimeOptions.iamProfile,
+        "iamProfile" to iamProfile,
         // <titus things>
-        "capacityGroup" to runtimeOptions.capacityGroup,
-        "entryPoint" to runtimeOptions.entryPoint,
-        "env" to runtimeOptions.env,
-        "constraints" to runtimeOptions.constraints,
+        "capacityGroup" to capacityGroup,
+        "entryPoint" to entryPoint,
+        "env" to env,
+        "constraints" to constraints,
         "digest" to container.digest,
         "registry" to runBlocking { getRegistryForTitusAccount(location.account) },
-        "migrationPolicy" to runtimeOptions.migrationPolicy,
-        "resources" to runtimeOptions.resources,
+        "migrationPolicy" to migrationPolicy,
+        "resources" to resources,
         "imageId" to "${container.organization}/${container.image}:${container.digest}",
         // </titus things>
         "stack" to moniker.stack,
@@ -271,15 +271,13 @@ class TitusClusterHandler(
         image = image.dockerImageName.split("/").last(),
         digest = image.dockerImageDigest
       ),
-      runtimeOptions = RuntimeOptions(
-        entryPoint = entryPoint,
-        resources = resources,
-        env = env,
-        constraints = constraints,
-        iamProfile = iamProfile.substringAfterLast("/"),
-        capacityGroup = capacityGroup,
-        migrationPolicy = migrationPolicy
-      ),
+      entryPoint = entryPoint,
+      resources = resources,
+      env = env,
+      constraints = constraints,
+      iamProfile = iamProfile.substringAfterLast("/"),
+      capacityGroup = capacityGroup,
+      migrationPolicy = migrationPolicy,
       dependencies = ClusterDependencies(
         loadBalancers,
         securityGroupNames = securityGroupNames,

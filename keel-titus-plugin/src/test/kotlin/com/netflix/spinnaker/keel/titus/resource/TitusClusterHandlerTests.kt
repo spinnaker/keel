@@ -145,19 +145,19 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         region = location.region,
         image = TitusActiveServerGroupImage("${container.organization}/${container.image}", "", container.digest),
         iamProfile = moniker.app + "InstanceProfile",
-        entryPoint = runtimeOptions.entryPoint,
+        entryPoint = entryPoint,
         targetGroups = dependencies.targetGroups,
         loadBalancers = dependencies.loadBalancerNames,
         securityGroups = securityGroups.map(SecurityGroupSummary::id).toSet(),
         capacity = capacity,
         cloudProvider = CLOUD_PROVIDER,
         moniker = parseMoniker("$name-v$sequence"),
-        env = runtimeOptions.env,
-        constraints = runtimeOptions.constraints,
-        migrationPolicy = runtimeOptions.migrationPolicy,
+        env = env,
+        constraints = constraints,
+        migrationPolicy = migrationPolicy,
         serviceJobProcesses = ServiceJobProcesses(),
         tags = emptyMap(),
-        resources = runtimeOptions.resources,
+        resources = resources,
         capacityGroup = moniker.app
       )
     }
@@ -387,11 +387,7 @@ private fun TitusServerGroup.withDoubleCapacity(): TitusServerGroup =
   )
 
 private fun TitusServerGroup.withDifferentRuntimeOptions(): TitusServerGroup =
-  copy(
-    runtimeOptions = runtimeOptions.copy(
-      capacityGroup = "aDifferentGroup"
-    )
-  )
+  copy(capacityGroup = "aDifferentGroup")
 
 private fun <E, T : Iterable<E>> Assertion.Builder<T>.containsDistinctElements() =
   assert("contains distinct elements") { subject ->
