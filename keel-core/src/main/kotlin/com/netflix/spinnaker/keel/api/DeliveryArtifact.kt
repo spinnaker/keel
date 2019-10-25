@@ -6,7 +6,7 @@ data class DeliveryArtifact(
 )
 
 enum class ArtifactType {
-  DEB
+  DEB, DOCKER_IMAGE
 }
 
 // todo eb: add RELEASE
