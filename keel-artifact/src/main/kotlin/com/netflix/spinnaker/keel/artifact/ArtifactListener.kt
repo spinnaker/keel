@@ -4,7 +4,7 @@ import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.ArtifactStatus
 import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
-import com.netflix.spinnaker.keel.api.ArtifactType.DOCKER_IMAGE
+import com.netflix.spinnaker.keel.api.ArtifactType.DOCKER
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.events.ArtifactEvent
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
@@ -34,13 +34,13 @@ class ArtifactListener(
         if (artifactRepository.isRegistered(artifact.name, artifact.type)) {
           val version: String
           val status: ArtifactStatus
-          when {
-            korkArtifact.isDeb() -> {
+          when (artifact.type) {
+            DEB -> {
               version = "${korkArtifact.name}-${korkArtifact.version}"
               status = debStatus(korkArtifact)
             }
-            korkArtifact.isDockerImage() -> {
-              version = korkArtifact.name + ":" + korkArtifact.version
+            DOCKER -> {
+              version = "${korkArtifact.name}:${korkArtifact.version}"
               status = ArtifactStatus.FINAL // todo eb: should we default? should we re-think status? should status be null?
             }
             else -> throw UnsupportedArtifactTypeException(korkArtifact.type)
@@ -98,12 +98,6 @@ class ArtifactListener(
   }
 
   private val artifactTypeNames by lazy { ArtifactType.values().map(ArtifactType::name) }
-
-  private fun Artifact.isDeb(): Boolean =
-    type.equals(DEB.toString(), true)
-
-  private fun Artifact.isDockerImage(): Boolean =
-    type.equals(DOCKER_IMAGE.toString(), true)
 
   private fun Artifact.toDeliveryArtifact(): DeliveryArtifact =
     DeliveryArtifact(name, ArtifactType.valueOf(type.toUpperCase()))

@@ -17,8 +17,8 @@
  */
 package com.netflix.spinnaker.keel.artifact
 
-import com.netflix.spinnaker.keel.api.ArtifactStatus
+import com.netflix.spinnaker.keel.api.ArtifactType
 
 class UnsupportedArtifactTypeException(
   val type: String
-) : RuntimeException("Artifact type $type not in supported types: ${ArtifactStatus.values()}")
+) : RuntimeException("Artifact type $type not in supported types: ${ArtifactType.values()}")

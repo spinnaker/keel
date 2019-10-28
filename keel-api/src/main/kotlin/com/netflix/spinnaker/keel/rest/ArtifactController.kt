@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
-import com.netflix.spinnaker.keel.api.ArtifactType.DOCKER_IMAGE
+import com.netflix.spinnaker.keel.api.ArtifactType.DOCKER
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.events.ArtifactEvent
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
@@ -43,7 +43,7 @@ class ArtifactController(
     echoArtifactEvent.payload.artifacts.forEach { artifact ->
       if (artifact.type.equals(DEB.toString(), true) && artifact.isFromArtifactEvent()) {
         publisher.publishEvent(ArtifactEvent(listOf(artifact), emptyMap()))
-      } else if (artifact.type.equals(DOCKER_IMAGE.toString(), true)) {
+      } else if (artifact.type.equals(DOCKER.toString(), true)) {
         publisher.publishEvent(ArtifactEvent(listOf(artifact), emptyMap()))
       } else {
         log.debug("Ignoring artifact event with type {}: {}", artifact.type, artifact)
