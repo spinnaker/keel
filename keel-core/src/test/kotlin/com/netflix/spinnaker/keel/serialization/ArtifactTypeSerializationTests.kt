@@ -15,14 +15,20 @@ internal class ArtifactTypeSerializationTests : JUnit5Minutests {
   fun tests() = rootContext<Unit> {
     context("custom (de)serialization") {
       test("serializes enum value to friendly name") {
-        for (enumValue in ArtifactType.values()) {
-          expectThat(mapper.writeValueAsString(enumValue)).isEqualTo("--- \"${enumValue.friendlyName}\"\n")
+        for (artifactType in ArtifactType.values()) {
+          expectThat(mapper.writeValueAsString(artifactType)).isEqualTo("--- \"${artifactType.friendlyName}\"\n")
         }
       }
 
       test("deserializes friendly name to enum value") {
-        for (enumValue in ArtifactType.values()) {
-          expectThat(mapper.readValue<ArtifactType>(enumValue.friendlyName)).isEqualTo(enumValue)
+        for (artifactType in ArtifactType.values()) {
+          expectThat(mapper.readValue<ArtifactType>(artifactType.friendlyName)).isEqualTo(artifactType)
+        }
+      }
+
+      test("deserialization is backwards-compatible with original enum names") {
+        for (artifactType in ArtifactType.values()) {
+          expectThat(mapper.readValue<ArtifactType>(artifactType.name)).isEqualTo(artifactType)
         }
       }
     }
