@@ -70,14 +70,16 @@ class ImageResolver(
           imageProvider.artifactStatuses
         }
       ) ?: throw NoImageSatisfiesConstraints(artifact.name, environment.name)
-      imageService.getLatestNamedImage(
+      imageService.getLatestNamedImageWithAllRegionsForAppVersion(
         appVersion = AppVersion.parseName(artifactVersion),
-        account = account
+        account = account,
+        regions = resource.spec.locations.regions.map { it.name }
       ) ?: throw NoImageFound(artifactVersion)
     } else {
-      imageService.getLatestNamedImage(
+      imageService.getLatestNamedImageWithAllRegions(
         packageName = artifact.name,
-        account = account
+        account = account,
+        regions = resource.spec.locations.regions.map { it.name }
       ) ?: throw NoImageFound(artifact.name)
     }
   }

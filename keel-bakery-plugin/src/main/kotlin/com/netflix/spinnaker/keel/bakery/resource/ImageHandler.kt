@@ -63,7 +63,7 @@ class ImageHandler(
 
   override suspend fun current(resource: Resource<ImageSpec>): Image? =
     with(resource) {
-      imageService.getLatestImage(spec.artifactName, "test")?.let {
+      imageService.getLatestImageWithAllRegions(spec.artifactName, "test", resource.spec.regions.toList())?.let {
         it.copy(regions = it.regions.intersect(resource.spec.regions))
       }
     }
@@ -127,15 +127,7 @@ class ImageHandler(
               "storeType" to resource.spec.storeType.name.toLowerCase(),
               "user" to "keel",
               "vmType" to "hvm"
-            ).let { job ->
-              if (resourceDiff.isRegionOnly()) {
-                job + mapOf(
-                  "rebake" to true
-                )
-              } else {
-                job
-              }
-            }
+            )
           )
         ),
         trigger = OrchestrationTrigger(

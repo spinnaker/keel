@@ -33,7 +33,6 @@ import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectThat
 import strikt.api.expectThrows
-import strikt.assertions.containsKey
 import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
@@ -154,46 +153,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
           }
           expectThat(desired).isEqualTo(image)
         }
-
-        context("the image is missing in one region") {
-          before {
-            coEvery {
-              imageService.getLatestImage("keel", "test")
-            } returns image.copy(regions = image.regions - "us-east-1")
-
-            coEvery { igorService.getArtifact("keel", "0.161.0-h63.24d0843") } returns
-              Artifact(
-                "DEB",
-                false,
-                "keel",
-                "0.161.0-h63.24d0843",
-                "rocket",
-                "debian-local:pool/k/keel/keel_0.160.0-h62.02c0fbf_all.deb",
-                mapOf(
-                  "repoKey" to "stash/spkr/keel-nflx",
-                  "rocketMessageId" to "84c1ecca-7f76-482e-9952-226fb2c4c410",
-                  "releaseStatus" to "FINAL"
-                ),
-                null,
-                "https://spinnaker.builds.test.netflix.net/job/SPINNAKER-rocket-package-keel/62",
-                null
-              )
-          }
-
-          test("should submit force-rebake") {
-            val request = slot<OrchestrationRequest>()
-            coEvery { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
-
-            runBlocking {
-              val desired = handler.desired(resource)
-              val current = handler.current(resource)
-              val diff = ResourceDiff(desired, current)
-              handler.upsert(resource, diff)
-            }
-
-            expectThat(request.captured.job.first()).containsKey("rebake")
-          }
-        }
       }
 
       context("there are no known versions of the artifact") {
@@ -270,7 +229,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       context("the image already exists in more regions than desired") {
         before {
           coEvery {
-            imageService.getLatestImage("keel", "test")
+            imageService.getLatestImageWithAllRegions("keel", "test", image.regions.toList())
           } returns image.copy(regions = image.regions + "eu-west-1")
         }
         test("current should filter the undesireable regions out of the image") {
