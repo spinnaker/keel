@@ -2,9 +2,9 @@ _**IMPORTANT:** This service is currently under development and is not ready for
 
 ---
 # High Level Project Overview
-**Keel is the service where much of our work on the new Managed Delivery iniative is happening. For a high level overview of the Managed Delivery project and its goals, [check out our introductory post on the Spinnaker blog](https://blog.spinnaker.io/managed-delivery-evolving-continuous-delivery-at-netflix-eb74877fb33c).**
+Keel is the service where much of our work on the new Managed Delivery iniative is happening. For a high level overview of the Managed Delivery project and its goals, [check out our introductory post on the Spinnaker blog](https://blog.spinnaker.io/managed-delivery-evolving-continuous-delivery-at-netflix-eb74877fb33c).
 
-**Continue reading for technical architecture, or check out our [FAQ section](FAQ.md) for more information about what we're building. Join us in the [#sig-spinnaker-as-code](https://slack.com/app_redirect?team=T091CRSGH&channel=CERACDPDZ) channel on the [Spinnaker Slack workspace](http://join.spinnaker.io/) if you have questions or want to get involved!**
+Continue reading for technical architecture, or check out our [FAQ section](FAQ.md) for more information about what we're building. Join us in the [#sig-spinnaker-as-code](https://slack.com/app_redirect?team=T091CRSGH&channel=CERACDPDZ) channel on the [Spinnaker Slack workspace](http://join.spinnaker.io/) if you have questions or want to get involved!
 
 # Keel Architecture
 
