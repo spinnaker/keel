@@ -195,5 +195,5 @@ sealed class NoSuchResourceException(override val message: String?) : RuntimeExc
 class NoSuchResourceId(id: ResourceId) : NoSuchResourceException("No resource with id $id exists in the repository")
 
 enum class ResourceStatus {
-  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, UNKNOWN
+  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, UNKNOWN
 }

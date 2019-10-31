@@ -18,6 +18,8 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.ResourceStatus
+import com.netflix.spinnaker.keel.veto.VetoEnforcer
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.GetMapping
@@ -29,7 +31,8 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/application"])
 class ApplicationController(
-  private val resourceRepository: ResourceRepository
+  private val resourceRepository: ResourceRepository,
+  private val vetoEnforcer: VetoEnforcer
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -44,6 +47,12 @@ class ApplicationController(
     if (includeDetails) {
       val resources = resourceRepository.getSummaryByApplication(application)
         .filter { it.kind != "keel-tag" }
+        .map { resourceSummary ->
+          when {
+            vetoEnforcer.canCheck(resourceSummary.id).allowed -> resourceSummary
+            else -> resourceSummary.copy(status = ResourceStatus.PAUSED)
+          }
+        }
 
       return mapOf(
         "hasManagedResources" to resources.isNotEmpty(),
