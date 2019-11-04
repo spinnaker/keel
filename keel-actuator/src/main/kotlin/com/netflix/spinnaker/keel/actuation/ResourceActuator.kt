@@ -45,8 +45,7 @@ class ResourceActuator(
       log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
       publisher.publishEvent(ResourceCheckSkipped(apiVersion, kind, id))
 
-      val lastEvent = resourceRepository.eventHistory(id, limit = 1).first()
-      if (lastEvent !is ResourceActuationPaused) {
+      if (resourceRepository.lastEvent(id) !is ResourceActuationPaused) {
         log.info("Actuation for resource {} paused due to veto: {}", id, response.message)
         publisher.publishEvent(ResourceActuationPaused(apiVersion, kind, id.value, id.applicationName, response.message,
           clock.instant()))
@@ -64,8 +63,7 @@ class ResourceActuator(
 
     log.debug("Checking resource {}", id)
 
-    val lastEvent = resourceRepository.eventHistory(id, limit = 1).first()
-    if (lastEvent is ResourceActuationPaused) {
+    if (resourceRepository.lastEvent(id) is ResourceActuationPaused) {
       log.info("Actuation for resource {} resuming", id)
       publisher.publishEvent(ResourceActuationResumed(apiVersion, kind, id.value, id.applicationName, clock.instant()))
     }
@@ -99,7 +97,7 @@ class ResourceActuator(
         else -> {
           log.info("Resource {} is valid", id)
           // TODO: not sure this logic belongs here
-          val lastEvent = resourceRepository.eventHistory(resource.id, limit = 1).first()
+          val lastEvent = resourceRepository.lastEvent(id)
           if (lastEvent is ResourceDeltaDetected || lastEvent is ResourceActuationLaunched) {
             publisher.publishEvent(ResourceDeltaResolved(resource, clock))
           } else {

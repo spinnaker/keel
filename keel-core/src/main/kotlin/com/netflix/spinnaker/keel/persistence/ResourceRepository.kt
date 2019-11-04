@@ -104,6 +104,14 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
   fun eventHistory(id: ResourceId, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent>
 
   /**
+   * Retrieves the last event from the history of state change events for the resource represented by [id] or null if
+   * none found.
+   *
+   * @param id the resource id.
+   */
+  fun lastEvent(id: ResourceId): ResourceEvent? = eventHistory(id, 1).firstOrNull()
+
+  /**
    * Records an event associated with a resource.
    */
   fun appendHistory(event: ResourceEvent)
