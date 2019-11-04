@@ -19,12 +19,13 @@ package com.netflix.spinnaker.keel.events
 
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.exceptions.InvalidResourceFormatException
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.DIFF
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.DIFF
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -42,6 +43,9 @@ internal class ResourceStatusTests : JUnit5Minutests {
     val actuationLaunchedEvent = ResourceActuationLaunched(resource, "resourceHandlerPlugin", listOf(Task("1", "task name")))
     val deltaResolvedEvent = ResourceDeltaResolved(resource)
     val errorEvent = ResourceCheckError(resource, InvalidResourceFormatException("bad resource", "who knows"))
+    val actuationPausedEvent = ResourceActuationPaused(resource, "whatever")
+    val actuationResumedEvent = ResourceActuationResumed(resource)
+    val resourceValidEvent = ResourceValid(resource)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -67,7 +71,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(missingEvent)
       }
 
-      test("returns diff") {
+      test("returns diff status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
@@ -78,7 +82,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(deltaDetectedEvent)
       }
 
-      test("returns returns diff") {
+      test("returns diff status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
@@ -90,7 +94,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(actuationLaunchedEvent)
       }
 
-      test("returns returns actuating") {
+      test("returns actuating status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(ACTUATING)
       }
     }
@@ -110,7 +114,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(actuationLaunchedEvent)
       }
 
-      test("returns returns unhappy") {
+      test("returns unhappy status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(UNHAPPY)
       }
     }
@@ -131,7 +135,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(deltaResolvedEvent)
       }
 
-      test("returns returns happy") {
+      test("returns happy status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
@@ -144,7 +148,17 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(deltaResolvedEvent)
       }
 
-      test("returns returns happy") {
+      test("returns happy status") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(HAPPY)
+      }
+    }
+
+    context("resource valid") {
+      before {
+        resourceRepository.appendHistory(resourceValidEvent)
+      }
+
+      test("returns happy status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
@@ -154,8 +168,30 @@ internal class ResourceStatusTests : JUnit5Minutests {
         resourceRepository.appendHistory(errorEvent)
       }
 
-      test("returns returns error") {
+      test("returns error status") {
         expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(ERROR)
+      }
+    }
+
+    context("resource actuation paused") {
+      before {
+        resourceRepository.appendHistory(actuationPausedEvent)
+      }
+
+      test("returns paused status") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(PAUSED)
+      }
+    }
+
+    context("resource actuation resumed") {
+      before {
+        resourceRepository.appendHistory(actuationPausedEvent)
+        resourceRepository.appendHistory(actuationResumedEvent)
+        resourceRepository.appendHistory(resourceValidEvent)
+      }
+
+      test("returns status according to first event after resuming") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
   }

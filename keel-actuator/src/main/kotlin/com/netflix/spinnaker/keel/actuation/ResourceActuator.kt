@@ -7,6 +7,8 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
+import com.netflix.spinnaker.keel.events.ResourceActuationPaused
+import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
@@ -42,6 +44,13 @@ class ResourceActuator(
     if (!response.allowed) {
       log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
       publisher.publishEvent(ResourceCheckSkipped(apiVersion, kind, id))
+
+      val lastEvent = resourceRepository.eventHistory(id, limit = 1).first()
+      if (lastEvent !is ResourceActuationPaused) {
+        log.info("Actuation for resource {} paused due to veto: {}", id, response.message)
+        publisher.publishEvent(ResourceActuationPaused(apiVersion, kind, id.value, id.applicationName, response.message,
+          clock.instant()))
+      }
       return
     }
 
@@ -54,6 +63,12 @@ class ResourceActuator(
     }
 
     log.debug("Checking resource {}", id)
+
+    val lastEvent = resourceRepository.eventHistory(id, limit = 1).first()
+    if (lastEvent is ResourceActuationPaused) {
+      log.info("Actuation for resource {} resuming", id)
+      publisher.publishEvent(ResourceActuationResumed(apiVersion, kind, id.value, id.applicationName, clock.instant()))
+    }
 
     val resource = resourceRepository.get(id)
 

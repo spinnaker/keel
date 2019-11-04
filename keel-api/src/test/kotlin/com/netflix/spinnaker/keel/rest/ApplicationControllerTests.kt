@@ -68,21 +68,4 @@ internal class ApplicationControllerTests {
         """{"hasManagedResources":true,"resources":[{"id":"${res.id}","kind":"${res.kind}","status":"CREATED"}]}"""
       ))
   }
-
-  @Test
-  fun `overrides resource status to PAUSED when vetoed`() {
-    val res = resource(id = "test:whatever:fnord")
-    resourceRepository.store(res)
-    resourceRepository.appendHistory(ResourceCreated(res))
-    applicationVetoRepository.optOut(res.application)
-
-    val request = get("/application/${res.application}?includeDetails=true")
-      .accept(MediaType.APPLICATION_JSON_VALUE)
-    mvc
-      .perform(request)
-      .andExpect(status().isOk)
-      .andExpect(content().string(
-        """{"hasManagedResources":true,"resources":[{"id":"${res.id}","kind":"${res.kind}","status":"PAUSED"}]}"""
-      ))
-  }
 }

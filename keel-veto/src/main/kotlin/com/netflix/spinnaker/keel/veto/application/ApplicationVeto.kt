@@ -34,11 +34,8 @@ class ApplicationVeto(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun check(id: ResourceId): VetoResponse {
-    // FIXME (lpollo): The following expects a ResourceId to have a specific format, but it's not defined/enforced
-    //  anywhere. We should add a validation and perhaps token extraction methods to ResourceId to be used consistently.
-    val appName = id.toString().split(":").last().split("-").first()
-    if (applicationVetoRepository.appVetoed(appName)) {
-      return VetoResponse(allowed = false, message = "Application $appName has been opted out.")
+    if (applicationVetoRepository.appVetoed(id.applicationName)) {
+      return VetoResponse(allowed = false, message = "Application ${id.applicationName} has been opted out.")
     }
     return VetoResponse(allowed = true)
   }
