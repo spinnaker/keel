@@ -26,6 +26,6 @@ data class ResourceId(val value: String) {
   override fun toString(): String = value
 
   // Resource names (the last token in a ResourceId) follow the Moniker format (<app>-<stack>-<detail>)
-  val applicationName: String
+  val application: String
     get() = value.split(":").last().split("-").first()
 }

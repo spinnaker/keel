@@ -44,12 +44,8 @@ class ResourceActuator(
     if (!response.allowed) {
       log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
       publisher.publishEvent(ResourceCheckSkipped(apiVersion, kind, id))
-
-      if (resourceRepository.lastEvent(id) !is ResourceActuationPaused) {
-        log.info("Actuation for resource {} paused due to veto: {}", id, response.message)
-        publisher.publishEvent(ResourceActuationPaused(apiVersion, kind, id.value, id.applicationName, response.message,
-          clock.instant()))
-      }
+      publisher.publishEvent(ResourceActuationPaused(apiVersion, kind, id.value, id.application, response.message,
+        clock.instant()))
       return
     }
 
@@ -65,7 +61,7 @@ class ResourceActuator(
 
     if (resourceRepository.lastEvent(id) is ResourceActuationPaused) {
       log.info("Actuation for resource {} resuming", id)
-      publisher.publishEvent(ResourceActuationResumed(apiVersion, kind, id.value, id.applicationName, clock.instant()))
+      publisher.publishEvent(ResourceActuationResumed(apiVersion, kind, id.value, id.application, clock.instant()))
     }
 
     val resource = resourceRepository.get(id)
