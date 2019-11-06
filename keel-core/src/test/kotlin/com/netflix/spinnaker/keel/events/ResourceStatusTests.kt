@@ -26,6 +26,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -187,11 +188,10 @@ internal class ResourceStatusTests : JUnit5Minutests {
       before {
         resourceRepository.appendHistory(actuationPausedEvent)
         resourceRepository.appendHistory(actuationResumedEvent)
-        resourceRepository.appendHistory(resourceValidEvent)
       }
 
-      test("returns status according to first event after resuming") {
-        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(HAPPY)
+      test("returns resumed status") {
+        expectThat(resourceRepository.getStatus(resource.id)).isEqualTo(RESUMED)
       }
     }
   }

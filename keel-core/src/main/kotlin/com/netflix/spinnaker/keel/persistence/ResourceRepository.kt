@@ -27,6 +27,7 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
+import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
@@ -40,6 +41,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNKNOWN
 import com.netflix.spinnaker.keel.events.ResourceValid
 
@@ -135,6 +137,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
       history.isError() -> ERROR
       history.isCreated() -> CREATED
       history.isPaused() -> PAUSED
+      history.isResumed() -> RESUMED
       else -> UNKNOWN
     }
   }
@@ -161,6 +164,10 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
 
   private fun List<ResourceEvent>.isPaused(): Boolean {
     return first() is ResourceActuationPaused
+  }
+
+  private fun List<ResourceEvent>.isResumed(): Boolean {
+    return first() is ResourceActuationResumed
   }
 
   /**
@@ -211,5 +218,5 @@ sealed class NoSuchResourceException(override val message: String?) : RuntimeExc
 class NoSuchResourceId(id: ResourceId) : NoSuchResourceException("No resource with id $id exists in the repository")
 
 enum class ResourceStatus {
-  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, UNKNOWN
+  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, RESUMED, UNKNOWN
 }
