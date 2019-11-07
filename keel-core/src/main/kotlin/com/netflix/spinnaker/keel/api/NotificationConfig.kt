@@ -17,6 +17,9 @@
  */
 package com.netflix.spinnaker.keel.api
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonValue
+
 // todo eb: this does not allow you to customize the notification message, but we can add that later.
 data class NotificationConfig(
   val type: NotificationType,
@@ -24,14 +27,30 @@ data class NotificationConfig(
   val frequency: NotificationFrequency
 )
 
-enum class NotificationFrequency {
-  VERBOSE, // notification on task starting, completing, failing
-  NORMAL, // notification on task completing or failing
-  QUIET // notification only for failure
+enum class NotificationFrequency(@JsonValue val friendlyName: String) {
+  VERBOSE("verbose"), // notification on task starting, completing, failing
+  NORMAL("normal"), // notification on task completing or failing
+  QUIET("quiet"); // notification only for failure
+
+  companion object {
+    @JsonCreator
+    @JvmStatic
+    fun fromFriendlyName(friendlyName: String): NotificationFrequency? {
+      return valueOf(friendlyName.toUpperCase())
+    }
+  }
 }
 
-enum class NotificationType {
-  SLACK, EMAIL;
+enum class NotificationType(@JsonValue val friendlyName: String) {
+  SLACK("slack"), EMAIL("email");
+
+  companion object {
+    @JsonCreator
+    @JvmStatic
+    fun fromFriendlyName(friendlyName: String): NotificationType? {
+      return valueOf(friendlyName.toUpperCase())
+    }
+  }
 
   override fun toString(): String {
     return name.toLowerCase()
