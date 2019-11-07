@@ -48,6 +48,7 @@ class InMemoryResourceRepository(
       ?.also {
         resources.remove(it)
         events.remove(it)
+        lastCheckTimes.remove(it)
       }
       ?: throw NoSuchElementException(application)
   }

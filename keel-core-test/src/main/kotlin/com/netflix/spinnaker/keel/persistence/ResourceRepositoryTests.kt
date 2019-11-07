@@ -275,7 +275,6 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
 
         test("the resource is no longer returned when listing all resources") {
           subject.allResources(callback)
-
           verify(exactly = 0) { callback(any()) }
         }
 

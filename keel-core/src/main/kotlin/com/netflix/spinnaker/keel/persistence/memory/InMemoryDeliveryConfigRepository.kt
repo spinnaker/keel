@@ -27,7 +27,7 @@ class InMemoryDeliveryConfigRepository(
       .singleOrNull()
       ?.also {
         configs.remove(it)
-        configs.remove(it)
+        lastCheckTimes.remove(it)
       }
       ?: throw NoSuchElementException(application)
   }
