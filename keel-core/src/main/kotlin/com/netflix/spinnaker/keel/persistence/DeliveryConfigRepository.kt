@@ -14,7 +14,7 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
 
   fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig?
 
-  fun deleteByApplication (application : String)
+  fun deleteByApplication(application: String)
 }
 
 sealed class NoSuchDeliveryConfigException(message: String) : RuntimeException(message)

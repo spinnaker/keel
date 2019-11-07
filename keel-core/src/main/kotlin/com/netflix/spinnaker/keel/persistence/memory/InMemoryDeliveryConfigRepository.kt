@@ -32,7 +32,6 @@ class InMemoryDeliveryConfigRepository(
       ?: throw NoSuchElementException(application)
   }
 
-
   override fun get(name: String): DeliveryConfig =
     configs[name] ?: throw NoSuchDeliveryConfigName(name)
 

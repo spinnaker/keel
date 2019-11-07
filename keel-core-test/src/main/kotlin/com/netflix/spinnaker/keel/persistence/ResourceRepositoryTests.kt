@@ -291,7 +291,6 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         }
       }
 
-
       context("fetching event history for the resource") {
         before {
           repeat(3) {

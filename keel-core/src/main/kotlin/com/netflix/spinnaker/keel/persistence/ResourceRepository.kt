@@ -97,7 +97,6 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
    */
   fun delete(id: ResourceId)
 
-
   /**
    * Deletes the resource associated with [application].
    */

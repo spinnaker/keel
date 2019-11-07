@@ -16,7 +16,12 @@ import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
-import strikt.assertions.*
+import strikt.assertions.failed
+import strikt.assertions.hasSize
+import strikt.assertions.isA
+import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
+import strikt.assertions.succeeded
 
 abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
   JUnit5Minutests {
@@ -224,7 +229,6 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
               .failed()
         }
       }
-
     }
   }
 }
