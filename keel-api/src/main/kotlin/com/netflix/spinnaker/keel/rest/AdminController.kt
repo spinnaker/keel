@@ -3,7 +3,10 @@ package com.netflix.spinnaker.keel.rest
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import org.slf4j.LoggerFactory.getLogger
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping(path = ["/admin"])
@@ -23,5 +26,4 @@ class AdminController(
     resourceRepository.deleteByApplication(application)
     return deliveryConfigRepository.deleteByApplication(application)
   }
-
 }
