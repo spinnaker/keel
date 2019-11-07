@@ -2,7 +2,14 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.*
+import com.netflix.spinnaker.keel.api.ApiVersion
+import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceId
+import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.ResourceSummary
+import com.netflix.spinnaker.keel.api.application
+import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
@@ -33,22 +40,21 @@ open class SqlResourceRepository(
       .where(RESOURCE.APPLICATION.eq(application))
       .execute()
 
-    jooq.deleteFrom(RESOURCE_LAST_CHECKED).
-      where(
+    jooq.deleteFrom(RESOURCE_LAST_CHECKED)
+      .where(
         notExists(jooq.select(RESOURCE.UID)
           .from(RESOURCE)
           .where
           (RESOURCE_LAST_CHECKED.RESOURCE_UID.eq(RESOURCE.UID)))
       ).execute()
 
-    jooq.deleteFrom(RESOURCE_EVENT).
-      where(
+    jooq.deleteFrom(RESOURCE_EVENT)
+      .where(
         notExists(jooq.select(RESOURCE.UID)
           .from(RESOURCE)
           .where
           (RESOURCE_EVENT.UID.eq(RESOURCE.UID)))
       ).execute()
-
   }
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {

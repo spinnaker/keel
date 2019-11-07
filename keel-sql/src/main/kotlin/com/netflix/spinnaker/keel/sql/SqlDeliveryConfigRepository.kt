@@ -12,7 +12,14 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.*
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG_ARTIFACT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG_LAST_CHECKED
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VERSIONS
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import org.jooq.DSLContext
@@ -36,40 +43,40 @@ class SqlDeliveryConfigRepository(
       .where(DELIVERY_CONFIG.APPLICATION.eq(application))
       .execute()
 
-    jooq.deleteFrom(ENVIRONMENT).
-      where(
+    jooq.deleteFrom(ENVIRONMENT)
+      .where(
         notExists(jooq.select(DELIVERY_CONFIG.UID)
           .from(DELIVERY_CONFIG)
           .where
           (ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID)))
       ).execute()
 
-    jooq.deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS).
-      where(
+    jooq.deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
+      .where(
         notExists(jooq.select(ENVIRONMENT.UID)
           .from(ENVIRONMENT)
           .where
           (ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID)))
       ).execute()
 
-    jooq.deleteFrom(ENVIRONMENT_RESOURCE).
-      where(
+    jooq.deleteFrom(ENVIRONMENT_RESOURCE)
+      .where(
         notExists(jooq.select(ENVIRONMENT.UID)
           .from(ENVIRONMENT)
           .where
           (ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(ENVIRONMENT.UID)))
       ).execute()
 
-    jooq.deleteFrom(DELIVERY_CONFIG_ARTIFACT).
-      where(
+    jooq.deleteFrom(DELIVERY_CONFIG_ARTIFACT)
+      .where(
         notExists(jooq.select(DELIVERY_CONFIG.UID)
           .from(DELIVERY_CONFIG)
           .where
           (DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID)))
       ).execute()
 
-    jooq.deleteFrom(DELIVERY_CONFIG_LAST_CHECKED).
-      where(
+    jooq.deleteFrom(DELIVERY_CONFIG_LAST_CHECKED)
+      .where(
         notExists(jooq.select(DELIVERY_CONFIG.UID)
           .from(DELIVERY_CONFIG)
           .where
