@@ -13,6 +13,8 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun environmentFor(resourceId: ResourceId): Environment?
 
   fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig?
+
+  fun deleteByApplication (application : String)
 }
 
 sealed class NoSuchDeliveryConfigException(message: String) : RuntimeException(message)

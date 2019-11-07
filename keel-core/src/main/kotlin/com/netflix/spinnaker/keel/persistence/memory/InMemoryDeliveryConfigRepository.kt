@@ -15,8 +15,23 @@ import java.time.Instant.EPOCH
 class InMemoryDeliveryConfigRepository(
   private val clock: Clock = Clock.systemDefaultZone()
 ) : DeliveryConfigRepository {
+
   private val configs = mutableMapOf<String, DeliveryConfig>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
+
+  override fun deleteByApplication(application: String) {
+    configs
+      .values
+      .filter { it.application == application }
+      .map { it.application }
+      .singleOrNull()
+      ?.also {
+        configs.remove(it)
+        configs.remove(it)
+      }
+      ?: throw NoSuchElementException(application)
+  }
+
 
   override fun get(name: String): DeliveryConfig =
     configs[name] ?: throw NoSuchDeliveryConfigName(name)

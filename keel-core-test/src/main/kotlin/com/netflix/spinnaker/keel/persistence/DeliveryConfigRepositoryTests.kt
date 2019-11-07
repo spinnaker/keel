@@ -16,12 +16,7 @@ import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
-import strikt.assertions.failed
-import strikt.assertions.hasSize
-import strikt.assertions.isA
-import strikt.assertions.isEqualTo
-import strikt.assertions.isNotNull
-import strikt.assertions.succeeded
+import strikt.assertions.*
 
 abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
   JUnit5Minutests {
@@ -55,6 +50,10 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
     fun getByName() = expectCatching {
       repository.get(deliveryConfig.name)
+    }
+
+    fun delete() {
+      repository.deleteByApplication(deliveryConfig.application)
     }
 
     fun store() {
@@ -213,6 +212,19 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
             .get { environments }.hasSize(deliveryConfig.environments.size)
         }
       }
+
+      context("creating and deleting an application") {
+        before {
+          store()
+          delete()
+        }
+
+        test("delete application data successfully") {
+          getByName()
+              .failed()
+        }
+      }
+
     }
   }
 }
