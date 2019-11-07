@@ -1,9 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import org.springframework.http.HttpStatus.NOT_FOUND
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.web.bind.annotation.*
 
@@ -26,9 +24,4 @@ class AdminController(
     return deliveryConfigRepository.deleteByApplication(application)
   }
 
-  @ExceptionHandler(NoSuchResourceException::class)
-  @ResponseStatus(NOT_FOUND)
-  fun onNotFound(e: NoSuchResourceException) {
-    log.error(e.message)
-  }
 }
