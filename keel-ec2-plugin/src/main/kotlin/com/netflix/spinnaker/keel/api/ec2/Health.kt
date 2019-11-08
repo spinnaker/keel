@@ -34,12 +34,32 @@ data class Health(
 
   fun toClusterHealthSpecWithoutDefaults() =
     ClusterSpec.HealthSpec(
-      if (cooldown == defaults.cooldown) { null } else { cooldown },
-      if (warmup == defaults.warmup) { null } else { warmup },
-      if (healthCheckType == defaults.healthCheckType) { null } else { healthCheckType },
-      if (enabledMetrics == defaults.enabledMetrics) { null } else { enabledMetrics },
-      if (terminationPolicies == defaults.terminationPolicies) { null } else { terminationPolicies }
-      )
+      if (cooldown == defaults.cooldown) {
+        null
+      } else {
+        cooldown
+      },
+      if (warmup == defaults.warmup) {
+        null
+      } else {
+        warmup
+      },
+      if (healthCheckType == defaults.healthCheckType) {
+        null
+      } else {
+        healthCheckType
+      },
+      if (enabledMetrics == defaults.enabledMetrics) {
+        null
+      } else {
+        enabledMetrics
+      },
+      if (terminationPolicies == defaults.terminationPolicies) {
+        null
+      } else {
+        terminationPolicies
+      }
+    )
 
   companion object {
     val defaults = Health()
