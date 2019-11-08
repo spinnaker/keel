@@ -346,7 +346,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           expectThat(exported.spec.defaults.health)
             .isNotNull()
           expectThat(exported.spec.defaults.health!!.terminationPolicies)
-            .isEqualTo(setOf(TerminationPolicy.OldestInstance))
+            .isEqualTo(setOf(TerminationPolicy.NewestInstance))
         }
       }
     }
@@ -526,6 +526,6 @@ private fun ActiveServerGroup.withOlderAppVersion(): ActiveServerGroup =
 
 private fun ActiveServerGroup.withNonDefaultHealthProps(): ActiveServerGroup =
   copy(
-    asg = asg.copy(terminationPolicies = setOf(TerminationPolicy.OldestInstance.name)
+    asg = asg.copy(terminationPolicies = setOf(TerminationPolicy.NewestInstance.name)
     )
   )

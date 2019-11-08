@@ -27,7 +27,7 @@ data class Health(
   val warmup: Duration = Duration.ofSeconds(600),
   val healthCheckType: HealthCheckType = HealthCheckType.EC2,
   val enabledMetrics: Set<Metric> = emptySet(),
-  val terminationPolicies: Set<TerminationPolicy> = setOf(TerminationPolicy.Default)
+  val terminationPolicies: Set<TerminationPolicy> = setOf(TerminationPolicy.OldestInstance)
 ) {
   fun toClusterHealthSpec() =
     ClusterSpec.HealthSpec(cooldown, warmup, healthCheckType, enabledMetrics, terminationPolicies)
