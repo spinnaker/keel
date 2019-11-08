@@ -289,6 +289,12 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
             subject.eventHistory(resource.id)
           }
         }
+
+        test("deleting a non-existent application throws an exception") {
+          expectThrows<NoSuchApplication> {
+            subject.deleteByApplication(resource.application)
+          }
+        }
       }
 
       context("fetching event history for the resource") {

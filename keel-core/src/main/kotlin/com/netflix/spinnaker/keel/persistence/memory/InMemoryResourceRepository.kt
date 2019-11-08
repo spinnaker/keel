@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.api.ResourceSummary
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -50,7 +51,7 @@ class InMemoryResourceRepository(
         events.remove(it)
         lastCheckTimes.remove(it)
       }
-      ?: throw NoSuchElementException(application)
+      ?: throw NoSuchApplication(application)
   }
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
