@@ -319,8 +319,6 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             .isEqualTo("cluster")
           expectThat(apiVersion)
             .isEqualTo(SPINNAKER_EC2_API_V1)
-          expectThat(spec.regionalIds)
-            .hasSize(2)
           expectThat(spec.locations.regions)
             .hasSize(2)
           expectThat(spec.overrides)
