@@ -37,15 +37,12 @@ open class SqlResourceRepository(
 
   override fun deleteByApplication(application: String) {
 
-    jooq.select(RESOURCE.UID)
-      .from(RESOURCE)
-      .where(RESOURCE.APPLICATION.eq(application))
-      .fetchAny(RESOURCE.UID)
-      ?: throw NoSuchApplication(application)
-
-    jooq.deleteFrom(RESOURCE)
+  jooq.deleteFrom(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
       .execute()
+      .also { count ->
+      if (count == 0) throw NoSuchApplication(application)
+    }
 
     jooq.deleteFrom(RESOURCE_LAST_CHECKED)
       .where(

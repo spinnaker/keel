@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.HttpStatus
-import org.springframework.http.HttpStatus.ACCEPTED
+import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -24,7 +24,7 @@ class AdminController(
   @DeleteMapping(
       path = ["/applications/{application}"]
   )
-  @ResponseStatus(ACCEPTED)
+  @ResponseStatus(NO_CONTENT)
   fun deleteApplicationData(
     @PathVariable("application") application: String
   ) {
