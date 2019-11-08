@@ -161,7 +161,8 @@ class ClusterHandler(
       .toSet()
 
     val base = serverGroups.values.first()
-    val modifiedHealth = ResourceDiff(base.health, Health()).hasChanges()
+    val healthDiff = ResourceDiff(base.health, Health())
+    val modifiedHealth = healthDiff.hasChanges()
 
     val locations = SubnetAwareLocations(
       account = exportable.account,
@@ -190,13 +191,7 @@ class ClusterHandler(
         capacity = base.capacity,
         dependencies = base.dependencies,
         health = if (modifiedHealth) {
-          ClusterSpec.HealthSpec(
-            cooldown = base.health.cooldown,
-            warmup = base.health.warmup,
-            healthCheckType = base.health.healthCheckType,
-            enabledMetrics = base.health.enabledMetrics,
-            terminationPolicies = base.health.terminationPolicies
-          )
+          base.health.toClusterHealthSpecWithoutDefaults()
         } else {
           null
         },
