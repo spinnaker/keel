@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
+import com.netflix.spinnaker.keel.api.ec2.LaunchConfiguration
 import com.netflix.spinnaker.keel.api.ec2.Metric
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
@@ -118,8 +119,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         ),
         instanceType = "r4.8xlarge",
         ebsOptimized = false,
-        iamRole = "keelRole",
-        keyPair = "keel-key-pair",
+        iamRole = LaunchConfiguration.defaultIamRoleForApp("keel"),
+        keyPair = LaunchConfiguration.defaultKeyPairForAccount("test"),
         instanceMonitoring = false
       ),
       capacity = Capacity(1, 6, 4),
@@ -336,7 +337,9 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       context("other handling of default properties in cluster export") {
         before {
           coEvery { cloudDriverService.activeServerGroup("us-east-1") } returns activeServerGroupResponseEast
-          coEvery { cloudDriverService.activeServerGroup("us-west-2") } returns activeServerGroupResponseWest.withNonDefaultHealthProps()
+          coEvery { cloudDriverService.activeServerGroup("us-west-2") } returns activeServerGroupResponseWest
+            .withNonDefaultHealthProps()
+            .withNonDefaultLaunchConfigProps()
         }
 
         test("export omits properties with default values from complex fields") {
@@ -345,8 +348,29 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           }
           expectThat(exported.spec.defaults.health)
             .isNotNull()
+          expectThat(exported.spec.defaults.health!!.cooldown)
+            .isNull()
+          expectThat(exported.spec.defaults.health!!.warmup)
+            .isNull()
+          expectThat(exported.spec.defaults.health!!.healthCheckType)
+            .isNull()
+          expectThat(exported.spec.defaults.health!!.enabledMetrics)
+            .isNull()
+          expectThat(exported.spec.defaults.health!!.cooldown)
+            .isNull()
           expectThat(exported.spec.defaults.health!!.terminationPolicies)
             .isEqualTo(setOf(TerminationPolicy.NewestInstance))
+
+          expectThat(exported.spec.defaults.launchConfiguration!!.ebsOptimized)
+            .isNull()
+          expectThat(exported.spec.defaults.launchConfiguration!!.instanceMonitoring)
+            .isNull()
+          expectThat(exported.spec.defaults.launchConfiguration!!.ramdiskId)
+            .isNull()
+          expectThat(exported.spec.defaults.launchConfiguration!!.iamRole)
+            .isNotNull()
+          expectThat(exported.spec.defaults.launchConfiguration!!.keyPair)
+            .isNotNull()
         }
       }
     }
@@ -528,4 +552,9 @@ private fun ActiveServerGroup.withNonDefaultHealthProps(): ActiveServerGroup =
   copy(
     asg = asg.copy(terminationPolicies = setOf(TerminationPolicy.NewestInstance.name)
     )
+  )
+
+private fun ActiveServerGroup.withNonDefaultLaunchConfigProps(): ActiveServerGroup =
+  copy(
+    launchConfig = launchConfig.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
   )

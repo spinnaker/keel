@@ -31,32 +31,29 @@ data class Health(
   // SRE to change the default to OldestInstance
   val terminationPolicies: Set<TerminationPolicy> = setOf(TerminationPolicy.OldestInstance)
 ) {
-  fun toClusterHealthSpec() =
-    ClusterSpec.HealthSpec(cooldown, warmup, healthCheckType, enabledMetrics, terminationPolicies)
-
-  fun toClusterHealthSpecWithoutDefaults() =
+  fun toClusterHealthSpec(omitDefaults: Boolean = false) =
     ClusterSpec.HealthSpec(
-      if (cooldown == defaults.cooldown) {
+      if (omitDefaults && cooldown == defaults.cooldown) {
         null
       } else {
         cooldown
       },
-      if (warmup == defaults.warmup) {
+      if (omitDefaults && warmup == defaults.warmup) {
         null
       } else {
         warmup
       },
-      if (healthCheckType == defaults.healthCheckType) {
+      if (omitDefaults && healthCheckType == defaults.healthCheckType) {
         null
       } else {
         healthCheckType
       },
-      if (enabledMetrics == defaults.enabledMetrics) {
+      if (omitDefaults && enabledMetrics == defaults.enabledMetrics) {
         null
       } else {
         enabledMetrics
       },
-      if (terminationPolicies == defaults.terminationPolicies) {
+      if (omitDefaults && terminationPolicies == defaults.terminationPolicies) {
         null
       } else {
         terminationPolicies
@@ -64,6 +61,6 @@ data class Health(
     )
 
   companion object {
-    val defaults = Health()
+    val defaults by lazy { Health() }
   }
 }

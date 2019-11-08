@@ -50,9 +50,11 @@ private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec
     ebsOptimized = checkNotNull(overrides[region.name]?.launchConfiguration?.ebsOptimized
       ?: defaults.launchConfiguration?.ebsOptimized),
     iamRole = checkNotNull(overrides[region.name]?.launchConfiguration?.iamRole
-      ?: defaults.launchConfiguration?.iamRole),
+      ?: defaults.launchConfiguration?.iamRole
+      ?: LaunchConfiguration.defaultIamRoleForApp(moniker.app)),
     keyPair = checkNotNull(overrides[region.name]?.launchConfiguration?.keyPair
-      ?: defaults.launchConfiguration?.keyPair),
+      ?: defaults.launchConfiguration?.keyPair
+      ?: LaunchConfiguration.defaultKeyPairForAccount(locations.account)),
     instanceMonitoring = overrides[region.name]?.launchConfiguration?.instanceMonitoring
       ?: defaults.launchConfiguration?.instanceMonitoring ?: false,
     ramdiskId = overrides[region.name]?.launchConfiguration?.ramdiskId

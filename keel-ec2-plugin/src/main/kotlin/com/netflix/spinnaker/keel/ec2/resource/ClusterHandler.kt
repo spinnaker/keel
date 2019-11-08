@@ -181,17 +181,12 @@ class ClusterHandler(
       },
       locations = locations,
       _defaults = ClusterSpec.ServerGroupSpec(
-        launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
-          instanceType = base.launchConfiguration.instanceType,
-          ebsOptimized = base.launchConfiguration.ebsOptimized,
-          iamRole = base.launchConfiguration.iamRole,
-          keyPair = base.launchConfiguration.keyPair,
-          instanceMonitoring = base.launchConfiguration.instanceMonitoring
-        ),
+        launchConfiguration = base.launchConfiguration
+          .toLaunchConfigurationSpec(exportable.account, exportable.moniker.app, omitDefaults = true),
         capacity = base.capacity,
         dependencies = base.dependencies,
         health = if (modifiedHealth) {
-          base.health.toClusterHealthSpecWithoutDefaults()
+          base.health.toClusterHealthSpec(omitDefaults = true)
         } else {
           null
         },
@@ -206,6 +201,8 @@ class ClusterHandler(
     )
 
     spec.generateOverrides(
+      exportable.account,
+      exportable.moniker.app,
       serverGroups
         .filter { it.value.location.region != base.location.region }
     )
@@ -224,26 +221,10 @@ class ClusterHandler(
         ResourceDiff(desired, current?.get(region))
       }
 
-  private fun ClusterSpec.generateOverrides(serverGroups: Map<String, ServerGroup>) =
-    serverGroups.forEach { region, serverGroup ->
-      val launchSpec = with(serverGroup.launchConfiguration) {
-        ClusterSpec.LaunchConfigurationSpec(
-          instanceType = instanceType,
-          ebsOptimized = ebsOptimized,
-          iamRole = iamRole,
-          keyPair = keyPair,
-          instanceMonitoring = instanceMonitoring
-        )
-      }
-      val healthSpec = with(serverGroup.health) {
-        ClusterSpec.HealthSpec(
-          cooldown = cooldown,
-          warmup = warmup,
-          healthCheckType = healthCheckType,
-          enabledMetrics = enabledMetrics,
-          terminationPolicies = terminationPolicies
-        )
-      }
+  private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
+    serverGroups.forEach { (region, serverGroup) ->
+      val launchSpec = serverGroup.launchConfiguration.toLaunchConfigurationSpec(account, application, omitDefaults = true)
+      val healthSpec = serverGroup.health.toClusterHealthSpec(omitDefaults = true)
       val dependencies = with(serverGroup.dependencies) {
         ClusterDependencies(
           loadBalancerNames = loadBalancerNames,
@@ -254,7 +235,7 @@ class ClusterHandler(
 
       val launchDiff = ResourceDiff(launchSpec, defaults.launchConfiguration).hasChanges()
       val healthDiff = if (defaults.health == null) {
-        ResourceDiff(healthSpec, Health().toClusterHealthSpec()).hasChanges()
+        ResourceDiff(healthSpec, Health().toClusterHealthSpec(omitDefaults = true)).hasChanges()
       } else {
         ResourceDiff(healthSpec, defaults.health).hasChanges()
       }
