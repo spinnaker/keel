@@ -169,7 +169,7 @@ class ClusterHandler(
       subnet = base.location.subnet,
       vpc = base.location.vpc,
       regions = subnetAwareRegionSpecs
-    )
+    ).withDefaultsOmitted()
 
     val spec = ClusterSpec(
       moniker = exportable.moniker,

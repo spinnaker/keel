@@ -346,6 +346,10 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           val exported = runBlocking {
             export(exportable)
           }
+          expectThat(exported.spec.locations.vpc)
+            .isNull()
+          expectThat(exported.spec.locations.subnet)
+            .isNull()
           expectThat(exported.spec.defaults.health)
             .isNotNull()
           expectThat(exported.spec.defaults.health!!.cooldown)
