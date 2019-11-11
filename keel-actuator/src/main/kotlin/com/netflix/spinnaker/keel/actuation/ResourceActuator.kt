@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
@@ -9,6 +10,7 @@ import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
+import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
@@ -101,6 +103,9 @@ class ResourceActuator(
           }
         }
       }
+    } catch (e: ResourceCurrentlyUnresolvable) {
+      log.warn("Resource check for {} failed (hopefully temporarily) due to {}", id, e.message)
+      publisher.publishEvent(ResourceCheckUnresolvable(resource, e, clock))
     } catch (e: Exception) {
       log.error("Resource check for $id failed", e)
       publisher.publishEvent(ResourceCheckError(resource, e, clock))
@@ -112,6 +117,8 @@ class ResourceActuator(
       val desired = async {
         try {
           desired(resource)
+        } catch (e: ResourceCurrentlyUnresolvable) {
+          throw e
         } catch (e: Throwable) {
           throw CannotResolveDesiredState(resource.id, e)
         }
