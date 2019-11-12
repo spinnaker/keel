@@ -46,38 +46,24 @@ class SqlDeliveryConfigRepository(
       jooq.deleteFrom(DELIVERY_CONFIG)
         .where(DELIVERY_CONFIG.UID.eq(uid))
         .execute()
-    }
-
-    environmentUIDs.forEach { uid ->
-      jooq.deleteFrom(ENVIRONMENT)
-        .where(ENVIRONMENT.UID.eq(uid))
-        .execute()
-    }
-
-    deliveryConfigUIDs.forEach { uid ->
       jooq.deleteFrom(DELIVERY_CONFIG_ARTIFACT)
         .where(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(uid))
         .execute()
-    }
-
-    deliveryConfigUIDs.forEach { uid ->
       jooq.deleteFrom(DELIVERY_CONFIG_LAST_CHECKED)
         .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(uid))
         .execute()
     }
-
     environmentUIDs.forEach { uid ->
+      jooq.deleteFrom(ENVIRONMENT)
+        .where(ENVIRONMENT.UID.eq(uid))
+        .execute()
       jooq.deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
         .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(uid))
         .execute()
-    }
-
-    environmentUIDs.forEach { uid ->
       jooq.deleteFrom(ENVIRONMENT_RESOURCE)
         .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(uid))
         .execute()
     }
-
     return deliveryConfigUIDs.size
   }
 

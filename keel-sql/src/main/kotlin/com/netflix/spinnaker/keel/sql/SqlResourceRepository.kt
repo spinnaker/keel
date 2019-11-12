@@ -34,27 +34,19 @@ open class SqlResourceRepository(
 ) : ResourceRepository {
 
   override fun deleteByApplication(application: String): Int {
-
     val resourceIds = getUidByApplication(application)
 
     resourceIds.forEach { uid ->
       jooq.deleteFrom(RESOURCE)
         .where(RESOURCE.UID.eq(uid))
         .execute()
-    }
-
-    resourceIds.forEach { uid ->
       jooq.deleteFrom(RESOURCE_LAST_CHECKED)
         .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.eq(uid))
         .execute()
-    }
-
-    resourceIds.forEach { uid ->
       jooq.deleteFrom(RESOURCE_EVENT)
         .where(RESOURCE_EVENT.UID.eq(uid))
         .execute()
     }
-
     return resourceIds.size
   }
 
