@@ -101,7 +101,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<ResourceHeader> {
   /**
    * Deletes the resource associated with [application].
    */
-  fun deleteByApplication(application: String)
+  fun deleteByApplication(application: String): Int
 
   /**
    * Retrieves the history of state change events for the resource represented by [uid].

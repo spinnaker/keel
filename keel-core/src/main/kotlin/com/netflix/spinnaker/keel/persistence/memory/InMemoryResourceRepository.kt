@@ -22,7 +22,6 @@ import com.netflix.spinnaker.keel.api.ResourceSummary
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -39,7 +38,8 @@ class InMemoryResourceRepository(
   private val events = mutableMapOf<ResourceId, MutableList<ResourceEvent>>()
   private val lastCheckTimes = mutableMapOf<ResourceId, Instant>()
 
-  override fun deleteByApplication(application: String) {
+  override fun deleteByApplication(application: String): Int {
+    val size = resources.count { it.value.application == application }
 
     resources
       .values
@@ -51,7 +51,7 @@ class InMemoryResourceRepository(
         events.remove(it)
         lastCheckTimes.remove(it)
       }
-      ?: throw NoSuchApplication(application)
+    return size
   }
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {

@@ -23,7 +23,6 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import org.jooq.DSLContext
-import org.jooq.impl.DSL.notExists
 import org.jooq.impl.DSL.select
 import java.time.Clock
 import java.time.Duration
@@ -38,50 +37,64 @@ class SqlDeliveryConfigRepository(
 
   private val mapper = configuredObjectMapper()
 
-  override fun deleteByApplication(application: String) {
-    jooq.deleteFrom(DELIVERY_CONFIG)
+  override fun deleteByApplication(application: String): Int {
+
+    val deliveryConfigUIDs = getUIDsByApplication(application)
+    val environmentUIDs = getEnvironmentUIDs(deliveryConfigUIDs)
+
+    deliveryConfigUIDs.forEach { uid ->
+      jooq.deleteFrom(DELIVERY_CONFIG)
+        .where(DELIVERY_CONFIG.UID.eq(uid))
+        .execute()
+    }
+
+    environmentUIDs.forEach { uid ->
+      jooq.deleteFrom(ENVIRONMENT)
+        .where(ENVIRONMENT.UID.eq(uid))
+        .execute()
+    }
+
+    deliveryConfigUIDs.forEach { uid ->
+      jooq.deleteFrom(DELIVERY_CONFIG_ARTIFACT)
+        .where(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(uid))
+        .execute()
+    }
+
+    deliveryConfigUIDs.forEach { uid ->
+      jooq.deleteFrom(DELIVERY_CONFIG_LAST_CHECKED)
+        .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(uid))
+        .execute()
+    }
+
+    environmentUIDs.forEach { uid ->
+      jooq.deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(uid))
+        .execute()
+    }
+
+    environmentUIDs.forEach { uid ->
+      jooq.deleteFrom(ENVIRONMENT_RESOURCE)
+        .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(uid))
+        .execute()
+    }
+
+    return deliveryConfigUIDs.size
+  }
+
+  private fun getUIDsByApplication(application: String): List<String> {
+    return jooq
+      .select(DELIVERY_CONFIG.UID)
+      .from(DELIVERY_CONFIG)
       .where(DELIVERY_CONFIG.APPLICATION.eq(application))
-      .execute()
+      .fetch(DELIVERY_CONFIG.UID)
+  }
 
-    jooq.deleteFrom(ENVIRONMENT)
-      .where(
-        notExists(jooq.select(DELIVERY_CONFIG.UID)
-          .from(DELIVERY_CONFIG)
-          .where
-          (ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID)))
-      ).execute()
-
-    jooq.deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
-      .where(
-        notExists(jooq.select(ENVIRONMENT.UID)
-          .from(ENVIRONMENT)
-          .where
-          (ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID)))
-      ).execute()
-
-    jooq.deleteFrom(ENVIRONMENT_RESOURCE)
-      .where(
-        notExists(jooq.select(ENVIRONMENT.UID)
-          .from(ENVIRONMENT)
-          .where
-          (ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(ENVIRONMENT.UID)))
-      ).execute()
-
-    jooq.deleteFrom(DELIVERY_CONFIG_ARTIFACT)
-      .where(
-        notExists(jooq.select(DELIVERY_CONFIG.UID)
-          .from(DELIVERY_CONFIG)
-          .where
-          (DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID)))
-      ).execute()
-
-    jooq.deleteFrom(DELIVERY_CONFIG_LAST_CHECKED)
-      .where(
-        notExists(jooq.select(DELIVERY_CONFIG.UID)
-          .from(DELIVERY_CONFIG)
-          .where
-          (DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID)))
-      ).execute()
+  private fun getEnvironmentUIDs(deliveryConfigUIDs: List<String>): List<String> {
+    return jooq
+      .select(ENVIRONMENT.UID)
+      .from(ENVIRONMENT)
+      .where(ENVIRONMENT.DELIVERY_CONFIG_UID.`in`(deliveryConfigUIDs))
+      .fetch(ENVIRONMENT.UID)
   }
 
   override fun store(deliveryConfig: DeliveryConfig) {
@@ -203,7 +216,7 @@ class SqlDeliveryConfigRepository(
       }
 
   override fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig? =
-  // TODO: this implementation could be more efficient by sharing code with get(name)
+    // TODO: this implementation could be more efficient by sharing code with get(name)
     jooq
       .select(DELIVERY_CONFIG.NAME)
       .from(ENVIRONMENT, ENVIRONMENT_RESOURCE, RESOURCE, DELIVERY_CONFIG)

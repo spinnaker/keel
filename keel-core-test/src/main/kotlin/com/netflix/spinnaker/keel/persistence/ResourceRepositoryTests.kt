@@ -291,10 +291,8 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         }
 
         test("deleting a non-existent application throws an exception") {
-          expectThrows<NoSuchApplication> {
-            subject.deleteByApplication(resource.application)
+          expectThat(subject.deleteByApplication(resource.application)).isEqualTo(0)
           }
-        }
       }
 
       context("fetching event history for the resource") {

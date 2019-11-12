@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import org.slf4j.LoggerFactory.getLogger
@@ -29,13 +30,19 @@ class AdminController(
     @PathVariable("application") application: String
   ) {
     log.debug("Deleting all data for application: $application")
-    resourceRepository.deleteByApplication(application)
-    deliveryConfigRepository.deleteByApplication(application)
+    deleteApplication(application)
   }
 
   @ExceptionHandler(NoSuchResourceException::class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   fun onNotFound(e: NoSuchResourceException) {
     log.error(e.message)
+  }
+
+  fun deleteApplication(application: String) {
+    val resources = resourceRepository.deleteByApplication(application)
+    val deliveryConfigs = deliveryConfigRepository.deleteByApplication(application)
+    if (resources == 0 && deliveryConfigs == 0)
+      throw NoSuchApplication(application)
   }
 }

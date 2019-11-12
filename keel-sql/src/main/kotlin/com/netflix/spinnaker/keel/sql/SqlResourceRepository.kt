@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -22,7 +21,6 @@ import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.select
-import org.jooq.impl.DSL.notExists
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -35,30 +33,29 @@ open class SqlResourceRepository(
   private val objectMapper: ObjectMapper
 ) : ResourceRepository {
 
-  override fun deleteByApplication(application: String) {
+  override fun deleteByApplication(application: String): Int {
 
-  jooq.deleteFrom(RESOURCE)
-      .where(RESOURCE.APPLICATION.eq(application))
-      .execute()
-      .also { count ->
-      if (count == 0) throw NoSuchApplication(application)
+    val resourceIds = getUidByApplication(application)
+
+    resourceIds.forEach { uid ->
+      jooq.deleteFrom(RESOURCE)
+        .where(RESOURCE.UID.eq(uid))
+        .execute()
     }
 
-    jooq.deleteFrom(RESOURCE_LAST_CHECKED)
-      .where(
-        notExists(jooq.select(RESOURCE.UID)
-          .from(RESOURCE)
-          .where
-          (RESOURCE_LAST_CHECKED.RESOURCE_UID.eq(RESOURCE.UID)))
-      ).execute()
+    resourceIds.forEach { uid ->
+      jooq.deleteFrom(RESOURCE_LAST_CHECKED)
+        .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.eq(uid))
+        .execute()
+    }
 
-    jooq.deleteFrom(RESOURCE_EVENT)
-      .where(
-        notExists(jooq.select(RESOURCE.UID)
-          .from(RESOURCE)
-          .where
-          (RESOURCE_EVENT.UID.eq(RESOURCE.UID)))
-      ).execute()
+    resourceIds.forEach { uid ->
+      jooq.deleteFrom(RESOURCE_EVENT)
+        .where(RESOURCE_EVENT.UID.eq(uid))
+        .execute()
+    }
+
+    return resourceIds.size
   }
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
@@ -103,6 +100,14 @@ open class SqlResourceRepository(
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
       .fetch(RESOURCE.ID)
+  }
+
+  fun getUidByApplication(application: String): List<String> {
+    return jooq
+      .select(RESOURCE.UID)
+      .from(RESOURCE)
+      .where(RESOURCE.APPLICATION.eq(application))
+      .fetch(RESOURCE.UID)
   }
 
   override fun getSummaryByApplication(application: String): List<ResourceSummary> {

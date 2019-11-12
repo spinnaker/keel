@@ -19,8 +19,10 @@ class InMemoryDeliveryConfigRepository(
   private val configs = mutableMapOf<String, DeliveryConfig>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
 
-  override fun deleteByApplication(application: String) {
-    configs
+  override fun deleteByApplication(application: String): Int {
+    val size = configs.count { it.value.application == application }
+
+      configs
       .values
       .filter { it.application == application }
       .map { it.application }
@@ -29,7 +31,8 @@ class InMemoryDeliveryConfigRepository(
         configs.remove(it)
         lastCheckTimes.remove(it)
       }
-      ?: throw NoSuchElementException(application)
+
+    return size
   }
 
   override fun get(name: String): DeliveryConfig =
