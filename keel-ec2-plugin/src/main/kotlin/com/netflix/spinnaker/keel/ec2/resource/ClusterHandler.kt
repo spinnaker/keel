@@ -182,11 +182,11 @@ class ClusterHandler(
       locations = locations,
       _defaults = ClusterSpec.ServerGroupSpec(
         launchConfiguration = base.launchConfiguration
-          .toLaunchConfigurationSpec(exportable.account, exportable.moniker.app, omitDefaults = true),
+          .exportSpec(exportable.account, exportable.moniker.app),
         capacity = base.capacity,
         dependencies = base.dependencies,
         health = if (modifiedHealth) {
-          base.health.toClusterHealthSpec(omitDefaults = true)
+          base.health.exportSpec()
         } else {
           null
         },
@@ -223,8 +223,8 @@ class ClusterHandler(
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
-      val launchSpec = serverGroup.launchConfiguration.toLaunchConfigurationSpec(account, application, omitDefaults = true)
-      val healthSpec = serverGroup.health.toClusterHealthSpec(omitDefaults = true)
+      val launchSpec = serverGroup.launchConfiguration.exportSpec(account, application)
+      val healthSpec = serverGroup.health.exportSpec()
       val dependencies = with(serverGroup.dependencies) {
         ClusterDependencies(
           loadBalancerNames = loadBalancerNames,
@@ -235,7 +235,7 @@ class ClusterHandler(
 
       val launchDiff = ResourceDiff(launchSpec, defaults.launchConfiguration).hasChanges()
       val healthDiff = if (defaults.health == null) {
-        ResourceDiff(healthSpec, Health().toClusterHealthSpec(omitDefaults = true)).hasChanges()
+        ResourceDiff(healthSpec, Health().exportSpec()).hasChanges()
       } else {
         ResourceDiff(healthSpec, defaults.health).hasChanges()
       }
@@ -500,6 +500,72 @@ class ClusterHandler(
 
   private fun Instant.iso() =
     atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE_TIME)
+
+  /**
+   * Translates a LaunchConfiguration object to a ClusterSpec.LaunchConfigurationSpec with default values omitted for export.
+   */
+  private fun LaunchConfiguration.exportSpec(account: String, application: String) =
+    ClusterSpec.LaunchConfigurationSpec(
+      instanceType = instanceType,
+      ebsOptimized = if (!ebsOptimized) {
+        null
+      } else {
+        ebsOptimized
+      },
+      // for the iam role, we compare against a default based on a stable naming convention
+      iamRole = if (iamRole == LaunchConfiguration.defaultIamRoleForApp(application)) {
+        null
+      } else {
+        iamRole
+      },
+      // for the key pair, we compare against the currently configured default in clouddriver since there are
+      // multiple naming conventions
+      keyPair = if (keyPair == cloudDriverCache.defaultKeyPairForAccount(account)) {
+        null
+      } else {
+        keyPair
+      },
+      instanceMonitoring = if (!instanceMonitoring) {
+        null
+      } else {
+        instanceMonitoring
+      },
+      ramdiskId = ramdiskId
+    )
+
+  /**
+   * Translates a Health object to a ClusterSpec.HealthSpec with default values omitted for export.
+   */
+  private fun Health.exportSpec(): ClusterSpec.HealthSpec {
+    val defaults by lazy { Health() }
+    return ClusterSpec.HealthSpec(
+      cooldown = if (cooldown == defaults.cooldown) {
+        null
+      } else {
+        cooldown
+      },
+      warmup = if (warmup == defaults.warmup) {
+        null
+      } else {
+        warmup
+      },
+      healthCheckType = if (healthCheckType == defaults.healthCheckType) {
+        null
+      } else {
+        healthCheckType
+      },
+      enabledMetrics = if (enabledMetrics == defaults.enabledMetrics) {
+        null
+      } else {
+        enabledMetrics
+      },
+      terminationPolicies = if (terminationPolicies == defaults.terminationPolicies) {
+        null
+      } else {
+        terminationPolicies
+      }
+    )
+  }
 
   companion object {
     // these tags are auto-applied by CloudDriver so we should not consider them in a diff as they

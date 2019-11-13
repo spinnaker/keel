@@ -30,37 +30,4 @@ data class Health(
   // Note: the default for this in Deck is currently setOf(TerminationPolicy.Default), but we were advised by Netflix
   // SRE to change the default to OldestInstance
   val terminationPolicies: Set<TerminationPolicy> = setOf(TerminationPolicy.OldestInstance)
-) {
-  fun toClusterHealthSpec(omitDefaults: Boolean = false) =
-    ClusterSpec.HealthSpec(
-      if (omitDefaults && cooldown == defaults.cooldown) {
-        null
-      } else {
-        cooldown
-      },
-      if (omitDefaults && warmup == defaults.warmup) {
-        null
-      } else {
-        warmup
-      },
-      if (omitDefaults && healthCheckType == defaults.healthCheckType) {
-        null
-      } else {
-        healthCheckType
-      },
-      if (omitDefaults && enabledMetrics == defaults.enabledMetrics) {
-        null
-      } else {
-        enabledMetrics
-      },
-      if (omitDefaults && terminationPolicies == defaults.terminationPolicies) {
-        null
-      } else {
-        terminationPolicies
-      }
-    )
-
-  companion object {
-    val defaults by lazy { Health() }
-  }
-}
+)
