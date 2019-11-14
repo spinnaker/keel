@@ -28,7 +28,9 @@ data class LaunchConfiguration(
   val ramdiskId: String? = null
 ) {
   companion object {
-    fun defaultKeyPairForAccount(account: String) = "nf-keypair-$account-{{region}}"
-    fun defaultIamRoleForApp(application: String) = "${application}InstanceProfile"
+    // TODO (lpollo): make these configurable?
+    fun defaultKeyPairTemplateFor(account: String) = "nf-keypair-$account-{{region}}"
+    fun defaultKeyPairFor(account: String, region: String) = "nf-keypair-$account-$region"
+    fun defaultIamRoleFor(application: String) = "${application}InstanceProfile"
   }
 }

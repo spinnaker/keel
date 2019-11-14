@@ -504,8 +504,9 @@ class ClusterHandler(
   /**
    * Translates a LaunchConfiguration object to a ClusterSpec.LaunchConfigurationSpec with default values omitted for export.
    */
-  private fun LaunchConfiguration.exportSpec(account: String, application: String) =
-    ClusterSpec.LaunchConfigurationSpec(
+  private fun LaunchConfiguration.exportSpec(account: String, application: String): ClusterSpec.LaunchConfigurationSpec {
+    val defaultKeyPair = cloudDriverCache.defaultKeyPairForAccount(account)
+    return ClusterSpec.LaunchConfigurationSpec(
       instanceType = instanceType,
       ebsOptimized = if (!ebsOptimized) {
         null
@@ -513,17 +514,25 @@ class ClusterHandler(
         ebsOptimized
       },
       // for the iam role, we compare against a default based on a stable naming convention
-      iamRole = if (iamRole == LaunchConfiguration.defaultIamRoleForApp(application)) {
+      iamRole = if (iamRole == LaunchConfiguration.defaultIamRoleFor(application)) {
         null
       } else {
         iamRole
       },
       // for the key pair, we compare against the currently configured default in clouddriver since there are
-      // multiple naming conventions
-      keyPair = if (keyPair == cloudDriverCache.defaultKeyPairForAccount(account)) {
-        null
+      // multiple naming conventions, and handle the case where the default includes a region placeholder
+      keyPair = if (REGION_PLACEHOLDER.find(defaultKeyPair) == null) {
+        if (keyPair == defaultKeyPair) {
+          null
+        } else {
+          keyPair
+        }
       } else {
-        keyPair
+        if (defaultKeyPair.replace(REGION_PLACEHOLDER, REGION_PATTERN).toRegex().matches(keyPair)) {
+          null
+        } else {
+          keyPair
+        }
       },
       instanceMonitoring = if (!instanceMonitoring) {
         null
@@ -532,6 +541,7 @@ class ClusterHandler(
       },
       ramdiskId = ramdiskId
     )
+  }
 
   /**
    * Translates a Health object to a ClusterSpec.HealthSpec with default values omitted for export.
@@ -575,6 +585,9 @@ class ClusterHandler(
       "spinnaker:stack",
       "spinnaker:details"
     )
+
+    private val REGION_PLACEHOLDER = """\{\{region\}\}""".toRegex()
+    private const val REGION_PATTERN = """([a-z]{2}(-gov)?)-([a-z]+)-\\d"""
   }
 }
 
