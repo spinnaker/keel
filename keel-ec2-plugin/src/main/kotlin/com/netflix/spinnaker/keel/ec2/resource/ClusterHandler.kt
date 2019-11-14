@@ -521,14 +521,14 @@ class ClusterHandler(
       },
       // for the key pair, we compare against the currently configured default in clouddriver since there are
       // multiple naming conventions, and handle the case where the default includes a region placeholder
-      keyPair = if (REGION_PLACEHOLDER.find(defaultKeyPair) == null) {
-        if (keyPair == defaultKeyPair) {
+      keyPair = if (defaultKeyPair.contains(REGION_PLACEHOLDER)) {
+        if (defaultKeyPair.replace(REGION_PLACEHOLDER, REGION_PATTERN).toRegex().matches(keyPair)) {
           null
         } else {
           keyPair
         }
       } else {
-        if (defaultKeyPair.replace(REGION_PLACEHOLDER, REGION_PATTERN).toRegex().matches(keyPair)) {
+        if (keyPair == defaultKeyPair) {
           null
         } else {
           keyPair
@@ -586,8 +586,8 @@ class ClusterHandler(
       "spinnaker:details"
     )
 
-    private val REGION_PLACEHOLDER = """\{\{region\}\}""".toRegex()
-    private const val REGION_PATTERN = """([a-z]{2}(-gov)?)-([a-z]+)-\\d"""
+    private const val REGION_PLACEHOLDER = "{{region}}"
+    private const val REGION_PATTERN = "([a-z]{2}(-gov)?)-([a-z]+)-\\d"
   }
 }
 
