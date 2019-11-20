@@ -379,7 +379,7 @@ class ClusterHandler(
         if (them.distinctBy { it.launchConfiguration.appVersion }.size == 1) {
           publisher.publishEvent(ArtifactVersionDeployed(
             resourceId = resource.id,
-            artifactVersion = them.first().launchConfiguration.appVersion
+            artifactVersion = them.first().launchConfiguration.appVersion!!
           ))
         }
       }

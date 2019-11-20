@@ -61,6 +61,7 @@ import kotlinx.coroutines.runBlocking
 import org.apache.commons.lang3.RandomStringUtils.randomNumeric
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.Assertion
+import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
@@ -71,6 +72,7 @@ import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.map
+import strikt.assertions.succeeded
 import java.time.Clock
 import java.util.UUID.randomUUID
 
@@ -398,6 +400,21 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       }
     }
 
+    context("the cluster has active server groups with missing app version tag") {
+      before {
+        coEvery { cloudDriverService.activeServerGroup("us-east-1") } returns activeServerGroupResponseEast
+        coEvery { cloudDriverService.activeServerGroup("us-west-2") } answers { activeServerGroupResponseWest.withMissingAppVersion() }
+      }
+
+      test("no excpetion is thrown") {
+        expectCatching {
+          runBlocking {
+            current(resource)
+          }
+        }.succeeded()
+      }
+    }
+
     context("a diff has been detected") {
       context("the diff is only in capacity") {
 
@@ -565,4 +582,12 @@ private fun ActiveServerGroup.withNonDefaultHealthProps(): ActiveServerGroup =
 private fun ActiveServerGroup.withNonDefaultLaunchConfigProps(): ActiveServerGroup =
   copy(
     launchConfig = launchConfig.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
+  )
+
+private fun ActiveServerGroup.withMissingAppVersion(): ActiveServerGroup =
+  copy(
+    image = ActiveServerGroupImage(
+      imageId = "ami-573e1b2650a5",
+      tags = emptyList()
+    )
   )
