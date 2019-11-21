@@ -23,6 +23,10 @@ import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.SimpleLocations
+import com.netflix.spinnaker.keel.api.SubmittedResource
+import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
@@ -30,9 +34,11 @@ import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
 import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.Task
+import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
@@ -112,6 +118,63 @@ class TitusClusterHandler(
         }
         .map { it.await() }
     }
+
+  override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
+    val serverGroups = cloudDriverService.getServerGroups(
+      exportable.account,
+      exportable.moniker,
+      exportable.regions,
+      exportable.serviceAccount
+    ).byRegion()
+
+    if (serverGroups.isEmpty()) {
+      throw ResourceNotFound("Could not find cluster: ${exportable.moniker.name} " +
+        "in account: ${exportable.account} for export")
+    }
+
+    val base = serverGroups.values.first()
+
+    val locations = SimpleLocations(
+      account = exportable.account,
+      regions = (exportable.regions.map {
+        SimpleRegionSpec(it)
+      }).toSet())
+
+    val spec = TitusClusterSpec(
+      moniker = exportable.moniker,
+      locations = locations,
+      container = serverGroups.values.first().container,
+      // containr
+
+//      imageProvider = if (base.buildInfo?.packageName != null) {
+//        ArtifactImageProvider(
+//          deliveryArtifact = DeliveryArtifact(name = base.buildInfo.packageName!!))
+//      } else {
+//        null
+//      },
+
+      _defaults = TitusServerGroupSpec(
+        capacity = base.capacity,
+        dependencies = base.dependencies,
+        tags = base.tags
+      ),
+      overrides = mutableMapOf()
+    )
+
+//    spec.generateOverrides(
+//      exportable.account,
+//      exportable.moniker.app,
+//      serverGroups
+//        .filter { it.value.location.region != base.location.region }
+//    )
+
+    return SubmittedResource(
+      apiVersion = supportedKind.apiVersion,
+      kind = supportedKind.kind,
+      spec = spec,
+      metadata = mapOf("serviceAccount" to exportable.serviceAccount)
+    )
+  }
 
   private fun ResourceDiff<TitusServerGroup>.resizeServerGroupJob(): Map<String, Any?> {
     val current = requireNotNull(current) {
@@ -209,16 +272,28 @@ class TitusClusterHandler(
       }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
+    getServerGroups(resource.spec.locations.account,
+      resource.spec.moniker,
+      resource.spec.locations.regions.map { it.name }.toSet(),
+      resource.serviceAccount
+    )
+
+  private suspend fun CloudDriverService.getServerGroups(
+    account: String,
+    moniker: Moniker,
+    regions: Set<String>,
+    serviceAccount: String
+  ): Iterable<TitusServerGroup> =
     coroutineScope {
-      resource.spec.locations.regions.map {
+      regions.map {
         async {
           try {
             titusActiveServerGroup(
-              resource.serviceAccount,
-              resource.spec.moniker.app,
-              resource.spec.locations.account,
-              resource.spec.moniker.name,
-              it.name,
+              serviceAccount,
+              moniker.app,
+              account,
+              moniker.name,
+              it,
               CLOUD_PROVIDER
             )
               .toTitusServerGroup()
