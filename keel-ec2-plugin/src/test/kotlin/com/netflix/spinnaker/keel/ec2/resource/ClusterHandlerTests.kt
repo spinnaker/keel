@@ -400,18 +400,33 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       }
     }
 
-    context("the cluster has active server groups with missing app version tag") {
+    context("the cluster has active server groups with missing app version tag in one region") {
       before {
         coEvery { cloudDriverService.activeServerGroup("us-east-1") } returns activeServerGroupResponseEast
         coEvery { cloudDriverService.activeServerGroup("us-west-2") } answers { activeServerGroupResponseWest.withMissingAppVersion() }
       }
 
-      test("no excpetion is thrown") {
+      test("app version is null in the region with missing tag") {
+        val current = runBlocking {
+          current(resource)
+        }
+        expectThat(current).containsKey("us-west-2")
+        expectThat(current["us-west-2"]!!.launchConfiguration.appVersion).isNull()
+      }
+
+      test("no exception is thrown") {
         expectCatching {
           runBlocking {
             current(resource)
           }
         }.succeeded()
+      }
+
+      test("no event is fired indicating an app version is deployed") {
+        runBlocking {
+          current(resource)
+        }
+        verify(exactly = 0) { publisher.publishEvent(ofType<ArtifactVersionDeployed>()) }
       }
     }
 
