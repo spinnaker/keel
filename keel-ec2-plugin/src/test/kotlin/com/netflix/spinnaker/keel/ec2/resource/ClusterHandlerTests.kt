@@ -428,6 +428,29 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
         verify(exactly = 0) { publisher.publishEvent(ofType<ArtifactVersionDeployed>()) }
       }
+
+      test("applying the diff creates a server group") {
+        val modified = setOf(
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withMissingAppVersion()
+        )
+        val diff = ResourceDiff(
+          serverGroups.byRegion(),
+          modified.byRegion()
+        )
+        runBlocking {
+          upsert(resource, diff)
+        }
+
+        val slot = slot<OrchestrationRequest>()
+        coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
+
+        expectThat(slot.captured.job.first()) {
+          get("type").isEqualTo("createServerGroup")
+          // TODO (lpollo): since we rely on the tag when looking up server groups, should we add the tag when creating them?
+          // get("tags").isEqualTo(mapOf("appversion" to serverGroupWest.launchConfiguration.appVersion))
+        }
+      }
     }
 
     context("a diff has been detected") {
@@ -574,6 +597,13 @@ private fun ServerGroup.withDifferentInstanceType(): ServerGroup =
   copy(
     launchConfiguration = launchConfiguration.copy(
       instanceType = "r4.16xlarge"
+    )
+  )
+
+private fun ServerGroup.withMissingAppVersion(): ServerGroup =
+  copy(
+    launchConfiguration = launchConfiguration.copy(
+      appVersion = null
     )
   )
 
