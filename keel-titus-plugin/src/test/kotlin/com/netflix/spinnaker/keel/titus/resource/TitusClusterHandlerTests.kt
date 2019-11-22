@@ -29,7 +29,6 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
-import com.netflix.spinnaker.keel.api.titus.cluster.Container
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterHandler
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroup
@@ -46,14 +45,15 @@ import com.netflix.spinnaker.keel.clouddriver.model.ServiceJobProcesses
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroupImage
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.docker.ContainerWithDigest
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
+import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -112,13 +112,18 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       account = titusAccount,
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
     ),
+    container = ContainerWithDigest(
+      organization = "spinnaker",
+      image = "keel",
+      digest = "sha:1111"
+    ),
     _defaults = TitusServerGroupSpec(
       capacity = Capacity(1, 6, 4),
       dependencies = ClusterDependencies(
         loadBalancerNames = setOf("keel-test-frontend"),
         securityGroupNames = setOf(sg1West.name)
       ),
-      container = Container(
+      container = ContainerWithDigest(
         organization = "spinnaker",
         image = "keel",
         digest = "sha:1111"
@@ -230,7 +235,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           .containsKey("us-west-2")
       }
 
-      test("annealing a diff creates a new server group") {
+      test("resolving diff a diff creates a new server group") {
         runBlocking {
           upsert(resource, ResourceDiff(serverGroups.byRegion(), emptyMap()))
         }
@@ -285,7 +290,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           modified.byRegion()
         )
 
-        test("annealing resizes the current server group") {
+        test("resolving diff resizes the current server group") {
           runBlocking {
             upsert(resource, diff)
           }
@@ -320,7 +325,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           modified.byRegion()
         )
 
-        test("annealing clones the current server group") {
+        test("resolving diff clones the current server group") {
           runBlocking {
             upsert(resource, diff)
           }
@@ -329,7 +334,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
           expectThat(slot.captured.job.first()) {
-            get("type").isEqualTo("upsertServerGroup")
+            get("type").isEqualTo("createServerGroup")
             get("source").isEqualTo(
               mapOf(
                 "account" to activeServerGroupResponseWest.placement.account,
@@ -419,14 +424,14 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
         }
 
-        test("annealing launches one task per server group") {
+        test("resolving diff launches one task per server group") {
           val tasks = mutableListOf<OrchestrationRequest>()
           coVerify { orcaService.orchestrate(any(), capture(tasks)) }
 
           expectThat(tasks)
             .hasSize(2)
             .map { it.job.first()["type"] }
-            .containsExactlyInAnyOrder("upsertServerGroup", "resizeServerGroup")
+            .containsExactlyInAnyOrder("createServerGroup", "resizeServerGroup")
         }
 
         test("each task has a distinct correlation id") {

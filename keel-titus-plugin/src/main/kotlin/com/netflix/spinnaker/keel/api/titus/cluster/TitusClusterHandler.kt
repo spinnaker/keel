@@ -38,13 +38,14 @@ import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.docker.ContainerWithDigest
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
+import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -225,7 +226,7 @@ class TitusClusterHandler(
           "cluster" to moniker.name
         ),
         "reason" to "Diff detected at ${clock.instant().iso()}",
-        "type" to if (current == null) "createServerGroup" else "upsertServerGroup",
+        "type" to "createServerGroup",
         "cloudProvider" to CLOUD_PROVIDER,
         "securityGroups" to securityGroupIds(),
         "loadBalancers" to dependencies.loadBalancerNames,
@@ -347,7 +348,7 @@ class TitusClusterHandler(
         region = region
       ),
       capacity = capacity,
-      container = Container(
+      container = ContainerWithDigest(
         organization = image.dockerImageName.split("/").first(),
         image = image.dockerImageName.split("/").last(),
         digest = image.dockerImageDigest
