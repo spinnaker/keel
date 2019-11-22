@@ -448,8 +448,6 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("createServerGroup")
           get { get("availabilityZones") as Map<String, String> }.containsKey("us-west-2")
-          // TODO (lpollo): since we rely on the tag when looking up server groups, should we add the tag when creating them?
-          // get("tags").isEqualTo(mapOf("appversion" to serverGroupWest.launchConfiguration.appVersion))
         }
       }
     }
