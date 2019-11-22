@@ -429,7 +429,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         verify(exactly = 0) { publisher.publishEvent(ofType<ArtifactVersionDeployed>()) }
       }
 
-      test("applying the diff creates a server group") {
+      test("applying the diff creates a server group in the region with missing tag") {
         val modified = setOf(
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withMissingAppVersion()
@@ -447,6 +447,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
         expectThat(slot.captured.job.first()) {
           get("type").isEqualTo("createServerGroup")
+          get { get("availabilityZones") as Map<String, String> }.containsKey("us-west-2")
           // TODO (lpollo): since we rely on the tag when looking up server groups, should we add the tag when creating them?
           // get("tags").isEqualTo(mapOf("appversion" to serverGroupWest.launchConfiguration.appVersion))
         }
