@@ -35,6 +35,7 @@ import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfiguration
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.Task
@@ -143,30 +144,17 @@ class TitusClusterHandler(
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
       locations = locations,
-      container = serverGroups.values.first().container,
-      // containr
-
-//      imageProvider = if (base.buildInfo?.packageName != null) {
-//        ArtifactImageProvider(
-//          deliveryArtifact = DeliveryArtifact(name = base.buildInfo.packageName!!))
-//      } else {
-//        null
-//      },
-
-      _defaults = TitusServerGroupSpec(
-        capacity = base.capacity,
-        dependencies = base.dependencies,
-        tags = base.tags
-      ),
+      container = base.container,
+      _defaults = base.exportSpec(),
       overrides = mutableMapOf()
     )
 
-//    spec.generateOverrides(
-//      exportable.account,
-//      exportable.moniker.app,
-//      serverGroups
-//        .filter { it.value.location.region != base.location.region }
-//    )
+    spec.generateOverrides(
+      exportable.account,
+      exportable.moniker.app,
+      serverGroups
+        .filter { it.value.location.region != base.location.region }
+    )
 
     return SubmittedResource(
       apiVersion = supportedKind.apiVersion,
@@ -271,6 +259,14 @@ class TitusClusterHandler(
         ResourceDiff(desired, current?.get(region))
       }
 
+  private fun TitusClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, TitusServerGroup>) =
+    serverGroups.forEach { (region, serverGroup) ->
+      if (ResourceDiff(serverGroup, defaults).hasChanges()) {
+        // FIXME (lpollo): return diff as TitusServerGroupSpec including only different values, other fields null
+        (overrides as MutableMap)[region] = serverGroup.exportSpec()
+      }
+    }
+
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
     getServerGroups(resource.spec.locations.account,
       resource.spec.moniker,
@@ -364,4 +360,28 @@ class TitusClusterHandler(
 
   private fun Instant.iso() =
     atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE_TIME)
+
+  private fun TitusServerGroup.exportSpec() =
+    TitusServerGroupSpec(
+      capacity = capacity,
+      capacityGroup = capacityGroup,
+      constraints = constraints,
+      container = container,
+      dependencies = dependencies,
+      entryPoint = entryPoint,
+      env = env,
+      iamProfile = iamProfile,
+      migrationPolicy = migrationPolicy,
+      resources = resources.exportSpec(),
+      tags = tags
+    )
+
+  private fun Resources.exportSpec() =
+    ResourcesSpec(
+      cpu = cpu,
+      disk = disk,
+      gpu = gpu,
+      memory = memory,
+      networkMbps = networkMbps
+    )
 }
