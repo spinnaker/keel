@@ -149,8 +149,6 @@ class TitusClusterHandler(
     )
 
     spec.generateOverrides(
-      exportable.account,
-      exportable.moniker.app,
       serverGroups
         .filter { it.value.location.region != base.location.region }
     )
@@ -258,11 +256,70 @@ class TitusClusterHandler(
         ResourceDiff(desired, current?.get(region))
       }
 
-  private fun TitusClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, TitusServerGroup>) =
+  private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
-      if (ResourceDiff(serverGroup, defaults).hasChanges()) {
-        // FIXME (lpollo): return diff as TitusServerGroupSpec including only different values, other fields null
-        (overrides as MutableMap)[region] = serverGroup.exportSpec()
+      val workingSpec = serverGroup.exportSpec()
+      val diff = ResourceDiff(workingSpec, defaults)
+      if (diff.hasChanges()) {
+        log.debug(diff.toDebug())
+        // man, I wish kotlin had **kwargs... :-P
+        (overrides as MutableMap)[region] = TitusServerGroupSpec(
+          capacity = if ("capacity" in diff.affectedRootPropertyNames) {
+            workingSpec.capacity
+          } else {
+            null
+          },
+          capacityGroup = if ("capacityGroup" in diff.affectedRootPropertyNames) {
+            workingSpec.capacityGroup
+          } else {
+            null
+          },
+          constraints = if ("constraints" in diff.affectedRootPropertyNames) {
+            workingSpec.constraints
+          } else {
+            null
+          },
+          container = if ("container" in diff.affectedRootPropertyNames) {
+            workingSpec.container
+          } else {
+            null
+          },
+          dependencies = if ("dependencies" in diff.affectedRootPropertyNames) {
+            workingSpec.dependencies
+          } else {
+            null
+          },
+          entryPoint = if ("entryPoint" in diff.affectedRootPropertyNames) {
+            workingSpec.entryPoint
+          } else {
+            null
+          },
+          env = if ("env" in diff.affectedRootPropertyNames) {
+            workingSpec.env
+          } else {
+            null
+          },
+          iamProfile = if ("iamProfile" in diff.affectedRootPropertyNames) {
+            workingSpec.iamProfile
+          } else {
+            null
+          },
+          migrationPolicy = if ("migrationPolicy" in diff.affectedRootPropertyNames) {
+            workingSpec.migrationPolicy
+          } else {
+            null
+          },
+          resources = if ("resources" in diff.affectedRootPropertyNames) {
+            workingSpec.resources
+          } else {
+            null
+          },
+          tags = if ("tags" in diff.affectedRootPropertyNames) {
+            workingSpec.tags
+          } else {
+            null
+          }
+        )
       }
     }
 

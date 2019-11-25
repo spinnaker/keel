@@ -39,6 +39,15 @@ data class ResourceDiff<T : Any>(
         }
       }
 
+  val affectedRootPropertyNames: List<String>
+    get() = mutableListOf<String>()
+      .also { names ->
+        diff.visitChildren { node, visit ->
+          visit.dontGoDeeper()
+          names += node.propertyName
+        }
+      }
+
   fun toDeltaJson(): Map<String, Any?> =
     JsonVisitor(desired, current, "desired", "current")
       .also { diff.visit(it) }
