@@ -144,7 +144,6 @@ class TitusClusterHandler(
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
       locations = locations,
-      container = base.container,
       _defaults = base.exportSpec(),
       overrides = mutableMapOf()
     )

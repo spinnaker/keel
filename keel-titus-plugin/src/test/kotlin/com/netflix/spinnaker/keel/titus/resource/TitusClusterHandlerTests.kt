@@ -109,11 +109,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       account = titusAccount,
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
     ),
-    container = Container(
-      organization = "spinnaker",
-      image = "keel",
-      digest = "sha:1111"
-    ),
     _defaults = TitusServerGroupSpec(
       capacity = Capacity(1, 6, 4),
       dependencies = ClusterDependencies(
