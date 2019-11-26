@@ -224,7 +224,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
     before {
       with(cloudDriverCache) {
-        every { defaultKeyPairForAccount("test") } returns LaunchConfiguration.defaultKeyPairTemplateFor("test")
+        every { defaultKeyPairForAccount("test") } returns "nf-keypair-test-{{region}}"
+
         every { networkBy(vpcWest.id) } returns vpcWest
         every { subnetBy(subnet1West.id) } returns subnet1West
         every { subnetBy(subnet2West.id) } returns subnet2West

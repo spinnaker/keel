@@ -30,7 +30,6 @@ data class LaunchConfiguration(
 ) {
   companion object {
     // TODO (lpollo): make these configurable?
-    fun defaultKeyPairTemplateFor(account: String) = "nf-keypair-$account-{{region}}"
     fun defaultKeyPairFor(account: String, region: String) = "nf-keypair-$account-$region"
     fun defaultIamRoleFor(application: String) = "${application}InstanceProfile"
   }
