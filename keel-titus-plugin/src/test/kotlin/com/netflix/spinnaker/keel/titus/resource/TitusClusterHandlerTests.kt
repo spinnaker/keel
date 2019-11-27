@@ -21,10 +21,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
+import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
 import com.netflix.spinnaker.keel.api.titus.cluster.Container
@@ -78,6 +80,8 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
+import strikt.assertions.isNotNull
+import strikt.assertions.isNullOrEmpty
 import strikt.assertions.map
 import java.time.Clock
 import java.time.Duration
@@ -134,6 +138,14 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     apiVersion = SPINNAKER_TITUS_API_V1,
     kind = "cluster",
     spec = spec
+  )
+
+  val exportable = Exportable(
+    account = spec.locations.account,
+    serviceAccount = "keel@spinnaker",
+    moniker = spec.moniker,
+    regions = spec.locations.regions.map { it.name }.toSet(),
+    kind = "cluster"
   )
 
   private fun TitusServerGroup.toClouddriverResponse(
@@ -426,6 +438,52 @@ class TitusClusterHandlerTests : JUnit5Minutests {
             .hasSize(2)
             .map { it.trigger.correlationId }
             .containsDistinctElements()
+        }
+      }
+      context("the cluster has active server groups") {
+        before {
+          coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
+          coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
+        }
+
+        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
+          deriveFixture {
+            runBlocking {
+              export(exportable)
+            }
+          }
+
+          test("has the expected basic properties") {
+            expectThat(kind)
+              .isEqualTo("cluster")
+            expectThat(apiVersion)
+              .isEqualTo(SPINNAKER_TITUS_API_V1)
+            expectThat(spec.locations.regions)
+              .hasSize(2)
+            expectThat(spec.overrides)
+              .hasSize(0)
+          }
+        }
+      }
+
+      context("other handling of default properties in cluster export") {
+        before {
+          coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
+          coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
+        }
+
+        test("export omits properties with default values from complex fields") {
+          val exported = runBlocking {
+            export(exportable)
+          }
+          expectThat(exported.spec.defaults.container)
+            .isNotNull()
+
+          expectThat(exported.spec.defaults.iamProfile)
+            .isNotNull()
+
+          expectThat(exported.spec.defaults.entryPoint)
+            .isNullOrEmpty()
         }
       }
     }

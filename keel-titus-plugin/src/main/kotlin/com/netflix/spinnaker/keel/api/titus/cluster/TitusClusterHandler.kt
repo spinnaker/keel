@@ -121,6 +121,7 @@ class TitusClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
+    // TODO[GY] : remove unchanged/default fields from response (across all export responses)
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
       exportable.moniker,
@@ -261,8 +262,6 @@ class TitusClusterHandler(
       val workingSpec = serverGroup.exportSpec()
       val diff = ResourceDiff(workingSpec, defaults)
       if (diff.hasChanges()) {
-        log.debug(diff.toDebug())
-        // man, I wish kotlin had **kwargs... :-P
         (overrides as MutableMap)[region] = TitusServerGroupSpec(
           capacity = if ("capacity" in diff.affectedRootPropertyNames) {
             workingSpec.capacity
