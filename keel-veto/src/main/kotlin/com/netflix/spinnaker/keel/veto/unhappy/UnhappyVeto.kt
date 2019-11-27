@@ -48,13 +48,18 @@ class UnhappyVeto(
     check(resource.id, resource.spec.application)
 
   override fun check(resourceId: ResourceId, application: String): VetoResponse {
-    val shouldSkip = unhappyVetoRepository.shouldSkip(resourceId)
-    if (shouldSkip) {
+    val vetoStatus = unhappyVetoRepository.getVetoStatus(resourceId)
+    if (vetoStatus.shouldSkip) {
       return deniedResponse("Resource is unhappy and will be checked again for a diff after $waitingTime")
     }
 
-    val status = resourceRepository.getStatus(resourceId)
-    return if (status == UNHAPPY) {
+    // allow for a check every [waitingTime] even if the resource is unhappy
+    if (vetoStatus.shouldRecheck) {
+      unhappyVetoRepository.markUnhappy(resourceId, application)
+      return allowedResponse()
+    }
+
+    return if (resourceRepository.getStatus(resourceId) == UNHAPPY) {
       unhappyVetoRepository.markUnhappy(resourceId, application)
       deniedResponse("Resource is unhappy and will be checked again for a diff after $waitingTime")
     } else {

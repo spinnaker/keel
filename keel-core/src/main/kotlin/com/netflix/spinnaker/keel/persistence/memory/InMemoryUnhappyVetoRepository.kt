@@ -36,9 +36,12 @@ class InMemoryUnhappyVetoRepository(
     resources.remove(resourceId)
   }
 
-  override fun shouldSkip(resourceId: ResourceId): Boolean {
-    val record = resources[resourceId] ?: return false
-    return record.recheckTime > clock.instant()
+  override fun getVetoStatus(resourceId: ResourceId): UnhappyVetoStatus {
+    val record = resources[resourceId] ?: return UnhappyVetoStatus()
+    return UnhappyVetoStatus(
+      shouldSkip = record.recheckTime > clock.instant(),
+      shouldRecheck = record.recheckTime < clock.instant()
+    )
   }
 
   override fun getAll(): Set<ResourceId> {
@@ -49,7 +52,7 @@ class InMemoryUnhappyVetoRepository(
   override fun getAllForApp(application: String): Set<ResourceId> {
     val now = clock.instant()
     return resources.filter { (id, record) ->
-      record.recheckTime > now && (record.application == null || record.application == application)
+      record.recheckTime > now && record.application == application
     }.keys.toSet()
   }
 

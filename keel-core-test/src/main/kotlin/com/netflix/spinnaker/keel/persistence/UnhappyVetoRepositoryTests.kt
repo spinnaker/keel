@@ -22,6 +22,7 @@ import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
+import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.hasSize
@@ -57,13 +58,15 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
     }
 
     context("basic operations") {
-      test("marking unhappy works") {
+      before {
         subject.markUnhappy(resourceId, application)
+      }
+
+      test("marking unhappy works") {
         expectThat(subject.getAll()).hasSize(1)
       }
 
       test("marking happy works") {
-        subject.markUnhappy(resourceId, application)
         subject.markHappy(resourceId)
         expectThat(subject.getAll()).hasSize(0)
       }
@@ -75,25 +78,37 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
       }
 
       test("should skip right after we mark unhappy") {
-        expectThat(subject.shouldSkip(resourceId)).isEqualTo(true)
+        val vetoStatus = subject.getVetoStatus(resourceId)
+        expect {
+          that(vetoStatus.shouldSkip).isEqualTo(true)
+          that(vetoStatus.shouldRecheck).isEqualTo(false)
+        }
       }
 
       test("9 minutes later we should still skip") {
         clock.incrementBy(Duration.ofMinutes(9))
-        expectThat(subject.shouldSkip(resourceId)).isEqualTo(true)
+        val vetoStatus = subject.getVetoStatus(resourceId)
+        expect {
+          that(vetoStatus.shouldSkip).isEqualTo(true)
+          that(vetoStatus.shouldRecheck).isEqualTo(false)
+        }
       }
 
-      test("11 minutes later don't skip") {
+      test("11 minutes later don't skip, instead recheck") {
         clock.incrementBy(Duration.ofMinutes(11))
-        expectThat(subject.shouldSkip(resourceId)).isEqualTo(false)
+        val vetoStatus = subject.getVetoStatus(resourceId)
+        expect {
+          that(vetoStatus.shouldSkip).isEqualTo(false)
+          that(vetoStatus.shouldRecheck).isEqualTo(true)
+        }
       }
     }
 
-    context("filtering works") {
+    context("filtering") {
       before {
         subject.markUnhappy(resourceId, application)
       }
-      test("even if we don't mark happy again") {
+      test("filters out resources that are past the recheck time") {
         clock.incrementBy(Duration.ofMinutes(11))
         expectThat(subject.getAll()).hasSize(0)
       }

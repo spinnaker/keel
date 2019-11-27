@@ -19,7 +19,7 @@ package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
+import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryUnhappyVetoRepository
 import com.netflix.spinnaker.keel.test.resource
@@ -32,6 +32,8 @@ import io.mockk.mockk
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
+import strikt.assertions.isTrue
 import java.time.Duration
 
 class UnhappyVetoTests : JUnit5Minutests {
@@ -53,7 +55,7 @@ class UnhappyVetoTests : JUnit5Minutests {
 
     context("resource is happy") {
       before {
-        every { resourceRepository.getStatus(r.id) } returns HAPPY
+        every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
       }
 
       test("happy resources aren't vetoed") {
@@ -70,24 +72,33 @@ class UnhappyVetoTests : JUnit5Minutests {
         expectThat(subject.check(r).allowed).isEqualTo(false)
       }
 
-      test("unhappy resources are checked again after the duration") {
-        before {
-          every { resourceRepository.getStatus(r.id) } returns UNHAPPY
-        }
+      test("resources are checked once every wait time") {
+        unhappyRepository.markUnhappy(r.id, r.spec.application)
 
         val response1 = subject.check(r)
-        clock.incrementBy(Duration.ofMinutes(5))
+        clock.incrementBy(Duration.ofMinutes(11))
         val response2 = subject.check(r)
-        clock.incrementBy(Duration.ofMinutes(5))
+        clock.incrementBy(Duration.ofMinutes(3))
+        val response3 = subject.check(r)
+
+        expect {
+          that(response1.allowed).isFalse()
+          that(response2.allowed).isTrue()
+          that(response3.allowed).isFalse()
+        }
+      }
+
+      test("a happy resource should no longer be skipped ") {
+        val response1 = subject.check(r) // unhappy, so vetoed
+        clock.incrementBy(Duration.ofMinutes(11))
 
         // returnsMany seems to not work for enums, so this is a workaround.
-        every { resourceRepository.getStatus(r.id) } returns HAPPY
+        every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
 
-        val response3 = subject.check(r)
+        val response2 = subject.check(r) // rechecked, and it's happy now
         expect {
           that(response1.allowed).isEqualTo(false)
-          that(response2.allowed).isEqualTo(false)
-          that(response3.allowed).isEqualTo(true)
+          that(response2.allowed).isEqualTo(true)
         }
       }
     }

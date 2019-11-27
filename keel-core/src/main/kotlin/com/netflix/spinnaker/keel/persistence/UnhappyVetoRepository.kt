@@ -39,7 +39,7 @@ abstract class UnhappyVetoRepository(
 
   abstract fun markHappy(resourceId: ResourceId)
 
-  abstract fun shouldSkip(resourceId: ResourceId): Boolean
+  abstract fun getVetoStatus(resourceId: ResourceId): UnhappyVetoStatus
 
   abstract fun getAll(): Set<ResourceId>
 
@@ -50,4 +50,9 @@ abstract class UnhappyVetoRepository(
 
   fun calculateExpirationTime(): Instant =
     clock.instant().plus(Duration.parse(waitingTime))
+
+  data class UnhappyVetoStatus(
+    val shouldSkip: Boolean = false,
+    val shouldRecheck: Boolean = false
+  )
 }

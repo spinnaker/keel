@@ -44,16 +44,19 @@ class SqlUnhappyVetoRepository(
       .execute()
   }
 
-  override fun shouldSkip(resourceId: ResourceId): Boolean {
+  override fun getVetoStatus(resourceId: ResourceId): UnhappyVetoStatus {
     jooq
       .select(UNHAPPY_VETO.RECHECK_TIME)
       .from(UNHAPPY_VETO)
-      .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId.toString()))
+      .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId.value))
       .fetchOne()
       ?.let { (recheckTime) ->
-        return recheckTime > clock.instant().toEpochMilli()
+        return UnhappyVetoStatus(
+          shouldSkip = recheckTime > clock.instant().toEpochMilli(),
+          shouldRecheck = recheckTime < clock.instant().toEpochMilli()
+        )
       }
-    return false
+    return UnhappyVetoStatus()
   }
 
   override fun getAll(): Set<ResourceId> {
