@@ -1,11 +1,13 @@
 package com.netflix.spinnaker.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.keel.events.ResourceEvent.Companion.clock
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.sql.SqlApplicationVetoRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
+import com.netflix.spinnaker.keel.sql.SqlUnhappyVetoRepository
 import com.netflix.spinnaker.kork.sql.config.DefaultSqlConfiguration
 import org.jooq.DSLContext
 import org.jooq.impl.DefaultConfiguration
@@ -60,4 +62,10 @@ class SqlConfiguration {
     jooq: DSLContext
   ) =
     SqlApplicationVetoRepository(jooq)
+
+  @Bean
+  fun unhappyVetoRepository(
+    jooq: DSLContext
+  ) =
+    SqlUnhappyVetoRepository(clock, jooq)
 }
