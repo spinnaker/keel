@@ -26,7 +26,6 @@ import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
 import com.netflix.spinnaker.keel.api.titus.cluster.Container
@@ -446,17 +445,22 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
         }
 
-        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
-          deriveFixture {
-            runBlocking {
-              export(exportable)
-            }
+        test("export omits properties with default values from complex fields") {
+          runBlocking {
+            export(exportable)
           }
 
+//        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
+//          deriveFixture {
+//            runBlocking {
+//              export(exportable)
+//            }
+//          }
+
           test("has the expected basic properties") {
-            expectThat(kind)
+            expectThat(resource.kind)
               .isEqualTo("cluster")
-            expectThat(apiVersion)
+            expectThat(resource.apiVersion)
               .isEqualTo(SPINNAKER_TITUS_API_V1)
             expectThat(spec.locations.regions)
               .hasSize(2)

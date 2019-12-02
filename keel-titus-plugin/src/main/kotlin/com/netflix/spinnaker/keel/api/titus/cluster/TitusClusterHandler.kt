@@ -138,7 +138,7 @@ class TitusClusterHandler(
 
     val locations = SimpleLocations(
       account = exportable.account,
-      regions = (exportable.regions.map {
+      regions = (serverGroups.keys.map {
         SimpleRegionSpec(it)
       }).toSet())
 
