@@ -39,8 +39,8 @@ data class ResourceDiff<T : Any>(
         }
       }
 
-  val affectedRootPropertyNames: List<String>
-    get() = mutableListOf<String>()
+  val affectedRootPropertyNames: Set<String>
+    get() = mutableSetOf<String>()
       .also { names ->
         diff.visitChildren { node, visit ->
           visit.dontGoDeeper()
