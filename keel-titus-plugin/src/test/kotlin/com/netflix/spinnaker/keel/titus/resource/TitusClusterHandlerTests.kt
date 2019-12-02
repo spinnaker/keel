@@ -313,7 +313,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
         val modified = setOf(
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity().withDifferentEnv()
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity().withDifferentRuntimeOptions()
         )
         val diff = ResourceDiff(
           serverGroups.byRegion(),
@@ -405,7 +405,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       context("multiple server groups have a diff") {
 
         val modified = setOf(
-          serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentEnv(),
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentRuntimeOptions(),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
         val diff = ResourceDiff(
@@ -527,7 +527,7 @@ private fun TitusServerGroup.withDoubleCapacity(): TitusServerGroup =
     )
   )
 
-private fun TitusServerGroup.withDifferentEnv(): TitusServerGroup =
+private fun TitusServerGroup.withDifferentRuntimeOptions(): TitusServerGroup =
   copy(capacityGroup = "aDifferentGroup")
 
 private fun TitusActiveServerGroup.withDoubleCapacity(): TitusActiveServerGroup =
