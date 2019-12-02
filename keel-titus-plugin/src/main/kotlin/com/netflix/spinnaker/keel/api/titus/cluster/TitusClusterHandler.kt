@@ -154,6 +154,8 @@ class TitusClusterHandler(
         .filter { it.value.location.region != base.location.region }
     )
 
+    // TODO: omit defaults from exported spec
+
     return SubmittedResource(
       apiVersion = supportedKind.apiVersion,
       kind = supportedKind.kind,

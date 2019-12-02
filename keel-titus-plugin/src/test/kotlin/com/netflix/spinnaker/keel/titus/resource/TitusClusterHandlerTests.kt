@@ -26,6 +26,7 @@ import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
 import com.netflix.spinnaker.keel.api.titus.cluster.Container
@@ -79,8 +80,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
-import strikt.assertions.isNotNull
-import strikt.assertions.isNullOrEmpty
+import strikt.assertions.isTrue
 import strikt.assertions.map
 import java.time.Clock
 import java.time.Duration
@@ -313,7 +313,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
         val modified = setOf(
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity().withDifferentRuntimeOptions()
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity().withDifferentEnv()
         )
         val diff = ResourceDiff(
           serverGroups.byRegion(),
@@ -405,7 +405,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       context("multiple server groups have a diff") {
 
         val modified = setOf(
-          serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentRuntimeOptions(),
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentEnv(),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
         val diff = ResourceDiff(
@@ -439,23 +439,18 @@ class TitusClusterHandlerTests : JUnit5Minutests {
             .containsDistinctElements()
         }
       }
-      context("the cluster has active server groups") {
+      context("export without overrides") {
         before {
           coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
           coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
         }
 
-        test("export omits properties with default values from complex fields") {
-          runBlocking {
-            export(exportable)
+        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
+          deriveFixture {
+            runBlocking {
+              export(exportable)
+            }
           }
-
-//        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
-//          deriveFixture {
-//            runBlocking {
-//              export(exportable)
-//            }
-//          }
 
           test("has the expected basic properties") {
             expectThat(resource.kind)
@@ -470,26 +465,46 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         }
       }
 
-      context("other handling of default properties in cluster export") {
+      context("export with overrides") {
         before {
-          coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
-          coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
+          coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns
+            activeServerGroupResponseEast
+          coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns
+            activeServerGroupResponseWest
+              .withDifferentEntryPoint()
+              .withDifferentEnv()
+              .withDoubleCapacity()
         }
-
-        test("export omits properties with default values from complex fields") {
-          val exported = runBlocking {
-            export(exportable)
+        derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
+          deriveFixture {
+            runBlocking {
+              export(exportable)
+            }
           }
-          expectThat(exported.spec.defaults.container)
-            .isNotNull()
 
-          expectThat(exported.spec.defaults.iamProfile)
-            .isNotNull()
-
-          expectThat(exported.spec.defaults.entryPoint)
-            .isNullOrEmpty()
+          test("has overrides matching differences in the server groups") {
+            val defaults = TitusServerGroupSpec()
+            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, defaults)
+            expectThat(resource.kind)
+              .isEqualTo("cluster")
+            expectThat(resource.apiVersion)
+              .isEqualTo(SPINNAKER_TITUS_API_V1)
+            expectThat(spec.locations.regions)
+              .hasSize(2)
+            expectThat(spec.overrides)
+              .hasSize(1)
+            expectThat(spec.overrides)
+              .containsKey("us-west-2")
+            expectThat(overrideDiff.hasChanges())
+              .isTrue()
+            expectThat(overrideDiff.diff.childCount())
+              .isEqualTo(3)
+            expectThat(overrideDiff.affectedRootPropertyNames)
+              .isEqualTo(setOf("entryPoint", "capacity", "env"))
+          }
         }
       }
+      // TODO: test for defaults omitted from export
     }
   }
 
@@ -512,8 +527,23 @@ private fun TitusServerGroup.withDoubleCapacity(): TitusServerGroup =
     )
   )
 
-private fun TitusServerGroup.withDifferentRuntimeOptions(): TitusServerGroup =
+private fun TitusServerGroup.withDifferentEnv(): TitusServerGroup =
   copy(capacityGroup = "aDifferentGroup")
+
+private fun TitusActiveServerGroup.withDoubleCapacity(): TitusActiveServerGroup =
+  copy(
+    capacity = Capacity(
+      min = capacity.min * 2,
+      max = capacity.max * 2,
+      desired = capacity.desired * 2
+    )
+  )
+
+private fun TitusActiveServerGroup.withDifferentEnv(): TitusActiveServerGroup =
+  copy(env = mapOf("foo" to "bar"))
+
+private fun TitusActiveServerGroup.withDifferentEntryPoint(): TitusActiveServerGroup =
+  copy(entryPoint = "/bin/blah")
 
 private fun <E, T : Iterable<E>> Assertion.Builder<T>.containsDistinctElements() =
   assert("contains distinct elements") { subject ->
