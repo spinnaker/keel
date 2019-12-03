@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
@@ -43,7 +44,8 @@ class UnhappyVetoTests : JUnit5Minutests {
     val clock = MutableClock()
     val unhappyRepository = InMemoryUnhappyVetoRepository(clock)
     val resourceRepository: ResourceRepository = mockk()
-    val subject = UnhappyVeto(resourceRepository, unhappyRepository)
+    val diffFingerprintRepository: DiffFingerprintRepository = mockk()
+    val subject = UnhappyVeto(resourceRepository, diffFingerprintRepository, unhappyRepository)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -56,6 +58,7 @@ class UnhappyVetoTests : JUnit5Minutests {
     context("resource is happy") {
       before {
         every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
+        every { diffFingerprintRepository.diffCount(r.id) } returns 11
       }
 
       test("happy resources aren't vetoed") {
@@ -68,37 +71,53 @@ class UnhappyVetoTests : JUnit5Minutests {
         every { resourceRepository.getStatus(r.id) } returns UNHAPPY
       }
 
-      test("unhappy resources are vetoed") {
-        expectThat(subject.check(r).allowed).isEqualTo(false)
-      }
+      context("diff has been seen more than 10 times") {
+        before {
+          every { diffFingerprintRepository.diffCount(r.id) } returns 11
+        }
 
-      test("resources are checked once every wait time") {
-        unhappyRepository.markUnhappy(r.id, r.spec.application)
+        test("unhappy resources are vetoed") {
+          expectThat(subject.check(r).allowed).isEqualTo(false)
+        }
 
-        val response1 = subject.check(r)
-        clock.incrementBy(Duration.ofMinutes(11))
-        val response2 = subject.check(r)
-        clock.incrementBy(Duration.ofMinutes(3))
-        val response3 = subject.check(r)
+        test("resources are checked once every wait time") {
+          unhappyRepository.markUnhappyForWaitingTime(r.id, r.spec.application)
 
-        expect {
-          that(response1.allowed).isFalse()
-          that(response2.allowed).isTrue()
-          that(response3.allowed).isFalse()
+          val response1 = subject.check(r)
+          clock.incrementBy(Duration.ofMinutes(11))
+          val response2 = subject.check(r)
+          clock.incrementBy(Duration.ofMinutes(3))
+          val response3 = subject.check(r)
+
+          expect {
+            that(response1.allowed).isFalse()
+            that(response2.allowed).isTrue()
+            that(response3.allowed).isFalse()
+          }
+        }
+
+        test("a happy resource should no longer be skipped ") {
+          val response1 = subject.check(r) // unhappy, so vetoed
+          clock.incrementBy(Duration.ofMinutes(11))
+
+          // returnsMany seems to not work for enums, so this is a workaround.
+          every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
+
+          val response2 = subject.check(r) // rechecked, and it's happy now
+          expect {
+            that(response1.allowed).isEqualTo(false)
+            that(response2.allowed).isEqualTo(true)
+          }
         }
       }
 
-      test("a happy resource should no longer be skipped ") {
-        val response1 = subject.check(r) // unhappy, so vetoed
-        clock.incrementBy(Duration.ofMinutes(11))
+      context("diff has been seen less than 10 times") {
+        before {
+          every { diffFingerprintRepository.diffCount(r.id) } returns 4
+        }
 
-        // returnsMany seems to not work for enums, so this is a workaround.
-        every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
-
-        val response2 = subject.check(r) // rechecked, and it's happy now
-        expect {
-          that(response1.allowed).isEqualTo(false)
-          that(response2.allowed).isEqualTo(true)
+        test("resource not skipped") {
+          expectThat(subject.check(r).allowed).isEqualTo(true)
         }
       }
     }

@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.events.Task
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
@@ -34,6 +35,7 @@ import java.time.Clock
 @Component
 class ResourceActuator(
   private val resourceRepository: ResourceRepository,
+  private val diffFingerprintRepository: DiffFingerprintRepository,
   private val handlers: List<ResourceHandler<*, *>>,
   private val vetoEnforcer: VetoEnforcer,
   private val publisher: ApplicationEventPublisher,
@@ -43,14 +45,6 @@ class ResourceActuator(
 
   suspend fun <T : ResourceSpec> checkResource(resource: Resource<T>) {
     val id = resource.id
-    val response = vetoEnforcer.canCheck(resource)
-    if (!response.allowed) {
-      log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
-      publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id))
-      publishVetoedEvent(response, resource)
-      return
-    }
-
     val plugin = handlers.supporting(resource.apiVersion, resource.kind)
 
     if (plugin.actuationInProgress(resource)) {
@@ -59,22 +53,31 @@ class ResourceActuator(
       return
     }
 
-    log.debug("Checking resource {}", id)
-
-    if (resourceRepository.lastEvent(id) is ResourceActuationPaused) {
-      log.info("Actuation for resource {} resuming", id)
-      publisher.publishEvent(
-        ResourceActuationResumed(
-          resource.apiVersion,
-          resource.kind,
-          resource.id.value,
-          resource.spec.application,
-          clock.instant()))
-    }
-
     try {
       val (desired, current) = plugin.resolve(resource)
       val diff = ResourceDiff(desired, current)
+      diffFingerprintRepository.store(id, diff)
+
+      val response = vetoEnforcer.canCheck(resource)
+      if (!response.allowed) {
+        log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
+        publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id))
+        publishVetoedEvent(response, resource)
+        return
+      }
+
+      log.debug("Checking resource {}", id)
+
+      if (resourceRepository.lastEvent(id) is ResourceActuationPaused) {
+        log.info("Actuation for resource {} resuming", id)
+        publisher.publishEvent(
+          ResourceActuationResumed(
+            resource.apiVersion,
+            resource.kind,
+            resource.id.value,
+            resource.spec.application,
+            clock.instant()))
+      }
 
       when {
         current == null -> {

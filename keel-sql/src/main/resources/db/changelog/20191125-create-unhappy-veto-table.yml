@@ -21,6 +21,13 @@ databaseChangeLog:
                   type: bigint
                   constraints:
                     - nullable: false
+        - modifySql:
+            dbms: mysql
+            append:
+              value: " engine innodb"
+      rollback:
+        - dropTable:
+            tableName: unhappy_veto
   - changeSet:
       id: create-unhappy-veto-constraint-indicies
       author: emjburns
@@ -39,3 +46,10 @@ databaseChangeLog:
                   name: resource_id
               - column:
                   name: recheck_time
+      rollback:
+        - dropPrimaryKey:
+            constraintName: unhappy_veto_pk
+            tableName: unhappy_veto
+        - dropIndex:
+            indexName: unhappy_veto_idx
+            tableName: unhappy_veto

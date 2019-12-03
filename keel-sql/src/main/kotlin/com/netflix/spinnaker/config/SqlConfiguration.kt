@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.sql.SqlApplicationVetoRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
+import com.netflix.spinnaker.keel.sql.SqlDiffFingerprintRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
 import com.netflix.spinnaker.keel.sql.SqlUnhappyVetoRepository
 import com.netflix.spinnaker.kork.sql.config.DefaultSqlConfiguration
@@ -56,6 +57,12 @@ class SqlConfiguration {
     resourceTypeIdentifier: ResourceTypeIdentifier
   ) =
     SqlDeliveryConfigRepository(jooq, clock, resourceTypeIdentifier)
+
+  @Bean
+  fun diffFingerprintRepository(
+    jooq: DSLContext,
+    clock: Clock
+  ) = SqlDiffFingerprintRepository(jooq, clock)
 
   @Bean
   fun applicationVetoRepository(

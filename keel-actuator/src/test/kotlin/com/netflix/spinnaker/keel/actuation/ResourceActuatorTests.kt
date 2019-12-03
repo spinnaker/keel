@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.events.Task
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
@@ -47,12 +48,13 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
   class Fixture {
     val resourceRepository = InMemoryResourceRepository()
+    val diffFingerprintRepository = InMemoryDiffFingerprintRepository()
     val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
     val veto = mockk<Veto>()
     val vetoEnforcer = VetoEnforcer(listOf(veto))
-    val subject = ResourceActuator(resourceRepository, listOf(plugin1, plugin2), vetoEnforcer, publisher, Clock.systemDefaultZone())
+    val subject = ResourceActuator(resourceRepository, diffFingerprintRepository, listOf(plugin1, plugin2), vetoEnforcer, publisher, Clock.systemDefaultZone())
   }
 
   fun tests() = rootContext<Fixture> {
@@ -319,6 +321,9 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       context("the resource check is vetoed") {
         before {
           every { veto.check(resource) } returns VetoResponse(false, "ApplicationVeto")
+          coEvery { plugin1.desired(resource) } returns DummyResource(resource.spec)
+          coEvery { plugin1.current(resource) } returns DummyResource(resource.spec)
+          coEvery { plugin1.actuationInProgress(resource) } returns false
 
           runBlocking {
             subject.checkResource(resource)

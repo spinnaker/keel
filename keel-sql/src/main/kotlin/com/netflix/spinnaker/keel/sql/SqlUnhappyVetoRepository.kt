@@ -28,7 +28,7 @@ class SqlUnhappyVetoRepository(
   private val jooq: DSLContext
 ) : UnhappyVetoRepository(clock) {
 
-  override fun markUnhappy(resourceId: ResourceId, application: String) {
+  override fun markUnhappyForWaitingTime(resourceId: ResourceId, application: String) {
     jooq.insertInto(UNHAPPY_VETO)
       .set(UNHAPPY_VETO.RESOURCE_ID, resourceId.toString())
       .set(UNHAPPY_VETO.APPLICATION, application)

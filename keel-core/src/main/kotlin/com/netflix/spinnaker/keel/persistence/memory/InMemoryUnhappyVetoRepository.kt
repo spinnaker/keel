@@ -28,7 +28,7 @@ class InMemoryUnhappyVetoRepository(
 
   private val resources: MutableMap<ResourceId, Record> = mutableMapOf()
 
-  override fun markUnhappy(resourceId: ResourceId, application: String) {
+  override fun markUnhappyForWaitingTime(resourceId: ResourceId, application: String) {
     resources[resourceId] = Record(application, calculateExpirationTime())
   }
 
@@ -51,7 +51,7 @@ class InMemoryUnhappyVetoRepository(
 
   override fun getAllForApp(application: String): Set<ResourceId> {
     val now = clock.instant()
-    return resources.filter { (id, record) ->
+    return resources.filter { (_, record) ->
       record.recheckTime > now && record.application == application
     }.keys.toSet()
   }

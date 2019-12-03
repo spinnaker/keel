@@ -20,6 +20,7 @@ package com.netflix.spinnaker.keel.veto.unhappy
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.UnhappyVetoRepository
@@ -36,32 +37,42 @@ import org.springframework.stereotype.Component
 @Component
 class UnhappyVeto(
   private val resourceRepository: ResourceRepository,
+  private val diffFingerprintRepository: DiffFingerprintRepository,
   private val unhappyVetoRepository: UnhappyVetoRepository
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @Value("veto.unhappy.waiting-time")
-  var waitingTime: String = "PT10M"
+  private var waitingTime: String = "PT10M"
+
+  private val MAX_DIFF_COUNT = 10
+
+  private val unhappyMessage = "Resource is unhappy and our $MAX_DIFF_COUNT actions have not fixed it. We will try again after $waitingTime, or if the diff changes."
 
   override fun check(resource: Resource<*>) =
     check(resource.id, resource.spec.application)
 
   override fun check(resourceId: ResourceId, application: String): VetoResponse {
+    if (diffFingerprintRepository.diffCount(resourceId) <= MAX_DIFF_COUNT) {
+      // if we haven't generated the same diff 10 times, we should keep trying
+      return allowedResponse()
+    }
+
     val vetoStatus = unhappyVetoRepository.getVetoStatus(resourceId)
     if (vetoStatus.shouldSkip) {
-      return deniedResponse("Resource is unhappy and will be checked again for a diff after $waitingTime")
+      return deniedResponse(unhappyMessage)
     }
 
     // allow for a check every [waitingTime] even if the resource is unhappy
     if (vetoStatus.shouldRecheck) {
-      unhappyVetoRepository.markUnhappy(resourceId, application)
+      unhappyVetoRepository.markUnhappyForWaitingTime(resourceId, application)
       return allowedResponse()
     }
 
     return if (resourceRepository.getStatus(resourceId) == UNHAPPY) {
-      unhappyVetoRepository.markUnhappy(resourceId, application)
-      deniedResponse("Resource is unhappy and will be checked again for a diff after $waitingTime")
+      unhappyVetoRepository.markUnhappyForWaitingTime(resourceId, application)
+      deniedResponse(unhappyMessage)
     } else {
       unhappyVetoRepository.markHappy(resourceId)
       allowedResponse()

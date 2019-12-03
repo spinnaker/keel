@@ -21,7 +21,6 @@ import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import io.mockk.mockk
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
@@ -40,8 +39,7 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
   val application = "keeldemo"
 
   data class Fixture<T : UnhappyVetoRepository>(
-    val subject: T,
-    val callback: (ResourceHeader) -> Unit = mockk(relaxed = true)
+    val subject: T
   )
 
   fun tests() = rootContext<Fixture<T>> {
@@ -59,7 +57,7 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
 
     context("basic operations") {
       before {
-        subject.markUnhappy(resourceId, application)
+        subject.markUnhappyForWaitingTime(resourceId, application)
       }
 
       test("marking unhappy works") {
@@ -74,7 +72,7 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
 
     context("expiring the time") {
       before {
-        subject.markUnhappy(resourceId, application)
+        subject.markUnhappyForWaitingTime(resourceId, application)
       }
 
       test("should skip right after we mark unhappy") {
@@ -106,7 +104,7 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
 
     context("filtering") {
       before {
-        subject.markUnhappy(resourceId, application)
+        subject.markUnhappyForWaitingTime(resourceId, application)
       }
       test("filters out resources that are past the recheck time") {
         clock.incrementBy(Duration.ofMinutes(11))
@@ -120,10 +118,10 @@ abstract class UnhappyVetoRepositoryTests<T : UnhappyVetoRepository> : JUnit5Min
       val resource1 = ResourceId("ec2:securityGroup:test:us-west-2:keeldemo-managed")
       val resource2 = ResourceId("ec2:securityGroup:test:us-west-2:keel-managed")
       before {
-        subject.markUnhappy(bake1, "keeldemo")
-        subject.markUnhappy(bake2, "keel")
-        subject.markUnhappy(resource1, "keeldemo")
-        subject.markUnhappy(resource2, "keel")
+        subject.markUnhappyForWaitingTime(bake1, "keeldemo")
+        subject.markUnhappyForWaitingTime(bake2, "keel")
+        subject.markUnhappyForWaitingTime(resource1, "keeldemo")
+        subject.markUnhappyForWaitingTime(resource2, "keel")
       }
 
       test("get for keel returns only correct resources") {

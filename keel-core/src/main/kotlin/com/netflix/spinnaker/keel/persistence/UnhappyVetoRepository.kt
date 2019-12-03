@@ -35,16 +35,28 @@ abstract class UnhappyVetoRepository(
     log.info("Using ${javaClass.simpleName}")
   }
 
-  abstract fun markUnhappy(resourceId: ResourceId, application: String)
+  /**
+   * Marks [resourceId] as unhappy for [waitingTime]
+   */
+  abstract fun markUnhappyForWaitingTime(resourceId: ResourceId, application: String)
 
+  /**
+   * Clears unhappy marking for [resourceId]
+   */
   abstract fun markHappy(resourceId: ResourceId)
 
+  /**
+   * Calculates whether a resource should be skipped or rechecked at this instant
+   */
   abstract fun getVetoStatus(resourceId: ResourceId): UnhappyVetoStatus
 
+  /**
+   * Returns all currently vetoed resources
+   */
   abstract fun getAll(): Set<ResourceId>
 
   /**
-   * Get all resources for an application that this veto is currently vetoing
+   * Returns all currently vetoed resources for an [application]
    */
   abstract fun getAllForApp(application: String): Set<ResourceId>
 
