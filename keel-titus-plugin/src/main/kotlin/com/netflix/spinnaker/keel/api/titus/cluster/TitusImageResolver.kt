@@ -49,13 +49,13 @@ class TitusImageResolver(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun getContainerFromSpec(resource: Resource<TitusClusterSpec>) =
-    resource.spec.container
+    resource.spec.defaults.container
 
   override fun getAccountFromSpec(resource: Resource<TitusClusterSpec>) =
     resource.spec.deriveRegistry()
 
   override fun updateContainerInSpec(resource: Resource<TitusClusterSpec>, container: Container) =
-    resource.copy(spec = resource.spec.copy(container = container))
+    resource.copy(spec = resource.spec.copy(_defaults = resource.spec.defaults.copy(container = container)))
 
   override fun getTags(account: String, organization: String, image: String) =
     runBlocking {

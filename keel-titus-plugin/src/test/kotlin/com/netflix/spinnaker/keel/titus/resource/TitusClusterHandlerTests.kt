@@ -112,21 +112,16 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       account = titusAccount,
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
     ),
-    container = ContainerWithDigest(
-      organization = "spinnaker",
-      image = "keel",
-      digest = "sha:1111"
-    ),
     _defaults = TitusServerGroupSpec(
-      capacity = Capacity(1, 6, 4),
-      dependencies = ClusterDependencies(
-        loadBalancerNames = setOf("keel-test-frontend"),
-        securityGroupNames = setOf(sg1West.name)
-      ),
       container = ContainerWithDigest(
         organization = "spinnaker",
         image = "keel",
         digest = "sha:1111"
+      ),
+      capacity = Capacity(1, 6, 4),
+      dependencies = ClusterDependencies(
+        loadBalancerNames = setOf("keel-test-frontend"),
+        securityGroupNames = setOf(sg1West.name)
       )
     )
   )
@@ -488,7 +483,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
 
           test("has overrides matching differences in the server groups") {
-            val defaults = TitusServerGroupSpec()
+            val defaults = TitusServerGroupSpec(spec.defaults.container)
             val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, defaults)
             expectThat(resource.kind)
               .isEqualTo("cluster")

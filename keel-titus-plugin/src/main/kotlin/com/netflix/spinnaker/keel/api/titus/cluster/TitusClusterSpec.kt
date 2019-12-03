@@ -92,10 +92,10 @@ data class TitusClusterSpec(
 }
 
 data class TitusServerGroupSpec(
+  val container: Container,
   val capacity: Capacity? = null,
   val capacityGroup: String? = null,
   val constraints: Constraints? = null,
-  val container: Container? = null,
   val dependencies: ClusterDependencies? = null,
   val entryPoint: String? = null,
   val env: Map<String, String>? = null,
