@@ -47,21 +47,25 @@ class ResourceActuator(
     val id = resource.id
     val plugin = handlers.supporting(resource.apiVersion, resource.kind)
 
+    // todo eb: extract "application veto" as its own concept, and check before generating the diff.
+
     if (plugin.actuationInProgress(resource)) {
       log.debug("Actuation for resource {} is already running, skipping checks", id)
-      publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id))
+      publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, "ActuationInProgress"))
       return
     }
 
     try {
       val (desired, current) = plugin.resolve(resource)
       val diff = ResourceDiff(desired, current)
-      diffFingerprintRepository.store(id, diff)
+      if (diff.hasChanges()) {
+        diffFingerprintRepository.store(id, diff)
+      }
 
       val response = vetoEnforcer.canCheck(resource)
       if (!response.allowed) {
         log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
-        publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id))
+        publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, response.vetoName))
         publishVetoedEvent(response, resource)
         return
       }

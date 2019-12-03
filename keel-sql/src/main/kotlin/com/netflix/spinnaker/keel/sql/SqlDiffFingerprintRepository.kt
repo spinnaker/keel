@@ -31,30 +31,30 @@ class SqlDiffFingerprintRepository(
   override fun store(resourceId: ResourceId, diff: ResourceDiff<*>) {
     val hash = diff.generateHash()
     jooq
-      .select(DIFF_FINGERPRINT.COUNT, DIFF_FINGERPRINT.FIRST_DETECTION_TIME)
+      .select(DIFF_FINGERPRINT.COUNT, DIFF_FINGERPRINT.FIRST_DETECTION_TIME, DIFF_FINGERPRINT.HASH)
       .from(DIFF_FINGERPRINT)
       .where(DIFF_FINGERPRINT.RESOURCE_ID.eq(resourceId.toString()))
-      .and(DIFF_FINGERPRINT.HASH.eq(hash))
-      .forUpdate()
       .fetchOne()
-      ?.let { (count, firstDetectionTime) ->
-        jooq.insertInto(DIFF_FINGERPRINT)
-          .set(DIFF_FINGERPRINT.RESOURCE_ID, resourceId.toString())
-          .set(DIFF_FINGERPRINT.COUNT, count + 1)
+      ?.let { (count, firstDetectionTime, existingHash) ->
+        var newCount = 1
+        var newTime = clock.instant().toEpochMilli()
+        if (hash == existingHash) {
+          newCount = count + 1
+          newTime = firstDetectionTime
+        }
+        jooq.update(DIFF_FINGERPRINT)
           .set(DIFF_FINGERPRINT.HASH, hash)
-          .set(DIFF_FINGERPRINT.FIRST_DETECTION_TIME, firstDetectionTime)
-          .onDuplicateKeyUpdate()
-          .set(DIFF_FINGERPRINT.COUNT, count + 1)
+          .set(DIFF_FINGERPRINT.COUNT, newCount)
+          .set(DIFF_FINGERPRINT.FIRST_DETECTION_TIME, newTime)
+          .where(DIFF_FINGERPRINT.RESOURCE_ID.eq(resourceId.toString()))
           .execute()
         return
       }
 
+    // if there's a duplicate key here we have a bigger issue - either there's something wrong with our data,
+    // or multiple instances are checking the resource at the same time
     jooq.insertInto(DIFF_FINGERPRINT)
       .set(DIFF_FINGERPRINT.RESOURCE_ID, resourceId.toString())
-      .set(DIFF_FINGERPRINT.HASH, hash)
-      .set(DIFF_FINGERPRINT.COUNT, 1)
-      .set(DIFF_FINGERPRINT.FIRST_DETECTION_TIME, clock.instant().toEpochMilli())
-      .onDuplicateKeyUpdate()
       .set(DIFF_FINGERPRINT.HASH, hash)
       .set(DIFF_FINGERPRINT.COUNT, 1)
       .set(DIFF_FINGERPRINT.FIRST_DETECTION_TIME, clock.instant().toEpochMilli())

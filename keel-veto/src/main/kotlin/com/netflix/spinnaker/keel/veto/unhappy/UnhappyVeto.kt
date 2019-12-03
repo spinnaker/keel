@@ -26,6 +26,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.UnhappyVetoRepository
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
+import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -38,30 +39,27 @@ import org.springframework.stereotype.Component
 class UnhappyVeto(
   private val resourceRepository: ResourceRepository,
   private val diffFingerprintRepository: DiffFingerprintRepository,
-  private val unhappyVetoRepository: UnhappyVetoRepository
+  private val unhappyVetoRepository: UnhappyVetoRepository,
+  private val dynamicConfigService: DynamicConfigService
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @Value("veto.unhappy.waiting-time")
-  private var waitingTime: String = "PT10M"
-
-  private val MAX_DIFF_COUNT = 10
-
-  private val unhappyMessage = "Resource is unhappy and our $MAX_DIFF_COUNT actions have not fixed it. We will try again after $waitingTime, or if the diff changes."
+  private var configuredWaitingTime: String = "PT10M"
 
   override fun check(resource: Resource<*>) =
     check(resource.id, resource.spec.application)
 
   override fun check(resourceId: ResourceId, application: String): VetoResponse {
-    if (diffFingerprintRepository.diffCount(resourceId) <= MAX_DIFF_COUNT) {
+    if (diffFingerprintRepository.diffCount(resourceId) <= maxDiffCount()) {
       // if we haven't generated the same diff 10 times, we should keep trying
       return allowedResponse()
     }
 
     val vetoStatus = unhappyVetoRepository.getVetoStatus(resourceId)
     if (vetoStatus.shouldSkip) {
-      return deniedResponse(unhappyMessage)
+      return deniedResponse(unhappyMessage())
     }
 
     // allow for a check every [waitingTime] even if the resource is unhappy
@@ -72,7 +70,7 @@ class UnhappyVeto(
 
     return if (resourceRepository.getStatus(resourceId) == UNHAPPY) {
       unhappyVetoRepository.markUnhappyForWaitingTime(resourceId, application)
-      deniedResponse(unhappyMessage)
+      deniedResponse(unhappyMessage())
     } else {
       unhappyVetoRepository.markHappy(resourceId)
       allowedResponse()
@@ -92,4 +90,16 @@ class UnhappyVeto(
 
   override fun currentRejectionsByApp(application: String) =
     unhappyVetoRepository.getAllForApp(application).toList()
+
+  private fun maxDiffCount() =
+    dynamicConfigService.getConfig(Int::class.java, "veto.unhappy.max-diff-count", 5)
+
+  private fun waitingTime() =
+    dynamicConfigService.getConfig(String::class.java, "veto.unhappy.waiting-time", configuredWaitingTime)
+
+  private fun unhappyMessage(): String {
+    val maxDiffs = maxDiffCount()
+    val waitingTime = waitingTime()
+    return "Resource is unhappy and our $maxDiffs actions have not fixed it. We will try again after $waitingTime, or if the diff changes."
+  }
 }

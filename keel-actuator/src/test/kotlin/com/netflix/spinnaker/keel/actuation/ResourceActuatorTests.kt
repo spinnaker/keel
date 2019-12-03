@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
@@ -109,7 +110,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           }
 
           test("a telemetry event is published") {
-            verify { publisher.publishEvent(ResourceCheckSkipped(resource)) }
+            verify { publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, resource.id, "ActuationInProgress")) }
           }
         }
 
@@ -331,7 +332,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("resource checking is skipped and actuation is paused") {
-          verify { publisher.publishEvent(ResourceCheckSkipped(resource)) }
+          verify { publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, resource.id, "ApplicationVeto")) }
           verify { publisher.publishEvent(ofType<ResourceActuationPaused>()) }
         }
       }

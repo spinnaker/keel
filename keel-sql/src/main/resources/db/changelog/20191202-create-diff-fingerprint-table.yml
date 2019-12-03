@@ -24,7 +24,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: hash
-                  type: longtext
+                  type: char(40)
                   constraints:
                     nullable: false
         - modifySql:
@@ -45,4 +45,4 @@ databaseChangeLog:
       rollback:
         - dropPrimaryKey:
             constraintName: diff_fingerprint_pk
-            tableName: resource_id
+            tableName: diff_fingerprint

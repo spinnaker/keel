@@ -25,6 +25,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryUnhappyVetoRepository
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.veto.unhappy.UnhappyVeto
+import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -45,7 +46,15 @@ class UnhappyVetoTests : JUnit5Minutests {
     val unhappyRepository = InMemoryUnhappyVetoRepository(clock)
     val resourceRepository: ResourceRepository = mockk()
     val diffFingerprintRepository: DiffFingerprintRepository = mockk()
-    val subject = UnhappyVeto(resourceRepository, diffFingerprintRepository, unhappyRepository)
+    private val dynamicConfigService: DynamicConfigService = mockk(relaxUnitFun = true) {
+      every {
+        getConfig(Int::class.java, "veto.unhappy.max-diff-count", any())
+      } returns 5
+      every {
+        getConfig(String::class.java, "veto.unhappy.waiting-time", any())
+      } returns "PT10M"
+    }
+    val subject = UnhappyVeto(resourceRepository, diffFingerprintRepository, unhappyRepository, dynamicConfigService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -58,7 +67,7 @@ class UnhappyVetoTests : JUnit5Minutests {
     context("resource is happy") {
       before {
         every { resourceRepository.getStatus(r.id) } returns ResourceStatus.HAPPY
-        every { diffFingerprintRepository.diffCount(r.id) } returns 11
+        every { diffFingerprintRepository.diffCount(r.id) } returns 6
       }
 
       test("happy resources aren't vetoed") {
@@ -73,7 +82,7 @@ class UnhappyVetoTests : JUnit5Minutests {
 
       context("diff has been seen more than 10 times") {
         before {
-          every { diffFingerprintRepository.diffCount(r.id) } returns 11
+          every { diffFingerprintRepository.diffCount(r.id) } returns 6
         }
 
         test("unhappy resources are vetoed") {
