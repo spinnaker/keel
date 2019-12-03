@@ -154,8 +154,6 @@ class TitusClusterHandler(
         .filter { it.value.location.region != base.location.region }
     )
 
-    // TODO: omit defaults from exported spec
-
     return SubmittedResource(
       apiVersion = supportedKind.apiVersion,
       kind = supportedKind.kind,
@@ -261,66 +259,44 @@ class TitusClusterHandler(
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
+      var newSpec = TitusServerGroupSpec()
       val workingSpec = serverGroup.exportSpec()
       val diff = ResourceDiff(workingSpec, defaults)
       if (diff.hasChanges()) {
-        (overrides as MutableMap)[region] = TitusServerGroupSpec(
-          capacity = if ("capacity" in diff.affectedRootPropertyNames) {
-            workingSpec.capacity
-          } else {
-            null
-          },
-          capacityGroup = if ("capacityGroup" in diff.affectedRootPropertyNames) {
-            workingSpec.capacityGroup
-          } else {
-            null
-          },
-          constraints = if ("constraints" in diff.affectedRootPropertyNames) {
-            workingSpec.constraints
-          } else {
-            null
-          },
-          container = if ("container" in diff.affectedRootPropertyNames) {
-            workingSpec.container
-          } else {
-            null
-          },
-          dependencies = if ("dependencies" in diff.affectedRootPropertyNames) {
-            workingSpec.dependencies
-          } else {
-            null
-          },
-          entryPoint = if ("entryPoint" in diff.affectedRootPropertyNames) {
-            workingSpec.entryPoint
-          } else {
-            null
-          },
-          env = if ("env" in diff.affectedRootPropertyNames) {
-            workingSpec.env
-          } else {
-            null
-          },
-          iamProfile = if ("iamProfile" in diff.affectedRootPropertyNames) {
-            workingSpec.iamProfile
-          } else {
-            null
-          },
-          migrationPolicy = if ("migrationPolicy" in diff.affectedRootPropertyNames) {
-            workingSpec.migrationPolicy
-          } else {
-            null
-          },
-          resources = if ("resources" in diff.affectedRootPropertyNames) {
-            workingSpec.resources
-          } else {
-            null
-          },
-          tags = if ("tags" in diff.affectedRootPropertyNames) {
-            workingSpec.tags
-          } else {
-            null
-          }
-        )
+        if ("capacity" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(capacity = workingSpec.capacity)
+        }
+        if ("capacityGroup" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(capacityGroup = workingSpec.capacityGroup)
+        }
+        if ("constraints" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(constraints = workingSpec.constraints)
+        }
+        if ("container" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(container = workingSpec.container)
+        }
+        if ("dependencies" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(dependencies = workingSpec.dependencies)
+        }
+        if ("entryPoint" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(entryPoint = workingSpec.entryPoint)
+        }
+        if ("env" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(env = workingSpec.env)
+        }
+        if ("iamProfile" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(iamProfile = workingSpec.iamProfile)
+        }
+        if ("migrationPolicy" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(migrationPolicy = workingSpec.migrationPolicy)
+        }
+        if ("resources" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(resources = workingSpec.resources)
+        }
+        if ("tags" in diff.affectedRootPropertyNames) {
+          newSpec = newSpec.copy(tags = workingSpec.tags)
+        }
+        (overrides as MutableMap)[region] = newSpec
       }
     }
 
