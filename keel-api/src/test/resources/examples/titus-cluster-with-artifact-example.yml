@@ -11,7 +11,7 @@ spec:
   container:
     organization: emburns
     image: spin-titus-demo
-    tagVersionStrategy: semver_tag
+    tagVersionStrategy: semver-tag
   locations:
     account: titustestvpc
     regions:
