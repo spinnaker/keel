@@ -18,7 +18,7 @@ import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 
-internal class LaunchConfigurationResolverTests : JUnit5Minutests {
+internal class KeyPairResolverTests : JUnit5Minutests {
   val vpcWest = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")
   val vpcEast = Network(CLOUD_PROVIDER, "vpc-4342589", "vpc0", "test", "us-east-1")
   val baseSpec = ClusterSpec(
@@ -43,7 +43,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
 
   val cloudDriverCache = mockk<CloudDriverCache>()
 
-  data class Fixture(val subject: LaunchConfigurationResolver, val spec: ClusterSpec) {
+  data class Fixture(val subject: KeyPairResolver, val spec: ClusterSpec) {
     val resource = resource(
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
@@ -55,7 +55,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
   fun tests() = rootContext<Fixture> {
     fixture {
       Fixture(
-        LaunchConfigurationResolver(cloudDriverCache),
+        KeyPairResolver(cloudDriverCache),
         baseSpec
       )
     }
@@ -75,7 +75,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
       context("key pair specified in the spec defaults") {
         fixture {
           Fixture(
-            LaunchConfigurationResolver(cloudDriverCache),
+            KeyPairResolver(cloudDriverCache),
             baseSpec
           )
         }
@@ -89,7 +89,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
       context("no launch config in the spec defaults") {
         fixture {
           Fixture(
-            LaunchConfigurationResolver(cloudDriverCache),
+            KeyPairResolver(cloudDriverCache),
             baseSpec.withNoDefaultLaunchConfig()
           )
         }
@@ -102,7 +102,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
       context("no key pair in the spec defaults") {
         fixture {
           Fixture(
-            LaunchConfigurationResolver(cloudDriverCache),
+            KeyPairResolver(cloudDriverCache),
             baseSpec.withNoDefaultKeyPair()
           )
         }
@@ -124,7 +124,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
       context("no launch configuration overrides in the spec") {
         fixture {
           Fixture(
-            LaunchConfigurationResolver(cloudDriverCache),
+            KeyPairResolver(cloudDriverCache),
             baseSpec
           )
         }
@@ -142,7 +142,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
       context("some launch configuration overrides present in the spec") {
         fixture {
           Fixture(
-            LaunchConfigurationResolver(cloudDriverCache),
+            KeyPairResolver(cloudDriverCache),
             baseSpec.withKeyPairOverride("us-west-2")
           )
         }

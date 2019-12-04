@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component
 
 @Component
 /**
- * A [Resolver] that looks up configuration for defaults such as the key pair in clouddriver and uses that to fill out
- * missing information in the [ClusterSpec].
+ * A [Resolver] that looks up the default key pair configured in clouddriver for an account and uses that to fill out
+ * missing key pair details in the [ClusterSpec].
  */
-class LaunchConfigurationResolver(private val cloudDriverCache: CloudDriverCache) : Resolver<ClusterSpec> {
+class KeyPairResolver(private val cloudDriverCache: CloudDriverCache) : Resolver<ClusterSpec> {
   override val apiVersion: ApiVersion = SPINNAKER_EC2_API_V1
   override val supportedKind: String = "cluster"
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
