@@ -17,20 +17,23 @@
  */
 package com.netflix.spinnaker.keel.docker
 
-import com.netflix.spinnaker.keel.docker.TagVersionStrategy.INCREASING
-import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER
+import com.netflix.spinnaker.keel.docker.SortType.INCREASING
+import com.netflix.spinnaker.keel.docker.SortType.SEMVER
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.INCREASING_TAG
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_TAG
 import net.swiftzer.semver.SemVer
 
 class DockerComparator {
   companion object {
-    fun sort(tags: List<String>, strategy: TagVersionStrategy, captureGroup: String?): List<String> =
-      when (captureGroup) {
-        null -> sortRegular(tags, strategy)
-        else -> sortRegex(tags, strategy, captureGroup)
+    fun sort(tags: List<String>, strategy: TagVersionStrategy, customCaptureGroupRegex: String?): List<String> =
+      if (customCaptureGroupRegex == null && strategy in listOf(INCREASING_TAG, SEMVER_TAG)) {
+        sortRegular(tags, strategy.sortType)
+      } else {
+        sortRegex(tags, strategy.sortType, customCaptureGroupRegex ?: strategy.regex)
       }
 
-    private fun sortRegular(tags: List<String>, strategy: TagVersionStrategy): List<String> =
-      when (strategy) {
+    private fun sortRegular(tags: List<String>, sortType: SortType): List<String> =
+      when (sortType) {
         INCREASING -> tags.sorted().reversed()
         SEMVER -> tags.filter { isSemver(it) }.sortedWith(SEMVER_COMPARATOR).reversed()
       }
@@ -42,14 +45,14 @@ class DockerComparator {
      *
      *  We process this way so that we can sort the keys while still remembering the tag value to return.
      */
-    private fun sortRegex(tags: List<String>, strategy: TagVersionStrategy, captureGroup: String): List<String> {
+    private fun sortRegex(tags: List<String>, sortType: SortType, captureGroup: String): List<String> {
       val tagMap: MutableMap<String, String> = mutableMapOf()
       tags.forEach { tag ->
         parseTag(tag, captureGroup)?.let { result ->
           tagMap.put(result, tag)
         }
       }
-      return when (strategy) {
+      return when (sortType) {
         INCREASING -> tagMap.toSortedMap().values.reversed()
         SEMVER -> tagMap.filter { isSemver(it.key) }.toSortedMap(SEMVER_COMPARATOR).values.toList().reversed()
       }

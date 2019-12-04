@@ -112,5 +112,5 @@ abstract class DockerImageResolver<T : ResourceSpec>(
   }
 
   private fun Container.toArtifact() =
-    DeliveryArtifact("$organization/$image", DOCKER)
+    DeliveryArtifact(repository(), DOCKER)
 }

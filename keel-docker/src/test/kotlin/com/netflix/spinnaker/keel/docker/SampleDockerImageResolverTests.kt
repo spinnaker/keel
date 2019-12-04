@@ -23,7 +23,7 @@ import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import dev.minutest.junit.JUnit5Minutests
@@ -46,7 +46,7 @@ class SampleDockerImageResolverTests : JUnit5Minutests {
     container = ContainerWithVersionedTag(
       organization = "spkr",
       image = "keeldemo",
-      tagVersionStrategy = SEMVER
+      tagVersionStrategy = SEMVER_TAG
     ),
     account = "test"
   )

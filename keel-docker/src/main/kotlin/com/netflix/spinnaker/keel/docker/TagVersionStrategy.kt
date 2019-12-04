@@ -17,8 +17,18 @@
  */
 package com.netflix.spinnaker.keel.docker
 
-enum class TagVersionStrategy {
-  SEMVER, INCREASING;
+import com.netflix.spinnaker.keel.docker.SortType.INCREASING
+import com.netflix.spinnaker.keel.docker.SortType.SEMVER
+
+enum class TagVersionStrategy(val regex: String, val sortType: SortType) {
+  INCREASING_TAG("""^.*$""", INCREASING),
+  SEMVER_TAG("""^.*$""", SEMVER),
+  BRANCH_JOB_COMMIT_BY_JOB("""^master-h(\d+).*$""", INCREASING), // popular netflix strategy
+  SEMVER_JOB_COMMIT_BY_JOB("""^v.*-h(\d+).*$""", INCREASING), // popular netflix strategy
+  SEMVER_JOB_COMMIT_BY_SEMVER("""^v(.*)-h\d+.*$""", SEMVER); // popular netflix strategy
 }
 
-// todo eb: define other strategies that come with a regex.
+enum class SortType {
+  INCREASING,
+  SEMVER;
+}

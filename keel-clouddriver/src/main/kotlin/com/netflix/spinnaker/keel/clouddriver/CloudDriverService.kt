@@ -139,7 +139,7 @@ interface CloudDriverService {
   ): List<NamedImage>
 
   @GET("/dockerRegistry/images/find")
-  suspend fun findDockerImage(
+  suspend fun findDockerImages(
     @Query("account") account: String? = null,
     @Query("repository") repository: String? = null,
     @Query("tag") tag: String? = null,

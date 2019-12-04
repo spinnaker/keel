@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 sealed class Container(
   open val organization: String,
   open val image: String
-)
+) {
+  fun repository() = "$organization/$image"
+}
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
 data class ContainerWithDigest(

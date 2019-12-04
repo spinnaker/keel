@@ -35,10 +35,19 @@ import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfiguration
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.docker.Container
 import com.netflix.spinnaker.keel.docker.ContainerWithDigest
+import com.netflix.spinnaker.keel.docker.ContainerWithVersionedTag
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.INCREASING_TAG
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.docker.isSemver
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -163,6 +172,39 @@ class TitusClusterHandler(
     )
   }
 
+  fun generateContainer(container: ContainerWithDigest, account: String): Container {
+    val images = runBlocking {
+      cloudDriverService.findDockerImages(
+        account = getRegistryForTitusAccount(account),
+        repository = container.repository()
+      )
+    }
+
+    val image = images.find { it.digest == container.digest } ?: return container
+    val tagVersionStrategy = findTagVersioningStrategy(image) ?: return container
+    return ContainerWithVersionedTag(
+      organization = container.organization,
+      image = container.image,
+      tagVersionStrategy = tagVersionStrategy
+    )
+  }
+
+  fun findTagVersioningStrategy(image: DockerImage): TagVersionStrategy? {
+    if (image.tag.toIntOrNull() != null) {
+      return INCREASING_TAG
+    }
+    if (Regex(SEMVER_JOB_COMMIT_BY_SEMVER.regex).find(image.tag) != null) {
+      return SEMVER_JOB_COMMIT_BY_SEMVER
+    }
+    if (Regex(BRANCH_JOB_COMMIT_BY_JOB.regex).find(image.tag) != null) {
+      return BRANCH_JOB_COMMIT_BY_JOB
+    }
+    if (isSemver(image.tag)) {
+      return SEMVER_TAG
+    }
+    return null
+  }
+
   private fun ResourceDiff<TitusServerGroup>.resizeServerGroupJob(): Map<String, Any?> {
     val current = requireNotNull(current) {
       "Current server group must not be null when generating a resize job"
@@ -273,7 +315,8 @@ class TitusClusterHandler(
         if ("constraints" in diff.affectedRootPropertyNames) {
           newSpec = newSpec.copy(constraints = workingSpec.constraints)
         }
-        if ("container" in diff.affectedRootPropertyNames) {
+        if ("container" in diff.affectedRootPropertyNames && defaults.container is ContainerWithDigest) {
+          // only allow overrides in container if it has a digest and not a versioning strategy
           newSpec = newSpec.copy(container = workingSpec.container)
         }
         if ("dependencies" in diff.affectedRootPropertyNames) {
@@ -400,7 +443,7 @@ class TitusClusterHandler(
       capacity = capacity,
       capacityGroup = capacityGroup,
       constraints = constraints,
-      container = container,
+      container = generateContainer(container, location.account),
       dependencies = dependencies,
       entryPoint = entryPoint,
       env = env,

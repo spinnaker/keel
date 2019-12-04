@@ -39,6 +39,7 @@ import com.netflix.spinnaker.keel.api.titus.cluster.resolve
 import com.netflix.spinnaker.keel.api.titus.cluster.resolveCapacity
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.Placement
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.ServiceJobProcesses
@@ -46,6 +47,11 @@ import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroupImage
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.docker.ContainerWithDigest
+import com.netflix.spinnaker.keel.docker.ContainerWithVersionedTag
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.INCREASING_TAG
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
+import com.netflix.spinnaker.keel.docker.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
@@ -72,6 +78,7 @@ import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
 import retrofit2.Response
 import strikt.api.Assertion
+import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
@@ -145,6 +152,21 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     moniker = spec.moniker,
     regions = spec.locations.regions.map { it.name }.toSet(),
     kind = "cluster"
+  )
+
+  val images = listOf(
+    DockerImage(
+      account = "testregistry",
+      repository = "emburns/spin-titus-demo",
+      tag = "1",
+      digest = "sha:2222"
+    ),
+    DockerImage(
+      account = "testregistry",
+      repository = "emburns/spin-titus-demo",
+      tag = "2",
+      digest = "sha:3333"
+    )
   )
 
   private fun TitusServerGroup.toClouddriverResponse(
@@ -443,6 +465,8 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         before {
           coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
           coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
+          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
 
         derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
@@ -474,6 +498,8 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .withDifferentEntryPoint()
               .withDifferentEnv()
               .withDoubleCapacity()
+          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
         derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
           deriveFixture {
@@ -505,6 +531,56 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         }
       }
       // TODO: test for defaults omitted from export
+    }
+
+    context("figuring out tagging strategy") {
+      val image = DockerImage(
+        account = "testregistry",
+        repository = "emburns/spin-titus-demo",
+        tag = "12",
+        digest = "sha:1111"
+      )
+      test("number") {
+        expectThat(findTagVersioningStrategy(image)).isEqualTo(INCREASING_TAG)
+      }
+      test("semver with v") {
+        expectThat(findTagVersioningStrategy(image.copy(tag = "v1.12.3-rc.1"))).isEqualTo(SEMVER_TAG)
+      }
+      test("semver without v") {
+        expectThat(findTagVersioningStrategy(image.copy(tag = "1.12.3-rc.1"))).isEqualTo(SEMVER_TAG)
+      }
+      test("branch-job-commit") {
+        expectThat(findTagVersioningStrategy(image.copy(tag = "master-h3.2317144"))).isEqualTo(BRANCH_JOB_COMMIT_BY_JOB)
+      }
+      test("semver-job-commit parses to semver version") {
+        expectThat(findTagVersioningStrategy(image.copy(tag = "v1.12.3-rc.1-h1196.49b8dc5"))).isEqualTo(SEMVER_JOB_COMMIT_BY_SEMVER)
+      }
+    }
+
+    context("generate container") {
+      val container = ContainerWithDigest(
+        organization = "emburns",
+        image = "spin-titus-demo",
+        digest = "sha:1111"
+      )
+
+      before {
+        coEvery { cloudDriverService.findDockerImages("testregistry", container.repository()) } returns images
+        coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
+      }
+
+      test("no sha match does not generate an artifact strategy") {
+        expectThat(generateContainer(container, titusAccount)).isEqualTo(container)
+      }
+
+      test("sha match generates a container with a strategy") {
+        val generatedContainer = generateContainer(
+          container = container.copy(digest = "sha:2222"),
+          account = titusAccount)
+        expect {
+          that(generatedContainer).isA<ContainerWithVersionedTag>().get { tagVersionStrategy }.isEqualTo(INCREASING_TAG)
+        }
+      }
     }
   }
 
