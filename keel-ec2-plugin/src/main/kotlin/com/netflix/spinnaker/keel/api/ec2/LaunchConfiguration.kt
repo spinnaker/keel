@@ -31,8 +31,7 @@ data class LaunchConfiguration(
   companion object {
     const val DEFAULT_EBS_OPTIMIZED = false
     const val DEFAULT_INSTANCE_MONITORING = false
-    // TODO (lpollo): make these configurable?
-    fun defaultKeyPairFor(account: String, region: String) = "nf-keypair-$account-$region"
+    // TODO (lpollo): make configurable, or resolve via LaunchConfigurationResolver
     fun defaultIamRoleFor(application: String) = "${application}InstanceProfile"
   }
 }

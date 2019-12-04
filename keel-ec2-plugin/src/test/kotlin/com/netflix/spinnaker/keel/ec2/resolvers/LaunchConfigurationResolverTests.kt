@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
-import com.netflix.spinnaker.keel.api.ec2.LaunchConfiguration
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
@@ -37,7 +36,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
     ),
     _defaults = ClusterSpec.ServerGroupSpec(
       launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
-        keyPair = LaunchConfiguration.defaultKeyPairFor("test", "us-west-2")
+        keyPair = "nf-keypair-test-fake"
       )
     )
   )
@@ -69,7 +68,7 @@ internal class LaunchConfigurationResolverTests : JUnit5Minutests {
     context("non-templated default key pair configured in clouddriver") {
       before {
         with(cloudDriverCache) {
-          every { defaultKeyPairForAccount("test") } returns "nf-test-keypair-a" // nf-keypair-test-{{region}}
+          every { defaultKeyPairForAccount("test") } returns "nf-test-keypair-a"
         }
       }
 

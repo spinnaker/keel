@@ -130,7 +130,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         instanceType = "r4.8xlarge",
         ebsOptimized = false,
         iamRole = LaunchConfiguration.defaultIamRoleFor("keel"),
-        keyPair = LaunchConfiguration.defaultKeyPairFor("test", "us-west-2"),
+        keyPair = "nf-keypair-test-fake",
         instanceMonitoring = false
       ),
       capacity = Capacity(1, 6, 4),
