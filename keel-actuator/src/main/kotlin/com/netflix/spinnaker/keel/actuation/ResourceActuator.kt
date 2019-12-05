@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
+import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationVetoed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
@@ -14,9 +15,9 @@ import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.events.Task
+import com.netflix.spinnaker.keel.pause.ResourcePauser
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -36,6 +37,7 @@ class ResourceActuator(
   private val resourceRepository: ResourceRepository,
   private val diffFingerprintRepository: DiffFingerprintRepository,
   private val handlers: List<ResourceHandler<*, *>>,
+  private val resourcePauser: ResourcePauser,
   private val vetoEnforcer: VetoEnforcer,
   private val publisher: ApplicationEventPublisher,
   private val clock: Clock
@@ -46,8 +48,9 @@ class ResourceActuator(
     val id = resource.id
     val plugin = handlers.supporting(resource.apiVersion, resource.kind)
 
-    if (resourceRepository.getStatus(id) == PAUSED) {
+    if (resourcePauser.isPaused(resource)) {
       log.debug("Actuation for resource {} is paused, skipping checks", id)
+      publisher.publishEvent(ResourceActuationPaused(resource, "Management of this resource has been paused"))
       publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, "ActuationPaused"))
       return
     }

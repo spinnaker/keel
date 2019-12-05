@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.pause.ResourcePauser
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryPausedRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -36,8 +37,9 @@ class ResourcePauserTests : JUnit5Minutests {
 
   class Fixture {
     val resourceRepository = InMemoryResourceRepository()
+    val pausedRepository = InMemoryPausedRepository()
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    val subject = ResourcePauser(resourceRepository, publisher)
+    val subject = ResourcePauser(resourceRepository, pausedRepository, publisher)
   }
 
   fun tests() = rootContext<Fixture> {

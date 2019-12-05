@@ -19,9 +19,13 @@ package com.netflix.spinnaker.keel.pause
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
+import com.netflix.spinnaker.keel.api.application
+import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
+import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -29,12 +33,17 @@ import org.springframework.stereotype.Component
 @Component
 class ResourcePauser(
   val resourceRepository: ResourceRepository,
+  val pausedRepository: PausedRepository,
   val publisher: ApplicationEventPublisher
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
+  fun isPaused(resource: Resource<*>): Boolean =
+    pausedRepository.applicationIsPaused(resource.application) || resourceRepository.getStatus(resource.id) == PAUSED
+
   fun pauseApplication(application: String) {
     log.info("Pausing application $application")
+    pausedRepository.pauseApplication(application)
     resourcesInApplication(application).forEach { resource ->
       publisher.publishEvent(ResourceActuationPaused(resource, "Management of application $application has been paused"))
     }
@@ -42,6 +51,7 @@ class ResourcePauser(
 
   fun resumeApplication(application: String) {
     log.info("Resuming application $application")
+    pausedRepository.resumeApplication(application)
     resourcesInApplication(application).forEach { resource ->
       publisher.publishEvent(ResourceActuationResumed(resource))
     }
@@ -65,7 +75,10 @@ class ResourcePauser(
     publisher.publishEvent(ResourceActuationResumed(resource))
   }
 
-  fun resourcesInApplication(application: String): List<Resource<*>> =
+  fun pausedApplications(): List<String> =
+    pausedRepository.pausedApplications()
+
+  private fun resourcesInApplication(application: String): List<Resource<*>> =
     resourceRepository.getByApplication(application)
       .map { resourceRepository.get(ResourceId(it)) }
 }
