@@ -6,8 +6,6 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
-import com.netflix.spinnaker.keel.events.ResourceActuationPaused
-import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceActuationVetoed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
@@ -18,6 +16,7 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -47,7 +46,11 @@ class ResourceActuator(
     val id = resource.id
     val plugin = handlers.supporting(resource.apiVersion, resource.kind)
 
-    // todo eb: extract "application veto" as its own concept, and check before generating the diff.
+    if (resourceRepository.getStatus(id) == PAUSED) {
+      log.debug("Actuation for resource {} is paused, skipping checks", id)
+      publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, "ActuationPaused"))
+      return
+    }
 
     if (plugin.actuationInProgress(resource)) {
       log.debug("Actuation for resource {} is already running, skipping checks", id)
@@ -71,17 +74,6 @@ class ResourceActuator(
       }
 
       log.debug("Checking resource {}", id)
-
-      if (resourceRepository.lastEvent(id) is ResourceActuationPaused) {
-        log.info("Actuation for resource {} resuming", id)
-        publisher.publishEvent(
-          ResourceActuationResumed(
-            resource.apiVersion,
-            resource.kind,
-            resource.id.value,
-            resource.spec.application,
-            clock.instant()))
-      }
 
       when {
         current == null -> {
@@ -150,14 +142,6 @@ class ResourceActuator(
    */
   private fun publishVetoedEvent(response: VetoResponse, resource: Resource<*>) =
     when {
-      response.vetoName == "ApplicationVeto" -> publisher.publishEvent(
-        ResourceActuationPaused(
-          resource.apiVersion,
-          resource.kind,
-          resource.id.value,
-          resource.spec.application,
-          response.message,
-          clock.instant()))
       response.vetoName == "UnhappyVeto" -> {
         // don't publish an event, we want the status to stay as "unhappy" for clarity
       }
