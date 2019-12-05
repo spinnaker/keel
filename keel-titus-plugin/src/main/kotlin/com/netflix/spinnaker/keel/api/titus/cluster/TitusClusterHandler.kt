@@ -49,6 +49,8 @@ import com.netflix.spinnaker.keel.retrofit.isNotFound
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
+import org.slf4j.MDC
 import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
 import java.time.Clock
@@ -77,9 +79,12 @@ class TitusClusterHandler(
     }
 
   override suspend fun current(resource: Resource<TitusClusterSpec>): Map<String, TitusServerGroup> =
-    cloudDriverService
-      .getServerGroups(resource)
-      .byRegion()
+    coroutineScope {
+      log.debug("Testing MDC (current)")
+      cloudDriverService
+        .getServerGroups(resource)
+        .byRegion()
+    }
 
   override suspend fun <T : ResourceSpec> actuationInProgress(resource: Resource<T>) =
     (resource.spec as TitusClusterSpec).locations
@@ -108,7 +113,8 @@ class TitusClusterHandler(
 
           log.info("Upserting server group using task: {}", job)
 
-          async {
+          MDC.put("X-SPINNAKER-RESOURCE-ID", resource.id.toString())
+          async(MDCContext()) {
             taskLauncher.submitJobToOrca(
               resource = resource,
               description = "Upsert server group ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}",
@@ -121,6 +127,8 @@ class TitusClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
+    log.info("Testing MDC (export)")
+
     // TODO[GY] : remove unchanged/default fields from response (across all export responses)
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
@@ -248,6 +256,9 @@ class TitusClusterHandler(
   /**
    * @return `true` if the only changes in the diff are to capacity.
    */
+  /**
+   * @return `true` if the only changes in the diff are to capacity.
+   */
   private fun ResourceDiff<TitusServerGroup>.isCapacityOnly(): Boolean =
     current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
 
@@ -316,6 +327,7 @@ class TitusClusterHandler(
     coroutineScope {
       regions.map {
         async {
+          log.debug("Testing MDC (getServerGroups)")
           try {
             titusActiveServerGroup(
               serviceAccount,

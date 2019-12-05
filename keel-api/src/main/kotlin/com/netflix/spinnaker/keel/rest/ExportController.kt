@@ -10,7 +10,9 @@ import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.supporting
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -87,7 +89,8 @@ class ExportController(
       kind = kind
     )
 
-    return runBlocking {
+    MDC.put("X-SPINNAKER-RESOURCE-ID", "$cloudProvider:$kind:$account:$name")
+    return runBlocking(MDCContext()) {
       handler.export(exportable)
     }
   }
