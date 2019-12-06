@@ -41,44 +41,29 @@ class ResourcePauser(
   fun isPaused(resource: Resource<*>): Boolean =
     pausedRepository.applicationIsPaused(resource.application) || resourceRepository.getStatus(resource.id) == PAUSED
 
+  fun applicationIsPaused(application: String): Boolean =
+    pausedRepository.applicationIsPaused(application)
+
   fun pauseApplication(application: String) {
     log.info("Pausing application $application")
     pausedRepository.pauseApplication(application)
-    resourcesInApplication(application).forEach { resource ->
-      publisher.publishEvent(ResourceActuationPaused(resource, "Management of application $application has been paused"))
-    }
   }
 
   fun resumeApplication(application: String) {
     log.info("Resuming application $application")
     pausedRepository.resumeApplication(application)
-    resourcesInApplication(application).forEach { resource ->
-      publisher.publishEvent(ResourceActuationResumed(resource))
-    }
   }
 
   fun pauseResource(id: ResourceId) {
     val resource = resourceRepository.get(id)
-    pauseResource(resource)
-  }
-
-  fun pauseResource(resource: Resource<*>) {
     publisher.publishEvent(ResourceActuationPaused(resource, "Management of this resource has been paused"))
   }
 
   fun resumeResource(id: ResourceId) {
     val resource = resourceRepository.get(id)
-    resumeResource(resource)
-  }
-
-  fun resumeResource(resource: Resource<*>) {
     publisher.publishEvent(ResourceActuationResumed(resource))
   }
 
   fun pausedApplications(): List<String> =
     pausedRepository.pausedApplications()
-
-  private fun resourcesInApplication(application: String): List<Resource<*>> =
-    resourceRepository.getByApplication(application)
-      .map { resourceRepository.get(ResourceId(it)) }
 }

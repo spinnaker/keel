@@ -20,6 +20,7 @@ package com.netflix.spinnaker.keel.rest
 import com.netflix.spinnaker.keel.pause.ResourcePauser
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.GetMapping
@@ -49,7 +50,10 @@ class ApplicationController(
     val hasDeliveryConfig = deliveryConfigRepository.hasDeliveryConfig(application)
 
     if (includeDetails) {
-      val resources = resourceRepository.getSummaryByApplication(application)
+      var resources = resourceRepository.getSummaryByApplication(application)
+      if (resourcePauser.applicationIsPaused(application)) {
+        resources = resources.map { it.copy(status = PAUSED) }
+      }
       val constraintStates = if (hasDeliveryConfig) {
         deliveryConfigRepository.constraintStateFor(application)
       } else {
