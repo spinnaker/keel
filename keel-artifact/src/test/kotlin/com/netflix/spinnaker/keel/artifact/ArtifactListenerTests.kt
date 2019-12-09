@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.artifact
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
+import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.events.ArtifactEvent
@@ -49,10 +50,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           details = emptyMap()
         ),
 
-        artifact = DeliveryArtifact(
-          name = "fnord",
-          type = DEB
-        )
+        artifact = DebianArtifact(name = "fnord")
       )
     }
 
@@ -76,6 +74,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     context("the artifact is registered with versions") {
       before {
         every { repository.isRegistered(artifact.name, artifact.type) } returns true
+        every { repository.get(artifact.name, artifact.type) } returns artifact
         every { repository.versions(artifact) } returns listOf("0.227.0-h141.bd97556")
       }
 
@@ -126,21 +125,16 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     fixture {
       RegisteredFixture(
         event = ArtifactRegisteredEvent(
-          DeliveryArtifact(
-            name = "fnord",
-            type = DEB
-          )
+          DebianArtifact(name = "fnord")
         ),
-        artifact = DeliveryArtifact(
-          name = "fnord",
-          type = DEB
-        )
+        artifact = DebianArtifact(name = "fnord")
       )
     }
 
     context("artifact is already registered") {
       before {
         every { repository.isRegistered("fnord", DEB) } returns true
+        every { repository.get(artifact.name, artifact.type) } returns artifact
         every { repository.versions(any()) } returns listOf("0.227.0-h141.bd97556")
         listener.onArtifactRegisteredEvent(event)
       }
@@ -173,7 +167,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("the newest version is saved") {
           verify(exactly = 1) {
-            repository.store(DeliveryArtifact("fnord", DEB), "fnord-0.227.0-h141.bd97556", FINAL)
+            repository.store(DebianArtifact("fnord"), "fnord-0.227.0-h141.bd97556", FINAL)
           }
         }
       }
@@ -195,7 +189,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     }
   }
 
-  val newerKorkArtifact = Artifact.builder()
+  val newerKorkArtifact: Artifact = Artifact.builder()
     .type("DEB")
     .customKind(false)
     .name("fnord")
@@ -218,16 +212,13 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   fun syncArtifactsFixture() = rootContext<SyncArtifactsFixture> {
     fixture {
       SyncArtifactsFixture(
-        artifact = DeliveryArtifact(
-          name = "fnord",
-          type = DEB
-        )
+        artifact = DebianArtifact(name = "fnord")
       )
     }
 
     context("we don't have any versions of an artifact") {
       before {
-        every { repository.getAll(DEB) } returns listOf(artifact)
+        every { repository.getAll() } returns listOf(artifact)
         every { repository.versions(artifact) } returns listOf()
         coEvery { artifactService.getVersions(artifact.name) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
         coEvery { artifactService.getArtifact(artifact.name, "0.161.0-h61.116f116") } returns newerKorkArtifact
@@ -235,14 +226,14 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       }
 
       test("new version is stored") {
-        listener.syncDebArtifactVersions()
+        listener.syncArtifactVersions()
         verify { repository.store(artifact, "${artifact.name}-0.161.0-h61.116f116", FINAL) }
       }
     }
 
     context("there is one artifact with one version stored") {
       before {
-        every { repository.getAll(DEB) } returns listOf(artifact)
+        every { repository.getAll() } returns listOf(artifact)
         every { repository.versions(artifact) } returns listOf("${artifact.name}-0.156.0-h58.f67fe09")
       }
 
@@ -254,7 +245,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         }
 
         test("new version stored") {
-          listener.syncDebArtifactVersions()
+          listener.syncArtifactVersions()
           verify { repository.store(artifact, "${artifact.name}-0.161.0-h61.116f116", FINAL) }
         }
       }
@@ -265,7 +256,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         }
 
         test("store not called") {
-          listener.syncDebArtifactVersions()
+          listener.syncArtifactVersions()
           verify(exactly = 0) { repository.store(artifact, any(), FINAL) }
         }
       }
@@ -276,7 +267,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         }
 
         test("store not called") {
-          listener.syncDebArtifactVersions()
+          listener.syncArtifactVersions()
           verify(exactly = 0) { repository.store(artifact, any(), FINAL) }
         }
       }
