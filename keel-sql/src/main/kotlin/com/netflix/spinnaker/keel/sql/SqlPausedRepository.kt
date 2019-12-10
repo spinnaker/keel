@@ -17,8 +17,11 @@
  */
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.persistence.PausedRepository
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.APPLICATION
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import org.jooq.DSLContext
 
@@ -27,37 +30,65 @@ class SqlPausedRepository(
 ) : PausedRepository {
 
   override fun pauseApplication(application: String) {
+    insert(APPLICATION, application)
+  }
+
+  override fun resumeApplication(application: String) {
+    remove(APPLICATION, application)
+  }
+
+  override fun applicationPaused(application: String): Boolean =
+    exists(APPLICATION, application)
+
+  override fun pauseResource(id: ResourceId) {
+    insert(RESOURCE, id.value)
+  }
+
+  override fun resumeResource(id: ResourceId) {
+    remove(RESOURCE, id.value)
+  }
+
+  override fun resourcePaused(id: ResourceId): Boolean =
+    exists(RESOURCE, id.value)
+
+  override fun getPausedApplications(): List<String> =
+    get(APPLICATION)
+
+  override fun getPausedResources(): List<ResourceId> =
+    get(RESOURCE).map { ResourceId(it) }
+
+  private fun insert(scope: Scope, name: String) {
     jooq
       .insertInto(PAUSED)
-      .set(PAUSED.SCOPE, APPLICATION.name)
-      .set(PAUSED.NAME, application)
+      .set(PAUSED.SCOPE, scope.name)
+      .set(PAUSED.NAME, name)
       .onDuplicateKeyIgnore()
       .execute()
   }
 
-  override fun resumeApplication(application: String) {
+  private fun remove(scope: Scope, name: String) {
     jooq
       .deleteFrom(PAUSED)
-      .where(PAUSED.SCOPE.eq(APPLICATION.name))
-      .and(PAUSED.NAME.eq(application))
+      .where(PAUSED.SCOPE.eq(scope.name))
+      .and(PAUSED.NAME.eq(name))
       .execute()
   }
 
-  override fun applicationIsPaused(application: String): Boolean {
+  private fun exists(scope: Scope, name: String): Boolean {
     jooq
       .select(PAUSED.NAME)
       .from(PAUSED)
-      .where(PAUSED.SCOPE.eq(APPLICATION.name))
-      .and(PAUSED.NAME.eq(application))
+      .where(PAUSED.SCOPE.eq(scope.name))
+      .and(PAUSED.NAME.eq(name))
       .fetchOne()
       ?.let { return true }
     return false
   }
 
-  override fun pausedApplications(): List<String> =
+  private fun get(scope: Scope): List<String> =
     jooq
       .select(PAUSED.NAME)
       .from(PAUSED)
-      .where(PAUSED.SCOPE.eq(APPLICATION.name))
+      .where(PAUSED.SCOPE.eq(scope.name))
       .fetch(PAUSED.NAME)
 }

@@ -17,9 +17,11 @@
  */
 package com.netflix.spinnaker.keel.persistence.memory
 
+import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.APPLICATION
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.RESOURCE
 
 class InMemoryPausedRepository : PausedRepository {
   private val paused: MutableList<Record> = mutableListOf()
@@ -32,10 +34,24 @@ class InMemoryPausedRepository : PausedRepository {
     paused.remove(Record(APPLICATION, application))
   }
 
-  override fun applicationIsPaused(application: String): Boolean =
+  override fun pauseResource(id: ResourceId) {
+    paused.add(Record(RESOURCE, id.value))
+  }
+
+  override fun resumeResource(id: ResourceId) {
+    paused.remove(Record(RESOURCE, id.value))
+  }
+
+  override fun resourcePaused(id: ResourceId): Boolean =
+    paused.contains(Record(RESOURCE, id.value))
+
+  override fun getPausedResources(): List<ResourceId> =
+    paused.filter { it.scope == RESOURCE }.map { ResourceId(it.name) }.toList()
+
+  override fun applicationPaused(application: String): Boolean =
     paused.contains(Record(APPLICATION, application))
 
-  override fun pausedApplications(): List<String> =
+  override fun getPausedApplications(): List<String> =
     paused.filter { it.scope == APPLICATION }.map { it.name }.toList()
 
   fun flush() =

@@ -82,8 +82,8 @@ class ResourceController(
     resourcePauser.pauseResource(id)
   }
 
-  @PostMapping(
-    path = ["/{id}/resume"],
+  @DeleteMapping(
+    path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun resumeResource(@PathVariable("id") id: ResourceId) {

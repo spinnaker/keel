@@ -17,6 +17,8 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.keel.api.ResourceId
+
 /**
  * A repository to track what scopes are paused, starting with application
  */
@@ -24,12 +26,17 @@ interface PausedRepository {
 
   fun pauseApplication(application: String)
   fun resumeApplication(application: String)
+  fun applicationPaused(application: String): Boolean
 
-  fun applicationIsPaused(application: String): Boolean
-  fun pausedApplications(): List<String>
+  fun pauseResource(id: ResourceId)
+  fun resumeResource(id: ResourceId)
+  fun resourcePaused(id: ResourceId): Boolean
+
+  fun getPausedApplications(): List<String>
+  fun getPausedResources(): List<ResourceId>
 
   // todo eb: add environment
   enum class Scope {
-    APPLICATION;
+    APPLICATION, RESOURCE;
   }
 }

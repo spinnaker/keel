@@ -45,11 +45,11 @@ abstract class PausedRepositoryTests<T : PausedRepository> : JUnit5Minutests {
 
     context("application not vetoed") {
       test("shows not paused") {
-        expectThat(subject.applicationIsPaused(application)).isFalse()
+        expectThat(subject.applicationPaused(application)).isFalse()
       }
 
       test("no applications are paused") {
-        expectThat(subject.pausedApplications()).isEmpty()
+        expectThat(subject.getPausedApplications()).isEmpty()
       }
     }
 
@@ -59,16 +59,16 @@ abstract class PausedRepositoryTests<T : PausedRepository> : JUnit5Minutests {
       }
 
       test("app appears in list of paused apps") {
-        expectThat(subject.pausedApplications()).containsExactlyInAnyOrder(application)
+        expectThat(subject.getPausedApplications()).containsExactlyInAnyOrder(application)
       }
 
       test("paused reflects correctly") {
-        expectThat(subject.applicationIsPaused(application)).isTrue()
+        expectThat(subject.applicationPaused(application)).isTrue()
       }
 
       test("resume works") {
         subject.resumeApplication(application)
-        expectThat(subject.applicationIsPaused(application)).isFalse()
+        expectThat(subject.applicationPaused(application)).isFalse()
       }
     }
   }

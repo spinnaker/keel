@@ -21,11 +21,11 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.events.ResourceActuationPaused
-import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.persistence.PausedRepository
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.APPLICATION
+import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.RESOURCE
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -39,10 +39,20 @@ class ResourcePauser(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   fun isPaused(resource: Resource<*>): Boolean =
-    pausedRepository.applicationIsPaused(resource.application) || resourceRepository.getStatus(resource.id) == PAUSED
+    getPauseScope(resource) != null
+
+  fun getPauseScope(resource: Resource<*>): Scope? =
+    when {
+      applicationIsPaused(resource.application) -> APPLICATION
+      resourceIsPaused(resource.id) -> RESOURCE
+      else -> null
+    }
 
   fun applicationIsPaused(application: String): Boolean =
-    pausedRepository.applicationIsPaused(application)
+    pausedRepository.applicationPaused(application)
+
+  fun resourceIsPaused(id: ResourceId): Boolean =
+    pausedRepository.resourcePaused(id)
 
   fun pauseApplication(application: String) {
     log.info("Pausing application $application")
@@ -55,15 +65,15 @@ class ResourcePauser(
   }
 
   fun pauseResource(id: ResourceId) {
-    val resource = resourceRepository.get(id)
-    publisher.publishEvent(ResourceActuationPaused(resource, "Management of this resource has been paused"))
+    log.info("Pausing resource $id")
+    pausedRepository.pauseResource(id)
   }
 
   fun resumeResource(id: ResourceId) {
-    val resource = resourceRepository.get(id)
-    publisher.publishEvent(ResourceActuationResumed(resource))
+    log.info("Resuming resource $id")
+    pausedRepository.resumeResource(id)
   }
 
   fun pausedApplications(): List<String> =
-    pausedRepository.pausedApplications()
+    pausedRepository.getPausedApplications()
 }
