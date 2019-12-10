@@ -11,9 +11,15 @@ import org.slf4j.LoggerFactory
 
 class InMemoryArtifactRepository : ArtifactRepository {
   private val artifacts = mutableMapOf<DeliveryArtifact, MutableList<ArtifactVersionAndStatus>>()
-  private val approvedVersions = mutableMapOf<Triple<DeliveryArtifact, DeliveryConfig, String>, MutableList<String>>()
-  private val deployedVersions = mutableMapOf<Triple<DeliveryArtifact, DeliveryConfig, String>, MutableList<String>>()
+  private val approvedVersions = mutableMapOf<Key, MutableList<String>>()
+  private val deployedVersions = mutableMapOf<Key, MutableList<String>>()
   private val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
+
+  private data class Key(
+    val artifact: DeliveryArtifact,
+    val deliveryConfig: DeliveryConfig,
+    val environment: String
+  )
 
   override fun register(artifact: DeliveryArtifact) {
     try {
@@ -51,12 +57,19 @@ class InMemoryArtifactRepository : ArtifactRepository {
     artifacts.keys.toList().filter { type == null || it.type == type }
 
   override fun versions(name: String, type: ArtifactType, statuses: List<ArtifactStatus>): List<String> =
-    versions(get(name, type))
+    versions(get(name, type), statuses)
 
   override fun versions(artifact: DeliveryArtifact, statuses: List<ArtifactStatus>): List<String> {
     val versions = artifacts[artifact] ?: throw NoSuchArtifactException(artifact)
     return versions
-      .filter { it.status in statuses }
+      .filter {
+        if (statuses.isEmpty()) {
+          // select all
+          true
+        } else {
+          it.status in statuses
+        }
+      }
       .map { it.version }
       .sortedWith(artifact.versioningStrategy.comparator)
   }
@@ -67,7 +80,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     version: String,
     targetEnvironment: String
   ): Boolean {
-    val key = Triple(artifact, deliveryConfig, targetEnvironment)
+    val key = Key(artifact, deliveryConfig, targetEnvironment)
     val versions = approvedVersions.getOrDefault(key, mutableListOf())
     val isNew = !versions.contains(version)
     versions.add(version)
@@ -81,7 +94,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     version: String,
     targetEnvironment: String
   ): Boolean {
-    val key = Triple(artifact, deliveryConfig, targetEnvironment)
+    val key = Key(artifact, deliveryConfig, targetEnvironment)
     val versions = approvedVersions.getOrDefault(key, mutableListOf())
     return versions.contains(version)
   }
@@ -92,12 +105,12 @@ class InMemoryArtifactRepository : ArtifactRepository {
     targetEnvironment: String,
     statuses: List<ArtifactStatus>
   ): String? {
-    val key = Triple(artifact, deliveryConfig, targetEnvironment)
-    val approved = approvedVersions.getOrDefault(key, mutableListOf()).sortedWith(artifact.versioningStrategy.comparator)
+    val key = Key(artifact, deliveryConfig, targetEnvironment)
+    val approved = approvedVersions.getOrDefault(key, mutableListOf())
     val versionsWithCorrectStatus = versions(artifact.name, artifact.type, statuses)
 
     // return the latest version that has been approved with the correct status
-    return approved.intersect(versionsWithCorrectStatus).firstOrNull()
+    return approved.intersect(versionsWithCorrectStatus).sortedWith(artifact.versioningStrategy.comparator).firstOrNull()
   }
 
   override fun wasSuccessfullyDeployedTo(
@@ -106,7 +119,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     version: String,
     targetEnvironment: String
   ): Boolean {
-    val key = Triple(artifact, deliveryConfig, targetEnvironment)
+    val key = Key(artifact, deliveryConfig, targetEnvironment)
     return deployedVersions[key]?.contains(version) ?: false
   }
 
@@ -116,7 +129,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     version: String,
     targetEnvironment: String
   ) {
-    val key = Triple(artifact, deliveryConfig, targetEnvironment)
+    val key = Key(artifact, deliveryConfig, targetEnvironment)
     val list = deployedVersions[key]
     if (list == null) {
       deployedVersions[key] = mutableListOf(version)

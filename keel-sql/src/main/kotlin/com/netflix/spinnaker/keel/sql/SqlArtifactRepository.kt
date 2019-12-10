@@ -34,27 +34,27 @@ class SqlArtifactRepository(
       .set(DELIVERY_ARTIFACT.UID, randomUID().toString())
       .set(DELIVERY_ARTIFACT.NAME, artifact.name)
       .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
-      .set(DELIVERY_ARTIFACT.DETAILS, artifact.toJson())
+      .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
       .onDuplicateKeyUpdate()
-      .set(DELIVERY_ARTIFACT.DETAILS, artifact.toJson())
+      .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
       .execute()
   }
 
-  private fun DeliveryArtifact.toJson() =
+  private fun DeliveryArtifact.detailsAsJson() =
     when (this) {
-      is DockerArtifact -> toJson()
-      is DebianArtifact -> toJson()
-      else -> "{}" // there are only two types of artifacts, but kotlin can't infer this apparently.
+      is DockerArtifact -> detailsAsJson()
+      is DebianArtifact -> detailsAsJson()
+      else -> "{}" // there are only two types of artifacts, but kotlin can't infer this here.
     }
 
-  private fun DockerArtifact.toJson() =
+  private fun DockerArtifact.detailsAsJson() =
     objectMapper.writeValueAsString(
       mapOf(
         "tagVersionStrategy" to tagVersionStrategy,
         "captureGroupRegex" to captureGroupRegex)
     )
 
-  private fun DebianArtifact.toJson() =
+  private fun DebianArtifact.detailsAsJson() =
     objectMapper.writeValueAsString(
       mapOf("statuses" to statuses)
     )
@@ -67,7 +67,7 @@ class SqlArtifactRepository(
       .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
       .fetchOne()
       ?.let { (details) ->
-        ArtifactUtils.mapToArtifact(name, type, details)
+        mapToArtifact(name, type, details)
       } ?: throw NoSuchArtifactException(name, type)
   }
 
@@ -101,14 +101,13 @@ class SqlArtifactRepository(
       .from(DELIVERY_ARTIFACT)
       .apply { if (type != null) where(DELIVERY_ARTIFACT.TYPE.eq(type.toString())) }
       .fetch { (name, storedType, details) ->
-        ArtifactUtils.mapToArtifact(name, ArtifactType.valueOf(storedType), details)
+        mapToArtifact(name, ArtifactType.valueOf(storedType), details)
       }
 
   override fun versions(name: String, type: ArtifactType, statuses: List<ArtifactStatus>): List<String> =
     versions(get(name, type), statuses)
 
   override fun versions(artifact: DeliveryArtifact, statuses: List<ArtifactStatus>): List<String> {
-    val status = statuses.map { it.toString() }
     return if (isRegistered(artifact.name, artifact.type)) {
       jooq
         .select(DELIVERY_ARTIFACT_VERSION.VERSION)
@@ -116,7 +115,7 @@ class SqlArtifactRepository(
         .where(DELIVERY_ARTIFACT.UID.eq(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID))
         .and(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
         .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
-        .and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*status.toTypedArray()))
+        .apply { if (statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
         .fetch()
         .getValues(DELIVERY_ARTIFACT_VERSION.VERSION)
         .sortedWith(artifact.versioningStrategy.comparator)
@@ -131,7 +130,6 @@ class SqlArtifactRepository(
     targetEnvironment: String,
     statuses: List<ArtifactStatus>
   ): String? {
-    val status = statuses.map { it.toString() }
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
     val envUid = deliveryConfig.getUidFor(environment)
     val artifactId = artifact.uid
@@ -143,7 +141,7 @@ class SqlArtifactRepository(
       .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
       .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(DELIVERY_ARTIFACT_VERSION.VERSION))
       .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifactId))
-      .and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*status.toTypedArray()))
+      .apply { if (statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
       .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT.desc())
       .limit(1)
       .fetchOne(0, String::class.java)

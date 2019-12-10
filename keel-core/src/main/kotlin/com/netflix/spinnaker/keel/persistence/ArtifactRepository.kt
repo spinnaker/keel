@@ -10,10 +10,7 @@ interface ArtifactRepository {
   /**
    * Creates or updates a registered artifact
    */
-  // todo eb: allow the same artifact with different versioning strategies to be registered
-  // so that two users aren't battling
-  // maybe require an artifact to be associated with a delivery config?
-  // maybe have an artifact also have a name to reference?
+  // todo eb: https://github.com/spinnaker/keel/issues/655
   fun register(artifact: DeliveryArtifact)
 
   fun get(name: String, type: ArtifactType): DeliveryArtifact
@@ -34,7 +31,7 @@ interface ArtifactRepository {
   fun versions(
     name: String,
     type: ArtifactType,
-    statuses: List<ArtifactStatus> = enumValues<ArtifactStatus>().toList() // todo eb: change to none provided means all
+    statuses: List<ArtifactStatus> = emptyList()
   ): List<String>
 
   fun versions(
@@ -46,12 +43,11 @@ interface ArtifactRepository {
    * @return the latest version of [artifact] approved for use in [targetEnvironment],
    * optionally filtering by status if provided.
    */
-  // todo eb: move artifact sorting to artifact https://github.com/spinnaker/keel/issues/619
   fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     targetEnvironment: String,
-    statuses: List<ArtifactStatus> = enumValues<ArtifactStatus>().toList()
+    statuses: List<ArtifactStatus> = emptyList()
   ): String?
 
   /**

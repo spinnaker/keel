@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
+import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.LocationConstants.DEFAULT_SUBNET_PURPOSE
 import com.netflix.spinnaker.keel.api.LocationConstants.DEFAULT_VPC_NAME

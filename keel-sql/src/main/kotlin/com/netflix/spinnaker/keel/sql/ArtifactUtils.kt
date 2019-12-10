@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.exceptions.DataParsingException
+import com.netflix.spinnaker.exceptions.ArtifactParsingException
 import com.netflix.spinnaker.keel.api.ArtifactStatus
 import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ArtifactType.DEB
@@ -31,41 +31,42 @@ import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DockerArtifact
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 
-object ArtifactUtils {
-  private val objectMapper: ObjectMapper = configuredObjectMapper()
+private val objectMapper: ObjectMapper = configuredObjectMapper()
 
-  fun mapToArtifact(
-    name: String,
-    type: ArtifactType,
-    json: String
-  ): DeliveryArtifact {
-    try {
-      val details = objectMapper.readValue<Map<String, Any>>(json)
-      return when (type) {
-        DEB -> {
-          val statuses: List<ArtifactStatus> = details["statuses"]?.let { it ->
-            try {
-              objectMapper.convertValue<List<ArtifactStatus>>(it)
-            } catch (e: java.lang.IllegalArgumentException) {
-              null
-            }
-          } ?: emptyList()
-          DebianArtifact(
-            name = name,
-            statuses = statuses
-          )
-        }
-        DOCKER -> {
-          val tagVersionStrategy = details.getOrDefault("tagVersionStrategy", "semver-tag")
-          DockerArtifact(
-            name = name,
-            tagVersionStrategy = objectMapper.convertValue(tagVersionStrategy),
-            captureGroupRegex = details["captureGroupRegex"]?.toString()
-          )
-        }
+/**
+ * A helper function to construct the proper artifact type from the serialized json.
+ */
+fun mapToArtifact(
+  name: String,
+  type: ArtifactType,
+  json: String
+): DeliveryArtifact {
+  try {
+    val details = objectMapper.readValue<Map<String, Any>>(json)
+    return when (type) {
+      DEB -> {
+        val statuses: List<ArtifactStatus> = details["statuses"]?.let { it ->
+          try {
+            objectMapper.convertValue<List<ArtifactStatus>>(it)
+          } catch (e: java.lang.IllegalArgumentException) {
+            null
+          }
+        } ?: emptyList()
+        DebianArtifact(
+          name = name,
+          statuses = statuses
+        )
       }
-    } catch (e: JsonMappingException) {
-      throw DataParsingException(name, type, json, e)
+      DOCKER -> {
+        val tagVersionStrategy = details.getOrDefault("tagVersionStrategy", "semver-tag")
+        DockerArtifact(
+          name = name,
+          tagVersionStrategy = objectMapper.convertValue(tagVersionStrategy),
+          captureGroupRegex = details["captureGroupRegex"]?.toString()
+        )
+      }
     }
+  } catch (e: JsonMappingException) {
+    throw ArtifactParsingException(name, type, json, e)
   }
 }
