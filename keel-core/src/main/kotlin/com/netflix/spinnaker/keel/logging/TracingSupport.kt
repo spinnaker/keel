@@ -35,8 +35,12 @@ class TracingSupport {
       resourceId: ResourceId,
       block: suspend CoroutineScope.() -> R
     ): R {
-      MDC.put(X_SPINNAKER_RESOURCE_ID, resourceId.toString())
-      return withContext(MDCContext(), block)
+      try {
+        MDC.put(X_SPINNAKER_RESOURCE_ID, resourceId.toString())
+        return withContext(MDCContext(), block)
+      } finally {
+        MDC.remove(X_SPINNAKER_RESOURCE_ID)
+      }
     }
   }
 }
