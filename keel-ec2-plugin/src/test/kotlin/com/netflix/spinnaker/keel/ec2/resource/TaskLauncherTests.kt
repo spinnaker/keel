@@ -29,7 +29,7 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -51,7 +51,7 @@ class TaskLauncherTests : JUnit5Minutests {
     val clock = Clock.systemDefaultZone()
     val orcaService: OrcaService = mockk()
     val deliveryConfigRepository = InMemoryDeliveryConfigRepository(clock)
-    val taskLauncher = TaskLauncher(orcaService, deliveryConfigRepository)
+    val taskLauncher = OrcaTaskLauncher(orcaService, deliveryConfigRepository)
     val resource: Resource<DummyResourceSpec> = resource()
     val request = slot<OrchestrationRequest>()
   }

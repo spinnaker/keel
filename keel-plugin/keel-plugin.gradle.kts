@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+  api(project(":keel-api"))
   api(project(":keel-core"))
   implementation(project(":keel-orca"))
 

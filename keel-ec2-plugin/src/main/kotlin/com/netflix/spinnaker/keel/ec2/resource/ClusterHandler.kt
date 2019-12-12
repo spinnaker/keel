@@ -41,7 +41,7 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -57,7 +57,7 @@ class ClusterHandler(
   private val cloudDriverService: CloudDriverService,
   private val cloudDriverCache: CloudDriverCache,
   private val orcaService: OrcaService,
-  private val taskLauncher: TaskLauncher,
+  private val taskLauncher: OrcaTaskLauncher,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
   objectMapper: ObjectMapper,

@@ -30,7 +30,7 @@ allprojects {
 }
 
 subprojects {
-  if (name != "keel-bom") {
+  if (name != "keel-bom" && name != "keel-api") {
     apply(plugin = "nebula.kotlin")
 
     repositories {

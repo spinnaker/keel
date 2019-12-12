@@ -5,6 +5,7 @@ plugins {
 }
 
 dependencies {
+  api(project(":keel-api"))
   api(project(":keel-actuator"))
   api(project(":keel-plugin"))
   api(project(":keel-clouddriver"))

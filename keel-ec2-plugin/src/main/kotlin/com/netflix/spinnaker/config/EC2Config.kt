@@ -24,7 +24,7 @@ import com.netflix.spinnaker.keel.ec2.resource.ClassicLoadBalancerHandler
 import com.netflix.spinnaker.keel.ec2.resource.ClusterHandler
 import com.netflix.spinnaker.keel.ec2.resource.SecurityGroupHandler
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
@@ -41,7 +41,7 @@ class EC2Config {
     cloudDriverService: CloudDriverService,
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
-    taskLauncher: TaskLauncher,
+    taskLauncher: OrcaTaskLauncher,
     clock: Clock,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>,
@@ -63,7 +63,7 @@ class EC2Config {
     cloudDriverService: CloudDriverService,
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
-    taskLauncher: TaskLauncher,
+    taskLauncher: OrcaTaskLauncher,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): SecurityGroupHandler =
@@ -81,7 +81,7 @@ class EC2Config {
     cloudDriverService: CloudDriverService,
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
-    taskLauncher: TaskLauncher,
+    taskLauncher: OrcaTaskLauncher,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): ClassicLoadBalancerHandler =
@@ -99,7 +99,7 @@ class EC2Config {
     cloudDriverService: CloudDriverService,
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
-    taskLauncher: TaskLauncher,
+    taskLauncher: OrcaTaskLauncher,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): ApplicationLoadBalancerHandler =

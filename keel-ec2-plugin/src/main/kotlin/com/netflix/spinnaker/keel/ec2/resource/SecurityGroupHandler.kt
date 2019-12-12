@@ -45,7 +45,7 @@ import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -58,7 +58,7 @@ class SecurityGroupHandler(
   private val cloudDriverService: CloudDriverService,
   private val cloudDriverCache: CloudDriverCache,
   private val orcaService: OrcaService,
-  private val taskLauncher: TaskLauncher,
+  private val taskLauncher: OrcaTaskLauncher,
   objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<SecurityGroupSpec, Map<String, SecurityGroup>>(objectMapper, resolvers) {

@@ -46,7 +46,7 @@ import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -89,7 +89,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val normalizers = emptyList<Resolver<ClusterSpec>>()
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   val clock = Clock.systemDefaultZone()
-  val taskLauncher = TaskLauncher(
+  val taskLauncher = OrcaTaskLauncher(
     orcaService,
     InMemoryDeliveryConfigRepository(clock)
   )

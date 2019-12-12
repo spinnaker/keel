@@ -10,6 +10,7 @@ dependencies {
 
   testImplementation(project(":keel-test"))
   testImplementation(project(":keel-core-test"))
+  testImplementation(project(":keel-api"))
   testImplementation(project(":keel-plugin"))
   testImplementation("dev.minutest:minutest")
   testImplementation("io.strikt:strikt-core")

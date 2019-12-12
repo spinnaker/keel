@@ -18,10 +18,10 @@
 package com.netflix.spinnaker.keel.plugin
 
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.Task
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
-import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.EchoNotification
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -36,7 +36,7 @@ import org.springframework.stereotype.Component
  * Wraps [OrcaService] to make it easier to launch tasks in a standard way.
  */
 @Component
-class TaskLauncher(
+class OrcaTaskLauncher(
   private val orcaService: OrcaService,
   private val deliveryConfigRepository: DeliveryConfigRepository
 ) {
@@ -62,7 +62,7 @@ class TaskLauncher(
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, resource.id)
-        Task(id = it.taskId, name = description)
+        Task(it.taskId, description)
       }
 
   private val Resource<*>.notifications: List<EchoNotification>

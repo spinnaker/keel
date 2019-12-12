@@ -48,7 +48,7 @@ import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.resource
@@ -82,7 +82,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private val cloudDriverCache: CloudDriverCache = mockk()
   private val orcaService: OrcaService = mockk()
   private val clock = Clock.systemDefaultZone()
-  private val taskLauncher = TaskLauncher(
+  private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     InMemoryDeliveryConfigRepository(clock)
   )
@@ -94,7 +94,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     val cloudDriverService: CloudDriverService
     val cloudDriverCache: CloudDriverCache
     val orcaService: OrcaService
-    val taskLauncher: TaskLauncher
+    val taskLauncher: OrcaTaskLauncher
     val objectMapper: ObjectMapper
     val normalizers: List<Resolver<SecurityGroupSpec>>
     val vpcRegion1: Network
@@ -109,7 +109,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val cloudDriverService: CloudDriverService,
     override val cloudDriverCache: CloudDriverCache,
     override val orcaService: OrcaService,
-    override val taskLauncher: TaskLauncher,
+    override val taskLauncher: OrcaTaskLauncher,
     override val objectMapper: ObjectMapper,
     override val normalizers: List<Resolver<SecurityGroupSpec>>,
     override val vpcRegion1: Network =
@@ -197,7 +197,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val cloudDriverService: CloudDriverService,
     override val cloudDriverCache: CloudDriverCache,
     override val orcaService: OrcaService,
-    override val taskLauncher: TaskLauncher,
+    override val taskLauncher: OrcaTaskLauncher,
     override val objectMapper: ObjectMapper,
     override val normalizers: List<Resolver<SecurityGroupSpec>>,
     override val vpcRegion1: Network =

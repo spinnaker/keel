@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
   api(project(":keel-plugin"))
+  implementation(project(":keel-api"))
   implementation(project(":keel-clouddriver"))
   implementation(project(":keel-orca"))
   implementation(project(":keel-retrofit"))
