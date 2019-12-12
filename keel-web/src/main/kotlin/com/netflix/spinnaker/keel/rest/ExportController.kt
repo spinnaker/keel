@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
-import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withResourceTracingContext
+import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.supporting
@@ -91,7 +91,7 @@ class ExportController(
     )
 
     return runBlocking {
-      withResourceTracingContext(exportable) {
+      withTracingContext(exportable) {
         log.info("Exporting resource ${exportable.toResourceId()}")
         handler.export(exportable)
       }

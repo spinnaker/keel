@@ -17,21 +17,21 @@ class TracingSupport {
   companion object {
     const val X_SPINNAKER_RESOURCE_ID = "X-SPINNAKER-RESOURCE-ID"
 
-    suspend fun <T : ResourceSpec, R> withResourceTracingContext(
+    suspend fun <T : ResourceSpec, R> withTracingContext(
       resource: Resource<T>,
       block: suspend CoroutineScope.() -> R
     ): R {
-      return withResourceTracingContext(resource.id, block)
+      return withTracingContext(resource.id, block)
     }
 
-    suspend fun <R> withResourceTracingContext(
+    suspend fun <R> withTracingContext(
       exportable: Exportable,
       block: suspend CoroutineScope.() -> R
     ): R {
-      return withResourceTracingContext(exportable.toResourceId(), block)
+      return withTracingContext(exportable.toResourceId(), block)
     }
 
-    private suspend fun <R> withResourceTracingContext(
+    private suspend fun <R> withTracingContext(
       resourceId: ResourceId,
       block: suspend CoroutineScope.() -> R
     ): R {

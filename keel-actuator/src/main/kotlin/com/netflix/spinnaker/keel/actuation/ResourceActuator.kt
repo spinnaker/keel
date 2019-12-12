@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.pause.ResourcePauser
-import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withResourceTracingContext
+import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
@@ -45,20 +45,20 @@ class ResourceActuator(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   suspend fun <T : ResourceSpec> checkResource(resource: Resource<T>) {
-    withResourceTracingContext(resource) {
+    withTracingContext(resource) {
       val id = resource.id
       val plugin = handlers.supporting(resource.apiVersion, resource.kind)
 
       if (resourcePauser.isPaused(resource)) {
         log.debug("Actuation for resource {} is paused, skipping checks", id)
         publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, "ActuationPaused"))
-        return@withResourceTracingContext
+        return@withTracingContext
       }
 
       if (plugin.actuationInProgress(resource)) {
         log.debug("Actuation for resource {} is already running, skipping checks", id)
         publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, "ActuationInProgress"))
-        return@withResourceTracingContext
+        return@withTracingContext
       }
 
       try {
@@ -73,7 +73,7 @@ class ResourceActuator(
           log.debug("Skipping actuation for resource {} because it was vetoed: {}", id, response.message)
           publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, id, response.vetoName))
           publishVetoedEvent(response, resource)
-          return@withResourceTracingContext
+          return@withTracingContext
         }
 
         log.debug("Checking resource {}", id)
