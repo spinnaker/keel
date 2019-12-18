@@ -19,5 +19,5 @@ jobs:
           ${{ runner.os }}-gradle-
     - name: Build
       env:
-        GRADLE_OPTS: -Xmx5g -Xms5g -Dorg.gradle.daemon=false
+        GRADLE_OPTS: -Xmx6g -Xms6g -Dorg.gradle.daemon=false
       run: ./gradlew build javadoc
