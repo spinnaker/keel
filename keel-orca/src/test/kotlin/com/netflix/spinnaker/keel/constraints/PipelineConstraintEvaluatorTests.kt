@@ -17,6 +17,8 @@ import dev.minutest.rootContext
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
+import java.time.Clock
+import java.util.HashMap
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
@@ -25,7 +27,6 @@ import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
-import java.time.Clock
 
 internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
 
@@ -53,7 +54,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
     )
     val executionId = randomUID().toString()
     val capturedId = slot<String>()
-    val trigger = slot<Map<String, Any?>>()
+    val trigger = slot<HashMap<String, Any>>()
     val subject = PipelineConstraintEvaluator(orcaService, deliveryConfigRepository, clock)
   }
 
@@ -84,10 +85,11 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
 
         expectThat(trigger.captured)
           .isEqualTo(
-            mapOf(
-              "youSayManaged" to "weSayDelivery",
-              "type" to "managed",
-              "user" to "keel"))
+            HashMap(
+              mapOf(
+                "parameters" to mapOf<String, Any?>("youSayManaged" to "weSayDelivery"),
+                "type" to "managed",
+                "user" to "keel")))
 
         val state = deliveryConfigRepository.getConstraintState(manifest.name, environment.name, version, type)
         expectThat(state)

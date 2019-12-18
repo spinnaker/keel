@@ -12,11 +12,12 @@ import com.netflix.spinnaker.keel.model.toEchoNotification
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import kotlinx.coroutines.runBlocking
-import org.springframework.stereotype.Component
 import java.lang.Exception
 import java.time.Clock
+import java.util.HashMap
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory.getLogger
+import org.springframework.stereotype.Component
 
 /**
  * An environment promotion constraint to gate promotions on the successful execution
@@ -156,9 +157,11 @@ class PipelineConstraintEvaluator(
     constraint: PipelineConstraint
   ): String {
 
-    val trigger: MutableMap<String, Any?> = constraint.parameters.toMutableMap()
+    // using java.util.HashMap over kotlin.collections for retrofit2 compatibility
+    val trigger = HashMap<String, Any>()
     trigger["type"] = "managed"
     trigger["user"] = "keel"
+    trigger["parameters"] = constraint.parameters
 
     if (environment.notifications.isNotEmpty() && !trigger.containsKey("notifications")) {
       trigger["notifications"] = environment.notifications
