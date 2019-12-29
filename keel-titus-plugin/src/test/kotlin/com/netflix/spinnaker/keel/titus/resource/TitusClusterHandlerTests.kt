@@ -466,7 +466,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         before {
           coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
           coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
-          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container!!.repository()) } returns images
           coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
 
@@ -499,9 +499,10 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .withDifferentEntryPoint()
               .withDifferentEnv()
               .withDoubleCapacity()
-          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container!!.repository()) } returns images
           coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
+
         derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
           deriveFixture {
             runBlocking {
@@ -510,8 +511,11 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
 
           test("has overrides matching differences in the server groups") {
-            val defaults = TitusServerGroupSpec(spec.defaults.container)
-            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, defaults)
+            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, spec.defaults)
+            val changedProps = overrideDiff.children
+              .filter { it.isChanged }
+              .map { it.propertyName }
+              .toSet()
             expectThat(resource.kind)
               .isEqualTo("cluster")
             expectThat(resource.apiVersion)
@@ -524,9 +528,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .containsKey("us-west-2")
             expectThat(overrideDiff.hasChanges())
               .isTrue()
-            expectThat(overrideDiff.diff.childCount())
-              .isEqualTo(3)
-            expectThat(overrideDiff.affectedRootPropertyNames)
+            expectThat(changedProps)
               .isEqualTo(setOf("entryPoint", "capacity", "env"))
           }
         }

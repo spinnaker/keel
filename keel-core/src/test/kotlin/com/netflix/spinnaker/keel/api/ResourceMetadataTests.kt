@@ -67,6 +67,6 @@ internal class ResourceMetadataTests : JUnit5Minutests {
         expectThat(mapper.readValue<Map<String, Any?>>(this))
           .hasEntry("namespace", "default")
       }
-    }
+      }
   }
 }

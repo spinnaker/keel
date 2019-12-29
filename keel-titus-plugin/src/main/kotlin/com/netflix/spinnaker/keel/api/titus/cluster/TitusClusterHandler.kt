@@ -54,6 +54,7 @@ import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import java.time.Clock
 import java.time.Duration
@@ -148,9 +149,10 @@ class TitusClusterHandler(
 
     val locations = SimpleLocations(
       account = exportable.account,
-      regions = (serverGroups.keys.map {
+      regions = serverGroups.keys.map {
         SimpleRegionSpec(it)
-      }).toSet())
+      }.toSet()
+    )
 
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
@@ -300,48 +302,11 @@ class TitusClusterHandler(
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
-      var newSpec = TitusServerGroupSpec(defaults.container)
       val workingSpec = serverGroup.exportSpec()
-      val diff = ResourceDiff(workingSpec, defaults)
-      if (diff.hasChanges()) {
-        if ("capacity" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(capacity = workingSpec.capacity)
-        }
-        if ("capacityGroup" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(capacityGroup = workingSpec.capacityGroup)
-        }
-        if ("constraints" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(constraints = workingSpec.constraints)
-        }
-        if ("container" in diff.affectedRootPropertyNames && defaults.container is ContainerWithDigest) {
-          // only allow overrides in container if it has a digest and not a versioning strategy
-          newSpec = newSpec.copy(container = workingSpec.container)
-        }
-        if ("dependencies" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(dependencies = workingSpec.dependencies)
-        }
-        if ("entryPoint" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(entryPoint = workingSpec.entryPoint)
-        }
-        if ("env" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(env = workingSpec.env)
-        }
-        if ("containerAttributes" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(containerAttributes = workingSpec.containerAttributes)
-        }
-        if ("iamProfile" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(iamProfile = workingSpec.iamProfile)
-        }
-        if ("migrationPolicy" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(migrationPolicy = workingSpec.migrationPolicy)
-        }
-        if ("resources" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(resources = workingSpec.resources)
-        }
-        if ("tags" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(tags = workingSpec.tags)
-        }
-        (overrides as MutableMap)[region] = newSpec
+      // TODO: there was a special case here for container is ContainerWithDigest -- do we have anything different on export?
+      val override: TitusServerGroupSpec? = buildSpecFromDiff(defaults, workingSpec)
+      if (override != null) {
+        (overrides as MutableMap)[region] = override
       }
     }
 
