@@ -183,19 +183,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      _defaults = ClusterSpec.ServerGroupSpec(
-        launchConfiguration = base.launchConfiguration
-          .exportSpec(exportable.account, exportable.moniker.app),
-        capacity = base.capacity,
-        dependencies = base.dependencies,
-        health = base.health.exportSpec(),
-        scaling = if (!base.scaling.hasScalingPolicies()) {
-          null
-        } else {
-          base.scaling
-        },
-        tags = base.tags
-      ),
+      _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )
 
@@ -746,12 +734,31 @@ class ClusterHandler(
   /**
    * Translates a ServerGroup object to a ClusterSpec.ServerGroupSpec with default values omitted for export.
    */
-  private fun ServerGroup.exportSpec(account: String, application: String) =
-    ClusterSpec.ServerGroupSpec(
-      launchConfiguration = launchConfiguration.exportSpec(account, application),
-      health = health.exportSpec(),
-      dependencies = dependencies
+  private fun ServerGroup.exportSpec(account: String, application: String): ClusterSpec.ServerGroupSpec {
+    val defaults = ClusterSpec.ServerGroupSpec(
+      capacity = Capacity(1, 1, 1),
+      dependencies = ClusterDependencies(),
+      health = Health().exportSpec(),
+      scaling = Scaling(),
+      tags = emptyMap()
     )
+
+    val thisSpec = ClusterSpec.ServerGroupSpec(
+      launchConfiguration = launchConfiguration.exportSpec(account, application),
+      capacity = capacity,
+      dependencies = dependencies,
+      health = health.exportSpec(),
+      scaling = if (!scaling.hasScalingPolicies()) {
+        null
+      } else {
+        scaling
+      },
+      tags = tags
+    )
+
+    // it's safe to assume a non-null result here because not all properties have defaults
+    return buildSpecFromDiff(defaults, thisSpec)!!
+  }
 
   /**
    * Translates a LaunchConfiguration object to a ClusterSpec.LaunchConfigurationSpec with default values omitted for export.
