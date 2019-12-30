@@ -40,7 +40,9 @@ import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfiguration
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.clouddriver.model.Constraints
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
+import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
@@ -55,6 +57,7 @@ import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
+import com.netflix.spinnaker.keel.plugin.convert
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import java.time.Clock
 import java.time.Duration
@@ -132,7 +135,6 @@ class TitusClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
-    // TODO[GY] : remove unchanged/default fields from response (across all export responses)
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
       exportable.moniker,
@@ -157,7 +159,7 @@ class TitusClusterHandler(
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
       locations = locations,
-      _defaults = base.exportSpec(),
+      _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf()
     )
 
@@ -302,8 +304,7 @@ class TitusClusterHandler(
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
-      val workingSpec = serverGroup.exportSpec()
-      // TODO: there was a special case here for container is ContainerWithDigest -- do we have anything different on export?
+      val workingSpec = serverGroup.exportSpec(moniker.app)
       val override: TitusServerGroupSpec? = buildSpecFromDiff(defaults, workingSpec)
       if (override != null) {
         (overrides as MutableMap)[region] = override
@@ -405,8 +406,22 @@ class TitusClusterHandler(
   private fun Instant.iso() =
     atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE_TIME)
 
-  private fun TitusServerGroup.exportSpec() =
-    TitusServerGroupSpec(
+  private fun TitusServerGroup.exportSpec(application: String): TitusServerGroupSpec {
+    val defaults = TitusServerGroupSpec(
+      capacity = Capacity(1, 1, 1),
+      iamProfile = application + "InstanceProfile",
+      resources = convert(Resources()),
+      entryPoint = "",
+      constraints = Constraints(),
+      migrationPolicy = MigrationPolicy(),
+      dependencies = ClusterDependencies(),
+      capacityGroup = application,
+      env = emptyMap(),
+      containerAttributes = emptyMap(),
+      tags = emptyMap()
+    )
+
+    val thisSpec = TitusServerGroupSpec(
       capacity = capacity,
       capacityGroup = capacityGroup,
       constraints = constraints,
@@ -421,12 +436,13 @@ class TitusClusterHandler(
       tags = tags
     )
 
-  private fun Resources.exportSpec() =
-    ResourcesSpec(
-      cpu = cpu,
-      disk = disk,
-      gpu = gpu,
-      memory = memory,
-      networkMbps = networkMbps
-    )
+    // it's safe to assume a non-null result here because not all properties have defaults
+    return buildSpecFromDiff(defaults, thisSpec)!!
+  }
+
+  private fun Resources.exportSpec(): ResourcesSpec? {
+    val defaults = Resources()
+    val thisSpec: ResourcesSpec = convert(this)
+    return buildSpecFromDiff(defaults, thisSpec)
+  }
 }
