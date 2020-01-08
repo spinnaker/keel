@@ -83,9 +83,9 @@ databaseChangeLog:
             indexName: artifact_versions_artifact_idx
             tableName: artifact_versions
 
-#  - changeSet:
-#      id: drop-delivery-artifact-versions
-#      author: emjburns
-#      changes:
-#        - dropTable:
-#            tableName: delivery_artifact_versions
+  - changeSet:
+      id: drop-delivery-artifact-version
+      author: emjburns
+      changes:
+        - dropTable:
+            tableName: delivery_artifact_version
