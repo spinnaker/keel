@@ -101,8 +101,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk()
   val taskLauncher = TaskLauncher(
-      orcaService,
-      deliveryConfigRepository
+    orcaService,
+    deliveryConfigRepository
   )
 
   val vpcWest = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")
@@ -121,49 +121,49 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val targetTrackingPolicyName = "keel-test-target-tracking-policy"
 
   val spec = ClusterSpec(
-      moniker = Moniker(app = "keel", stack = "test"),
-      locations = SubnetAwareLocations(
-          account = vpcWest.account,
-          vpc = "vpc0",
-          subnet = subnet1West.purpose!!,
-          regions = listOf(vpcWest, vpcEast).map { subnet ->
-            SubnetAwareRegionSpec(
-                name = subnet.region,
-                availabilityZones = listOf("a", "b", "c").map { "${subnet.region}$it" }.toSet()
-            )
-          }.toSet()
+    moniker = Moniker(app = "keel", stack = "test"),
+    locations = SubnetAwareLocations(
+      account = vpcWest.account,
+      vpc = "vpc0",
+      subnet = subnet1West.purpose!!,
+      regions = listOf(vpcWest, vpcEast).map { subnet ->
+        SubnetAwareRegionSpec(
+          name = subnet.region,
+          availabilityZones = listOf("a", "b", "c").map { "${subnet.region}$it" }.toSet()
+        )
+      }.toSet()
+    ),
+    _defaults = ServerGroupSpec(
+      launchConfiguration = LaunchConfigurationSpec(
+        image = VirtualMachineImage(
+          id = "ami-123543254134",
+          appVersion = "keel-0.287.0-h208.fe2e8a1",
+          baseImageVersion = "nflx-base-5.308.0-h1044.b4b3f78"
+        ),
+        instanceType = "r4.8xlarge",
+        ebsOptimized = false,
+        iamRole = LaunchConfiguration.defaultIamRoleFor("keel"),
+        keyPair = "nf-keypair-test-fake",
+        instanceMonitoring = false
       ),
-      _defaults = ServerGroupSpec(
-          launchConfiguration = LaunchConfigurationSpec(
-              image = VirtualMachineImage(
-                  id = "ami-123543254134",
-                  appVersion = "keel-0.287.0-h208.fe2e8a1",
-                  baseImageVersion = "nflx-base-5.308.0-h1044.b4b3f78"
-              ),
-              instanceType = "r4.8xlarge",
-              ebsOptimized = false,
-              iamRole = LaunchConfiguration.defaultIamRoleFor("keel"),
-              keyPair = "nf-keypair-test-fake",
-              instanceMonitoring = false
-          ),
-          capacity = Capacity(1, 6),
-          scaling = Scaling(
-              targetTrackingPolicies = setOf(TargetTrackingPolicy(
-                  name = targetTrackingPolicyName,
-                  targetValue = 560.0,
-                  disableScaleIn = true,
-                  customMetricSpec = CustomizedMetricSpecification(
-                      name = "RPS per instance",
-                      namespace = "SPIN/ACH",
-                      statistic = "Average"
-                  )
-              ))
-          ),
-          dependencies = ClusterDependencies(
-              loadBalancerNames = setOf("keel-test-frontend"),
-              securityGroupNames = setOf(sg1West.name, sg2West.name)
+      capacity = Capacity(1, 6),
+      scaling = Scaling(
+        targetTrackingPolicies = setOf(TargetTrackingPolicy(
+          name = targetTrackingPolicyName,
+          targetValue = 560.0,
+          disableScaleIn = true,
+          customMetricSpec = CustomizedMetricSpecification(
+            name = "RPS per instance",
+            namespace = "SPIN/ACH",
+            statistic = "Average"
           )
+        ))
+      ),
+      dependencies = ClusterDependencies(
+        loadBalancerNames = setOf("keel-test-frontend"),
+        securityGroupNames = setOf(sg1West.name, sg2West.name)
       )
+    )
   )
 
   val serverGroups = spec.resolve()
@@ -171,21 +171,21 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val serverGroupWest = serverGroups.first { it.location.region == "us-west-2" }
 
   val resource = resource(
-      apiVersion = SPINNAKER_API_V1,
-      kind = "cluster",
-      spec = spec
+    apiVersion = SPINNAKER_API_V1,
+    kind = "cluster",
+    spec = spec
   )
 
   val activeServerGroupResponseEast = serverGroupEast.toCloudDriverResponse(vpcEast, listOf(subnet1East, subnet2East, subnet3East), listOf(sg1East, sg2East))
   val activeServerGroupResponseWest = serverGroupWest.toCloudDriverResponse(vpcWest, listOf(subnet1West, subnet2West, subnet3West), listOf(sg1West, sg2West))
 
   val exportable = Exportable(
-      cloudProvider = "aws",
-      account = spec.locations.account,
-      serviceAccount = "keel@spinnaker",
-      moniker = spec.moniker,
-      regions = spec.locations.regions.map { it.name }.toSet(),
-      kind = "cluster"
+    cloudProvider = "aws",
+    account = spec.locations.account,
+    serviceAccount = "keel@spinnaker",
+    moniker = spec.moniker,
+    regions = spec.locations.regions.map { it.name }.toSet(),
+    kind = "cluster"
   )
 
   private fun ServerGroup.toCloudDriverResponse(
@@ -193,92 +193,92 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     subnets: List<Subnet>,
     securityGroups: List<SecurityGroupSummary>
   ): ActiveServerGroup =
-      randomNumeric(3).padStart(3, '0').let { sequence ->
-        ActiveServerGroup(
-            "$name-v$sequence",
-            location.region,
-            location.availabilityZones,
-            ActiveServerGroupImage(
-                launchConfiguration.imageId,
-                launchConfiguration.appVersion,
-                launchConfiguration.baseImageVersion
+    randomNumeric(3).padStart(3, '0').let { sequence ->
+      ActiveServerGroup(
+        "$name-v$sequence",
+        location.region,
+        location.availabilityZones,
+        ActiveServerGroupImage(
+          launchConfiguration.imageId,
+          launchConfiguration.appVersion,
+          launchConfiguration.baseImageVersion
+        ),
+        LaunchConfig(
+          launchConfiguration.ramdiskId,
+          launchConfiguration.ebsOptimized,
+          launchConfiguration.imageId,
+          launchConfiguration.instanceType,
+          launchConfiguration.keyPair,
+          launchConfiguration.iamRole,
+          InstanceMonitoring(launchConfiguration.instanceMonitoring)
+        ),
+        AutoScalingGroup(
+          "$name-v$sequence",
+          health.cooldown.seconds,
+          health.healthCheckType.let(HealthCheckType::toString),
+          health.warmup.seconds,
+          scaling.suspendedProcesses.map { SuspendedProcess(it.name) }.toSet(),
+          health.enabledMetrics.map(Metric::toString).toSet(),
+          tags.map { Tag(it.key, it.value) }.toSet(),
+          health.terminationPolicies.map(TerminationPolicy::toString).toSet(),
+          subnets.map(Subnet::id).joinToString(",")
+        ),
+        listOf(ScalingPolicy(
+          autoScalingGroupName = "$name-v$sequence",
+          policyName = "$name-target-tracking-policy",
+          policyType = "TargetTrackingScaling",
+          estimatedInstanceWarmup = 300,
+          adjustmentType = null,
+          minAdjustmentStep = null,
+          minAdjustmentMagnitude = null,
+          stepAdjustments = null,
+          metricAggregationType = null,
+          targetTrackingConfiguration = TargetTrackingConfiguration(
+            560.0,
+            true,
+            CustomizedMetricSpecificationModel(
+              "RPS per instance",
+              "SPIN/ACH",
+              "Average",
+              null,
+              listOf(MetricDimensionModel("AutoScalingGroupName", "$name-v$sequence"))
             ),
-            LaunchConfig(
-                launchConfiguration.ramdiskId,
-                launchConfiguration.ebsOptimized,
-                launchConfiguration.imageId,
-                launchConfiguration.instanceType,
-                launchConfiguration.keyPair,
-                launchConfiguration.iamRole,
-                InstanceMonitoring(launchConfiguration.instanceMonitoring)
-            ),
-            AutoScalingGroup(
-                "$name-v$sequence",
-                health.cooldown.seconds,
-                health.healthCheckType.let(HealthCheckType::toString),
-                health.warmup.seconds,
-                scaling.suspendedProcesses.map { SuspendedProcess(it.name) }.toSet(),
-                health.enabledMetrics.map(Metric::toString).toSet(),
-                tags.map { Tag(it.key, it.value) }.toSet(),
-                health.terminationPolicies.map(TerminationPolicy::toString).toSet(),
-                subnets.map(Subnet::id).joinToString(",")
-            ),
-            listOf(ScalingPolicy(
-                autoScalingGroupName = "$name-v$sequence",
-                policyName = "$name-target-tracking-policy",
-                policyType = "TargetTrackingScaling",
-                estimatedInstanceWarmup = 300,
-                adjustmentType = null,
-                minAdjustmentStep = null,
-                minAdjustmentMagnitude = null,
-                stepAdjustments = null,
-                metricAggregationType = null,
-                targetTrackingConfiguration = TargetTrackingConfiguration(
-                    560.0,
-                    true,
-                    CustomizedMetricSpecificationModel(
-                        "RPS per instance",
-                        "SPIN/ACH",
-                        "Average",
-                        null,
-                        listOf(MetricDimensionModel("AutoScalingGroupName", "$name-v$sequence"))
-                    ),
-                    null
-                ),
-                alarms = listOf(ScalingPolicyAlarm(
-                    true,
-                    "GreaterThanThreshold",
-                    listOf(MetricDimensionModel("AutoScalingGroupName", "$name-v$sequence")),
-                    3,
-                    60,
-                    560,
-                    "RPS per instance",
-                    "SPIN/ACH",
-                    "Average"
-                ))
-            )),
-            vpc.id,
-            dependencies.targetGroups,
-            dependencies.loadBalancerNames,
-            capacity.let { Capacity(it.min, it.max, it.desired) },
-            CLOUD_PROVIDER,
-            securityGroups.map(SecurityGroupSummary::id).toSet(),
-            location.account,
-            parseMoniker("$name-v$sequence")
-        )
-      }
+            null
+          ),
+          alarms = listOf(ScalingPolicyAlarm(
+            true,
+            "GreaterThanThreshold",
+            listOf(MetricDimensionModel("AutoScalingGroupName", "$name-v$sequence")),
+            3,
+            60,
+            560,
+            "RPS per instance",
+            "SPIN/ACH",
+            "Average"
+          ))
+        )),
+        vpc.id,
+        dependencies.targetGroups,
+        dependencies.loadBalancerNames,
+        capacity.let { Capacity(it.min, it.max, it.desired) },
+        CLOUD_PROVIDER,
+        securityGroups.map(SecurityGroupSummary::id).toSet(),
+        location.account,
+        parseMoniker("$name-v$sequence")
+      )
+    }
 
   fun tests() = rootContext<ClusterHandler> {
     fixture {
       ClusterHandler(
-          cloudDriverService,
-          cloudDriverCache,
-          orcaService,
-          taskLauncher,
-          clock,
-          publisher,
-          objectMapper,
-          normalizers
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService,
+        taskLauncher,
+        clock,
+        publisher,
+        objectMapper,
+        normalizers
       )
     }
 
@@ -296,7 +296,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         every { securityGroupByName(vpcWest.account, vpcWest.region, sg1West.name) } returns sg1West
         every { securityGroupByName(vpcWest.account, vpcWest.region, sg2West.name) } returns sg2West
         every { availabilityZonesBy(vpcWest.account, vpcWest.id, subnet1West.purpose!!, vpcWest.region) } returns
-            setOf(subnet1West.availabilityZone)
+          setOf(subnet1West.availabilityZone)
 
         every { networkBy(vpcEast.id) } returns vpcEast
         every { subnetBy(subnet1East.id) } returns subnet1East
@@ -308,7 +308,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         every { securityGroupByName(vpcEast.account, vpcEast.region, sg1East.name) } returns sg1East
         every { securityGroupByName(vpcEast.account, vpcEast.region, sg2East.name) } returns sg2East
         every { availabilityZonesBy(vpcEast.account, vpcEast.id, subnet1East.purpose!!, vpcEast.region) } returns
-            setOf(subnet1East.availabilityZone)
+          setOf(subnet1East.availabilityZone)
       }
 
       coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${randomUUID()}")
@@ -331,20 +331,20 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           current(resource)
         }
         expectThat(current)
-            .hasSize(1)
-            .not()
-            .containsKey("us-west-2")
+          .hasSize(1)
+          .not()
+          .containsKey("us-west-2")
       }
 
       test("annealing a new cluster only uses a createServerGroup stage if it has no scaling policies") {
         runBlocking {
           upsert(
-              resource,
-              ResourceDiff(
-                  serverGroups.map {
-                    it.copy(scaling = Scaling(), capacity = Capacity(2, 2, 2))
-                  }.byRegion(),
-                  emptyMap()))
+            resource,
+            ResourceDiff(
+              serverGroups.map {
+                it.copy(scaling = Scaling(), capacity = Capacity(2, 2, 2))
+              }.byRegion(),
+              emptyMap()))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -373,8 +373,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           get("type").isEqualTo("upsertScalingPolicy")
           get("refId").isEqualTo("2")
           get("requisiteStageRefIds")
-              .isA<List<String>>()
-              .isEqualTo(listOf("1"))
+            .isA<List<String>>()
+            .isEqualTo(listOf("1"))
         }
       }
     }
@@ -399,11 +399,11 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
         test("the server group name is derived correctly") {
           expectThat(values)
-              .map { it.name }
-              .containsExactlyInAnyOrder(
-                  activeServerGroupResponseEast.name,
-                  activeServerGroupResponseWest.name
-              )
+            .map { it.name }
+            .containsExactlyInAnyOrder(
+              activeServerGroupResponseEast.name,
+              activeServerGroupResponseWest.name
+            )
         }
 
         test("an event is fired if all server groups have the same artifact version") {
@@ -420,20 +420,20 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
         test("has the expected basic properties") {
           expectThat(kind)
-              .isEqualTo("cluster")
+            .isEqualTo("cluster")
           expectThat(apiVersion)
-              .isEqualTo(SPINNAKER_EC2_API_V1)
+            .isEqualTo(SPINNAKER_EC2_API_V1)
           expectThat(spec.locations.regions)
-              .hasSize(2)
+            .hasSize(2)
           expectThat(spec.defaults.scaling!!.targetTrackingPolicies)
-              .hasSize(1)
+            .hasSize(1)
           expectThat(spec.overrides)
-              .hasSize(0)
+            .hasSize(0)
         }
 
         test("omits complex fields altogether when all their properties have default values") {
           expectThat(spec.defaults.health)
-              .isNull()
+            .isNull()
         }
       }
 
@@ -441,8 +441,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         before {
           coEvery { cloudDriverService.activeServerGroup("us-east-1") } returns activeServerGroupResponseEast
           coEvery { cloudDriverService.activeServerGroup("us-west-2") } returns activeServerGroupResponseWest
-              .withNonDefaultHealthProps()
-              .withNonDefaultLaunchConfigProps()
+            .withNonDefaultHealthProps()
+            .withNonDefaultLaunchConfigProps()
         }
 
         test("export omits properties with default values from complex fields") {
@@ -450,34 +450,34 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             export(exportable)
           }
           expectThat(exported.spec.locations.vpc)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.locations.subnet)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health)
-              .isNotNull()
+            .isNotNull()
           expectThat(exported.spec.defaults.health!!.cooldown)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health!!.warmup)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health!!.healthCheckType)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health!!.enabledMetrics)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health!!.cooldown)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.health!!.terminationPolicies)
-              .isEqualTo(setOf(TerminationPolicy.NewestInstance))
+            .isEqualTo(setOf(TerminationPolicy.NewestInstance))
 
           expectThat(exported.spec.defaults.launchConfiguration!!.ebsOptimized)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.launchConfiguration!!.instanceMonitoring)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.launchConfiguration!!.ramdiskId)
-              .isNull()
+            .isNull()
           expectThat(exported.spec.defaults.launchConfiguration!!.iamRole)
-              .isNotNull()
+            .isNotNull()
           expectThat(exported.spec.defaults.launchConfiguration!!.keyPair)
-              .isNotNull()
+            .isNotNull()
         }
       }
     }
@@ -528,12 +528,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       test("applying the diff creates a server group in the region with missing tag") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name).withMissingAppVersion()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withMissingAppVersion()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
         runBlocking {
           upsert(resource, diff)
@@ -552,12 +552,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     context("a diff has been detected") {
       context("the diff is only in capacity") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
 
         test("annealing resizes the current server group") {
@@ -571,13 +571,13 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("resizeServerGroup")
             get("capacity").isEqualTo(
-                spec.resolveCapacity("us-west-2").let {
-                  mapOf(
-                      "min" to it.min,
-                      "max" to it.max,
-                      "desired" to it.desired
-                  )
-                }
+              spec.resolveCapacity("us-west-2").let {
+                mapOf(
+                  "min" to it.min,
+                  "max" to it.max,
+                  "desired" to it.desired
+                )
+              }
             )
             get("serverGroupName").isEqualTo(activeServerGroupResponseWest.asg.autoScalingGroupName)
           }
@@ -586,12 +586,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       context("the diff is only in scaling policies missing from current") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
 
         test("annealing only upserts scaling policies on the current server group") {
@@ -607,36 +607,36 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("upsertScalingPolicy")
             get("targetTrackingConfiguration")
-                .isA<Map<String, Any?>>()
-                .get {
-                  expectThat(get("targetValue"))
-                      .isA<Double>()
-                      .isEqualTo(560.0)
-                  expectThat(get("disableScaleIn"))
-                      .isA<Boolean>()
-                      .isTrue()
-                  expectThat(get("customizedMetricSpecification"))
-                      .isA<CustomizedMetricSpecificationModel>()
-                      .isEqualTo(
-                          CustomizedMetricSpecificationModel(
-                              metricName = metricSpec.name,
-                              namespace = metricSpec.namespace,
-                              statistic = metricSpec.statistic
-                          )
-                      )
-                }
+              .isA<Map<String, Any?>>()
+              .get {
+                expectThat(get("targetValue"))
+                  .isA<Double>()
+                  .isEqualTo(560.0)
+                expectThat(get("disableScaleIn"))
+                  .isA<Boolean>()
+                  .isTrue()
+                expectThat(get("customizedMetricSpecification"))
+                  .isA<CustomizedMetricSpecificationModel>()
+                  .isEqualTo(
+                    CustomizedMetricSpecificationModel(
+                      metricName = metricSpec.name,
+                      namespace = metricSpec.namespace,
+                      statistic = metricSpec.statistic
+                    )
+                  )
+              }
           }
         }
       }
 
       context("the diff is only that deployed scaling policies are no longer desired") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
         )
         val diff = ResourceDiff(
-            modified.byRegion(),
-            serverGroups.byRegion()
+          modified.byRegion(),
+          serverGroups.byRegion()
         )
 
         test("annealing only deletes policies from the current server group") {
@@ -657,21 +657,21 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       context("only an existing scaling policy has been modified") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(
-                name = activeServerGroupResponseWest.name,
-                scaling = serverGroupWest.scaling.copy(
-                    targetTrackingPolicies = setOf(
-                        serverGroupWest.scaling.targetTrackingPolicies
-                            .first()
-                            .copy(targetValue = 42.0)
-                    )
-                )
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(
+            name = activeServerGroupResponseWest.name,
+            scaling = serverGroupWest.scaling.copy(
+              targetTrackingPolicies = setOf(
+                serverGroupWest.scaling.targetTrackingPolicies
+                  .first()
+                  .copy(targetValue = 42.0)
+              )
             )
+          )
         )
         val diff = ResourceDiff(
-            modified.byRegion(),
-            serverGroups.byRegion()
+          modified.byRegion(),
+          serverGroups.byRegion()
         )
 
         test("the modified policy is applied in two phases via one task") {
@@ -686,34 +686,34 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           expectThat(slot.captured.job.first()) {
             get("refId").isEqualTo("1")
             get("requisiteStageRefIds")
-                .isA<List<String>>()
-                .isEqualTo(emptyList())
+              .isA<List<String>>()
+              .isEqualTo(emptyList())
             get("type").isEqualTo("deleteScalingPolicy")
             get("policyName").isEqualTo(targetTrackingPolicyName)
           }
           expectThat(slot.captured.job[1]) {
             get("refId").isEqualTo("2")
             get("requisiteStageRefIds")
-                .isA<List<String>>()
-                .isEqualTo(listOf("1"))
+              .isA<List<String>>()
+              .isEqualTo(listOf("1"))
             get("type").isEqualTo("upsertScalingPolicy")
             get("targetTrackingConfiguration")
-                .isA<Map<String, Any?>>()["targetValue"]
-                .isEqualTo(42.0)
+              .isA<Map<String, Any?>>()["targetValue"]
+              .isEqualTo(42.0)
           }
         }
       }
 
       context("the diff is only in capacity and scaling policies") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name)
-                .withDoubleCapacity()
-                .withNoScalingPolicies()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name)
+            .withDoubleCapacity()
+            .withNoScalingPolicies()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
 
         test("annealing resizes and modifies scaling policies in-place on the current server group") {
@@ -733,22 +733,22 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             get("refId").isEqualTo("2")
             get("type").isEqualTo("upsertScalingPolicy")
             get("targetTrackingConfiguration")
-                .isA<Map<String, Any?>>()["targetValue"]
-                .isEqualTo(560.0)
+              .isA<Map<String, Any?>>()["targetValue"]
+              .isEqualTo(560.0)
           }
         }
       }
 
       context("the diff is something other than just capacity or scaling policies") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name)
-                .withDoubleCapacity()
-                .withDifferentInstanceType()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name)
+            .withDoubleCapacity()
+            .withDifferentInstanceType()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
 
         test("annealing clones the current server group") {
@@ -762,11 +762,11 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           expectThat(slot.captured.job.first()) {
             get("type").isEqualTo("createServerGroup")
             get("source").isEqualTo(
-                mapOf(
-                    "account" to activeServerGroupResponseWest.accountName,
-                    "region" to activeServerGroupResponseWest.region,
-                    "asgName" to activeServerGroupResponseWest.asg.autoScalingGroupName
-                )
+              mapOf(
+                "account" to activeServerGroupResponseWest.accountName,
+                "region" to activeServerGroupResponseWest.region,
+                "asgName" to activeServerGroupResponseWest.asg.autoScalingGroupName
+              )
             )
           }
         }
@@ -792,10 +792,10 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
         test("the deploy strategy is configured") {
           val deployWith = RedBlack(
-              resizePreviousToZero = true,
-              delayBeforeDisable = Duration.ofMinutes(1),
-              delayBeforeScaleDown = Duration.ofMinutes(5),
-              maxServerGroups = 3
+            resizePreviousToZero = true,
+            delayBeforeDisable = Duration.ofMinutes(1),
+            delayBeforeScaleDown = Duration.ofMinutes(5),
+            maxServerGroups = 3
           )
           runBlocking {
             upsert(resource.copy(spec = resource.spec.copy(deployWith = deployWith)), diff)
@@ -835,12 +835,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       context("multiple server groups have a diff") {
         val modified = setOf(
-            serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentInstanceType(),
-            serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentInstanceType(),
+          serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
         val diff = ResourceDiff(
-            serverGroups.byRegion(),
-            modified.byRegion()
+          serverGroups.byRegion(),
+          modified.byRegion()
         )
 
         before {
@@ -854,9 +854,9 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           coVerify { orcaService.orchestrate(any(), capture(tasks)) }
 
           expectThat(tasks)
-              .hasSize(2)
-              .map { it.job.first()["type"] }
-              .containsExactlyInAnyOrder("createServerGroup", "resizeServerGroup")
+            .hasSize(2)
+            .map { it.job.first()["type"] }
+            .containsExactlyInAnyOrder("createServerGroup", "resizeServerGroup")
         }
 
         test("each task has a distinct correlation id") {
@@ -864,92 +864,92 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           coVerify { orcaService.orchestrate(any(), capture(tasks)) }
 
           expectThat(tasks)
-              .hasSize(2)
-              .map { it.trigger.correlationId }
-              .containsDistinctElements()
+            .hasSize(2)
+            .map { it.trigger.correlationId }
+            .containsDistinctElements()
         }
       }
     }
   }
 
   private suspend fun CloudDriverService.activeServerGroup(region: String) = activeServerGroup(
-      serviceAccount = "keel@spinnaker",
-      app = spec.moniker.app,
-      account = spec.locations.account,
-      cluster = spec.moniker.name,
-      region = region,
-      cloudProvider = CLOUD_PROVIDER
+    serviceAccount = "keel@spinnaker",
+    app = spec.moniker.app,
+    account = spec.locations.account,
+    cluster = spec.moniker.name,
+    region = region,
+    cloudProvider = CLOUD_PROVIDER
   )
 }
 
 private fun <E, T : Iterable<E>> Assertion.Builder<T>.containsDistinctElements() =
-    assert("contains distinct elements") { subject ->
-      val duplicates = subject
-          .associateWith { elem -> subject.count { it == elem } }
-          .filterValues { it > 1 }
-          .keys
-      when (duplicates.size) {
-        0 -> pass()
-        1 -> fail(duplicates.first(), "The element %s occurs more than once")
-        else -> fail(duplicates, "The elements %s occur more than once")
-      }
+  assert("contains distinct elements") { subject ->
+    val duplicates = subject
+      .associateWith { elem -> subject.count { it == elem } }
+      .filterValues { it > 1 }
+      .keys
+    when (duplicates.size) {
+      0 -> pass()
+      1 -> fail(duplicates.first(), "The element %s occurs more than once")
+      else -> fail(duplicates, "The elements %s occur more than once")
     }
+  }
 
 private fun ServerGroup.withDoubleCapacity(): ServerGroup =
-    copy(
-        capacity = Capacity(
-            min = capacity.min * 2,
-            max = capacity.max * 2,
-            desired = when (capacity.desired) {
-              null -> null
-              else -> capacity.desired!! * 2
-            }
-        )
+  copy(
+    capacity = Capacity(
+      min = capacity.min * 2,
+      max = capacity.max * 2,
+      desired = when (capacity.desired) {
+        null -> null
+        else -> capacity.desired!! * 2
+      }
     )
+  )
 
 private fun ServerGroup.withNoScalingPolicies(): ServerGroup =
-    copy(scaling = Scaling(), capacity = capacity.copy(desired = capacity.max))
+  copy(scaling = Scaling(), capacity = capacity.copy(desired = capacity.max))
 
 private fun ServerGroup.withDifferentInstanceType(): ServerGroup =
-    copy(
-        launchConfiguration = launchConfiguration.copy(
-            instanceType = "r4.16xlarge"
-        )
+  copy(
+    launchConfiguration = launchConfiguration.copy(
+      instanceType = "r4.16xlarge"
     )
+  )
 
 private fun ServerGroup.withMissingAppVersion(): ServerGroup =
-    copy(
-        launchConfiguration = launchConfiguration.copy(
-            appVersion = null
-        )
+  copy(
+    launchConfiguration = launchConfiguration.copy(
+      appVersion = null
     )
+  )
 
 private fun ActiveServerGroup.withOlderAppVersion(): ActiveServerGroup =
-    copy(
-        image = image.copy(
-            imageId = "ami-573e1b2650a5",
-            appVersion = "keel-0.251.0-h167.9ea0465"
-        ),
-        launchConfig = launchConfig.copy(
-            imageId = "ami-573e1b2650a5"
-        )
+  copy(
+    image = image.copy(
+      imageId = "ami-573e1b2650a5",
+      appVersion = "keel-0.251.0-h167.9ea0465"
+    ),
+    launchConfig = launchConfig.copy(
+      imageId = "ami-573e1b2650a5"
     )
+  )
 
 private fun ActiveServerGroup.withNonDefaultHealthProps(): ActiveServerGroup =
-    copy(
-        asg = asg.copy(terminationPolicies = setOf(TerminationPolicy.NewestInstance.name)
-        )
+  copy(
+    asg = asg.copy(terminationPolicies = setOf(TerminationPolicy.NewestInstance.name)
     )
+  )
 
 private fun ActiveServerGroup.withNonDefaultLaunchConfigProps(): ActiveServerGroup =
-    copy(
-        launchConfig = launchConfig.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
-    )
+  copy(
+    launchConfig = launchConfig.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
+  )
 
 private fun ActiveServerGroup.withMissingAppVersion(): ActiveServerGroup =
-    copy(
-        image = ActiveServerGroupImage(
-            imageId = "ami-573e1b2650a5",
-            tags = emptyList()
-        )
+  copy(
+    image = ActiveServerGroupImage(
+      imageId = "ami-573e1b2650a5",
+      tags = emptyList()
     )
+  )

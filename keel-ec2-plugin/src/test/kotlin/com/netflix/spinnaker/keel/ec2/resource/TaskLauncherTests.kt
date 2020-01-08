@@ -68,9 +68,9 @@ class TaskLauncherTests : JUnit5Minutests {
       before {
         val notification = NotificationConfig(SLACK, "#my-channel", QUIET)
         val env = Environment(
-            name = "test",
-            resources = setOf(resource),
-            notifications = setOf(notification)
+          name = "test",
+          resources = setOf(resource),
+          notifications = setOf(notification)
         )
         val deliveryConfig = DeliveryConfig(name = "keel", application = "keel", environments = setOf(env))
         deliveryConfigRepository.store(deliveryConfig)
@@ -86,7 +86,7 @@ class TaskLauncherTests : JUnit5Minutests {
           hasSize(1)
           first().get { `when` }.isEqualTo(listOf(ORCHESTRATION_FAILED.text()))
           first().get { message }.isEqualTo(
-              mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
+            mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
           )
         }
       }

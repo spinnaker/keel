@@ -24,8 +24,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
-    classes = [KeelApplication::class, MockEurekaConfiguration::class],
-    webEnvironment = MOCK
+  classes = [KeelApplication::class, MockEurekaConfiguration::class],
+  webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class ApplicationControllerTests {
@@ -50,31 +50,31 @@ internal class ApplicationControllerTests {
     resourceRepository.appendHistory(ResourceCreated(res))
 
     var request = get("/application/${res.application}")
-        .accept(MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON_VALUE)
     mvc
-        .perform(request)
-        .andExpect(status().isOk)
-        .andExpect(content().json(
-            """
+      .perform(request)
+      .andExpect(status().isOk)
+      .andExpect(content().json(
+        """
           {
             "hasManagedResources":true
           }
         """.trimIndent()
-        ))
+      ))
 
     request = get("/application/${res.application}?includeDetails=true")
-        .accept(MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON_VALUE)
     mvc
-        .perform(request)
-        .andExpect(status().isOk)
-        .andExpect(content().json(
-            """
+      .perform(request)
+      .andExpect(status().isOk)
+      .andExpect(content().json(
+        """
           |{
           |"hasManagedResources":true,
           |"resources":[{"id":"${res.id}","kind":"${res.kind}","status":"CREATED"}],
           |"currentEnvironmentConstraints":[]
           |}
         """.trimMargin()
-        ))
+      ))
   }
 }

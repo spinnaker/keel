@@ -32,8 +32,8 @@ import strikt.assertions.isNotNull
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
-    classes = [KeelApplication::class, MockEurekaConfiguration::class, DummyResourceConfiguration::class],
-    webEnvironment = MOCK
+  classes = [KeelApplication::class, MockEurekaConfiguration::class, DummyResourceConfiguration::class],
+  webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class ResourceControllerTests {
@@ -64,10 +64,10 @@ internal class ResourceControllerTests {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns false
 
     val request = post("/resources/diff")
-        .accept(APPLICATION_JSON)
-        .contentType(APPLICATION_JSON)
-        .content(
-            """{
+      .accept(APPLICATION_JSON)
+      .contentType(APPLICATION_JSON)
+      .content(
+        """{
           |  "apiVersion": "test.spinnaker.netflix.com/v1",
           |  "kind": "whatever",
           |  "metadata": {
@@ -77,32 +77,32 @@ internal class ResourceControllerTests {
           |    "data": "o hai"
           |  }
           |}"""
-                .trimMargin()
-        )
+          .trimMargin()
+      )
     mvc
-        .perform(request)
-        .andExpect(status().isForbidden)
+      .perform(request)
+      .andExpect(status().isForbidden)
   }
 
   @Test
   fun `an invalid request body results in an HTTP 400`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
     val request = post("/resources/diff")
-        .accept(APPLICATION_YAML)
-        .contentType(APPLICATION_YAML)
-        .content(
-            """---
+      .accept(APPLICATION_YAML)
+      .contentType(APPLICATION_YAML)
+      .content(
+        """---
           |apiVersion: test.spinnaker.netflix.com/v1
           |kind: whatever
           |metadata:
           |  name: i-forgot-my-service-account
           |spec:
           |  data: o hai"""
-                .trimMargin()
-        )
+          .trimMargin()
+      )
     mvc
-        .perform(request)
-        .andExpect(status().isBadRequest)
+      .perform(request)
+      .andExpect(status().isBadRequest)
   }
 
   @Test
@@ -110,25 +110,25 @@ internal class ResourceControllerTests {
     resourceRepository.store(resource)
 
     val request = get("/resources/${resource.id}")
-        .accept(APPLICATION_YAML)
+      .accept(APPLICATION_YAML)
     val result = mvc
-        .perform(request)
-        .andExpect(status().isOk)
-        .andReturn()
+      .perform(request)
+      .andExpect(status().isOk)
+      .andReturn()
     expectThat(result.response)
-        .contentType
-        .isNotNull()
-        .isCompatibleWith(APPLICATION_YAML)
+      .contentType
+      .isNotNull()
+      .isCompatibleWith(APPLICATION_YAML)
   }
 
   @Test
   fun `unknown resource name results in a 404`() {
     every { authorizationSupport.userCanModifySpec("keel@spinnaker", any()) } returns true
     val request = get("/resources/i-do-not-exist")
-        .accept(APPLICATION_YAML)
+      .accept(APPLICATION_YAML)
     mvc
-        .perform(request)
-        .andExpect(status().isNotFound)
+      .perform(request)
+      .andExpect(status().isNotFound)
   }
 }
 
@@ -137,6 +137,6 @@ private val Assertion.Builder<MockHttpServletResponse>.contentType: Describeable
 
 @Suppress("UNCHECKED_CAST")
 private fun <T : MediaType?> Assertion.Builder<T>.isCompatibleWith(expected: MediaType): Assertion.Builder<MediaType> =
-    assertThat("is compatible with $expected") {
-      it?.isCompatibleWith(expected) ?: false
-    } as Assertion.Builder<MediaType>
+  assertThat("is compatible with $expected") {
+    it?.isCompatibleWith(expected) ?: false
+  } as Assertion.Builder<MediaType>

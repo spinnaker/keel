@@ -68,15 +68,15 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
     every { environmentFor(any()) } returns Environment("test")
   }
   private val taskLauncher = TaskLauncher(
-      orcaService,
-      deliveryConfigRepository
+    orcaService,
+    deliveryConfigRepository
   )
   private val mapper = ObjectMapper().registerKotlinModule()
   private val yamlMapper = configuredYamlMapper()
 
   private val normalizers: List<Resolver<*>> = listOf(
-      ClassicLoadBalancerSecurityGroupsResolver(),
-      ClassicLoadBalancerNetworkResolver(cloudDriverCache))
+    ClassicLoadBalancerSecurityGroupsResolver(),
+    ClassicLoadBalancerNetworkResolver(cloudDriverCache))
 
   private val yaml = """
     |---
@@ -104,9 +104,9 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val spec = yamlMapper.readValue(yaml, ClassicLoadBalancerSpec::class.java)
   private val resource = resource(
-      apiVersion = SPINNAKER_EC2_API_V1,
-      kind = "classic-load-balancer",
-      spec = spec
+    apiVersion = SPINNAKER_EC2_API_V1,
+    kind = "classic-load-balancer",
+    spec = spec
   )
 
   private val vpc = Network(CLOUD_PROVIDER, "vpc-23144", "vpc0", "test", "us-east-1")
@@ -119,43 +119,43 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
   private val listener = spec.listeners.first()
 
   private val model = ClassicLoadBalancerModel(
-      loadBalancerName = spec.moniker.name,
-      availabilityZones = spec.locations.regions.first().availabilityZones,
-      vpcId = vpc.id,
-      subnets = setOf(sub1.id, sub2.id),
-      scheme = "internal",
-      securityGroups = setOf(sg1.id),
-      listenerDescriptions = listOf(
-          ClassicLoadBalancerListenerDescription(
-              ClassicLoadBalancerListener(
-                  protocol = listener.externalProtocol,
-                  loadBalancerPort = listener.externalPort,
-                  instanceProtocol = listener.internalProtocol,
-                  instancePort = listener.internalPort,
-                  sslcertificateId = null
-              )
-          )
-      ),
-      healthCheck = ClassicLoadBalancerHealthCheck(
-          target = spec.healthCheck.target,
-          interval = 10,
-          timeout = 5,
-          healthyThreshold = 5,
-          unhealthyThreshold = 2
-      ),
-      idleTimeout = 60,
-      moniker = null
+    loadBalancerName = spec.moniker.name,
+    availabilityZones = spec.locations.regions.first().availabilityZones,
+    vpcId = vpc.id,
+    subnets = setOf(sub1.id, sub2.id),
+    scheme = "internal",
+    securityGroups = setOf(sg1.id),
+    listenerDescriptions = listOf(
+      ClassicLoadBalancerListenerDescription(
+        ClassicLoadBalancerListener(
+          protocol = listener.externalProtocol,
+          loadBalancerPort = listener.externalPort,
+          instanceProtocol = listener.internalProtocol,
+          instancePort = listener.internalPort,
+          sslcertificateId = null
+        )
+      )
+    ),
+    healthCheck = ClassicLoadBalancerHealthCheck(
+      target = spec.healthCheck.target,
+      interval = 10,
+      timeout = 5,
+      healthyThreshold = 5,
+      unhealthyThreshold = 2
+    ),
+    idleTimeout = 60,
+    moniker = null
   )
 
   fun tests() = rootContext<ClassicLoadBalancerHandler> {
     fixture {
       ClassicLoadBalancerHandler(
-          cloudDriverService,
-          cloudDriverCache,
-          orcaService,
-          taskLauncher,
-          mapper,
-          normalizers
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService,
+        taskLauncher,
+        mapper,
+        normalizers
       )
     }
 
@@ -255,15 +255,15 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         }
 
         expectThat(diff.diff)
-            .and {
-              childCount().isEqualTo(1)
-              getChild(MapKeyElementSelector("us-east-1"), BeanPropertyElementSelector("dependencies"), BeanPropertyElementSelector("securityGroupNames"))
-                  .isNotNull()
-                  .and {
-                    state.isEqualTo(CHANGED)
-                    getChild(CollectionItemElementSelector("testapp-elb")).isNotNull().state.isEqualTo(REMOVED)
-                  }
-            }
+          .and {
+            childCount().isEqualTo(1)
+            getChild(MapKeyElementSelector("us-east-1"), BeanPropertyElementSelector("dependencies"), BeanPropertyElementSelector("securityGroupNames"))
+              .isNotNull()
+              .and {
+                state.isEqualTo(CHANGED)
+                getChild(CollectionItemElementSelector("testapp-elb")).isNotNull().state.isEqualTo(REMOVED)
+              }
+          }
 
         runBlocking {
           upsert(newResource, diff)
@@ -275,28 +275,28 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
       test("export generates a valid spec for the deployed CLB") {
         val exportable = Exportable(
-            cloudProvider = "aws",
-            account = "test",
-            serviceAccount = "keel@spin.spin.spin",
-            moniker = parseMoniker("testapp-managedogge-wow"),
-            regions = setOf("us-east-1"),
-            kind = supportedKind.kind
+          cloudProvider = "aws",
+          account = "test",
+          serviceAccount = "keel@spin.spin.spin",
+          moniker = parseMoniker("testapp-managedogge-wow"),
+          regions = setOf("us-east-1"),
+          kind = supportedKind.kind
         )
         val export = runBlocking {
           export(exportable)
         }
         expectThat(export.kind)
-            .isEqualTo("classic-load-balancer")
+          .isEqualTo("classic-load-balancer")
 
         runBlocking {
           // Export differs from the model prior to the application of resolvers
           val unresolvedDiff = ResourceDiff(resource, resource.copy(spec = export.spec))
           expectThat(unresolvedDiff.hasChanges())
-              .isTrue()
+            .isTrue()
           // But diffs cleanly after resolvers are applied
           val resolvedDiff = ResourceDiff(desired(resource), desired(normalize(export)))
           expectThat(resolvedDiff.hasChanges())
-              .isFalse()
+            .isFalse()
         }
       }
     }
@@ -304,17 +304,17 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 }
 
 fun Assertion.Builder<DiffNode>.childCount(): Assertion.Builder<Int> =
-    get("child count") { childCount() }
+  get("child count") { childCount() }
 
 fun Assertion.Builder<DiffNode>.getChild(propertyName: String): Assertion.Builder<DiffNode?> =
-    get("child node with property name $propertyName") {
-      getChild(propertyName)
-    }
+  get("child node with property name $propertyName") {
+    getChild(propertyName)
+  }
 
 fun Assertion.Builder<DiffNode>.getChild(vararg selectors: ElementSelector): Assertion.Builder<DiffNode?> =
-    get("child node with path $path") {
-      getChild(selectors.toList())
-    }
+  get("child node with path $path") {
+    getChild(selectors.toList())
+  }
 
 val Assertion.Builder<DiffNode>.path: Assertion.Builder<NodePath>
   get() = get("path") { path }

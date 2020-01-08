@@ -62,88 +62,88 @@ internal class ImageResolverTests : JUnit5Minutests {
     val artifactRepository = InMemoryArtifactRepository()
     val imageService = mockk<ImageService>()
     private val subject = ImageResolver(
-        dynamicConfigService,
-        deliveryConfigRepository,
-        artifactRepository,
-        imageService
+      dynamicConfigService,
+      deliveryConfigRepository,
+      artifactRepository,
+      imageService
     )
     val images = listOf(
-        NamedImage(
-            imageName = "fnord-$version1",
-            attributes = mapOf(
-                "creationDate" to "2019-07-28T13:01:00.000Z"
-            ),
-            tagsByImageId = mapOf(
-                "ami-1" to mapOf("appversion" to "fnord-$version1", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-            ),
-            accounts = setOf(account),
-            amis = mapOf(
-                imageRegion to listOf("ami-1")
-            )
+      NamedImage(
+        imageName = "fnord-$version1",
+        attributes = mapOf(
+          "creationDate" to "2019-07-28T13:01:00.000Z"
         ),
-        NamedImage(
-            imageName = "fnord-$version2",
-            attributes = mapOf(
-                "creationDate" to "2019-07-29T13:01:00.000Z"
-            ),
-            tagsByImageId = mapOf(
-                "ami-2" to mapOf("appversion" to "fnord-$version2", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-            ),
-            accounts = setOf(account),
-            amis = mapOf(
-                imageRegion to listOf("ami-2")
-            )
+        tagsByImageId = mapOf(
+          "ami-1" to mapOf("appversion" to "fnord-$version1", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
         ),
-        NamedImage(
-            imageName = "fnord-$version3",
-            attributes = mapOf(
-                "creationDate" to "2019-07-30T13:01:00.000Z"
-            ),
-            tagsByImageId = mapOf(
-                "ami-3" to mapOf("appversion" to "fnord-$version3", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-            ),
-            accounts = setOf(account),
-            amis = mapOf(
-                imageRegion to listOf("ami-3")
-            )
+        accounts = setOf(account),
+        amis = mapOf(
+          imageRegion to listOf("ami-1")
         )
+      ),
+      NamedImage(
+        imageName = "fnord-$version2",
+        attributes = mapOf(
+          "creationDate" to "2019-07-29T13:01:00.000Z"
+        ),
+        tagsByImageId = mapOf(
+          "ami-2" to mapOf("appversion" to "fnord-$version2", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+        ),
+        accounts = setOf(account),
+        amis = mapOf(
+          imageRegion to listOf("ami-2")
+        )
+      ),
+      NamedImage(
+        imageName = "fnord-$version3",
+        attributes = mapOf(
+          "creationDate" to "2019-07-30T13:01:00.000Z"
+        ),
+        tagsByImageId = mapOf(
+          "ami-3" to mapOf("appversion" to "fnord-$version3", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+        ),
+        accounts = setOf(account),
+        amis = mapOf(
+          imageRegion to listOf("ami-3")
+        )
+      )
     )
 
     val resource = resource(
-        apiVersion = SPINNAKER_EC2_API_V1,
-        kind = "cluster",
-        spec = ClusterSpec(
-            moniker = Moniker("fnord"),
-            imageProvider = imageProvider,
-            locations = SubnetAwareLocations(
-                account = account,
-                vpc = "vpc0",
-                subnet = "internal (vpc0)",
-                regions = setOf(
-                    SubnetAwareRegionSpec(
-                        name = resourceRegion,
-                        availabilityZones = setOf()
-                    )
-                )
-            ),
-            _defaults = ServerGroupSpec(
-                launchConfiguration = LaunchConfigurationSpec(
-                    instanceType = "m5.large",
-                    ebsOptimized = true,
-                    iamRole = "fnordIamRole",
-                    keyPair = "fnordKeyPair"
-                )
+      apiVersion = SPINNAKER_EC2_API_V1,
+      kind = "cluster",
+      spec = ClusterSpec(
+        moniker = Moniker("fnord"),
+        imageProvider = imageProvider,
+        locations = SubnetAwareLocations(
+          account = account,
+          vpc = "vpc0",
+          subnet = "internal (vpc0)",
+          regions = setOf(
+            SubnetAwareRegionSpec(
+              name = resourceRegion,
+              availabilityZones = setOf()
             )
+          )
+        ),
+        _defaults = ServerGroupSpec(
+          launchConfiguration = LaunchConfigurationSpec(
+            instanceType = "m5.large",
+            ebsOptimized = true,
+            iamRole = "fnordIamRole",
+            keyPair = "fnordKeyPair"
+          )
         )
+      )
     )
 
     val deliveryConfig = DeliveryConfig(
-        "my-manifest",
-        "fnord",
-        setOf(artifact),
-        setOf(
-            Environment(name = "test", resources = setOf(resource))
-        )
+      "my-manifest",
+      "fnord",
+      setOf(artifact),
+      setOf(
+        Environment(name = "test", resources = setOf(resource))
+      )
     )
 
     fun resolve(): Resource<ClusterSpec> = runBlocking {
@@ -157,7 +157,7 @@ internal class ImageResolverTests : JUnit5Minutests {
 
       test("returns the original spec unchanged") {
         expectThat(resolve())
-            .propertiesAreEqualTo(resource)
+          .propertiesAreEqualTo(resource)
       }
     }
 
@@ -165,7 +165,7 @@ internal class ImageResolverTests : JUnit5Minutests {
       val artifact = DebianArtifact(name = "fnord", deliveryConfigName = "my-manifest", statuses = listOf(RELEASE))
       fixture {
         Fixture(
-            ArtifactImageProvider(artifact, listOf(RELEASE))
+          ArtifactImageProvider(artifact, listOf(RELEASE))
         )
       }
 
@@ -197,11 +197,11 @@ internal class ImageResolverTests : JUnit5Minutests {
           test("returns the image id of the approved version") {
             val resolved = resolve()
             expectThat(resolved.spec.overrides[imageRegion]?.launchConfiguration?.image)
-                .isNotNull()
-                .and {
-                  get { appVersion }.isEqualTo("fnord-$version2")
-                  get { id }.isEqualTo("ami-2") // TODO: false moniker
-                }
+              .isNotNull()
+              .and {
+                get { appVersion }.isEqualTo("fnord-$version2")
+                get { id }.isEqualTo("ami-2") // TODO: false moniker
+              }
           }
         }
 
@@ -212,8 +212,8 @@ internal class ImageResolverTests : JUnit5Minutests {
           }
           test("throws an exception") {
             expectCatching { resolve() }
-                .failed()
-                .isA<NoImageSatisfiesConstraints>()
+              .failed()
+              .isA<NoImageSatisfiesConstraints>()
           }
         }
 
@@ -225,8 +225,8 @@ internal class ImageResolverTests : JUnit5Minutests {
           }
           test("throws an exception") {
             expectCatching { resolve() }
-                .failed()
-                .isA<NoImageSatisfiesConstraints>()
+              .failed()
+              .isA<NoImageSatisfiesConstraints>()
           }
         }
 
@@ -246,8 +246,8 @@ internal class ImageResolverTests : JUnit5Minutests {
 
           test("throws an exception") {
             expectCatching { resolve() }
-                .failed()
-                .isA<NoImageFoundForRegions>()
+              .failed()
+              .isA<NoImageFoundForRegions>()
           }
         }
 
@@ -282,8 +282,8 @@ internal class ImageResolverTests : JUnit5Minutests {
 
           test("throws an exception") {
             expectCatching { resolve() }
-                .failed()
-                .isA<NoImageFoundForRegions>()
+              .failed()
+              .isA<NoImageFoundForRegions>()
           }
         }
       }

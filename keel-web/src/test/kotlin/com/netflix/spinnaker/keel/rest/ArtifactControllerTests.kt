@@ -21,8 +21,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
-    classes = [KeelApplication::class, MockEurekaConfiguration::class],
-    webEnvironment = MOCK
+  classes = [KeelApplication::class, MockEurekaConfiguration::class],
+  webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class ArtifactControllerTests {
@@ -48,28 +48,28 @@ internal class ArtifactControllerTests {
     }
 
     val request = get("/artifacts/${artifact.name}/${artifact.type}")
-        .accept(APPLICATION_YAML)
+      .accept(APPLICATION_YAML)
     mvc
-        .perform(request)
-        .andExpect(status().isOk)
-        .andExpect(content().string(
-            """---
+      .perform(request)
+      .andExpect(status().isOk)
+      .andExpect(content().string(
+        """---
           |- "fnord-2.1.0-18ed1dc"
           |- "fnord-2.0.0-608bd90"
           |- "fnord-1.0.0-41595c4"
         """.trimMargin()
-        ))
+      ))
   }
 
   @Test
   fun `versions empty for an artifact we're not tracking`() {
     val request = get("/artifacts/unregistered/DEB")
-        .accept(APPLICATION_YAML)
+      .accept(APPLICATION_YAML)
     mvc
-        .perform(request)
-        .andExpect(status().isOk)
-        .andExpect(content().string(
-            """--- []""".trimMargin()
-        ))
+      .perform(request)
+      .andExpect(status().isOk)
+      .andExpect(content().string(
+        """--- []""".trimMargin()
+      ))
   }
 }
