@@ -89,7 +89,7 @@ class ArtifactListener(
    * For each registered debian artifact, get the last version, and persist if it's newer than what we have.
    */
   // todo eb: should we fetch more than one version?
-  @Scheduled(initialDelay = 60000, fixedDelayString = "\${keel.artifact-refresh.frequency:PT6H}")
+  @Scheduled(fixedDelayString = "\${keel.artifact-refresh.frequency:PT6H}")
   fun syncArtifactVersions() =
     runBlocking {
       artifactRepository.getAll().forEach { artifact ->

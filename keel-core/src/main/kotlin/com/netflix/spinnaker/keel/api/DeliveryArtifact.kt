@@ -1,5 +1,8 @@
 package com.netflix.spinnaker.keel.api
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonProperty.Access
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -42,7 +45,7 @@ interface DeliveryArtifact {
 @JsonTypeName("deb")
 data class DebianArtifact(
   override val name: String,
-  override val deliveryConfigName: String? = null,
+  @JsonProperty(access = Access.WRITE_ONLY) override val deliveryConfigName: String? = null,
   override val reference: String = name,
   val statuses: List<ArtifactStatus> = emptyList(),
   override val versioningStrategy: VersioningStrategy = DebianSemVerVersioningStrategy
@@ -53,16 +56,17 @@ data class DebianArtifact(
 @JsonTypeName("docker")
 data class DockerArtifact(
   override val name: String,
-  override val deliveryConfigName: String? = null,
+  @JsonProperty(access = Access.WRITE_ONLY) override val deliveryConfigName: String? = null,
   override val reference: String = name,
   val tagVersionStrategy: TagVersionStrategy = SEMVER_TAG,
   val captureGroupRegex: String? = null,
-  override val versioningStrategy: VersioningStrategy = DockerVersioningStrategy(tagVersionStrategy, captureGroupRegex)
+  @JsonProperty(access = Access.WRITE_ONLY) override val versioningStrategy: VersioningStrategy = DockerVersioningStrategy(tagVersionStrategy, captureGroupRegex)
 ) : DeliveryArtifact {
   override val type = DOCKER
 
   val organization
-    get() = name.split("/").first()
+    @JsonIgnore get() = name.split("/").first()
+
   val image
-    get() = name.split("/").last()
+    @JsonIgnore get() = name.split("/").last()
 }

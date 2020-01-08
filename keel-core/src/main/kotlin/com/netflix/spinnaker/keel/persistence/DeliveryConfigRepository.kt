@@ -23,15 +23,11 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
 
   /**
    * Retrieve the [Environment] a resource belongs to, by the resource [id].
-   *
-   * @return An [Environment] or `null` if the resource is not managed via an [Environment]
    */
   fun environmentFor(resourceId: ResourceId): Environment
 
   /**
    * Retrieve the [DeliveryConfig] a resource belongs to (the parent of its environment).
-   *
-   * @return A [DeliveryConfig] or `null` if the resource is not managed via a [DeliveryConfig].]
    */
   fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig
 
