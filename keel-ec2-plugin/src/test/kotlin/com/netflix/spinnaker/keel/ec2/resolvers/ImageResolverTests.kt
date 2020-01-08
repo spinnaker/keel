@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.ec2.resolvers
 
 import com.netflix.frigga.ami.AppVersion
-import com.netflix.spinnaker.keel.api.ArtifactStatus.FINAL
+import com.netflix.spinnaker.keel.api.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
@@ -47,6 +47,7 @@ internal class ImageResolverTests : JUnit5Minutests {
     val imageRegion: String = "ap-south-1",
     val resourceRegion: String = imageRegion
   ) {
+    val artifact = DebianArtifact(name = "fnord", deliveryConfigName = "my-manifest", statuses = listOf(RELEASE))
     private val account = "test"
     val version1 = "1.0.0-123456"
     val version2 = "1.1.0-123456"
@@ -61,90 +62,88 @@ internal class ImageResolverTests : JUnit5Minutests {
     val artifactRepository = InMemoryArtifactRepository()
     val imageService = mockk<ImageService>()
     private val subject = ImageResolver(
-      dynamicConfigService,
-      deliveryConfigRepository,
-      artifactRepository,
-      imageService
+        dynamicConfigService,
+        deliveryConfigRepository,
+        artifactRepository,
+        imageService
     )
     val images = listOf(
-      NamedImage(
-        imageName = "fnord-$version1",
-        attributes = mapOf(
-          "creationDate" to "2019-07-28T13:01:00.000Z"
+        NamedImage(
+            imageName = "fnord-$version1",
+            attributes = mapOf(
+                "creationDate" to "2019-07-28T13:01:00.000Z"
+            ),
+            tagsByImageId = mapOf(
+                "ami-1" to mapOf("appversion" to "fnord-$version1", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+            ),
+            accounts = setOf(account),
+            amis = mapOf(
+                imageRegion to listOf("ami-1")
+            )
         ),
-        tagsByImageId = mapOf(
-          "ami-1" to mapOf("appversion" to "fnord-$version1", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+        NamedImage(
+            imageName = "fnord-$version2",
+            attributes = mapOf(
+                "creationDate" to "2019-07-29T13:01:00.000Z"
+            ),
+            tagsByImageId = mapOf(
+                "ami-2" to mapOf("appversion" to "fnord-$version2", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+            ),
+            accounts = setOf(account),
+            amis = mapOf(
+                imageRegion to listOf("ami-2")
+            )
         ),
-        accounts = setOf(account),
-        amis = mapOf(
-          imageRegion to listOf("ami-1")
+        NamedImage(
+            imageName = "fnord-$version3",
+            attributes = mapOf(
+                "creationDate" to "2019-07-30T13:01:00.000Z"
+            ),
+            tagsByImageId = mapOf(
+                "ami-3" to mapOf("appversion" to "fnord-$version3", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
+            ),
+            accounts = setOf(account),
+            amis = mapOf(
+                imageRegion to listOf("ami-3")
+            )
         )
-      ),
-      NamedImage(
-        imageName = "fnord-$version2",
-        attributes = mapOf(
-          "creationDate" to "2019-07-29T13:01:00.000Z"
-        ),
-        tagsByImageId = mapOf(
-          "ami-2" to mapOf("appversion" to "fnord-$version2", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-        ),
-        accounts = setOf(account),
-        amis = mapOf(
-          imageRegion to listOf("ami-2")
-        )
-      ),
-      NamedImage(
-        imageName = "fnord-$version3",
-        attributes = mapOf(
-          "creationDate" to "2019-07-30T13:01:00.000Z"
-        ),
-        tagsByImageId = mapOf(
-          "ami-3" to mapOf("appversion" to "fnord-$version3", "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-        ),
-        accounts = setOf(account),
-        amis = mapOf(
-          imageRegion to listOf("ami-3")
-        )
-      )
     )
 
-    val artifact = DebianArtifact("fnord")
-
     val resource = resource(
-      apiVersion = SPINNAKER_EC2_API_V1,
-      kind = "cluster",
-      spec = ClusterSpec(
-        moniker = Moniker("fnord"),
-        imageProvider = imageProvider,
-        locations = SubnetAwareLocations(
-          account = account,
-          vpc = "vpc0",
-          subnet = "internal (vpc0)",
-          regions = setOf(
-            SubnetAwareRegionSpec(
-              name = resourceRegion,
-              availabilityZones = setOf()
+        apiVersion = SPINNAKER_EC2_API_V1,
+        kind = "cluster",
+        spec = ClusterSpec(
+            moniker = Moniker("fnord"),
+            imageProvider = imageProvider,
+            locations = SubnetAwareLocations(
+                account = account,
+                vpc = "vpc0",
+                subnet = "internal (vpc0)",
+                regions = setOf(
+                    SubnetAwareRegionSpec(
+                        name = resourceRegion,
+                        availabilityZones = setOf()
+                    )
+                )
+            ),
+            _defaults = ServerGroupSpec(
+                launchConfiguration = LaunchConfigurationSpec(
+                    instanceType = "m5.large",
+                    ebsOptimized = true,
+                    iamRole = "fnordIamRole",
+                    keyPair = "fnordKeyPair"
+                )
             )
-          )
-        ),
-        _defaults = ServerGroupSpec(
-          launchConfiguration = LaunchConfigurationSpec(
-            instanceType = "m5.large",
-            ebsOptimized = true,
-            iamRole = "fnordIamRole",
-            keyPair = "fnordKeyPair"
-          )
         )
-      )
     )
 
     val deliveryConfig = DeliveryConfig(
-      "my-manifest",
-      "fnord",
-      setOf(artifact),
-      setOf(
-        Environment(name = "test", resources = setOf(resource))
-      )
+        "my-manifest",
+        "fnord",
+        setOf(artifact),
+        setOf(
+            Environment(name = "test", resources = setOf(resource))
+        )
     )
 
     fun resolve(): Resource<ClusterSpec> = runBlocking {
@@ -158,36 +157,16 @@ internal class ImageResolverTests : JUnit5Minutests {
 
       test("returns the original spec unchanged") {
         expectThat(resolve())
-          .propertiesAreEqualTo(resource)
+            .propertiesAreEqualTo(resource)
       }
     }
 
     derivedContext<Fixture<ArtifactImageProvider>>("an image derived from an artifact") {
+      val artifact = DebianArtifact(name = "fnord", deliveryConfigName = "my-manifest", statuses = listOf(RELEASE))
       fixture {
         Fixture(
-          ArtifactImageProvider(DebianArtifact("fnord"), listOf(FINAL))
+            ArtifactImageProvider(artifact, listOf(RELEASE))
         )
-      }
-
-      context("the resource is not in an environment") {
-        before {
-          coEvery {
-            imageService.getLatestNamedImageWithAllRegions(artifact.name, any(), listOf(resourceRegion))
-          } answers {
-            images.lastOrNull { it.appVersion.startsWith(firstArg<String>()) }
-          }
-        }
-
-        test("returns the most recent version of the artifact") {
-          val resolved = resolve()
-          expectThat(resolved.spec.overrides[imageRegion]?.launchConfiguration?.image)
-            .isNotNull()
-            .and {
-              get { baseImageVersion }.isEqualTo("nflx-base-5.464.0-h1473.31178a8")
-              get { appVersion }.isEqualTo("fnord-$version3")
-              get { id }.isEqualTo("ami-3")
-            }
-        }
       }
 
       context("the resource is part of an environment in a delivery config manifest") {
@@ -202,7 +181,7 @@ internal class ImageResolverTests : JUnit5Minutests {
         context("a version of the artifact has been approved for the environment") {
           before {
             artifactRepository.register(artifact)
-            artifactRepository.store(artifact, "${artifact.name}-$version2", FINAL)
+            artifactRepository.store(artifact, "${artifact.name}-$version2", RELEASE)
             artifactRepository.approveVersionFor(deliveryConfig, artifact, "${artifact.name}-$version2", "test")
             coEvery {
               imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
@@ -218,23 +197,23 @@ internal class ImageResolverTests : JUnit5Minutests {
           test("returns the image id of the approved version") {
             val resolved = resolve()
             expectThat(resolved.spec.overrides[imageRegion]?.launchConfiguration?.image)
-              .isNotNull()
-              .and {
-                get { appVersion }.isEqualTo("fnord-$version2")
-                get { id }.isEqualTo("ami-2") // TODO: false moniker
-              }
+                .isNotNull()
+                .and {
+                  get { appVersion }.isEqualTo("fnord-$version2")
+                  get { id }.isEqualTo("ami-2") // TODO: false moniker
+                }
           }
         }
 
         context("no artifact version has been approved for the environment") {
           before {
             artifactRepository.register(artifact)
-            artifactRepository.store(artifact, "${artifact.name}-$version2", FINAL)
+            artifactRepository.store(artifact, "${artifact.name}-$version2", RELEASE)
           }
           test("throws an exception") {
             expectCatching { resolve() }
-              .failed()
-              .isA<NoImageSatisfiesConstraints>()
+                .failed()
+                .isA<NoImageSatisfiesConstraints>()
           }
         }
 
@@ -246,15 +225,15 @@ internal class ImageResolverTests : JUnit5Minutests {
           }
           test("throws an exception") {
             expectCatching { resolve() }
-              .failed()
-              .isA<NoImageSatisfiesConstraints>()
+                .failed()
+                .isA<NoImageSatisfiesConstraints>()
           }
         }
 
         context("no image is found for the artifact version") {
           before {
             artifactRepository.register(artifact)
-            artifactRepository.store(artifact, "${artifact.name}-$version2", FINAL)
+            artifactRepository.store(artifact, "${artifact.name}-$version2", RELEASE)
             artifactRepository.approveVersionFor(deliveryConfig, artifact, "${artifact.name}-$version2", "test")
             coEvery {
               imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
@@ -267,8 +246,8 @@ internal class ImageResolverTests : JUnit5Minutests {
 
           test("throws an exception") {
             expectCatching { resolve() }
-              .failed()
-              .isA<NoImageFoundForRegions>()
+                .failed()
+                .isA<NoImageFoundForRegions>()
           }
         }
 
@@ -288,7 +267,7 @@ internal class ImageResolverTests : JUnit5Minutests {
 
           before {
             artifactRepository.register(artifact)
-            artifactRepository.store(artifact, "${artifact.name}-$version2", FINAL)
+            artifactRepository.store(artifact, "${artifact.name}-$version2", RELEASE)
             artifactRepository.approveVersionFor(deliveryConfig, artifact, "${artifact.name}-$version2", "test")
             coEvery {
               imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
@@ -303,8 +282,8 @@ internal class ImageResolverTests : JUnit5Minutests {
 
           test("throws an exception") {
             expectCatching { resolve() }
-              .failed()
-              .isA<NoImageFoundForRegions>()
+                .failed()
+                .isA<NoImageFoundForRegions>()
           }
         }
       }

@@ -42,7 +42,6 @@ import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.first
 import strikt.assertions.hasSize
-import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 
@@ -65,25 +64,13 @@ class TaskLauncherTests : JUnit5Minutests {
       } returns TaskRefResponse("/tasks/${randomUID()}")
     }
 
-    context("no environments") {
-      before {
-        runBlocking {
-          taskLauncher.submitJobToOrca(resource, "task description", "correlate this", mapOf())
-        }
-      }
-
-      test("empty list gets returned") {
-        expectThat(request.captured.trigger.notifications).isEmpty()
-      }
-    }
-
     context("an environment exists") {
       before {
         val notification = NotificationConfig(SLACK, "#my-channel", QUIET)
         val env = Environment(
-          name = "test",
-          resources = setOf(resource),
-          notifications = setOf(notification)
+            name = "test",
+            resources = setOf(resource),
+            notifications = setOf(notification)
         )
         val deliveryConfig = DeliveryConfig(name = "keel", application = "keel", environments = setOf(env))
         deliveryConfigRepository.store(deliveryConfig)
@@ -99,7 +86,7 @@ class TaskLauncherTests : JUnit5Minutests {
           hasSize(1)
           first().get { `when` }.isEqualTo(listOf(ORCHESTRATION_FAILED.text()))
           first().get { message }.isEqualTo(
-            mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
+              mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
           )
         }
       }

@@ -35,11 +35,15 @@ interface DeliveryArtifact {
   val name: String
   val type: ArtifactType
   val versioningStrategy: VersioningStrategy
+  val reference: String // friendly reference to use within a delivery config
+  val deliveryConfigName: String? // the delivery config this artifact is a part of
 }
 
 @JsonTypeName("deb")
 data class DebianArtifact(
   override val name: String,
+  override val deliveryConfigName: String? = null,
+  override val reference: String = name,
   val statuses: List<ArtifactStatus> = emptyList(),
   override val versioningStrategy: VersioningStrategy = DebianSemVerVersioningStrategy
 ) : DeliveryArtifact {
@@ -49,9 +53,16 @@ data class DebianArtifact(
 @JsonTypeName("docker")
 data class DockerArtifact(
   override val name: String,
+  override val deliveryConfigName: String? = null,
+  override val reference: String = name,
   val tagVersionStrategy: TagVersionStrategy = SEMVER_TAG,
   val captureGroupRegex: String? = null,
   override val versioningStrategy: VersioningStrategy = DockerVersioningStrategy(tagVersionStrategy, captureGroupRegex)
 ) : DeliveryArtifact {
   override val type = DOCKER
+
+  val organization
+    get() = name.split("/").first()
+  val image
+    get() = name.split("/").last()
 }

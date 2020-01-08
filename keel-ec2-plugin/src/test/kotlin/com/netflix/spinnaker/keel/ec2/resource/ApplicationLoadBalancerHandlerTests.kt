@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
@@ -39,7 +40,6 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import java.time.Clock
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
@@ -53,17 +53,20 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
   private val cloudDriverService = mockk<CloudDriverService>()
   private val cloudDriverCache = mockk<CloudDriverCache>()
   private val orcaService = mockk<OrcaService>()
-  private val clock = Clock.systemDefaultZone()
+  private val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk() {
+    // we're just using this to get notifications
+    every { environmentFor(any()) } returns Environment("test")
+  }
   private val taskLauncher = TaskLauncher(
-    orcaService,
-    InMemoryDeliveryConfigRepository(clock)
+      orcaService,
+      deliveryConfigRepository
   )
   private val mapper = ObjectMapper().registerKotlinModule()
   private val yamlMapper = configuredYamlMapper()
 
   private val normalizers: List<Resolver<*>> = listOf(
-    ApplicationLoadBalancerDefaultsResolver(),
-    ApplicationLoadBalancerNetworkResolver(cloudDriverCache))
+      ApplicationLoadBalancerDefaultsResolver(),
+      ApplicationLoadBalancerNetworkResolver(cloudDriverCache))
 
   private val yaml = """
     |---
@@ -90,9 +93,9 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val spec = yamlMapper.readValue(yaml, ApplicationLoadBalancerSpec::class.java)
   private val resource = resource(
-    apiVersion = SPINNAKER_EC2_API_V1,
-    kind = "application-load-balancer",
-    spec = spec
+      apiVersion = SPINNAKER_EC2_API_V1,
+      kind = "application-load-balancer",
+      spec = spec
   )
 
   private val vpc = Network(CLOUD_PROVIDER, "vpc-23144", "vpc0", "test", "us-east-1")
@@ -101,67 +104,67 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
   private val sg1 = SecurityGroupSummary("testapp-elb", "sg-55555", "vpc-1")
 
   private val model = ApplicationLoadBalancerModel(
-    moniker = null,
-    loadBalancerName = "testapp-managedogge-wow",
-    availabilityZones = setOf("us-east-1c", "us-east-1d"),
-    vpcId = vpc.id,
-    subnets = setOf(sub1.id, sub2.id),
-    securityGroups = setOf(sg1.id),
-    scheme = "internal",
-    idleTimeout = 60,
-    ipAddressType = "ipv4",
-    listeners = listOf(
-      ApplicationLoadBalancerListener(
-        port = 80,
-        protocol = "HTTP",
-        certificates = null,
-        rules = emptyList(),
-        defaultActions = listOf(
-          Action(
-            order = 1,
-            targetGroupName = "managedogge-wow-tg",
-            type = "forward",
-            redirectConfig = null)
-        )
+      moniker = null,
+      loadBalancerName = "testapp-managedogge-wow",
+      availabilityZones = setOf("us-east-1c", "us-east-1d"),
+      vpcId = vpc.id,
+      subnets = setOf(sub1.id, sub2.id),
+      securityGroups = setOf(sg1.id),
+      scheme = "internal",
+      idleTimeout = 60,
+      ipAddressType = "ipv4",
+      listeners = listOf(
+          ApplicationLoadBalancerListener(
+              port = 80,
+              protocol = "HTTP",
+              certificates = null,
+              rules = emptyList(),
+              defaultActions = listOf(
+                  Action(
+                      order = 1,
+                      targetGroupName = "managedogge-wow-tg",
+                      type = "forward",
+                      redirectConfig = null)
+              )
+          )
+      ),
+      targetGroups = listOf(
+          TargetGroup(
+              targetGroupName = "managedogge-wow-tg",
+              loadBalancerNames = listOf("testapp-managedogge-wow"),
+              targetType = "instance",
+              matcher = TargetGroupMatcher(httpCode = "200-299"),
+              port = 7001,
+              protocol = "HTTP",
+              healthCheckEnabled = true,
+              healthCheckTimeoutSeconds = 5,
+              healthCheckPort = 7001,
+              healthCheckProtocol = "HTTP",
+              healthCheckPath = "/healthcheck",
+              healthCheckIntervalSeconds = 10,
+              healthyThresholdCount = 10,
+              unhealthyThresholdCount = 2,
+              vpcId = vpc.id,
+              attributes = TargetGroupAttributes(
+                  stickinessEnabled = false,
+                  deregistrationDelay = 300,
+                  stickinessType = "lb_cookie",
+                  stickinessDuration = 86400,
+                  slowStartDurationSeconds = 0
+              )
+          )
       )
-    ),
-    targetGroups = listOf(
-      TargetGroup(
-        targetGroupName = "managedogge-wow-tg",
-        loadBalancerNames = listOf("testapp-managedogge-wow"),
-        targetType = "instance",
-        matcher = TargetGroupMatcher(httpCode = "200-299"),
-        port = 7001,
-        protocol = "HTTP",
-        healthCheckEnabled = true,
-        healthCheckTimeoutSeconds = 5,
-        healthCheckPort = 7001,
-        healthCheckProtocol = "HTTP",
-        healthCheckPath = "/healthcheck",
-        healthCheckIntervalSeconds = 10,
-        healthyThresholdCount = 10,
-        unhealthyThresholdCount = 2,
-        vpcId = vpc.id,
-        attributes = TargetGroupAttributes(
-          stickinessEnabled = false,
-          deregistrationDelay = 300,
-          stickinessType = "lb_cookie",
-          stickinessDuration = 86400,
-          slowStartDurationSeconds = 0
-        )
-      )
-    )
   )
 
   fun tests() = rootContext<ApplicationLoadBalancerHandler> {
     fixture {
       ApplicationLoadBalancerHandler(
-        cloudDriverService,
-        cloudDriverCache,
-        orcaService,
-        taskLauncher,
-        mapper,
-        normalizers
+          cloudDriverService,
+          cloudDriverCache,
+          orcaService,
+          taskLauncher,
+          mapper,
+          normalizers
       )
     }
 
@@ -228,28 +231,28 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
 
       test("export generates a valid spec for the deployed ALB") {
         val exportable = Exportable(
-          cloudProvider = "aws",
-          account = "test",
-          serviceAccount = "keel@spin.spin.spin",
-          moniker = parseMoniker("testapp-managedogge-wow"),
-          regions = setOf("us-east-1"),
-          kind = supportedKind.kind
+            cloudProvider = "aws",
+            account = "test",
+            serviceAccount = "keel@spin.spin.spin",
+            moniker = parseMoniker("testapp-managedogge-wow"),
+            regions = setOf("us-east-1"),
+            kind = supportedKind.kind
         )
         val export = runBlocking {
           export(exportable)
         }
         expectThat(export.kind)
-          .isEqualTo("application-load-balancer")
+            .isEqualTo("application-load-balancer")
 
         runBlocking {
           // Export differs from the model prior to the application of resolvers
           val unresolvedDiff = ResourceDiff(resource, resource.copy(spec = export.spec))
           expectThat(unresolvedDiff.hasChanges())
-            .isTrue()
+              .isTrue()
           // But diffs cleanly after resolvers are applied
           val resolvedDiff = ResourceDiff(desired(resource), desired(normalize(export)))
           expectThat(resolvedDiff.hasChanges())
-            .isFalse()
+              .isFalse()
         }
       }
     }
