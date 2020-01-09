@@ -9,13 +9,13 @@ databaseChangeLog:
               - column:
                   name: delivery_config_name
                   type: varchar(255)
-                  value: "keel"
+                  value: "_pending"
                   constraints:
                     nullable: false
               - column:
                   name: reference
                   type: varchar(255)
-                  value: "keel"
+                  value: "_pending"
                   constraints:
                     nullable: false
       rollback:
