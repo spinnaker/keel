@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: shorten-artifact-type
+      author: emjburns
+      changes:
+        - modifyDataType:
+            tableName: delivery_artifact
+            columnName: type
+            newDataType: varchar(25)
+        - modifyDataType:
+            tableName: delivery_artifact
+            columnName: reference
+            newDataType: varchar(50)
+        - modifyDataType:
+            tableName: delivery_artifact
+            columnName: name
+            newDataType: varchar(50)
+  - changeSet:
+      id: fix-delivery-artifact-uniqueness
+      author: emjburns
+      changes:
+        - createIndex:
+            indexName: delivery_artifact_unique_idx
+            tableName: delivery_artifact
+            unique: true
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: type
+              - column:
+                  name: delivery_config_name
+              - column:
+                  name: reference
