@@ -17,9 +17,10 @@ import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.model.toEchoNotification
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.retrofit.isNotFound
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 
@@ -40,67 +41,62 @@ class Ec2CanaryConstraintDeployHandler(
   //  is intended.
   override val supportedClouds = setOf("ec2", "aws")
 
-  override fun deployCanary(
+  override suspend fun deployCanary(
     constraint: CanaryConstraint,
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment,
     regions: Set<String>
   ): Map<String, Task> {
-
+    val scope = CoroutineScope(GlobalScope.coroutineContext)
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
 
-    val image = runBlocking {
-      imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-        appVersion = AppVersion.parseName(version.replace("~", "_")),
-        account = "test", // TODO: update when we have "default image account" configuration
-        regions = constraint.regions.toList())
-    }
+    val image = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+      appVersion = AppVersion.parseName(version.replace("~", "_")),
+      account = "test", // TODO: update when we have "default image account" configuration
+      regions = constraint.regions.toList())
       ?.imageName ?: error("Image not found for $version in all requested regions ($regions)")
 
-    val regionalJobs = runBlocking {
-      val source = getSourceServerGroups(deliveryConfig.application, constraint)
-      require(regions.all { source.containsKey(it) }) {
-        "Source cluster ${constraint.source.cluster} not available in all canary regions"
-      }
+    val source = getSourceServerGroups(deliveryConfig.application, constraint)
+    require(regions.all { source.containsKey(it) }) {
+      "Source cluster ${constraint.source.cluster} not available in all canary regions"
+    }
 
-      regions.associateWith { region ->
-        val sourceServerGroup = source.getValue(region)
-        constraint.toStageBase(
-          cloudDriverCache = cloudDriverCache,
-          storageAccount = constraint.storageAccount ?: DEFAULT_KAYENTA_STORAGE_ACCOUNT,
-          app = deliveryConfig.application,
-          control = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "baseline", image),
-          experiment = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "canary", image)
-        )
-      }
+    val regionalJobs = regions.associateWith { region ->
+      val sourceServerGroup = source.getValue(region)
+      constraint.toStageBase(
+        cloudDriverCache = cloudDriverCache,
+        storageAccount = constraint.storageAccount ?: DEFAULT_KAYENTA_STORAGE_ACCOUNT,
+        app = deliveryConfig.application,
+        control = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "baseline", image),
+        experiment = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "canary", image)
+      )
     }
 
     @Suppress("UNCHECKED_CAST")
-    return regionalJobs.map { (region, task) ->
+    return regionalJobs.keys.associateWith { region ->
       val description = "Canary $version for ${deliveryConfig.application}/environment " +
         "${targetEnvironment.name} in $region"
 
-      region to
+      scope.async {
         try {
-          runBlocking {
-            taskLauncher.submitJobToOrca(
-              serviceAccount = constraint.serviceAccount,
-              application = deliveryConfig.application,
-              notifications = targetEnvironment.notifications.map { it.toEchoNotification() },
-              subject = description,
-              description = description,
-              correlationId = "$judge:$region",
-              stages = listOf(task)
-            )
-          }
+          taskLauncher.submitJobToOrca(
+            serviceAccount = constraint.serviceAccount,
+            application = deliveryConfig.application,
+            notifications = targetEnvironment.notifications.map { it.toEchoNotification() },
+            subject = description,
+            description = description,
+            correlationId = "$judge:$region",
+            stages = listOf(regionalJobs.getOrDefault(region, emptyMap()))
+          )
         } catch (e: Exception) {
           log.error("Error launching orca canary for: ${description.toLowerCase()}")
           null
         }
+      }
     }
-      .filter { it.second != null }
-      .toMap() as Map<String, Task>
+      .mapValues { it.value.await() }
+      .filterValues { it != null } as Map<String, Task>
   }
 
   private suspend fun getSourceServerGroups(

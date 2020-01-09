@@ -389,7 +389,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
 class DummyCanaryConstraintDeployHandler : CanaryConstraintDeployHandler {
   override val supportedClouds = setOf("aws", "ec2")
 
-  override fun deployCanary(
+  override suspend fun deployCanary(
     constraint: CanaryConstraint,
     version: String,
     deliveryConfig: DeliveryConfig,
@@ -405,7 +405,7 @@ class DummyCanaryConstraintDeployHandler : CanaryConstraintDeployHandler {
 class FailCanaryConstraintDeployHandler : CanaryConstraintDeployHandler {
   override val supportedClouds = setOf("aws", "ec2")
 
-  override fun deployCanary(
+  override suspend fun deployCanary(
     constraint: CanaryConstraint,
     version: String,
     deliveryConfig: DeliveryConfig,

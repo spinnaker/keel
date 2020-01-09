@@ -33,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import java.time.Clock
 import java.time.Duration
+import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.getValue
@@ -124,7 +125,9 @@ internal class Ec2CanaryConstraintDeployHandlerTests : JUnit5Minutests {
 
       test("generates and submits an orca task per regions") {
         val slot: CapturingSlot<List<Map<String, Any>>> = slot()
-        val tasks = subject.deployCanary(constraint, version, deliveryConfig, targetEnvironment, regions)
+        val tasks = runBlocking {
+          subject.deployCanary(constraint, version, deliveryConfig, targetEnvironment, regions)
+        }
 
         coVerify(exactly = 1) {
           imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName(version), "test", any())

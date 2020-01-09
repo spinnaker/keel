@@ -19,7 +19,7 @@ interface CanaryConstraintDeployHandler {
    *
    * @return A map where values are [Task]'s pointing to regional orca canary tasks, keyed by region
    */
-  fun deployCanary(
+  suspend fun deployCanary(
     constraint: CanaryConstraint,
     version: String,
     deliveryConfig: DeliveryConfig,

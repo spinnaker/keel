@@ -14,6 +14,8 @@ import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import java.time.Clock
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -41,7 +43,7 @@ import org.springframework.stereotype.Component
  *    source:
  *      account: test
  *      cloudProvider: aws
- *      cluster: afeldmantest-test-c
+ *      cluster: fnord-test-c
  *    regions:
  *      - us-east-1
  *      - us-west-2
@@ -71,7 +73,9 @@ class CanaryConstraintEvaluator(
 
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
     var attributes = state.attributes as CanaryConstraintAttributes? ?: CanaryConstraintAttributes()
-    val status = canaryStatus(attributes)
+    val status = runBlocking {
+      canaryStatus(attributes)
+    }
 
     if (status.anyFailed()) {
       val stillRunning = status.getRunning()
@@ -144,12 +148,14 @@ class CanaryConstraintEvaluator(
 
     attributes = attributes.copy(startAttempt = attributes.startAttempt + 1)
 
-    val tasks = deployHandler.deployCanary(
-      constraint = constraint,
-      version = version,
-      deliveryConfig = deliveryConfig,
-      targetEnvironment = targetEnvironment,
-      regions = regionsToTrigger)
+    val tasks = runBlocking {
+      deployHandler.deployCanary(
+        constraint = constraint,
+        version = version,
+        deliveryConfig = deliveryConfig,
+        targetEnvironment = targetEnvironment,
+        regions = regionsToTrigger)
+    }
 
     attributes = attributes.copy(
       executions = tasks.map { (region, task) ->
@@ -166,31 +172,33 @@ class CanaryConstraintEvaluator(
   }
 
   @Suppress("UNCHECKED_CAST")
-  private fun canaryStatus(attributes: CanaryConstraintAttributes?): Set<CanaryStatus> {
-    if (attributes == null || attributes.executions.isNullOrEmpty()) {
-      return emptySet()
-    }
+  private suspend fun canaryStatus(attributes: CanaryConstraintAttributes?): Set<CanaryStatus> =
+    coroutineScope {
+      if (attributes == null || attributes.executions.isNullOrEmpty()) {
+        return@coroutineScope emptySet<CanaryStatus>()
+      }
 
-    return attributes.executions
-      .associate {
-        it.region to runBlocking {
-          orcaService
-            .getOrchestrationExecution(it.executionId)
+      return@coroutineScope attributes.executions
+        .associate {
+          it.region to async {
+            orcaService
+              .getOrchestrationExecution(it.executionId)
+          }
         }
-      }
-      .map { (region, detail) ->
-        val context = detail.execution.stages.canaryContext()
+        .mapValues { it.value.await() }
+        .map { (region, detail) ->
+          val context = detail.execution.stages.canaryContext()
 
-        CanaryStatus(
-          executionId = detail.id,
-          region = region,
-          executionStatus = detail.status.toString(),
-          scores = context.getOrDefault("canaryScores", emptyList<Double>()) as List<Double>,
-          scoreMessage = context["canaryScoreMessage"] as String?
-        )
-      }
-      .toSet()
-  }
+          CanaryStatus(
+            executionId = detail.id,
+            region = region,
+            executionStatus = detail.status.toString(),
+            scores = context.getOrDefault("canaryScores", emptyList<Double>()) as List<Double>,
+            scoreMessage = context["canaryScoreMessage"] as String?
+          )
+        }
+        .toSet()
+    }
 
   private fun Set<CanaryStatus>.summary(): Map<String, Any> =
     associate { status ->
@@ -227,15 +235,16 @@ class CanaryConstraintEvaluator(
       .toSet()
 
   suspend fun CanaryConstraint.regionsWithCorrelatedExecutions(prefix: String): Map<String, String> =
-    regions.mapNotNull { region ->
-      val correlated = orcaService.getCorrelatedExecutions("$prefix:$region")
-      if (correlated.isNotEmpty()) {
-        region to correlated.first()
-      } else {
-        null
+    coroutineScope {
+      regions.associateWith { region ->
+        async {
+          orcaService.getCorrelatedExecutions("$prefix:$region")
+        }
       }
+        .mapValues { it.value.await() }
+        .filter { it.value.isNotEmpty() }
+        .mapValues { it.value.first() }
     }
-      .toMap()
 
   /**
    * @return Set of regions (as strings) that still need a canary deploy.
