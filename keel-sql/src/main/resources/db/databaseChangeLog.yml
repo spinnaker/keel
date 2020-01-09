@@ -71,3 +71,6 @@ databaseChangeLog:
   - include:
       file: changelog/20200106-tie-artifacts-to-delivery-configs.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20200108-update-delivery-artifact-indicies.yml
+      relativeToChangelogFile: true

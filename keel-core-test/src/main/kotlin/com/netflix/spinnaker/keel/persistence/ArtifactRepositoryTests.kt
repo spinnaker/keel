@@ -427,7 +427,6 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("getting all filters by type") {
       before {
         persist()
-        subject.register(artifact3)
         subject.store(artifact1, version4, FINAL)
         subject.store(artifact3, version6, FINAL)
       }

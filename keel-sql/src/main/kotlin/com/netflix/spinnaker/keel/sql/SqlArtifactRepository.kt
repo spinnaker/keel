@@ -119,11 +119,12 @@ class SqlArtifactRepository(
 
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     jooq
-      .selectOne()
+      .selectCount()
       .from(DELIVERY_ARTIFACT)
       .where(DELIVERY_ARTIFACT.NAME.eq(name))
       .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
-      .fetchOne() != null
+      .fetchOne()
+      .value1() > 0
 
   override fun getAll(type: ArtifactType?): List<DeliveryArtifact> =
     jooq
