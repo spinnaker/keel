@@ -436,8 +436,7 @@ class TitusClusterHandler(
       tags = tags
     )
 
-    // it's safe to assume a non-null result here because not all properties have defaults
-    return buildSpecFromDiff(defaults, thisSpec)!!
+    return checkNotNull(buildSpecFromDiff(defaults, thisSpec))
   }
 
   private fun Resources.exportSpec(): ResourcesSpec? {
