@@ -12,6 +12,12 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.DockerArtifact
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.EnvironmentArtifactsSummary
+import com.netflix.spinnaker.keel.api.PromotionStatus
+import com.netflix.spinnaker.keel.api.PromotionStatus.APPROVED
+import com.netflix.spinnaker.keel.api.PromotionStatus.CURRENT
+import com.netflix.spinnaker.keel.api.PromotionStatus.DEPLOYING
+import com.netflix.spinnaker.keel.api.PromotionStatus.PENDING
+import com.netflix.spinnaker.keel.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
@@ -22,11 +28,10 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VERSIONS
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDateTime
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Select
-import org.jooq.impl.DSL.castNull
+import org.jooq.impl.DSL
 import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.selectOne
 import org.slf4j.LoggerFactory
@@ -89,7 +94,7 @@ class SqlArtifactRepository(
     return jooq.insertInto(DELIVERY_ARTIFACT_VERSION)
       .set(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID, uid.value1())
       .set(DELIVERY_ARTIFACT_VERSION.VERSION, version)
-      .set(DELIVERY_ARTIFACT_VERSION.STATUS, status?.toString())
+      .set(DELIVERY_ARTIFACT_VERSION.RELEASE_STATUS, status?.toString())
       .onDuplicateKeyIgnore()
       .execute() == 1
   }
@@ -122,7 +127,7 @@ class SqlArtifactRepository(
         .where(DELIVERY_ARTIFACT.UID.eq(DELIVERY_ARTIFACT_VERSION.DELIVERY_ARTIFACT_UID))
         .and(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
         .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
-        .apply { if (artifact.type == DEB && statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
+        .apply { if (artifact.type == DEB && statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.RELEASE_STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
         .fetch()
         .getValues(DELIVERY_ARTIFACT_VERSION.VERSION)
         .sortedWith(artifact.versioningStrategy.comparator)
@@ -148,7 +153,7 @@ class SqlArtifactRepository(
       .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
       .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(DELIVERY_ARTIFACT_VERSION.VERSION))
       .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifactId))
-      .apply { if (statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
+      .apply { if (statuses.isNotEmpty()) and(DELIVERY_ARTIFACT_VERSION.RELEASE_STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
       .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT.desc())
       .limit(1)
       .fetchOne(0, String::class.java)
@@ -167,6 +172,7 @@ class SqlArtifactRepository(
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT, currentTimestamp())
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, APPROVED.name)
       .onDuplicateKeyIgnore()
       .execute() > 0
   }
@@ -204,6 +210,25 @@ class SqlArtifactRepository(
       )
   }
 
+  override fun markAsDeployingTo(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    version: String,
+    targetEnvironment: String
+  ) {
+    val environment = deliveryConfig.environmentNamed(targetEnvironment)
+    val environmentUid = deliveryConfig.getUidFor(environment)
+    jooq
+      .insertInto(ENVIRONMENT_ARTIFACT_VERSIONS)
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, environmentUid)
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, DEPLOYING.name)
+      .onDuplicateKeyUpdate()
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, DEPLOYING.name)
+      .execute()
+  }
+
   override fun markAsSuccessfullyDeployedTo(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
@@ -211,14 +236,25 @@ class SqlArtifactRepository(
     targetEnvironment: String
   ) {
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
+    val environmentUid = deliveryConfig.getUidFor(environment)
     jooq
       .insertInto(ENVIRONMENT_ARTIFACT_VERSIONS)
-      .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, deliveryConfig.getUidFor(environment))
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, environmentUid)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, currentTimestamp())
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT.name)
       .onDuplicateKeyUpdate()
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, currentTimestamp())
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT.name)
+      .execute()
+    jooq
+      .update(ENVIRONMENT_ARTIFACT_VERSIONS)
+      .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, PREVIOUS.name)
+      .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
+      .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+      .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
+      .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.ne(version))
       .execute()
   }
 
@@ -227,10 +263,9 @@ class SqlArtifactRepository(
       val artifactVersions = deliveryConfig.artifacts.map { artifact ->
         val versionsInEnvironment = jooq
           .select(
-            DELIVERY_ARTIFACT_VERSION.VERSION,
-            DELIVERY_ARTIFACT_VERSION.STATUS,
-            ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT,
-            ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT
+            ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION,
+            DELIVERY_ARTIFACT_VERSION.RELEASE_STATUS,
+            ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS
           )
           .from(
             ENVIRONMENT_ARTIFACT_VERSIONS,
@@ -251,9 +286,8 @@ class SqlArtifactRepository(
         val pendingVersions = jooq
           .select(
             DELIVERY_ARTIFACT_VERSION.VERSION,
-            DELIVERY_ARTIFACT_VERSION.STATUS,
-            castNull(LocalDateTime::class.java),
-            castNull(LocalDateTime::class.java)
+            DELIVERY_ARTIFACT_VERSION.RELEASE_STATUS,
+            DSL.`val`(PENDING.name)
           )
           .from(
             DELIVERY_ARTIFACT_VERSION,
@@ -275,39 +309,32 @@ class SqlArtifactRepository(
           )
         val versions = versionsInEnvironment
           .unionAll(pendingVersions)
-          .fetch()
-          .filter { (_, status, _, _) ->
-            artifact !is DebianArtifact || artifact.statuses.isEmpty() || ArtifactStatus.valueOf(status) in artifact.statuses
+          .fetch { (version, releaseStatus, promotionStatus) ->
+            Triple(version, releaseStatus, PromotionStatus.valueOf(promotionStatus))
           }
-          .map { (version, _, approvedAt, deployedAt) ->
-            ArtifactVersionResult(version, approvedAt, deployedAt)
+          .filter { (_, artifactStatus, _) ->
+            artifact !is DebianArtifact || artifact.statuses.isEmpty() || ArtifactStatus.valueOf(artifactStatus) in artifact.statuses
           }
-          .sortedWith(compareBy(artifact.versioningStrategy.comparator) { it.version })
-        val deployed = versions.filter { it.deployedAt != null }
-        val current = deployed.maxBy { checkNotNull(it.deployedAt) }
-        val previous = deployed.filterNot { it == current }
-        val deploying = versions.filter { it.approvedAt != null && it.deployedAt == null }.maxBy { checkNotNull(it.approvedAt) }
-        val pending = versions.filter { it.approvedAt == null }
+          .sortedWith(compareBy(artifact.versioningStrategy.comparator) { (version, _, _) -> version })
+          .groupBy({ (_, _, promotionStatus) ->
+            promotionStatus
+          }, { (version, _, _) ->
+            version
+          })
         ArtifactVersions(
           name = artifact.name,
           type = artifact.type,
           versions = ArtifactVersionStatus(
-            current = current?.version,
-            deploying = deploying?.version,
-            pending = pending.map { it.version },
-            previous = previous.map { it.version }
+            current = versions[CURRENT]?.firstOrNull(),
+            deploying = versions[DEPLOYING]?.firstOrNull(),
+            pending = versions[PENDING] ?: emptyList(),
+            previous = versions[PREVIOUS] ?: emptyList()
           )
         )
       }
       EnvironmentArtifactsSummary(environment.name, artifactVersions)
     }
   }
-
-  private data class ArtifactVersionResult(
-    val version: String,
-    val approvedAt: LocalDateTime?,
-    val deployedAt: LocalDateTime?
-  )
 
   private fun DeliveryConfig.environmentNamed(name: String): Environment =
     requireNotNull(environments.firstOrNull { it.name == name }) {
