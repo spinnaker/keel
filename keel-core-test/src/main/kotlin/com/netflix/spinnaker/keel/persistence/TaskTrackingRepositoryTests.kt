@@ -3,7 +3,9 @@ package com.netflix.spinnaker.keel.persistence
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat
-import strikt.assertions.*
+import strikt.assertions.first
+import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
 
 abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5Minutests {
 
@@ -39,7 +41,6 @@ abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5
         subject.store(taskRecord1)
         expectThat(subject.getTasks().size).isEqualTo(2)
       }
-
     }
 
       test("no in-progress tasks") {
@@ -52,6 +53,5 @@ abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5
         subject.delete(taskRecord1.taskId)
         expectThat(subject.getTasks()).isEmpty()
       }
-
   }
 }
