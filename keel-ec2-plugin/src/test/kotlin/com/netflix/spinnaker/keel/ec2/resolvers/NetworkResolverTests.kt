@@ -39,11 +39,12 @@ import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 
 internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>> : JUnit5Minutests {
 
   protected abstract val createSubject: (CloudDriverCache) -> NetworkResolver<T>
-  protected abstract fun createResource(locations: SubnetAwareLocations): Resource<T>
+  protected abstract val createResource: (SubnetAwareLocations) -> Resource<T>
   private fun locations(
     vpc: String? = null,
     subnetPurpose: String? = null,
@@ -78,12 +79,14 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
 
   data class Fixture<T : Locatable<SubnetAwareLocations>>(
     val subjectFactory: (CloudDriverCache) -> NetworkResolver<T>,
-    val resource: Resource<T>
+    val locations: SubnetAwareLocations,
+    val resourceFactory: (SubnetAwareLocations) -> Resource<T>
   ) {
-    private val vpc0East = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.account, "us-east-1")
-    private val vpc0West = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", resource.spec.locations.account, "us-west-2")
-    private val vpc5East = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc5", resource.spec.locations.account, "us-east-1")
-    private val vpc5West = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc5", resource.spec.locations.account, "us-west-2")
+    val resource = resourceFactory(locations)
+    private val vpc0East = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", locations.account, "us-east-1")
+    private val vpc0West = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc0", locations.account, "us-west-2")
+    private val vpc5East = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc5", locations.account, "us-east-1")
+    private val vpc5West = Network(CLOUD_PROVIDER, "vpc-${randomHex()}", "vpc5", locations.account, "us-west-2")
     private val usEastSubnets =
       setOf(vpc0East, vpc5East).flatMap { vpc ->
         setOf("internal", "external").flatMap { purpose ->
@@ -91,7 +94,7 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
             Subnet(
               id = "subnet-${randomHex()}",
               vpcId = vpc.id,
-              account = resource.spec.locations.account,
+              account = locations.account,
               region = vpc.region,
               availabilityZone = zone,
               purpose = "$purpose (${vpc.name})"
@@ -106,7 +109,7 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
             Subnet(
               id = "subnet-${randomHex()}",
               vpcId = vpc.id,
-              account = resource.spec.locations.account,
+              account = locations.account,
               region = vpc.region,
               availabilityZone = zone,
               purpose = "$purpose (${vpc.name})"
@@ -130,7 +133,8 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
     fixture {
       Fixture(
         createSubject,
-        createResource(locations())
+        locations(),
+        createResource
       )
     }
 
@@ -143,17 +147,22 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
       fixture {
         Fixture(
           createSubject,
-          createResource(locations())
+          locations(),
+          createResource
         )
       }
 
       test("VPC name is defaulted") {
-        expectThat(resolved.spec.locations.vpc)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { vpc }
           .isEqualTo(DEFAULT_VPC_NAME)
       }
 
       test("subnets are defaulted") {
-        expectThat(resolved.spec.locations.subnet)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { subnet }
           .isEqualTo(DEFAULT_SUBNET_PURPOSE.format(DEFAULT_VPC_NAME))
       }
     }
@@ -162,27 +171,36 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
       fixture {
         Fixture(
           createSubject,
-          createResource(locations(westZones = setOf("us-west-2c")))
+          locations(westZones = setOf("us-west-2c")),
+          createResource
         )
       }
 
       test("VPC name is defaulted") {
-        expectThat(resolved.spec.locations.vpc)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { vpc }
           .isEqualTo(DEFAULT_VPC_NAME)
       }
 
       test("subnets are defaulted") {
-        expectThat(resolved.spec.locations.subnet)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { subnet }
           .isEqualTo(DEFAULT_SUBNET_PURPOSE.format(DEFAULT_VPC_NAME))
       }
 
       test("specified AZs are not re-assigned") {
-        expectThat(resolved.spec.locations.regions["us-east-1"].availabilityZones)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { regions["us-east-1"].availabilityZones }
           .hasSize(3)
       }
 
       test("specified AZs are not re-assigned") {
-        expectThat(resolved.spec.locations.regions["us-west-2"].availabilityZones)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { regions["us-west-2"].availabilityZones }
           .containsExactly("us-west-2c")
       }
     }
@@ -191,22 +209,29 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
       fixture {
         Fixture(
           createSubject,
-          createResource(locations(vpc = "vpc5"))
+          locations(vpc = "vpc5"),
+          createResource
         )
       }
 
       test("specified VPC name is used") {
-        expectThat(resolved.spec.locations.vpc)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { vpc }
           .isEqualTo("vpc5")
       }
 
       test("subnets are defaulted based on VPC name") {
-        expectThat(resolved.spec.locations.subnet)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { subnet }
           .isEqualTo(DEFAULT_SUBNET_PURPOSE.format("vpc5"))
       }
 
       test("all AZs are assigned") {
-        expectThat(resolved.spec.locations.regions.flatMap { it.availabilityZones })
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { regions.flatMap { it.availabilityZones } }
           .containsExactlyInAnyOrder(allZones)
       }
     }
@@ -215,17 +240,22 @@ internal abstract class NetworkResolverTests<T : Locatable<SubnetAwareLocations>
       fixture {
         Fixture(
           createSubject,
-          createResource(locations(subnetPurpose = "external (vpc5)"))
+          locations(subnetPurpose = "external (vpc5)"),
+          createResource
         )
       }
 
       test("VPC name is derived from subnets") {
-        expectThat(resolved.spec.locations.vpc)
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { vpc }
           .isEqualTo("vpc5")
       }
 
       test("all AZs are assigned") {
-        expectThat(resolved.spec.locations.regions.flatMap { it.availabilityZones })
+        expectThat(resolved.spec.locations)
+          .isNotNull()
+          .get { regions.flatMap { it.availabilityZones } }
           .containsExactlyInAnyOrder(allZones)
       }
     }
@@ -238,7 +268,7 @@ private operator fun <E : RegionSpec> Collection<E>.get(region: String): E =
 internal class ClusterNetworkResolverTests : NetworkResolverTests<ClusterSpec>() {
   override val createSubject = ::ClusterNetworkResolver
 
-  override fun createResource(locations: SubnetAwareLocations): Resource<ClusterSpec> =
+  override val createResource = { locations: SubnetAwareLocations ->
     resource(
       apiVersion = SPINNAKER_EC2_API_V1,
       kind = "cluster",
@@ -267,41 +297,46 @@ internal class ClusterNetworkResolverTests : NetworkResolverTests<ClusterSpec>()
         )
       )
     )
+  }
 }
 
 internal class ClassicLoadBalancerNetworkResolverTests : NetworkResolverTests<ClassicLoadBalancerSpec>() {
   override val createSubject = ::ClassicLoadBalancerNetworkResolver
 
-  override fun createResource(locations: SubnetAwareLocations): Resource<ClassicLoadBalancerSpec> = resource(
-    apiVersion = SPINNAKER_EC2_API_V1,
-    kind = "classic-load-balancer",
-    spec = ClassicLoadBalancerSpec(
-      moniker = Moniker(
-        app = "fnord",
-        stack = "test"
-      ),
-      locations = locations,
-      healthCheck = ClassicLoadBalancerHealthCheck(
-        target = "HTTP:7001/health"
+  override val createResource = { locations: SubnetAwareLocations ->
+    resource(
+      apiVersion = SPINNAKER_EC2_API_V1,
+      kind = "classic-load-balancer",
+      spec = ClassicLoadBalancerSpec(
+        moniker = Moniker(
+          app = "fnord",
+          stack = "test"
+        ),
+        locations = locations,
+        healthCheck = ClassicLoadBalancerHealthCheck(
+          target = "HTTP:7001/health"
+        )
       )
     )
-  )
+  }
 }
 
 internal class ApplicationLoadBalancerNetworkResolverTests : NetworkResolverTests<ApplicationLoadBalancerSpec>() {
   override val createSubject = ::ApplicationLoadBalancerNetworkResolver
 
-  override fun createResource(locations: SubnetAwareLocations): Resource<ApplicationLoadBalancerSpec> = resource(
-    apiVersion = SPINNAKER_EC2_API_V1,
-    kind = "application-load-balancer",
-    spec = ApplicationLoadBalancerSpec(
-      moniker = Moniker(
-        app = "fnord",
-        stack = "test"
-      ),
-      locations = locations,
-      listeners = emptySet(),
-      targetGroups = emptySet()
+  override val createResource = { locations: SubnetAwareLocations ->
+    resource(
+      apiVersion = SPINNAKER_EC2_API_V1,
+      kind = "application-load-balancer",
+      spec = ApplicationLoadBalancerSpec(
+        moniker = Moniker(
+          app = "fnord",
+          stack = "test"
+        ),
+        locations = locations,
+        listeners = emptySet(),
+        targetGroups = emptySet()
+      )
     )
-  )
+  }
 }

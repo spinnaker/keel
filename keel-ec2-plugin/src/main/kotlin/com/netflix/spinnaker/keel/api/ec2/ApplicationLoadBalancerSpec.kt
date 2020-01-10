@@ -13,7 +13,7 @@ import java.time.Duration
 
 data class ApplicationLoadBalancerSpec(
   override val moniker: Moniker,
-  override val locations: SubnetAwareLocations,
+  override val locations: SubnetAwareLocations?,
   override val internal: Boolean = true,
   override val dependencies: LoadBalancerDependencies = LoadBalancerDependencies(),
   override val idleTimeout: Duration = Duration.ofSeconds(60),
@@ -33,7 +33,7 @@ data class ApplicationLoadBalancerSpec(
   override val loadBalancerType: LoadBalancerType = APPLICATION
 
   @JsonIgnore
-  override val id: String = "${locations.account}:${moniker.name}"
+  override val id: String = "${locations?.account}:${moniker.name}"
 
   data class Listener(
     val port: Int,

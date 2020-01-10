@@ -50,7 +50,8 @@ class ClusterNetworkResolver(cloudDriverCache: CloudDriverCache) : NetworkResolv
       copy(
         spec = spec.run {
           copy(
-            locations = locations.withResolvedNetwork()
+            // TODO: fall back to environment's locations
+            locations = locations!!.withResolvedNetwork()
           )
         }
       )
@@ -67,7 +68,8 @@ class ClassicLoadBalancerNetworkResolver(cloudDriverCache: CloudDriverCache) : N
       copy(
         spec = spec.run {
           copy(
-            locations = locations.withResolvedNetwork()
+            // TODO: fall back to environment's locations
+            locations = locations!!.withResolvedNetwork()
           )
         }
       )
@@ -84,7 +86,8 @@ class ApplicationLoadBalancerNetworkResolver(cloudDriverCache: CloudDriverCache)
       copy(
         spec = spec.run {
           copy(
-            locations = locations.withResolvedNetwork()
+            // TODO: fall back to environment's locations
+            locations = locations!!.withResolvedNetwork()
           )
         }
       )

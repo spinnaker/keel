@@ -308,7 +308,9 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           .isEqualTo("security-group")
         expectThat(export.apiVersion)
           .isEqualTo(SPINNAKER_EC2_API_V1)
-        expectThat(export.spec.locations.regions)
+        expectThat(export.spec.locations)
+          .isNotNull()
+          .get { regions }
           .hasSize(2)
         expectThat(export.spec.overrides)
           .hasSize(0)
@@ -450,7 +452,8 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           }
 
           before {
-            securityGroupSpec.locations.regions.forEach { region ->
+            // TODO: fall back to environment's locations
+            securityGroupSpec.locations!!.regions.forEach { region ->
               Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "test", region.name)
                 .also {
                   every { cloudDriverCache.networkBy(it.id) } returns it
@@ -702,8 +705,9 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
             .copy(
               spec = resource.spec.copy(
                 locations = SimpleLocations(
-                  account = securityGroupSpec.locations.account,
-                  vpc = securityGroupSpec.locations.vpc,
+                  // TODO: fall back to environment's locations
+                  account = securityGroupSpec.locations!!.account,
+                  vpc = securityGroupSpec.locations!!.vpc,
                   regions = setOf(SimpleRegionSpec("us-east-17"))
                 )
               )

@@ -120,7 +120,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val model = ClassicLoadBalancerModel(
     loadBalancerName = spec.moniker.name,
-    availabilityZones = spec.locations.regions.first().availabilityZones,
+    availabilityZones = spec.locations!!.regions.first().availabilityZones,
     vpcId = vpc.id,
     subnets = setOf(sub1.id, sub2.id),
     scheme = "internal",

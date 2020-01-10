@@ -27,14 +27,14 @@ import de.danielbechler.diff.introspection.ObjectDiffProperty
 
 data class SecurityGroupSpec(
   override val moniker: Moniker,
-  override val locations: SimpleLocations,
+  override val locations: SimpleLocations?,
   val description: String?,
   val inboundRules: Set<SecurityGroupRule> = emptySet(),
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, SecurityGroupOverride> = emptyMap()
 ) : Monikered, Locatable<SimpleLocations> {
   @JsonIgnore
-  override val id = "${locations.account}:${moniker.name}"
+  override val id = "${locations?.account}:${moniker.name}"
 }
 
 data class SecurityGroupOverride(

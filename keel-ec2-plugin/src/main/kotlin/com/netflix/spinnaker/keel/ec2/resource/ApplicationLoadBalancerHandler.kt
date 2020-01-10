@@ -48,7 +48,8 @@ class ApplicationLoadBalancerHandler(
   override suspend fun toResolvedType(resource: Resource<ApplicationLoadBalancerSpec>):
     Map<String, ApplicationLoadBalancer> =
     with(resource.spec) {
-      locations.regions.map { region ->
+      // TODO: fall back to environment's locations
+      locations!!.regions.map { region ->
         ApplicationLoadBalancer(
           moniker,
           Location(
@@ -173,7 +174,8 @@ class ApplicationLoadBalancerHandler(
   override suspend fun actuationInProgress(resource: Resource<ApplicationLoadBalancerSpec>): Boolean =
     resource
       .spec
-      .locations
+      // TODO: fall back to environment's locations
+      .locations!!
       .regions
       .map { it.name }
       .any { region ->
@@ -186,9 +188,11 @@ class ApplicationLoadBalancerHandler(
     spec: ApplicationLoadBalancerSpec,
     serviceAccount: String
   ) = getApplicationLoadBalancer(
-    account = spec.locations.account,
+    // TODO: fall back to environment's locations
+    account = spec.locations!!.account,
     name = spec.moniker.name,
-    regions = spec.locations.regions.map { it.name }.toSet(),
+    // TODO: fall back to environment's locations
+    regions = spec.locations!!.regions.map { it.name }.toSet(),
     serviceAccount = serviceAccount
   )
 

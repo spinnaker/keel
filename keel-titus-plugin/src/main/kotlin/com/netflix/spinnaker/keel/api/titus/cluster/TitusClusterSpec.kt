@@ -42,13 +42,14 @@ import com.netflix.spinnaker.keel.model.Moniker
 data class TitusClusterSpec(
   override val moniker: Moniker,
   val deployWith: ClusterDeployStrategy = RedBlack(),
-  override val locations: SimpleLocations,
+  override val locations: SimpleLocations?,
   private val _defaults: TitusServerGroupSpec,
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap()
 ) : Monikered, Locatable<SimpleLocations> {
 
   @JsonIgnore
-  override val id = "${locations.account}:${moniker.name}"
+  // TODO: fall back to environment's locations
+  override val id = "${locations!!.account}:${moniker.name}"
 
   val defaults: TitusServerGroupSpec
     @JsonUnwrapped get() = _defaults
@@ -179,7 +180,8 @@ internal fun TitusClusterSpec.resolveDependencies(region: String): ClusterDepend
   )
 
 fun TitusClusterSpec.resolve(): Set<TitusServerGroup> =
-  locations.regions.map {
+  // TODO: fall back to environment's locations
+  locations!!.regions.map {
     TitusServerGroup(
       name = moniker.name,
       location = Location(

@@ -22,7 +22,8 @@ class KeyPairResolver(private val cloudDriverCache: CloudDriverCache) : Resolver
   override fun invoke(resource: Resource<ClusterSpec>): Resource<ClusterSpec> =
     resource.run {
       copy(
-        spec = spec.withResolvedKeyPairs(spec.locations.account)
+        // TODO: fall back to environment's locations
+        spec = spec.withResolvedKeyPairs(spec.locations!!.account)
       )
     }
 
@@ -36,7 +37,8 @@ class KeyPairResolver(private val cloudDriverCache: CloudDriverCache) : Resolver
     if (defaultKeyPair.contains(REGION_PLACEHOLDER)) {
       // if the default key pair in clouddriver is templated, we can't use that as a default but can try and apply it
       // to the overrides, if necessary.
-      locations.regions.forEach { region ->
+      // TODO: fall back to environment's locations
+      locations?.regions?.forEach { region ->
         val override = overrides[region.name]
         if (override?.launchConfiguration != null) {
           if (override.launchConfiguration.keyPair == null) {

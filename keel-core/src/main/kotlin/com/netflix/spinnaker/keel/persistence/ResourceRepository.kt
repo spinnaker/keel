@@ -210,11 +210,11 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
       } else {
         null
       },
-      locations = if (spec is Locatable<*>) {
+      locations = if (spec is Locatable<*> && spec.locations != null) {
         SimpleLocations(
-          account = spec.locations.account,
-          vpc = spec.locations.vpc,
-          regions = spec.locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
+          account = spec.locations!!.account,
+          vpc = spec.locations!!.vpc,
+          regions = spec.locations!!.regions.map { SimpleRegionSpec(it.name) }.toSet()
         )
       } else {
         null

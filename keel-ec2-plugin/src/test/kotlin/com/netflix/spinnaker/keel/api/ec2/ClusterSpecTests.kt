@@ -43,7 +43,8 @@ internal class ClusterSpecTests : JUnit5Minutests {
       }
 
       test("there is one server group per region specified in the cluster") {
-        expectThat(result).hasSize(spec.locations.regions.size)
+        // TODO: fall back to environment's locations
+        expectThat(result).hasSize(spec.locations!!.regions.size)
       }
 
       test("image resolution is applied to all server groups") {

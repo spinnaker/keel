@@ -67,7 +67,8 @@ class SecurityGroupHandler(
 
   override suspend fun toResolvedType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     with(resource.spec) {
-      locations.regions.map { region ->
+      // TODO: fall back to environment's locations
+      locations!!.regions.map { region ->
         region.name to SecurityGroup(
           moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
           location = SecurityGroup.Location(
@@ -208,7 +209,8 @@ class SecurityGroupHandler(
       val inboundDiff =
         ResourceDiff(securityGroup.inboundRules, this.inboundRules)
           .hasChanges()
-      val vpcDiff = securityGroup.location.vpc != this.locations.vpc
+      // TODO: fall back to environment's locations
+      val vpcDiff = securityGroup.location.vpc != this.locations!!.vpc
       val descriptionDiff = securityGroup.description != this.description
 
       if (inboundDiff || vpcDiff || descriptionDiff) {
@@ -235,7 +237,8 @@ class SecurityGroupHandler(
   override suspend fun actuationInProgress(resource: Resource<SecurityGroupSpec>): Boolean =
     resource
       .spec
-      .locations
+      // TODO: fall back to environment's locations
+      .locations!!
       .regions
       .map { it.name }
       .any { region ->
@@ -249,7 +252,8 @@ class SecurityGroupHandler(
     serviceAccount: String
   ): Map<String, SecurityGroup> =
     coroutineScope {
-      spec.locations.regions.map { region ->
+      // TODO: fall back to environment's locations
+      spec.locations!!.regions.map { region ->
         async {
           try {
             getSecurityGroup(

@@ -97,7 +97,8 @@ class TitusClusterHandler(
   override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
     resource
       .spec
-      .locations
+      // TODO: fall back to environment's locations
+      .locations!!
       .regions
       .map { it.name }
       .any { region ->
@@ -314,9 +315,12 @@ class TitusClusterHandler(
     }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
-    getServerGroups(resource.spec.locations.account,
+    getServerGroups(
+      // TODO: fall back to environment's locations
+      resource.spec.locations!!.account,
       resource.spec.moniker,
-      resource.spec.locations.regions.map { it.name }.toSet(),
+      // TODO: fall back to environment's locations
+      resource.spec.locations!!.regions.map { it.name }.toSet(),
       resource.serviceAccount
     )
 

@@ -123,7 +123,7 @@ data class DummyLocatableResourceSpec(
   override val id: String = randomString(),
   val data: String = randomString(),
   override val application: String = "fnord",
-  override val locations: SimpleLocations = SimpleLocations(
+  override val locations: SimpleLocations? = SimpleLocations(
     account = "test",
     vpc = "vpc0",
     regions = setOf(SimpleRegionSpec("us-west-1"))

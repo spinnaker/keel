@@ -7,7 +7,7 @@ import java.time.Duration
 
 interface LoadBalancerSpec : Monikered, Locatable<SubnetAwareLocations> {
   val loadBalancerType: LoadBalancerType
-  override val locations: SubnetAwareLocations
+  override val locations: SubnetAwareLocations?
   val internal: Boolean
   val dependencies: LoadBalancerDependencies
   val idleTimeout: Duration

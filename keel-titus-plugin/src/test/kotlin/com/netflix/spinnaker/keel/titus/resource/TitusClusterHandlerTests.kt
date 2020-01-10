@@ -91,6 +91,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
+import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import strikt.assertions.map
@@ -119,12 +120,13 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   val titusAccount = "titustest"
   val awsAccount = "test"
 
+  val locations = SimpleLocations(
+    account = titusAccount,
+    regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
+  )
   val spec = TitusClusterSpec(
     moniker = Moniker(app = "keel", stack = "test"),
-    locations = SimpleLocations(
-      account = titusAccount,
-      regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
-    ),
+    locations = locations,
     _defaults = TitusServerGroupSpec(
       container = DigestProvider(
         organization = "spinnaker",
@@ -154,10 +156,10 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
   val exportable = Exportable(
     cloudProvider = "titus",
-    account = spec.locations.account,
+    account = locations.account,
     serviceAccount = "keel@spinnaker",
     moniker = spec.moniker,
-    regions = spec.locations.regions.map { it.name }.toSet(),
+    regions = locations.regions.map { it.name }.toSet(),
     kind = "cluster"
   )
 
@@ -489,7 +491,9 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .isEqualTo("cluster")
             expectThat(resource.apiVersion)
               .isEqualTo(SPINNAKER_TITUS_API_V1)
-            expectThat(spec.locations.regions)
+            expectThat(spec.locations)
+              .isNotNull()
+              .get { regions }
               .hasSize(2)
             expectThat(spec.overrides)
               .hasSize(0)
@@ -548,7 +552,9 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .isEqualTo("cluster")
             expectThat(resource.apiVersion)
               .isEqualTo(SPINNAKER_TITUS_API_V1)
-            expectThat(spec.locations.regions)
+            expectThat(spec.locations)
+              .isNotNull()
+              .get { regions }
               .hasSize(2)
             expectThat(spec.overrides)
               .hasSize(1)
@@ -635,7 +641,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   private suspend fun CloudDriverService.titusActiveServerGroup(region: String) = titusActiveServerGroup(
     serviceAccount = "keel@spinnaker",
     app = spec.moniker.app,
-    account = spec.locations.account,
+    account = locations.account,
     cluster = spec.moniker.name,
     region = region,
     cloudProvider = CLOUD_PROVIDER

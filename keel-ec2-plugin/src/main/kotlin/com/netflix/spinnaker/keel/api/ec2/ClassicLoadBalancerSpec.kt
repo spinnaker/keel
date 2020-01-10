@@ -10,7 +10,7 @@ import java.time.Duration
 
 data class ClassicLoadBalancerSpec(
   override val moniker: Moniker,
-  override val locations: SubnetAwareLocations,
+  override val locations: SubnetAwareLocations?,
   override val internal: Boolean = true,
   override val dependencies: LoadBalancerDependencies = LoadBalancerDependencies(),
   override val idleTimeout: Duration = Duration.ofSeconds(60),
@@ -30,7 +30,7 @@ data class ClassicLoadBalancerSpec(
   override val loadBalancerType: LoadBalancerType = CLASSIC
 
   @JsonIgnore
-  override val id: String = "${locations.account}:${moniker.name}"
+  override val id: String = "${locations?.account}:${moniker.name}"
 }
 
 data class ClassicLoadBalancerOverride(

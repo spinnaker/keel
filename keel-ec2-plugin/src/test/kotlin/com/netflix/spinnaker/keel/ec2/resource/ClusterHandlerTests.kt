@@ -181,10 +181,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
   val exportable = Exportable(
     cloudProvider = "aws",
-    account = spec.locations.account,
+    // TODO: fall back to environment's locations
+    account = spec.locations!!.account,
     serviceAccount = "keel@spinnaker",
     moniker = spec.moniker,
-    regions = spec.locations.regions.map { it.name }.toSet(),
+    // TODO: fall back to environment's locations
+    regions = spec.locations!!.regions.map { it.name }.toSet(),
     kind = "cluster"
   )
 
@@ -423,7 +425,9 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             .isEqualTo("cluster")
           expectThat(apiVersion)
             .isEqualTo(SPINNAKER_EC2_API_V1)
-          expectThat(spec.locations.regions)
+          expectThat(spec.locations)
+            .isNotNull()
+            .get { regions }
             .hasSize(2)
           expectThat(spec.defaults.scaling!!.targetTrackingPolicies)
             .hasSize(1)
@@ -449,10 +453,12 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           val exported = runBlocking {
             export(exportable)
           }
-          expectThat(exported.spec.locations.vpc)
-            .isNull()
-          expectThat(exported.spec.locations.subnet)
-            .isNull()
+          expectThat(exported.spec.locations)
+            .isNotNull()
+            .and {
+              get { vpc }.isNull()
+              get { subnet }.isNull()
+            }
           expectThat(exported.spec.defaults.health)
             .isNotNull()
           expectThat(exported.spec.defaults.health!!.cooldown)
@@ -875,7 +881,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   private suspend fun CloudDriverService.activeServerGroup(region: String) = activeServerGroup(
     serviceAccount = "keel@spinnaker",
     app = spec.moniker.app,
-    account = spec.locations.account,
+    // TODO: fall back to environment's locations
+    account = spec.locations!!.account,
     cluster = spec.moniker.name,
     region = region,
     cloudProvider = CLOUD_PROVIDER

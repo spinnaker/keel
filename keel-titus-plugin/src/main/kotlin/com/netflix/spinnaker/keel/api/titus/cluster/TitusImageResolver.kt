@@ -72,6 +72,7 @@ class TitusImageResolver(
     }
 
   protected fun TitusClusterSpec.deriveRegistry(): String =
-    cloudDriverCache.credentialBy(locations.account).attributes["registry"]?.toString()
+    // TODO: fall back to environment's locations
+    cloudDriverCache.credentialBy(locations!!.account).attributes["registry"]?.toString()
       ?: throw RegistryNotFound(locations.account)
 }

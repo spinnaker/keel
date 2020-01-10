@@ -21,7 +21,8 @@ import java.time.Duration
  * Transforms a [ClusterSpec] into a concrete model of server group desired states.
  */
 fun ClusterSpec.resolve(): Set<ServerGroup> =
-  locations.regions.map {
+  // TODO: fall back to environment's locations
+  locations!!.regions.map {
     ServerGroup(
       name = moniker.name,
       location = Location(
@@ -102,13 +103,13 @@ data class ClusterSpec(
   override val moniker: Moniker,
   val imageProvider: ImageProvider? = null,
   val deployWith: ClusterDeployStrategy = RedBlack(),
-  override val locations: SubnetAwareLocations,
+  override val locations: SubnetAwareLocations?,
   private val _defaults: ServerGroupSpec,
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, ServerGroupSpec> = emptyMap()
 ) : Monikered, Locatable<SubnetAwareLocations> {
   @JsonIgnore
-  override val id = "${locations.account}:${moniker.name}"
+  override val id = "${locations?.account}:${moniker.name}"
 
   /**
    * I have no idea why, but if I annotate the constructor property with @get:JsonUnwrapped, the

@@ -76,7 +76,8 @@ class ImageResolver(
     val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
     val environment = deliveryConfigRepository.environmentFor(resource.id)
     val account = defaultImageAccount
-    val regions = resource.spec.locations.regions.map { it.name }
+    // TODO: fall back to locations in environment
+    val regions = resource.spec.locations!!.regions.map { it.name }
 
     val artifactVersion = artifactRepository.latestVersionApprovedIn(
       deliveryConfig,
@@ -113,14 +114,16 @@ class ImageResolver(
       .filterNotNullValues()
       .filterValues { it.isNotEmpty() }
       .mapValues { it.value.first() }
-    val missingRegions = spec.locations.regions.map { it.name } - imageIdByRegion.keys
+    // TODO: fall back to environment's locations
+    val missingRegions = (spec.locations?.regions?.map { it.name } ?: emptyList()) - imageIdByRegion.keys
     if (missingRegions.isNotEmpty()) {
       throw NoImageFoundForRegions(image.imageName, missingRegions)
     }
 
     val overrides = mutableMapOf<String, ServerGroupSpec>()
     overrides.putAll(spec.overrides)
-    spec.locations.regions.map { it.name }.forEach { region ->
+    // TODO: fall back to environment's locations
+    spec.locations?.regions?.map { it.name }?.forEach { region ->
       overrides[region] = overrides[region]
         .withVirtualMachineImage(
           VirtualMachineImage(

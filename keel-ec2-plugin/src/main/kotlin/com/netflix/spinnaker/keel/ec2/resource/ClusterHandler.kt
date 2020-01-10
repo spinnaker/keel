@@ -224,7 +224,8 @@ class ClusterHandler(
   override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
     resource
       .spec
-      .locations
+      // TODO: fall back to environment's locations
+      .locations!!
       .regions
       .map { it.name }
       .any { region ->
@@ -528,9 +529,11 @@ class ClusterHandler(
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<ClusterSpec>): Iterable<ServerGroup> =
     getServerGroups(
-      account = resource.spec.locations.account,
+      // TODO: fall back to environment's locations
+      account = resource.spec.locations!!.account,
       moniker = resource.spec.moniker,
-      regions = resource.spec.locations.regions.map { it.name }.toSet(),
+      // TODO: fall back to environment's locations
+      regions = resource.spec.locations!!.regions.map { it.name }.toSet(),
       serviceAccount = resource.serviceAccount
     )
       .also { them ->

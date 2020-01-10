@@ -21,7 +21,11 @@ package com.netflix.spinnaker.keel.api
  * A resource spec which is located in an account and one or more regions.
  */
 interface Locatable<T : Locations<*>> : ResourceSpec {
-  val locations: T
+  /**
+   * If not specified, the locations are inherited from the [Environment]. Locations must be
+   * specified in one place or the other.
+   */
+  val locations: T?
 }
 
 interface Locations<T : RegionSpec> {
@@ -68,6 +72,15 @@ data class SimpleLocations(
 
 fun defaultVPC(subnet: String?) =
   subnet?.let { Regex("""^.+\((.+)\)$""").find(it)?.groupValues?.get(1) } ?: "vpc0"
+
+fun SubnetAwareLocations.toSimpleLocations() =
+  SimpleLocations(
+    account,
+    vpc,
+    regions
+      .map { SimpleRegionSpec(it.name) }
+      .toSet()
+  )
 
 object LocationConstants {
   const val DEFAULT_VPC_NAME = "vpc0"
