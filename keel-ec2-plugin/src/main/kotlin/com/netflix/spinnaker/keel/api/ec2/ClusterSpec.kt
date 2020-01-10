@@ -17,88 +17,6 @@ import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.model.Moniker
 import java.time.Duration
 
-/**
- * Transforms a [ClusterSpec] into a concrete model of server group desired states.
- */
-fun ClusterSpec.resolve(): Set<ServerGroup> =
-  // TODO: fall back to environment's locations
-  locations!!.regions.map {
-    ServerGroup(
-      name = moniker.name,
-      location = Location(
-        account = locations.account,
-        region = it.name,
-        vpc = locations.vpc ?: error("No vpc supplied or resolved"),
-        subnet = locations.subnet ?: error("No subnet purpose supplied or resolved"),
-        availabilityZones = it.availabilityZones
-      ),
-      launchConfiguration = resolveLaunchConfiguration(it),
-      capacity = resolveCapacity(it.name),
-      dependencies = resolveDependencies(it.name),
-      health = resolveHealth(it.name),
-      scaling = resolveScaling(it.name),
-      tags = defaults.tags + overrides[it.name]?.tags
-    )
-  }
-    .toSet()
-
-private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec): LaunchConfiguration {
-  val image = checkNotNull(overrides[region.name]?.launchConfiguration?.image
-    ?: defaults.launchConfiguration?.image) { "No image resolved / specified for ${region.name}" }
-  return LaunchConfiguration(
-    appVersion = image.appVersion,
-    baseImageVersion = image.baseImageVersion,
-    imageId = image.id,
-    instanceType = checkNotNull(overrides[region.name]?.launchConfiguration?.instanceType
-      ?: defaults.launchConfiguration?.instanceType),
-    ebsOptimized = checkNotNull(overrides[region.name]?.launchConfiguration?.ebsOptimized
-      ?: defaults.launchConfiguration?.ebsOptimized
-      ?: LaunchConfiguration.DEFAULT_EBS_OPTIMIZED),
-    iamRole = checkNotNull(overrides[region.name]?.launchConfiguration?.iamRole
-      ?: defaults.launchConfiguration?.iamRole
-      ?: LaunchConfiguration.defaultIamRoleFor(moniker.app)),
-    keyPair = checkNotNull(overrides[region.name]?.launchConfiguration?.keyPair
-      ?: defaults.launchConfiguration?.keyPair),
-    instanceMonitoring = overrides[region.name]?.launchConfiguration?.instanceMonitoring
-      ?: defaults.launchConfiguration?.instanceMonitoring
-      ?: LaunchConfiguration.DEFAULT_INSTANCE_MONITORING,
-    ramdiskId = overrides[region.name]?.launchConfiguration?.ramdiskId
-      ?: defaults.launchConfiguration?.ramdiskId
-  )
-}
-
-internal fun ClusterSpec.resolveCapacity(region: String) =
-  overrides[region]?.capacity ?: defaults.capacity ?: Capacity(1, 1, 1)
-
-private fun ClusterSpec.resolveScaling(region: String): Scaling =
-  Scaling(
-    suspendedProcesses = defaults.scaling?.suspendedProcesses + overrides[region]?.scaling?.suspendedProcesses,
-    targetTrackingPolicies = defaults.scaling?.targetTrackingPolicies +
-      overrides[region]?.scaling?.targetTrackingPolicies,
-    stepScalingPolicies = defaults.scaling?.stepScalingPolicies + overrides[region]?.scaling?.stepScalingPolicies
-  )
-
-private fun ClusterSpec.resolveDependencies(region: String): ClusterDependencies =
-  ClusterDependencies(
-    loadBalancerNames = defaults.dependencies?.loadBalancerNames + overrides[region]?.dependencies?.loadBalancerNames,
-    securityGroupNames = defaults.dependencies?.securityGroupNames + overrides[region]?.dependencies?.securityGroupNames,
-    targetGroups = defaults.dependencies?.targetGroups + overrides[region]?.dependencies?.targetGroups
-  )
-
-private fun ClusterSpec.resolveHealth(region: String): Health {
-  val default by lazy { Health() }
-  return Health(
-    cooldown = overrides[region]?.health?.cooldown ?: defaults.health?.cooldown ?: default.cooldown,
-    warmup = overrides[region]?.health?.warmup ?: defaults.health?.warmup ?: default.warmup,
-    healthCheckType = overrides[region]?.health?.healthCheckType ?: defaults.health?.healthCheckType
-    ?: default.healthCheckType,
-    enabledMetrics = overrides[region]?.health?.enabledMetrics ?: defaults.health?.enabledMetrics
-    ?: default.enabledMetrics,
-    terminationPolicies = overrides[region]?.health?.terminationPolicies
-      ?: defaults.health?.terminationPolicies ?: default.terminationPolicies
-  )
-}
-
 data class ClusterSpec(
   override val moniker: Moniker,
   val imageProvider: ImageProvider? = null,
@@ -195,6 +113,88 @@ data class ClusterSpec(
     val healthCheckType: HealthCheckType? = null,
     val enabledMetrics: Set<Metric>? = null,
     val terminationPolicies: Set<TerminationPolicy>? = null
+  )
+}
+
+/**
+ * Transforms a [ClusterSpec] into a concrete model of server group desired states.
+ */
+fun ClusterSpec.resolve(): Set<ServerGroup> =
+  // TODO: fall back to environment's locations
+  locations!!.regions.map {
+    ServerGroup(
+      name = moniker.name,
+      location = Location(
+        account = locations.account,
+        region = it.name,
+        vpc = locations.vpc ?: error("No vpc supplied or resolved"),
+        subnet = locations.subnet ?: error("No subnet purpose supplied or resolved"),
+        availabilityZones = it.availabilityZones
+      ),
+      launchConfiguration = resolveLaunchConfiguration(it),
+      capacity = resolveCapacity(it.name),
+      dependencies = resolveDependencies(it.name),
+      health = resolveHealth(it.name),
+      scaling = resolveScaling(it.name),
+      tags = defaults.tags + overrides[it.name]?.tags
+    )
+  }
+    .toSet()
+
+private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec): LaunchConfiguration {
+  val image = checkNotNull(overrides[region.name]?.launchConfiguration?.image
+    ?: defaults.launchConfiguration?.image) { "No image resolved / specified for ${region.name}" }
+  return LaunchConfiguration(
+    appVersion = image.appVersion,
+    baseImageVersion = image.baseImageVersion,
+    imageId = image.id,
+    instanceType = checkNotNull(overrides[region.name]?.launchConfiguration?.instanceType
+      ?: defaults.launchConfiguration?.instanceType),
+    ebsOptimized = checkNotNull(overrides[region.name]?.launchConfiguration?.ebsOptimized
+      ?: defaults.launchConfiguration?.ebsOptimized
+      ?: LaunchConfiguration.DEFAULT_EBS_OPTIMIZED),
+    iamRole = checkNotNull(overrides[region.name]?.launchConfiguration?.iamRole
+      ?: defaults.launchConfiguration?.iamRole
+      ?: LaunchConfiguration.defaultIamRoleFor(moniker.app)),
+    keyPair = checkNotNull(overrides[region.name]?.launchConfiguration?.keyPair
+      ?: defaults.launchConfiguration?.keyPair),
+    instanceMonitoring = overrides[region.name]?.launchConfiguration?.instanceMonitoring
+      ?: defaults.launchConfiguration?.instanceMonitoring
+      ?: LaunchConfiguration.DEFAULT_INSTANCE_MONITORING,
+    ramdiskId = overrides[region.name]?.launchConfiguration?.ramdiskId
+      ?: defaults.launchConfiguration?.ramdiskId
+  )
+}
+
+internal fun ClusterSpec.resolveCapacity(region: String) =
+  overrides[region]?.capacity ?: defaults.capacity ?: Capacity(1, 1, 1)
+
+private fun ClusterSpec.resolveScaling(region: String): Scaling =
+  Scaling(
+    suspendedProcesses = defaults.scaling?.suspendedProcesses + overrides[region]?.scaling?.suspendedProcesses,
+    targetTrackingPolicies = defaults.scaling?.targetTrackingPolicies +
+      overrides[region]?.scaling?.targetTrackingPolicies,
+    stepScalingPolicies = defaults.scaling?.stepScalingPolicies + overrides[region]?.scaling?.stepScalingPolicies
+  )
+
+private fun ClusterSpec.resolveDependencies(region: String): ClusterDependencies =
+  ClusterDependencies(
+    loadBalancerNames = defaults.dependencies?.loadBalancerNames + overrides[region]?.dependencies?.loadBalancerNames,
+    securityGroupNames = defaults.dependencies?.securityGroupNames + overrides[region]?.dependencies?.securityGroupNames,
+    targetGroups = defaults.dependencies?.targetGroups + overrides[region]?.dependencies?.targetGroups
+  )
+
+private fun ClusterSpec.resolveHealth(region: String): Health {
+  val default by lazy { Health() }
+  return Health(
+    cooldown = overrides[region]?.health?.cooldown ?: defaults.health?.cooldown ?: default.cooldown,
+    warmup = overrides[region]?.health?.warmup ?: defaults.health?.warmup ?: default.warmup,
+    healthCheckType = overrides[region]?.health?.healthCheckType ?: defaults.health?.healthCheckType
+    ?: default.healthCheckType,
+    enabledMetrics = overrides[region]?.health?.enabledMetrics ?: defaults.health?.enabledMetrics
+    ?: default.enabledMetrics,
+    terminationPolicies = overrides[region]?.health?.terminationPolicies
+      ?: defaults.health?.terminationPolicies ?: default.terminationPolicies
   )
 }
 
