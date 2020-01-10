@@ -49,6 +49,7 @@ import com.netflix.spinnaker.keel.ec2.image.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -73,6 +74,7 @@ class ClusterHandler(
   private val taskLauncher: TaskLauncher,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
+  private val deliveryConfigRepository: DeliveryConfigRepository,
   objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<ClusterSpec, Map<String, ServerGroup>>(objectMapper, resolvers) {
@@ -82,7 +84,7 @@ class ClusterHandler(
 
   override suspend fun toResolvedType(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =
     with(resource.spec) {
-      resolve().byRegion()
+      resolve(deliveryConfigRepository.environmentFor(resource.id)).byRegion()
     }
 
   override suspend fun current(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =

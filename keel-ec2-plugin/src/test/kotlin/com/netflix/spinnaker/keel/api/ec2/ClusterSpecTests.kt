@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.DebianArtifact
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
@@ -29,7 +30,7 @@ internal class ClusterSpecTests : JUnit5Minutests {
 
   fun tests() = rootContext<Fixture> {
     context("a spec with multiple regions and minimal configuration") {
-      fixture { Fixture }
+      fixture { Fixture(locationsSpecifiedInSpec = true) }
 
       mapOf(
         "YAML" to configuredYamlMapper(),
@@ -101,10 +102,21 @@ internal class ClusterSpecTests : JUnit5Minutests {
         }
       }
     }
+
+    context("a spec with no locations specified") {
+      fixture { Fixture(locationsSpecifiedInSpec = false) }
+
+      test("the locations are determined by the environment") {
+        expectThat(result)
+          .hasSize(locations.regions.size)
+      }
+    }
   }
 }
 
-object Fixture {
+class Fixture(
+  locationsSpecifiedInSpec: Boolean
+) {
   val usEastServerGroup
     get() = result.first { it.location.region == "us-east-1" }
   val usWestServerGroup
@@ -115,27 +127,29 @@ object Fixture {
   val usEastImageId = "ami-6874986"
   val usWestImageId = "ami-6271051"
 
+  val locations = SubnetAwareLocations(
+    account = "test",
+    vpc = "vpc0",
+    subnet = "internal (vpc0)",
+    regions = setOf(
+      SubnetAwareRegionSpec(
+        name = "us-east-1",
+        availabilityZones = setOf("us-east-1c", "us-east-1d", "us-east-1e")
+      ),
+      SubnetAwareRegionSpec(
+        name = "us-west-2",
+        availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c")
+      )
+    )
+  )
+
   val spec: ClusterSpec = ClusterSpec(
     moniker = Moniker(
       app = "fnord",
       stack = "test"
     ),
     imageProvider = ArtifactImageProvider(DebianArtifact("fnord")),
-    locations = SubnetAwareLocations(
-      account = "test",
-      vpc = "vpc0",
-      subnet = "internal (vpc0)",
-      regions = setOf(
-        SubnetAwareRegionSpec(
-          name = "us-east-1",
-          availabilityZones = setOf("us-east-1c", "us-east-1d", "us-east-1e")
-        ),
-        SubnetAwareRegionSpec(
-          name = "us-west-2",
-          availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c")
-        )
-      )
-    ),
+    locations = if (locationsSpecifiedInSpec) locations else null,
     _defaults = ServerGroupSpec(
       launchConfiguration = LaunchConfigurationSpec(
         instanceType = "m5.large",
@@ -185,7 +199,12 @@ object Fixture {
     )
   )
 
-  fun resolve(): Set<ServerGroup> = spec.resolve()
+  val environment = Environment(
+    name = "test",
+    locations = locations
+  )
+
+  fun resolve(): Set<ServerGroup> = spec.resolve(environment)
 
   val result: Set<ServerGroup> by lazy { resolve() }
 }

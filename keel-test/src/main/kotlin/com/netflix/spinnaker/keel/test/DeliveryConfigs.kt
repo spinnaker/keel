@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 
 fun deliveryConfig(
   resource: Resource<*> = resource(),
-  env: Environment = Environment("test", setOf(resource)),
+  env: Environment = Environment(name = "test", resources = setOf(resource)),
   configName: String = "myconfig",
   artifact: DeliveryArtifact = DebianArtifact(name = "fnord", deliveryConfigName = configName),
   deliveryConfig: DeliveryConfig = DeliveryConfig(

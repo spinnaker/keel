@@ -120,6 +120,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
   val targetTrackingPolicyName = "keel-test-target-tracking-policy"
 
+  val environment = Environment(name = "test")
+
   val spec = ClusterSpec(
     moniker = Moniker(app = "keel", stack = "test"),
     locations = SubnetAwareLocations(
@@ -166,7 +168,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     )
   )
 
-  val serverGroups = spec.resolve()
+  val serverGroups = spec.resolve(environment)
   val serverGroupEast = serverGroups.first { it.location.region == "us-east-1" }
   val serverGroupWest = serverGroups.first { it.location.region == "us-west-2" }
 
@@ -279,6 +281,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         taskLauncher,
         clock,
         publisher,
+        deliveryConfigRepository,
         objectMapper,
         normalizers
       )
@@ -314,7 +317,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       }
 
       coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${randomUUID()}")
-      every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
+      every { deliveryConfigRepository.environmentFor(any()) } returns environment
     }
 
     after {

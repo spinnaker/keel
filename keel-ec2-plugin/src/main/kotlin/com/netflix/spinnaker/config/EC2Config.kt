@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.ec2.resource.ClassicLoadBalancerHandler
 import com.netflix.spinnaker.keel.ec2.resource.ClusterHandler
 import com.netflix.spinnaker.keel.ec2.resource.SecurityGroupHandler
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import java.time.Clock
@@ -52,7 +53,8 @@ class EC2Config {
     clock: Clock,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>,
-    publisher: ApplicationEventPublisher
+    publisher: ApplicationEventPublisher,
+    deliveryConfigRepository: DeliveryConfigRepository
   ): ClusterHandler =
     ClusterHandler(
       cloudDriverService,
@@ -61,6 +63,7 @@ class EC2Config {
       taskLauncher,
       clock,
       publisher,
+      deliveryConfigRepository,
       objectMapper,
       normalizers
     )

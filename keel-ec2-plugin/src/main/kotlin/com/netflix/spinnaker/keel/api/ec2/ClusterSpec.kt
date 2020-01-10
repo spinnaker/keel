@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Monikered
@@ -119,26 +120,30 @@ data class ClusterSpec(
 /**
  * Transforms a [ClusterSpec] into a concrete model of server group desired states.
  */
-fun ClusterSpec.resolve(): Set<ServerGroup> =
-  // TODO: fall back to environment's locations
-  locations!!.regions.map {
-    ServerGroup(
-      name = moniker.name,
-      location = Location(
-        account = locations.account,
-        region = it.name,
-        vpc = locations.vpc ?: error("No vpc supplied or resolved"),
-        subnet = locations.subnet ?: error("No subnet purpose supplied or resolved"),
-        availabilityZones = it.availabilityZones
-      ),
-      launchConfiguration = resolveLaunchConfiguration(it),
-      capacity = resolveCapacity(it.name),
-      dependencies = resolveDependencies(it.name),
-      health = resolveHealth(it.name),
-      scaling = resolveScaling(it.name),
-      tags = defaults.tags + overrides[it.name]?.tags
-    )
+fun ClusterSpec.resolve(environment: Environment): Set<ServerGroup> =
+  checkNotNull(locations ?: environment.locations) {
+    "Locations must be specified either in the resource spec, or its environment"
   }
+    .let { lox ->
+      lox.regions.map {
+        ServerGroup(
+          name = moniker.name,
+          location = Location(
+            account = lox.account,
+            region = it.name,
+            vpc = lox.vpc ?: error("No vpc supplied or resolved"),
+            subnet = lox.subnet ?: error("No subnet purpose supplied or resolved"),
+            availabilityZones = it.availabilityZones
+          ),
+          launchConfiguration = resolveLaunchConfiguration(it),
+          capacity = resolveCapacity(it.name),
+          dependencies = resolveDependencies(it.name),
+          health = resolveHealth(it.name),
+          scaling = resolveScaling(it.name),
+          tags = defaults.tags + overrides[it.name]?.tags
+        )
+      }
+    }
     .toSet()
 
 private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec): LaunchConfiguration {
