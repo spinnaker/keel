@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.ResourceSummary
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.events.DebugEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
@@ -36,6 +37,7 @@ class InMemoryResourceRepository(
 
   private val resources = mutableMapOf<ResourceId, Resource<*>>()
   private val events = mutableMapOf<ResourceId, MutableList<ResourceEvent>>()
+  private val debug = mutableMapOf<ResourceId, MutableList<DebugEvent>>()
   private val lastCheckTimes = mutableMapOf<ResourceId, Instant>()
 
   override fun deleteByApplication(application: String): Int {
@@ -117,6 +119,17 @@ class InMemoryResourceRepository(
           it.add(0, event)
         }
       }
+  }
+
+  override fun appendDebugLog(event: DebugEvent) {
+    debug.computeIfAbsent(event.resourceId) {
+      mutableListOf()
+    }.add(0, event)
+  }
+
+  override fun debugLog(id: ResourceId, limit: Int): List<DebugEvent> {
+    require(limit > 0) { "limit must be a positive integer" }
+    return debug[id]?.take(limit) ?: throw NoSuchResourceId(id)
   }
 
   override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>> {

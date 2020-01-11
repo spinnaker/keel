@@ -10,11 +10,13 @@ import com.netflix.spinnaker.keel.api.ResourceSummary
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.randomUID
+import com.netflix.spinnaker.keel.events.DebugEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_DEBUG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
@@ -210,6 +212,34 @@ open class SqlResourceRepository(
       .set(RESOURCE_EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
       .set(RESOURCE_EVENT.JSON, objectMapper.writeValueAsString(event))
       .execute()
+  }
+
+  override fun appendDebugLog(event: DebugEvent) {
+    jooq
+      .insertInto(RESOURCE_DEBUG)
+      .set(RESOURCE_DEBUG.UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.resourceId.value)))
+      .set(RESOURCE_DEBUG.TIMESTAMP, event.timestamp)
+      .set(RESOURCE_DEBUG.CONTEXT, event.context)
+      .set(RESOURCE_DEBUG.JSON, event.message)
+      .execute()
+  }
+
+  override fun debugLog(id: ResourceId, limit: Int): List<DebugEvent> {
+    require(limit > 0) { "limit must be a positive integer" }
+    return jooq
+      .select(RESOURCE_DEBUG.TIMESTAMP, RESOURCE_DEBUG.CONTEXT, RESOURCE_DEBUG.JSON, RESOURCE.ID)
+      .from(RESOURCE_DEBUG, RESOURCE)
+      .where(RESOURCE.ID.eq(id.toString()))
+      .and(RESOURCE.UID.eq(RESOURCE_DEBUG.UID))
+      .orderBy(RESOURCE_DEBUG.TIMESTAMP.desc())
+      .limit(limit)
+      .fetch()
+      .map { (timestamp, context, json, id) ->
+        DebugEvent(resourceId = ResourceId(id), timestamp = timestamp, context = context, message = json)
+      }
+      .ifEmpty {
+        throw NoSuchResourceId(id)
+      }
   }
 
   override fun delete(id: ResourceId) {

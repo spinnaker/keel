@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.api.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.NoKnownArtifactVersions
+import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.UnknownBaseImage
 import com.netflix.spinnaker.keel.bakery.api.BaseLabel.RELEASE
@@ -224,7 +225,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       context("the image already exists in more regions than desired") {
         before {
           coEvery {
-            imageService.getLatestImageWithAllRegions("keel", "test", image.regions.toList())
+            imageService.getLatestImageWithAllRegions(resource.id, "keel", "test", image.regions.toList())
           } returns image.copy(regions = image.regions + "eu-west-1")
         }
         test("current should filter the undesireable regions out of the image") {

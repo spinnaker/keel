@@ -21,10 +21,12 @@ import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.DiffResult
+import com.netflix.spinnaker.keel.events.DebugEvent
 import com.netflix.spinnaker.keel.exceptions.FailedNormalizationException
 import com.netflix.spinnaker.keel.pause.ResourcePauser
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.plugin.UnsupportedKind
@@ -44,6 +46,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
@@ -77,6 +80,17 @@ class ResourceController(
     } else {
       resourceRepository.getStatus(id)
     }
+
+  @GetMapping(
+    path = ["/{id}/debug"],
+    produces = [APPLICATION_JSON_VALUE]
+  )
+  fun getDebugLog(
+    @PathVariable("id") id: ResourceId,
+    @RequestParam("limit") limit: Int?
+  ): List<DebugEvent> {
+    return resourceRepository.debugLog(id, limit ?: DEFAULT_MAX_EVENTS)
+  }
 
   @PostMapping(
     path = ["/{id}/pause"],

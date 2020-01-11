@@ -19,16 +19,20 @@ package com.netflix.spinnaker.keel.clouddriver
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImageComparator
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.hasAppVersion
+import com.netflix.spinnaker.keel.events.DebugEvent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 
 class ImageService(
-  private val cloudDriverService: CloudDriverService
+  private val cloudDriverService: CloudDriverService,
+  private val publisher: ApplicationEventPublisher
 ) {
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -39,8 +43,8 @@ class ImageService(
    * If possible, return the latest image that's present in all regions and has tags.
    * If that doesn't exist, just return the latest image.
    */
-  suspend fun getLatestImageWithAllRegions(artifactName: String, account: String, regions: List<String>): Image? =
-    getLatestNamedImageWithAllRegions(artifactName, account, regions)?.toImage(artifactName)
+  suspend fun getLatestImageWithAllRegions(resourceId: ResourceId, artifactName: String, account: String, regions: List<String>): Image? =
+    getLatestNamedImageWithAllRegions(resourceId, artifactName, account, regions)?.toImage(artifactName)
       ?: getLatestImage(artifactName, account)
 
   private fun NamedImage.toImage(artifactName: String): Image? =
@@ -123,21 +127,46 @@ class ImageService(
    * Returns the latest image that is present in all regions.
    * Each ami must have tags.
    */
-  suspend fun getLatestNamedImageWithAllRegions(packageName: String, account: String, regions: List<String>): NamedImage? =
-    cloudDriverService.namedImages(
+  suspend fun getLatestNamedImageWithAllRegions(resourceId: ResourceId, packageName: String, account: String, regions: List<String>): NamedImage? {
+    val images = cloudDriverService.namedImages(
       serviceAccount = DEFAULT_SERVICE_ACCOUNT,
       imageName = packageName,
       account = account
     )
+
+    val filteredImages = images
       .filter { it.hasAppVersion }
       .sortedWith(NamedImageComparator)
+
+    val eliminatedImages = mutableMapOf<String, String>()
+    val image = filteredImages
       .find {
+        var errors = ""
         val curAppVersion = AppVersion.parseName(it.appVersion)
-        curAppVersion.packageName == packageName &&
-          it.accounts.contains(account) &&
-          it.amis.keys.containsAll(regions) &&
-          tagsExistForAllAmis(it.tagsByImageId)
+        if (curAppVersion.packageName != packageName) {
+          errors += "[package name ${curAppVersion.packageName} does not match required package]"
+        }
+        if (!it.accounts.contains(account)) {
+          errors += "[image is only in accounts ${it.accounts}]"
+        }
+        if (!it.amis.keys.containsAll(regions)) {
+          errors += "[image is only in regions ${it.amis.keys}]"
+        }
+        if (!tagsExistForAllAmis(it.tagsByImageId)) {
+          errors += "[image does not have tags for all regions: existing tags ${it.tagsByImageId}]"
+        }
+        if (errors == "") {
+          true
+        } else {
+          eliminatedImages[it.imageName] = errors
+          false
+        }
       }
+    publisher.publishEvent(DebugEvent(resourceId, "Finding latest qualifying named image for $packageName in account $account and regions $regions", "rejected images=$eliminatedImages"))
+    publisher.publishEvent(DebugEvent(resourceId, "Finding latest qualifying named image for $packageName in account $account and regions $regions", "selected image=$image"))
+
+    return image
+  }
 
   suspend fun getNamedImageFromJenkinsInfo(packageName: String, account: String, buildHost: String, buildName: String, buildNumber: String): NamedImage? =
     cloudDriverService.namedImages(DEFAULT_SERVICE_ACCOUNT, packageName, account)

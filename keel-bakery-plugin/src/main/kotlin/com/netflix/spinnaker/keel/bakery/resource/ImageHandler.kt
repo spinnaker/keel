@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.application
@@ -20,6 +21,7 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
+import com.netflix.spinnaker.keel.events.DebugEvent
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -52,9 +54,10 @@ class ImageHandler(
   override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
     with(resource) {
       val artifact = DebianArtifact(spec.artifactName)
-      val latestVersion = artifact.findLatestVersion(resource.spec.artifactStatuses)
+      val latestVersion = artifact.findLatestVersion(resource.id, resource.spec.artifactStatuses)
       val baseImage = baseImageCache.getBaseImage(spec.baseOs, spec.baseLabel)
       val baseAmi = findBaseAmi(baseImage, resource.serviceAccount)
+      publisher.publishEvent(DebugEvent(resource.id, "Resolving baseImage", "baseimage=$baseImage"))
       Image(
         baseAmiVersion = baseAmi,
         appVersion = latestVersion,
@@ -64,23 +67,29 @@ class ImageHandler(
 
   override suspend fun current(resource: Resource<ImageSpec>): Image? =
     with(resource) {
-      imageService.getLatestImageWithAllRegions(spec.artifactName, "test", resource.spec.regions.toList())?.let {
-        it.copy(regions = it.regions.intersect(resource.spec.regions))
-      }
+      val cur = imageService
+        .getLatestImageWithAllRegions(resource.id, spec.artifactName, "test", resource.spec.regions.toList())
+        ?.let {
+          it.copy(regions = it.regions.intersect(resource.spec.regions))
+        }
+      publisher.publishEvent(DebugEvent(resource.id, "Finding current image", "current image is $cur"))
+      cur
     }
 
   /**
    * First checks our repo, and if a version isn't found checks igor.
    */
-  private fun DeliveryArtifact.findLatestVersion(statuses: List<ArtifactStatus>): String {
+  private fun DeliveryArtifact.findLatestVersion(resourceId: ResourceId, statuses: List<ArtifactStatus>): String {
     try {
       val knownVersion = artifactRepository
         .versions(this, statuses)
         .firstOrNull()
       if (knownVersion != null) {
+        publisher.publishEvent(DebugEvent(resourceId, "Finding latest version of $name", "latest known version = $knownVersion"))
         return knownVersion
       }
     } catch (e: NoSuchArtifactException) {
+      publisher.publishEvent(DebugEvent(resourceId, "Finding latest version of $name", "latest known version = null"))
       if (!artifactRepository.isRegistered(name, type)) {
         // we clearly care about this artifact, let's register it.
         publisher.publishEvent(ArtifactRegisteredEvent(this))
@@ -89,11 +98,15 @@ class ImageHandler(
 
     // even though the artifact isn't registered we should grab the latest version to use
     return runBlocking {
-      igorService
+      val versions = igorService
         .getVersions(name, statuses.map { it.toString() })
+      publisher.publishEvent(DebugEvent(resourceId, "Finding latest version of $name", "versions igor knows about = $versions"))
+      versions
         .firstOrNull()
         ?.let {
-          "$name-$it"
+          val version = "$name-$it"
+          publisher.publishEvent(DebugEvent(resourceId, "Finding latest version of $name", "choosing = $version"))
+          version
         }
     } ?: throw NoKnownArtifactVersions(this)
   }
@@ -116,7 +129,8 @@ class ImageHandler(
       .provenance("n/a")
       .build()
 
-    log.info("baking new image for {}", resource.spec.artifactName)
+    publisher.publishEvent(DebugEvent(resource.id, "Upserting image", "appversion=$appVersion, version=$version"))
+
     val description = "Bake ${resourceDiff.desired.appVersion}"
     val taskRef = orcaService.orchestrate(
       resource.serviceAccount,

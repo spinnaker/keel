@@ -25,6 +25,7 @@ import com.netflix.spinnaker.keel.api.ResourceSummary
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.events.DebugEvent
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
@@ -129,6 +130,19 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * Records an event associated with a resource.
    */
   fun appendHistory(event: ResourceEvent)
+
+  /**
+   * Records a debug log associated with a resource
+   */
+  fun appendDebugLog(event: DebugEvent)
+
+  /**
+   * Retrieves the debug log for the resource represented by [uid].
+   *
+   * @param id the resource id.
+   * @param limit the maximum number of events to return.
+   */
+  fun debugLog(id: ResourceId, limit: Int = DEFAULT_MAX_EVENTS): List<DebugEvent>
 
   /**
    * Returns between zero and [limit] resources that have not been checked (i.e. returned by this
