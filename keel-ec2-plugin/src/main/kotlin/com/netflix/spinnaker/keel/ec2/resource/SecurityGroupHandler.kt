@@ -17,6 +17,8 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.Locations
+import com.netflix.spinnaker.keel.api.RegionSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -44,6 +46,7 @@ import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -58,6 +61,7 @@ class SecurityGroupHandler(
   private val cloudDriverCache: CloudDriverCache,
   private val orcaService: OrcaService,
   private val taskLauncher: TaskLauncher,
+  private val deliveryConfigRepository: DeliveryConfigRepository,
   objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<SecurityGroupSpec, Map<String, SecurityGroup>>(objectMapper, resolvers) {
@@ -67,23 +71,33 @@ class SecurityGroupHandler(
 
   override suspend fun toResolvedType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     with(resource.spec) {
-      // TODO: fall back to environment's locations
-      locations!!.regions.map { region ->
-        region.name to SecurityGroup(
-          moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
-          location = SecurityGroup.Location(
-            account = locations.account,
-            vpc = locations.vpc ?: error("No vpc supplied or resolved"),
-            region = region.name
-          ),
-          description = overrides[region.name]?.description ?: description,
-          inboundRules = overrides[region.name]?.inboundRules ?: inboundRules
-        )
-      }.toMap()
+      resource.locations().let { locations ->
+        locations.regions.map { region ->
+          region.name to SecurityGroup(
+            moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
+            location = SecurityGroup.Location(
+              account = locations.account,
+              vpc = locations.vpc ?: error("No vpc supplied or resolved"),
+              region = region.name
+            ),
+            description = overrides[region.name]?.description ?: description,
+            inboundRules = overrides[region.name]?.inboundRules ?: inboundRules
+          )
+        }.toMap()
+      }
     }
 
   override suspend fun current(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
-    cloudDriverService.getSecurityGroup(resource.spec, resource.serviceAccount)
+    cloudDriverService.getSecurityGroup(
+      resource.spec,
+      resource.locations(),
+      resource.serviceAccount
+    )
+
+  private fun Resource<SecurityGroupSpec>.locations(): Locations<out RegionSpec> =
+    checkNotNull(spec.locations ?: deliveryConfigRepository.environmentFor(id).locations) {
+      "Locations must be specified either in the resource spec, or its environment"
+    }
 
   override suspend fun upsert(
     resource: Resource<SecurityGroupSpec>,
@@ -207,11 +221,10 @@ class SecurityGroupHandler(
   ) =
     regionalGroups.forEach { (region, securityGroup) ->
       val inboundDiff =
-        ResourceDiff(securityGroup.inboundRules, this.inboundRules)
+        ResourceDiff(securityGroup.inboundRules, inboundRules)
           .hasChanges()
-      // TODO: fall back to environment's locations
-      val vpcDiff = securityGroup.location.vpc != this.locations!!.vpc
-      val descriptionDiff = securityGroup.description != this.description
+      val vpcDiff = securityGroup.location.vpc != checkNotNull(locations).vpc
+      val descriptionDiff = securityGroup.description != description
 
       if (inboundDiff || vpcDiff || descriptionDiff) {
         (this.overrides as MutableMap)[region] = SecurityGroupOverride(
@@ -236,9 +249,7 @@ class SecurityGroupHandler(
 
   override suspend fun actuationInProgress(resource: Resource<SecurityGroupSpec>): Boolean =
     resource
-      .spec
-      // TODO: fall back to environment's locations
-      .locations!!
+      .locations()
       .regions
       .map { it.name }
       .any { region ->
@@ -249,20 +260,20 @@ class SecurityGroupHandler(
 
   private suspend fun CloudDriverService.getSecurityGroup(
     spec: SecurityGroupSpec,
+    locations: Locations<*>,
     serviceAccount: String
   ): Map<String, SecurityGroup> =
     coroutineScope {
-      // TODO: fall back to environment's locations
-      spec.locations!!.regions.map { region ->
+      locations.regions.map { region ->
         async {
           try {
             getSecurityGroup(
               serviceAccount,
-              spec.locations.account,
+              locations.account,
               CLOUD_PROVIDER,
               spec.moniker.name,
               region.name,
-              cloudDriverCache.networkBy(spec.locations.vpc, spec.locations.account, region.name).id
+              cloudDriverCache.networkBy(locations.vpc, locations.account, region.name).id
             )
               .toSecurityGroup()
           } catch (e: HttpException) {

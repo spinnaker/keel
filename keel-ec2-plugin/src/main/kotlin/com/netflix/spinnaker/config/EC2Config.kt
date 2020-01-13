@@ -74,6 +74,7 @@ class EC2Config {
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
     taskLauncher: TaskLauncher,
+    deliveryConfigRepository: DeliveryConfigRepository,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): SecurityGroupHandler =
@@ -82,6 +83,7 @@ class EC2Config {
       cloudDriverCache,
       orcaService,
       taskLauncher,
+      deliveryConfigRepository,
       objectMapper,
       normalizers
     )

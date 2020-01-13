@@ -15,13 +15,14 @@
  */
 package com.netflix.spinnaker.keel.ec2.resource
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.PortRange
@@ -49,8 +50,7 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.Resolver
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.resource
@@ -67,6 +67,7 @@ import kotlinx.coroutines.runBlocking
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
+import strikt.assertions.containsKeys
 import strikt.assertions.first
 import strikt.assertions.get
 import strikt.assertions.hasSize
@@ -81,25 +82,14 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private val cloudDriverService: CloudDriverService = mockk()
   private val cloudDriverCache: CloudDriverCache = mockk()
   private val orcaService: OrcaService = mockk()
-  private val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk() {
-    // we're just using this to get notifications
-    every { environmentFor(any()) } returns Environment("test")
-  }
-  private val taskLauncher = TaskLauncher(
-    orcaService,
-    deliveryConfigRepository
-  )
-  private val objectMapper = configuredObjectMapper()
-  private val normalizers = emptyList<Resolver<SecurityGroupSpec>>()
   private val regions = listOf("us-west-3", "us-east-17")
 
   interface Fixture {
     val cloudDriverService: CloudDriverService
     val cloudDriverCache: CloudDriverCache
     val orcaService: OrcaService
-    val taskLauncher: TaskLauncher
-    val objectMapper: ObjectMapper
-    val normalizers: List<Resolver<SecurityGroupSpec>>
+    val deliveryConfigRepository: DeliveryConfigRepository
+    val environment: Environment
     val vpcRegion1: Network
     val vpcRegion2: Network
     val handler: SecurityGroupHandler
@@ -112,15 +102,32 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val cloudDriverService: CloudDriverService,
     override val cloudDriverCache: CloudDriverCache,
     override val orcaService: OrcaService,
-    override val taskLauncher: TaskLauncher,
-    override val objectMapper: ObjectMapper,
-    override val normalizers: List<Resolver<SecurityGroupSpec>>,
-    override val vpcRegion1: Network =
-      Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-west-3"),
-    override val vpcRegion2: Network =
-      Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-east-17"),
+    override val vpcRegion1: Network = Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-west-3"),
+    override val vpcRegion2: Network = Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-east-17"),
+    val locations: SubnetAwareLocations = SubnetAwareLocations(
+      account = vpcRegion1.account,
+      subnet = "internal (${vpcRegion1.name})",
+      vpc = vpcRegion1.name,
+      regions = setOf(SubnetAwareRegionSpec(vpcRegion1.region), SubnetAwareRegionSpec(vpcRegion2.region))
+    ),
+    override val environment: Environment = Environment(name = "test", locations = locations),
+    override val deliveryConfigRepository: DeliveryConfigRepository = mockk() {
+      // we're just using this to get notifications
+      every { environmentFor(any()) } returns environment
+    },
     override val handler: SecurityGroupHandler =
-      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers),
+      SecurityGroupHandler(
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService,
+        TaskLauncher(
+          orcaService,
+          deliveryConfigRepository
+        ),
+        deliveryConfigRepository,
+        configuredObjectMapper(),
+        emptyList()
+      ),
 
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
@@ -200,15 +207,28 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val cloudDriverService: CloudDriverService,
     override val cloudDriverCache: CloudDriverCache,
     override val orcaService: OrcaService,
-    override val taskLauncher: TaskLauncher,
-    override val objectMapper: ObjectMapper,
-    override val normalizers: List<Resolver<SecurityGroupSpec>>,
+    override val environment: Environment = Environment("test"),
+    override val deliveryConfigRepository: DeliveryConfigRepository = mockk() {
+      // we're just using this to get notifications
+      every { environmentFor(any()) } returns environment
+    },
     override val vpcRegion1: Network =
       Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-west-3"),
     override val vpcRegion2: Network =
       Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-east-17"),
     override val handler: SecurityGroupHandler =
-      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers),
+      SecurityGroupHandler(
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService,
+        TaskLauncher(
+          orcaService,
+          deliveryConfigRepository
+        ),
+        deliveryConfigRepository,
+        configuredObjectMapper(),
+        emptyList()
+      ),
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
         moniker = Moniker(
@@ -254,19 +274,82 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
       )
   ) : Fixture
 
+  fun desiredTests() = rootContext<CurrentFixture> {
+    fixture {
+      CurrentFixture(
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService
+      )
+    }
+
+    context("the spec defines locations") {
+      test("resolves a security group in each desired region") {
+        val response = runBlocking {
+          handler.desired(resource)
+        }
+
+        expectThat(response)
+          .hasSize(2)
+          .containsKeys("us-west-3", "us-east-17")
+      }
+    }
+
+    context("the spec does not define locations") {
+      deriveFixture {
+        copy(
+          securityGroupSpec = securityGroupSpec.copy(locations = null)
+        )
+      }
+
+      test("resolves a security group in each desired region") {
+        val response = runBlocking {
+          handler.desired(resource)
+        }
+
+        expectThat(response)
+          .hasSize(2)
+          .containsKeys("us-west-3", "us-east-17")
+      }
+    }
+  }
+
   fun currentTests() = rootContext<CurrentFixture> {
     fixture {
-      CurrentFixture(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers)
+      CurrentFixture(
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService
+      )
     }
 
     before {
       setupVpc()
     }
 
+    context("location is not specified on the resource spec") {
+      deriveFixture {
+        copy(
+          securityGroupSpec = securityGroupSpec.copy(locations = null)
+        )
+      }
+
+      before { cloudDriverSecurityGroupReturns() }
+
+      test("locations are determined from the resource's environment") {
+        val response = runBlocking {
+          handler.current(resource)
+        }
+        expectThat(response)
+          .hasSize(2)
+          .containsKeys("us-west-3", "us-east-17")
+      }
+    }
+
     context("no matching security group exists") {
       before { cloudDriverSecurityGroupNotFound() }
 
-      test("current returns null") {
+      test("current returns nothing") {
         val response = runBlocking {
           handler.current(resource)
         }
@@ -378,7 +461,13 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   }
 
   fun upsertTests() = rootContext<UpsertFixture> {
-    fixture { UpsertFixture(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers) }
+    fixture {
+      UpsertFixture(
+        cloudDriverService,
+        cloudDriverCache,
+        orcaService
+      )
+    }
 
     before {
       setupVpc()
