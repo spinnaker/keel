@@ -4,11 +4,10 @@ import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.TASK_TRACKING
 import org.jooq.DSLContext
-import java.time.Clock
 
-class SqlTaskTrackingRepository (
+class SqlTaskTrackingRepository(
   private val jooq: DSLContext
-) :TaskTrackingRepository {
+) : TaskTrackingRepository {
 
   override fun store(task: TaskRecord) {
     jooq.insertInto(TASK_TRACKING)
@@ -35,5 +34,4 @@ class SqlTaskTrackingRepository (
       .where(TASK_TRACKING.TASK_ID.eq(taskId))
       .execute()
   }
-
 }

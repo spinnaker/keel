@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.events.Task
+import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.model.EchoNotification
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -29,7 +30,9 @@ import com.netflix.spinnaker.keel.model.OrchestrationTrigger
 import com.netflix.spinnaker.keel.model.toEchoNotification
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.TaskRecord
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 /**
@@ -38,7 +41,8 @@ import org.springframework.stereotype.Component
 @Component
 class TaskLauncher(
   private val orcaService: OrcaService,
-  private val deliveryConfigRepository: DeliveryConfigRepository
+  private val deliveryConfigRepository: DeliveryConfigRepository,
+  private val publisher: ApplicationEventPublisher
 ) {
   suspend fun submitJobToOrca(
     resource: Resource<*>,
@@ -93,6 +97,8 @@ class TaskLauncher(
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, subject)
+        // TODO: check this
+        publisher.publishEvent(TaskCreatedEvent(TaskRecord(taskId = it.taskId, taskName = description, resourceId = subject)))
         Task(id = it.taskId, name = description)
       }
 

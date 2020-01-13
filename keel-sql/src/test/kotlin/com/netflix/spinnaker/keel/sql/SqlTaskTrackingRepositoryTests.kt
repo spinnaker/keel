@@ -4,10 +4,8 @@ import com.netflix.spinnaker.keel.persistence.TaskTrackingRepositoryTests
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
 import org.junit.jupiter.api.AfterAll
 
-
 private val testDatabase = initTestDatabase()
 private val jooq = testDatabase.context
-
 
 internal object SqlTaskTrackingRepositoryTests : TaskTrackingRepositoryTests<SqlTaskTrackingRepository>() {
 

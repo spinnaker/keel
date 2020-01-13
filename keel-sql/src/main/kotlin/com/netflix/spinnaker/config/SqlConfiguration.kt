@@ -8,8 +8,8 @@ import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlDiffFingerprintRepository
 import com.netflix.spinnaker.keel.sql.SqlPausedRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
-import com.netflix.spinnaker.keel.sql.SqlUnhappyVetoRepository
 import com.netflix.spinnaker.keel.sql.SqlTaskTrackingRepository
+import com.netflix.spinnaker.keel.sql.SqlUnhappyVetoRepository
 import com.netflix.spinnaker.kork.sql.config.DefaultSqlConfiguration
 import java.time.Clock
 import javax.annotation.PostConstruct
@@ -78,6 +78,6 @@ class SqlConfiguration {
 
   @Bean
   fun taskTrackingRepository(
-  jooq: DSLContext
+    jooq: DSLContext
   ) = SqlTaskTrackingRepository(jooq)
 }
