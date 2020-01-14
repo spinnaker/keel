@@ -210,14 +210,12 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
       } else {
         null
       },
-      locations = if (spec is Locatable<*> && spec.locations != null) {
+      locations = (spec as? Locatable<*>)?.locations?.let { locations ->
         SimpleLocations(
-          account = spec.locations!!.account,
-          vpc = spec.locations!!.vpc,
-          regions = spec.locations!!.regions.map { SimpleRegionSpec(it.name) }.toSet()
+          account = locations.account,
+          vpc = locations.vpc,
+          regions = locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
         )
-      } else {
-        null
       }
     )
 
