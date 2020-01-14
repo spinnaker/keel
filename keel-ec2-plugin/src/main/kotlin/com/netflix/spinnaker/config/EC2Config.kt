@@ -94,6 +94,7 @@ class EC2Config {
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
     taskLauncher: TaskLauncher,
+    deliveryConfigRepository: DeliveryConfigRepository,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): ClassicLoadBalancerHandler =
@@ -102,6 +103,7 @@ class EC2Config {
       cloudDriverCache,
       orcaService,
       taskLauncher,
+      deliveryConfigRepository,
       objectMapper,
       normalizers
     )
@@ -112,6 +114,7 @@ class EC2Config {
     cloudDriverCache: CloudDriverCache,
     orcaService: OrcaService,
     taskLauncher: TaskLauncher,
+    deliveryConfigRepository: DeliveryConfigRepository,
     objectMapper: ObjectMapper,
     normalizers: List<Resolver<*>>
   ): ApplicationLoadBalancerHandler =
@@ -120,6 +123,7 @@ class EC2Config {
       cloudDriverCache,
       orcaService,
       taskLauncher,
+      deliveryConfigRepository,
       objectMapper,
       normalizers
     )

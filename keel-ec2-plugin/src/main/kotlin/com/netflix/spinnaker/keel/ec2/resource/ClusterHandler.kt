@@ -50,6 +50,7 @@ import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.resolveLocations
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -224,10 +225,8 @@ class ClusterHandler(
     }
 
   override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
-    resource
-      .spec
-      // TODO: fall back to environment's locations
-      .locations!!
+    deliveryConfigRepository
+      .resolveLocations(resource)
       .regions
       .map { it.name }
       .any { region ->
@@ -530,25 +529,25 @@ class ClusterHandler(
   }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<ClusterSpec>): Iterable<ServerGroup> =
-    getServerGroups(
-      // TODO: fall back to environment's locations
-      account = resource.spec.locations!!.account,
-      moniker = resource.spec.moniker,
-      // TODO: fall back to environment's locations
-      regions = resource.spec.locations!!.regions.map { it.name }.toSet(),
-      serviceAccount = resource.serviceAccount
-    )
-      .also { them ->
-        if (them.distinctBy { it.launchConfiguration.appVersion }.size == 1) {
-          val appVersion = them.first().launchConfiguration.appVersion
-          if (appVersion != null) {
-            publisher.publishEvent(ArtifactVersionDeployed(
-              resourceId = resource.id,
-              artifactVersion = appVersion
-            ))
+    deliveryConfigRepository.resolveLocations(resource).let { locations ->
+      getServerGroups(
+        account = locations.account,
+        moniker = resource.spec.moniker,
+        regions = locations.regions.map { it.name }.toSet(),
+        serviceAccount = resource.serviceAccount
+      )
+        .also { them ->
+          if (them.distinctBy { it.launchConfiguration.appVersion }.size == 1) {
+            val appVersion = them.first().launchConfiguration.appVersion
+            if (appVersion != null) {
+              publisher.publishEvent(ArtifactVersionDeployed(
+                resourceId = resource.id,
+                artifactVersion = appVersion
+              ))
+            }
           }
         }
-      }
+    }
 
   private suspend fun CloudDriverService.getServerGroups(
     account: String,

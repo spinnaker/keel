@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterHandler
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import java.time.Clock
@@ -40,6 +41,7 @@ class TitusConfig {
     orcaService: OrcaService,
     clock: Clock,
     taskLauncher: TaskLauncher,
+    deliveryConfigRepository: DeliveryConfigRepository,
     publisher: ApplicationEventPublisher,
     objectMapper: ObjectMapper,
     resolvers: List<Resolver<*>>
@@ -49,7 +51,7 @@ class TitusConfig {
     orcaService,
     clock,
     taskLauncher,
-    publisher,
+    deliveryConfigRepository,
     objectMapper,
     resolvers
   )

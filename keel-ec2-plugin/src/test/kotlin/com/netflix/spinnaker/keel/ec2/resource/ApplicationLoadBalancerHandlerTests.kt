@@ -25,7 +25,7 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
@@ -53,7 +53,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
   private val cloudDriverService = mockk<CloudDriverService>()
   private val cloudDriverCache = mockk<CloudDriverCache>()
   private val orcaService = mockk<OrcaService>()
-  private val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk() {
+  private val deliveryConfigRepository: DeliveryConfigRepository = mockk() {
     // we're just using this to get notifications
     every { environmentFor(any()) } returns Environment("test")
   }
@@ -163,6 +163,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         cloudDriverCache,
         orcaService,
         taskLauncher,
+        deliveryConfigRepository,
         mapper,
         normalizers
       )

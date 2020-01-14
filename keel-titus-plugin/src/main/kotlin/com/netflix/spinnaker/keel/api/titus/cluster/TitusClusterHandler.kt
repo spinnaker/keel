@@ -51,6 +51,8 @@ import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.resolveLocations
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -67,7 +69,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.swiftzer.semver.SemVer
-import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
 
 class TitusClusterHandler(
@@ -76,7 +77,7 @@ class TitusClusterHandler(
   private val orcaService: OrcaService,
   private val clock: Clock,
   private val taskLauncher: TaskLauncher,
-  private val publisher: ApplicationEventPublisher,
+  private val deliveryConfigRepository: DeliveryConfigRepository,
   objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<TitusClusterSpec, Map<String, TitusServerGroup>>(objectMapper, resolvers) {
@@ -95,10 +96,8 @@ class TitusClusterHandler(
       .byRegion()
 
   override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
-    resource
-      .spec
-      // TODO: fall back to environment's locations
-      .locations!!
+    deliveryConfigRepository
+      .resolveLocations(resource)
       .regions
       .map { it.name }
       .any { region ->
@@ -315,14 +314,14 @@ class TitusClusterHandler(
     }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
-    getServerGroups(
-      // TODO: fall back to environment's locations
-      resource.spec.locations!!.account,
-      resource.spec.moniker,
-      // TODO: fall back to environment's locations
-      resource.spec.locations!!.regions.map { it.name }.toSet(),
-      resource.serviceAccount
-    )
+    deliveryConfigRepository.resolveLocations(resource).let { locations ->
+      getServerGroups(
+        locations.account,
+        resource.spec.moniker,
+        locations.regions.map { it.name }.toSet(),
+        resource.serviceAccount
+      )
+    }
 
   private suspend fun CloudDriverService.getServerGroups(
     account: String,

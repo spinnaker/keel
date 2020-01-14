@@ -4,7 +4,14 @@ import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.Locatable
+import com.netflix.spinnaker.keel.api.Locations
+import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
+import com.netflix.spinnaker.keel.api.SimpleLocations
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
+import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.toSimpleLocations
 
 interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfig> {
 
@@ -94,6 +101,30 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
     environmentName: String,
     limit: Int = 10
   ): List<ConstraintState>
+}
+
+/**
+ * Resolve [Locations] either from the spec or from [resource]'s [Environment]. One or the other
+ * must be non-null or an exception is thrown.
+ */
+fun <S : Locatable<SimpleLocations>> DeliveryConfigRepository.resolveLocations(resource: Resource<S>): SimpleLocations {
+  val specLocations = resource.spec.locations
+  val envLocations = environmentFor(resource.id).locations?.toSimpleLocations()
+  return checkNotNull(specLocations ?: envLocations) {
+    "Locations must be specified either in the resource spec, or its environment"
+  }
+}
+
+/**
+ * Resolve [Locations] either from the spec or from [resource]'s [Environment]. One or the other
+ * must be non-null or an exception is thrown.
+ */
+fun <S : Locatable<SubnetAwareLocations>> DeliveryConfigRepository.resolveLocations(resource: Resource<S>): SubnetAwareLocations {
+  val specLocations = resource.spec.locations
+  val envLocations = environmentFor(resource.id).locations
+  return checkNotNull(specLocations ?: envLocations) {
+    "Locations must be specified either in the resource spec, or its environment"
+  }
 }
 
 sealed class NoSuchDeliveryConfigException(message: String) : RuntimeException(message)

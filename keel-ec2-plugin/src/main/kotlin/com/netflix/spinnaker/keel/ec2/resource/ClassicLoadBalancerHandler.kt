@@ -26,6 +26,8 @@ import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.resolveLocations
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -41,6 +43,7 @@ class ClassicLoadBalancerHandler(
   private val cloudDriverCache: CloudDriverCache,
   private val orcaService: OrcaService,
   private val taskLauncher: TaskLauncher,
+  private val deliveryConfigRepository: DeliveryConfigRepository,
   objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<ClassicLoadBalancerSpec, Map<String, ClassicLoadBalancer>>(objectMapper, resolvers) {
@@ -50,29 +53,34 @@ class ClassicLoadBalancerHandler(
 
   override suspend fun toResolvedType(resource: Resource<ClassicLoadBalancerSpec>): Map<String, ClassicLoadBalancer> =
     with(resource.spec) {
-      // TODO: fall back to environment's locations
-      locations!!.regions.map { region ->
-        ClassicLoadBalancer(
-          moniker,
-          Location(
-            account = locations.account,
-            region = region.name,
-            vpc = locations.vpc ?: error("No vpc supplied or resolved"),
-            subnet = locations.subnet ?: error("No subnet purpose supplied or resolved"),
-            availabilityZones = region.availabilityZones
-          ),
-          internal,
-          overrides[region.name]?.dependencies ?: dependencies,
-          overrides[region.name]?.listeners ?: listeners,
-          overrides[region.name]?.healthCheck ?: healthCheck,
-          idleTimeout
-        )
+      deliveryConfigRepository.resolveLocations(resource).let { locations ->
+        locations.regions.map { region ->
+          ClassicLoadBalancer(
+            moniker,
+            Location(
+              account = locations.account,
+              region = region.name,
+              vpc = locations.vpc ?: error("No vpc supplied or resolved"),
+              subnet = locations.subnet ?: error("No subnet purpose supplied or resolved"),
+              availabilityZones = region.availabilityZones
+            ),
+            internal,
+            overrides[region.name]?.dependencies ?: dependencies,
+            overrides[region.name]?.listeners ?: listeners,
+            overrides[region.name]?.healthCheck ?: healthCheck,
+            idleTimeout
+          )
+        }
+          .associateBy { it.location.region }
       }
-        .associateBy { it.location.region }
     }
 
   override suspend fun current(resource: Resource<ClassicLoadBalancerSpec>): Map<String, ClassicLoadBalancer> =
-    cloudDriverService.getClassicLoadBalancer(resource.spec, resource.serviceAccount)
+    cloudDriverService.getClassicLoadBalancer(
+      resource.spec,
+      deliveryConfigRepository.resolveLocations(resource),
+      resource.serviceAccount
+    )
 
   override suspend fun upsert(
     resource: Resource<ClassicLoadBalancerSpec>,
@@ -174,10 +182,8 @@ class ClassicLoadBalancerHandler(
   }
 
   override suspend fun actuationInProgress(resource: Resource<ClassicLoadBalancerSpec>): Boolean =
-    resource
-      .spec
-      // TODO: fall back to environment's locations
-      .locations!!
+    deliveryConfigRepository
+      .resolveLocations(resource)
       .regions
       .map { it.name }
       .any { region ->
@@ -188,13 +194,13 @@ class ClassicLoadBalancerHandler(
 
   private suspend fun CloudDriverService.getClassicLoadBalancer(
     spec: ClassicLoadBalancerSpec,
+    locations: SubnetAwareLocations,
     serviceAccount: String
   ) = getClassicLoadBalancer(
-    // TODO: fall back to environment's locations
-    account = spec.locations!!.account,
+    account = locations.account,
     name = spec.moniker.name,
     // TODO: fall back to environment's locations
-    regions = spec.locations!!.regions.map { it.name }.toSet(),
+    regions = locations.regions.map { it.name }.toSet(),
     serviceAccount = serviceAccount
   )
 

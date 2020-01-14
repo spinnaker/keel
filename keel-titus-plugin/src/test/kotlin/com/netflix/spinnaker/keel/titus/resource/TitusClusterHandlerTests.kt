@@ -58,7 +58,7 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.test.resource
@@ -104,7 +104,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   val orcaService = mockk<OrcaService>()
   val objectMapper = ObjectMapper().registerKotlinModule()
   val resolvers = emptyList<Resolver<TitusClusterSpec>>()
-  val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk()
+  val deliveryConfigRepository: DeliveryConfigRepository = mockk()
   val taskLauncher = TaskLauncher(
     orcaService,
     deliveryConfigRepository
@@ -214,7 +214,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         orcaService,
         clock,
         taskLauncher,
-        publisher,
+        deliveryConfigRepository,
         objectMapper,
         resolvers
       )

@@ -18,7 +18,6 @@ package com.netflix.spinnaker.keel.ec2.resource
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Locations
-import com.netflix.spinnaker.keel.api.RegionSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -47,6 +46,7 @@ import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.resolveLocations
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -71,7 +71,7 @@ class SecurityGroupHandler(
 
   override suspend fun toResolvedType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     with(resource.spec) {
-      resource.locations().let { locations ->
+      deliveryConfigRepository.resolveLocations(resource).let { locations ->
         locations.regions.map { region ->
           region.name to SecurityGroup(
             moniker = Moniker(app = moniker.app, stack = moniker.stack, detail = moniker.detail),
@@ -90,14 +90,9 @@ class SecurityGroupHandler(
   override suspend fun current(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     cloudDriverService.getSecurityGroup(
       resource.spec,
-      resource.locations(),
+      deliveryConfigRepository.resolveLocations(resource),
       resource.serviceAccount
     )
-
-  private fun Resource<SecurityGroupSpec>.locations(): Locations<out RegionSpec> =
-    checkNotNull(spec.locations ?: deliveryConfigRepository.environmentFor(id).locations) {
-      "Locations must be specified either in the resource spec, or its environment"
-    }
 
   override suspend fun upsert(
     resource: Resource<SecurityGroupSpec>,
@@ -248,8 +243,8 @@ class SecurityGroupHandler(
     }
 
   override suspend fun actuationInProgress(resource: Resource<SecurityGroupSpec>): Boolean =
-    resource
-      .locations()
+    deliveryConfigRepository
+      .resolveLocations(resource)
       .regions
       .map { it.name }
       .any { region ->
