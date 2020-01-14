@@ -92,7 +92,8 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
       handlers = handlers,
       orcaService = orcaService,
       deliveryConfigRepository = deliveryConfigRepository,
-      clock = clock
+      clock = clock,
+      eventPublisher = mockk()
     )
   }
 

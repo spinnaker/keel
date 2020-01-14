@@ -84,6 +84,10 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
     type: String
   ): ConstraintState?
 
+  fun getConstraintStateForNotification(
+    notificationId: String
+  ): ConstraintState?
+
   /**
    * Rolls up the most recent constraint states (maximum of one per (Environment, ConstraintType))
    * related to a application retrieved by its name.

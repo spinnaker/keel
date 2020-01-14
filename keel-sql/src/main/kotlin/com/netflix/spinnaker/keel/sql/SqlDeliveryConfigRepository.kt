@@ -382,6 +382,7 @@ class SqlDeliveryConfigRepository(
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES))
               .execute()
 
+<<<<<<< HEAD
             txn
               .insertInto(CURRENT_CONSTRAINT)
               .set(CURRENT_CONSTRAINT.APPLICATION, application)
@@ -392,6 +393,19 @@ class SqlDeliveryConfigRepository(
               .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
               .execute()
           }
+=======
+          txn
+            .insertInto(CURRENT_CONSTRAINT)
+            .set(CURRENT_CONSTRAINT.APPLICATION, application)
+            .set(CURRENT_CONSTRAINT.ENVIRONMENT_UID, envUid)
+            .set(CURRENT_CONSTRAINT.TYPE, state.type)
+            .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, uid)
+            .onDuplicateKeyUpdate()
+            .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
+            .execute()
+
+          state.uid = uid
+>>>>>>> feat(constraints): Add interactive notifications for manual judgment
         }
       }
   }
@@ -451,6 +465,52 @@ class SqlDeliveryConfigRepository(
           )
         }
     }
+  }
+
+  override fun getConstraintStateForNotification(notificationId: String): ConstraintState? {
+    return jooq
+      .select(
+        DELIVERY_CONFIG.NAME,
+        ENVIRONMENT.NAME,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_AT,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.COMMENT,
+        ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES
+      )
+      .from(ENVIRONMENT_ARTIFACT_CONSTRAINT, DELIVERY_CONFIG, ENVIRONMENT)
+      .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(notificationId))
+      .and(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
+      .and(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+      .fetchOne { (deliveryConfigName,
+                    environmentName,
+                    artifactVersion,
+                    constraintType,
+                    status,
+                    createdAt,
+                    judgedBy,
+                    judgedAt,
+                    comment,
+                    attributes) ->
+        ConstraintState(
+          deliveryConfigName,
+          environmentName,
+          artifactVersion,
+          constraintType,
+          ConstraintStatus.valueOf(status),
+          createdAt.toInstant(ZoneOffset.UTC),
+          judgedBy,
+          when (judgedAt) {
+            null -> null
+            else -> judgedAt.toInstant(ZoneOffset.UTC)
+          },
+          comment,
+          mapper.readValue(attributes)
+        )
+      }
   }
 
   override fun constraintStateFor(application: String): List<ConstraintState> {

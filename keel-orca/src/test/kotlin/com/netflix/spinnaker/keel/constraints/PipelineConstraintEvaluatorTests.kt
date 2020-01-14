@@ -56,7 +56,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
     val executionId = randomUID().toString()
     val capturedId = slot<String>()
     val trigger = slot<HashMap<String, Any>>()
-    val subject = PipelineConstraintEvaluator(orcaService, deliveryConfigRepository, clock)
+    val subject = PipelineConstraintEvaluator(orcaService, deliveryConfigRepository, mockk(), clock)
   }
 
   fun tests() = rootContext<Fixture> {
