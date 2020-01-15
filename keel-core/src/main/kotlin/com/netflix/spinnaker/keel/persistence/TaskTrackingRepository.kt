@@ -8,7 +8,7 @@ interface TaskTrackingRepository {
 }
 
 data class TaskRecord(
-  val taskId: String,
-  val taskName: String,
-  val resourceId: String
+  val id: String,
+  val name: String,
+  val subject: String
 )

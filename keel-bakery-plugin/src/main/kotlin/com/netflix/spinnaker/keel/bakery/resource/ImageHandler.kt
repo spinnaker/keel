@@ -150,7 +150,7 @@ class ImageHandler(
       )
     )
     // TODO: check this
-    publisher.publishEvent(TaskCreatedEvent(TaskRecord(taskId = taskRef.taskId, taskName = description, resourceId = resource.id.toString())))
+    publisher.publishEvent(TaskCreatedEvent(TaskRecord(id = taskRef.taskId, name = description, subject = resource.id.toString())))
     return listOf(Task(id = taskRef.taskId, name = description)) // TODO: wow, this is ugly
   }
 

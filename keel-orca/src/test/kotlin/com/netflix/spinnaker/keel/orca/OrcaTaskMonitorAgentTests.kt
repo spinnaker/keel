@@ -17,7 +17,7 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
     val orcaService: OrcaService = mockk(relaxUnitFun = true),
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   ) {
-    val listner: OrcaTaskMonitorAgent = OrcaTaskMonitorAgent(repository, orcaService, publisher)
+    val listener: OrcaTaskMonitorAgent = OrcaTaskMonitorAgent(repository, orcaService, publisher)
   }
 
   fun orcaTaskMonitorAgentTests() = rootContext<OrcaTaskMonitorAgentFixture> {
@@ -25,16 +25,16 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
       OrcaTaskMonitorAgentFixture(
         event = TaskCreatedEvent(
           TaskRecord(
-            taskId = "123",
-            resourceId = "bla",
-            taskName = "upsert server group")
+            id = "123",
+            subject = "bla",
+            name = "upsert server group")
         )
       )
     }
 
     context("a new task is being created in orca") {
       before {
-          listner.onTaskEvent(event)
+          listener.onTaskEvent(event)
       }
 
       test("a new record is being added to the table exactly once") {

@@ -22,6 +22,11 @@ databaseChangeLog:
                   type: varchar(255)
                   constraints:
                     - nullable: false
+              - column:
+                  name: timestamp
+                  type: bigint
+                  constraints:
+                    nullable: false
               - modifySql:
                   dbms: mysql
                   append:

@@ -1,7 +1,9 @@
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import java.time.Clock
 import strikt.api.expectThat
 import strikt.assertions.first
 import strikt.assertions.isEmpty
@@ -9,7 +11,8 @@ import strikt.assertions.isEqualTo
 
 abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5Minutests {
 
-  abstract fun factory(): T
+  private val clock = MutableClock()
+  abstract fun factory(clock: Clock): T
 
   open fun T.flush() {}
 
@@ -19,7 +22,7 @@ abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5
 
   fun tests() = rootContext<Fixture<T>> {
     fixture {
-      Fixture(subject = factory())
+      Fixture(subject = factory(clock))
     }
 
     after { subject.flush() }
@@ -32,7 +35,7 @@ abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5
         subject.store(taskRecord1)
         expectThat(subject.getTasks().size).isEqualTo(1)
         expectThat(subject.getTasks()).first().get {
-          taskId == taskRecord1.taskId
+          id == taskRecord1.id
         }
       }
 
@@ -50,7 +53,7 @@ abstract class TaskTrackingRepositoryTests <T : TaskTrackingRepository> : JUnit5
       test("store, get and delete task") {
         subject.store(taskRecord1)
         expectThat(subject.getTasks().size).isEqualTo(1)
-        subject.delete(taskRecord1.taskId)
+        subject.delete(taskRecord1.id)
         expectThat(subject.getTasks()).isEmpty()
       }
   }

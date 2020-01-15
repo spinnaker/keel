@@ -31,6 +31,7 @@ import com.netflix.spinnaker.keel.model.toEchoNotification
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.TaskRecord
+import com.netflix.spinnaker.kork.artifacts.model.Artifact
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -79,7 +80,8 @@ class TaskLauncher(
     subject: String,
     description: String,
     correlationId: String,
-    stages: List<Map<String, Any?>>
+    stages: List<Map<String, Any?>>,
+    artifacts: List<Artifact> = emptyList()
   ): Task =
     orcaService
       .orchestrate(
@@ -91,14 +93,15 @@ class TaskLauncher(
           job = stages.map { Job(it["type"].toString(), it) },
           trigger = OrchestrationTrigger(
             correlationId = correlationId,
-            notifications = notifications
+            notifications = notifications,
+            artifacts = artifacts
           )
         )
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, subject)
         // TODO: check this
-        publisher.publishEvent(TaskCreatedEvent(TaskRecord(taskId = it.taskId, taskName = description, resourceId = subject)))
+        publisher.publishEvent(TaskCreatedEvent(TaskRecord(id = it.taskId, name = description, subject = subject)))
         Task(id = it.taskId, name = description)
       }
 

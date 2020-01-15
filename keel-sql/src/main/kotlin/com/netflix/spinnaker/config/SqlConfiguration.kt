@@ -78,6 +78,7 @@ class SqlConfiguration {
 
   @Bean
   fun taskTrackingRepository(
-    jooq: DSLContext
-  ) = SqlTaskTrackingRepository(jooq)
+    jooq: DSLContext,
+    clock: Clock
+  ) = SqlTaskTrackingRepository(jooq, clock)
 }
