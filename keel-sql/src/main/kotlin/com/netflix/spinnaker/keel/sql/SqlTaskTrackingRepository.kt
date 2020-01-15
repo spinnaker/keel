@@ -11,7 +11,7 @@ class SqlTaskTrackingRepository(
 
   override fun store(task: TaskRecord) {
     jooq.insertInto(TASK_TRACKING)
-      .set(TASK_TRACKING.RESOURCE_ID, task.resourceId)
+      .set(TASK_TRACKING.SUBJECT, task.resourceId)
       .set(TASK_TRACKING.TASK_ID, task.taskId)
       .set(TASK_TRACKING.TASK_NAME, task.taskName)
       .onDuplicateKeyIgnore()
@@ -20,7 +20,7 @@ class SqlTaskTrackingRepository(
 
   override fun getTasks(): Set<TaskRecord> {
     return jooq
-      .select(TASK_TRACKING.RESOURCE_ID, TASK_TRACKING.TASK_ID, TASK_TRACKING.TASK_NAME)
+      .select(TASK_TRACKING.SUBJECT, TASK_TRACKING.TASK_ID, TASK_TRACKING.TASK_NAME)
       .from(TASK_TRACKING)
       .fetch()
       .map { (resource_id, task_id, task_name) ->
