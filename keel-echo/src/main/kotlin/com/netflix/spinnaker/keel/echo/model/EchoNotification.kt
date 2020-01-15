@@ -79,23 +79,3 @@ data class EchoNotification(
     val user: String
   )
 }
-
-//  class ButtonAction extends InteractiveAction {
-//    String label
-//    String value
-//
-// //    ButtonAction(String name, String label, String value) {
-// ////      this.requestPath = requestPath.replace("{name}", name).replace("{value}", value)
-// ////      this.requestParameters = requestParameters.mapValues { _k, v -> v.replace("{name}", name).replace("{value}", value) }
-// //      this.name = name
-// //      this.label = label
-// //      this.value = label
-// //    }
-//  }
-//
-//  class InteractiveActionCallback {
-//    InteractiveAction actionPerformed
-//    String serviceId
-//    String callbackId
-//    String user
-//  }

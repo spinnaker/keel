@@ -467,7 +467,7 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  override fun getConstraintStateForNotification(notificationId: String): ConstraintState? {
+  override fun getConstraintStateById(uid: String): ConstraintState? {
     return jooq
       .select(
         DELIVERY_CONFIG.NAME,
@@ -482,7 +482,7 @@ class SqlDeliveryConfigRepository(
         ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES
       )
       .from(ENVIRONMENT_ARTIFACT_CONSTRAINT, DELIVERY_CONFIG, ENVIRONMENT)
-      .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(notificationId))
+      .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(uid))
       .and(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
       .and(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
       .fetchOne { (deliveryConfigName,

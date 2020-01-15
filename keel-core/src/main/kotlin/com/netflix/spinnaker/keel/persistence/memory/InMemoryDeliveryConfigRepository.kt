@@ -117,7 +117,7 @@ class InMemoryDeliveryConfigRepository(
   ): ConstraintState? =
     constraints["$deliveryConfigName:$environmentName:$artifactVersion:$type"]
 
-  override fun getConstraintStateForNotification(notificationId: String): ConstraintState? {
+  override fun getConstraintStateById(uid: String): ConstraintState? {
     TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
   }
 

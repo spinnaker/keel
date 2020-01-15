@@ -84,8 +84,8 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
     type: String
   ): ConstraintState?
 
-  fun getConstraintStateForNotification(
-    notificationId: String
+  fun getConstraintStateById(
+    uid: String
   ): ConstraintState?
 
   /**

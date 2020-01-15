@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController
 class InteractiveNotificationCallbackController(
   private val deliveryConfigRepository: DeliveryConfigRepository
 ) {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   @PostMapping(
     consumes = [MediaType.APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [MediaType.APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
@@ -31,8 +34,11 @@ class InteractiveNotificationCallbackController(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody callback: EchoNotification.InteractiveActionCallback
   ) {
-    val currentState = deliveryConfigRepository.getConstraintStateForNotification(callback.messageId)
+    val currentState = deliveryConfigRepository.getConstraintStateById(callback.messageId)
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
+
+    log.debug("Updating constraint status based on notification interaction: " +
+      "user = $user, status = ${callback.actionPerformed.value}")
 
     deliveryConfigRepository.storeConstraintState(
       currentState.copy(
