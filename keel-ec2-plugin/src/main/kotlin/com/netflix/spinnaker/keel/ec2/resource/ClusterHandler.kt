@@ -6,7 +6,6 @@ import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -46,7 +45,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
-import com.netflix.spinnaker.keel.ec2.image.ArtifactVersionDeployed
+import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -222,8 +221,10 @@ class ClusterHandler(
       }
     }
 
-  override suspend fun <T : ResourceSpec> actuationInProgress(resource: Resource<T>) =
-    (resource.spec as ClusterSpec).locations
+  override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
+    resource
+      .spec
+      .locations
       .regions
       .map { it.name }
       .any { region ->
@@ -538,7 +539,8 @@ class ClusterHandler(
           if (appVersion != null) {
             publisher.publishEvent(ArtifactVersionDeployed(
               resourceId = resource.id,
-              artifactVersion = appVersion
+              artifactVersion = appVersion,
+              provider = "aws"
             ))
           }
         }

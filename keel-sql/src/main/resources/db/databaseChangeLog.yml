@@ -78,5 +78,8 @@ databaseChangeLog:
       file: changelog/20200109-fix-delivery-artifact-uniqueness.yml
       relativeToChangelogFile: true
   - include:
+      file: changelog/20200110-artifact-fingerprint-unique.yml
+      relativeToChangelogFile: true
+  - include:
       file: changelog/20200109-create-task-tracking-table.yml
       relativeToChangelogFile: true

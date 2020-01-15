@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.sql
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ArtifactStatus
 import com.netflix.spinnaker.keel.api.ArtifactType
-import com.netflix.spinnaker.keel.api.ArtifactType.DEB
 import com.netflix.spinnaker.keel.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.api.ArtifactVersions
 import com.netflix.spinnaker.keel.api.DebianArtifact
@@ -37,7 +36,6 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.selectOne
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 
 class SqlArtifactRepository(
   private val jooq: DSLContext,
@@ -158,15 +156,14 @@ class SqlArtifactRepository(
       .getValues(ARTIFACT_VERSIONS.VERSION)
   }
 
-  // todo eb: get status from artifact instead of function param?
-  override fun versions(artifact: DeliveryArtifact, statuses: List<ArtifactStatus>): List<String> {
+  override fun versions(artifact: DeliveryArtifact): List<String> {
     return if (isRegistered(artifact.name, artifact.type)) {
       jooq
         .select(ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS)
         .from(ARTIFACT_VERSIONS)
         .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
         .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.value()))
-        .apply { if (artifact.type == DEB && statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
+        .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
         .fetch()
         .getValues(ARTIFACT_VERSIONS.VERSION)
         .sortedWith(artifact.versioningStrategy.comparator)
@@ -178,21 +175,16 @@ class SqlArtifactRepository(
   override fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
-    targetEnvironment: String,
-    statuses: List<ArtifactStatus>
+    targetEnvironment: String
   ): String? {
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
     val envUid = deliveryConfig.getUidFor(environment)
     val artifactId = artifact.uid
     val versions: List<String> = jooq
       .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
-      .from(ENVIRONMENT_ARTIFACT_VERSIONS, ARTIFACT_VERSIONS)
+      .from(ENVIRONMENT_ARTIFACT_VERSIONS)
       .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
       .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifactId))
-      .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-      .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
-      .and(ARTIFACT_VERSIONS.VERSION.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION))
-      .apply { if (statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*statuses.map { it.toString() }.toTypedArray())) }
       .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.APPROVED_AT.desc())
       .fetch()
       .getValues(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
@@ -420,21 +412,6 @@ class SqlArtifactRepository(
       .getInstance("SHA-1")
       .digest(data.toByteArray())
     return DatatypeConverter.printHexBinary(bytes).toUpperCase()
-  }
-
-  // todo eb: make fingerprint non-null and unique, remove this migration function
-  @Scheduled(fixedDelay = 600)
-  private fun computeFingerprints() {
-    jooq
-      .select(DELIVERY_ARTIFACT.UID, DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.TYPE, DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME, DELIVERY_ARTIFACT.REFERENCE)
-      .from(DELIVERY_ARTIFACT)
-      .forUpdate()
-      .fetch { (uid, name, type, configName, reference) ->
-        jooq.update(DELIVERY_ARTIFACT)
-          .set(DELIVERY_ARTIFACT.FINGERPRINT, fingerprint(name, type, configName, reference))
-          .where(DELIVERY_ARTIFACT.UID.eq(uid))
-          .execute()
-      }
   }
 
   private fun Instant.toLocal() = atZone(clock.zone).toLocalDateTime()
