@@ -22,7 +22,6 @@ import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.SubmittedResource
@@ -40,13 +39,15 @@ import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfiguration
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.clouddriver.model.Constraints
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
+import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
-import com.netflix.spinnaker.keel.docker.Container
-import com.netflix.spinnaker.keel.docker.ContainerWithDigest
-import com.netflix.spinnaker.keel.docker.ContainerWithVersionedTag
+import com.netflix.spinnaker.keel.docker.ContainerProvider
+import com.netflix.spinnaker.keel.docker.DigestProvider
+import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -54,6 +55,8 @@ import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
+import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
+import com.netflix.spinnaker.keel.plugin.convert
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import java.time.Clock
 import java.time.Duration
@@ -91,8 +94,10 @@ class TitusClusterHandler(
       .getServerGroups(resource)
       .byRegion()
 
-  override suspend fun <T : ResourceSpec> actuationInProgress(resource: Resource<T>) =
-    (resource.spec as TitusClusterSpec).locations
+  override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
+    resource
+      .spec
+      .locations
       .regions
       .map { it.name }
       .any { region ->
@@ -131,7 +136,6 @@ class TitusClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
-    // TODO[GY] : remove unchanged/default fields from response (across all export responses)
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
       exportable.moniker,
@@ -148,14 +152,15 @@ class TitusClusterHandler(
 
     val locations = SimpleLocations(
       account = exportable.account,
-      regions = (serverGroups.keys.map {
+      regions = serverGroups.keys.map {
         SimpleRegionSpec(it)
-      }).toSet())
+      }.toSet()
+    )
 
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
       locations = locations,
-      _defaults = base.exportSpec(),
+      _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf()
     )
 
@@ -172,7 +177,8 @@ class TitusClusterHandler(
     )
   }
 
-  fun generateContainer(container: ContainerWithDigest, account: String): Container {
+  // todo eb: this should generate a reference...
+  fun generateContainer(container: DigestProvider, account: String): ContainerProvider {
     val images = runBlocking {
       cloudDriverService.findDockerImages(
         account = getRegistryForTitusAccount(account),
@@ -182,7 +188,7 @@ class TitusClusterHandler(
 
     val image = images.find { it.digest == container.digest } ?: return container
     val tagVersionStrategy = findTagVersioningStrategy(image) ?: return container
-    return ContainerWithVersionedTag(
+    return VersionedTagProvider(
       organization = container.organization,
       image = container.image,
       tagVersionStrategy = tagVersionStrategy
@@ -300,48 +306,10 @@ class TitusClusterHandler(
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
-      var newSpec = TitusServerGroupSpec(defaults.container)
-      val workingSpec = serverGroup.exportSpec()
-      val diff = ResourceDiff(workingSpec, defaults)
-      if (diff.hasChanges()) {
-        if ("capacity" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(capacity = workingSpec.capacity)
-        }
-        if ("capacityGroup" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(capacityGroup = workingSpec.capacityGroup)
-        }
-        if ("constraints" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(constraints = workingSpec.constraints)
-        }
-        if ("container" in diff.affectedRootPropertyNames && defaults.container is ContainerWithDigest) {
-          // only allow overrides in container if it has a digest and not a versioning strategy
-          newSpec = newSpec.copy(container = workingSpec.container)
-        }
-        if ("dependencies" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(dependencies = workingSpec.dependencies)
-        }
-        if ("entryPoint" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(entryPoint = workingSpec.entryPoint)
-        }
-        if ("env" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(env = workingSpec.env)
-        }
-        if ("containerAttributes" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(containerAttributes = workingSpec.containerAttributes)
-        }
-        if ("iamProfile" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(iamProfile = workingSpec.iamProfile)
-        }
-        if ("migrationPolicy" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(migrationPolicy = workingSpec.migrationPolicy)
-        }
-        if ("resources" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(resources = workingSpec.resources)
-        }
-        if ("tags" in diff.affectedRootPropertyNames) {
-          newSpec = newSpec.copy(tags = workingSpec.tags)
-        }
-        (overrides as MutableMap)[region] = newSpec
+      val workingSpec = serverGroup.exportSpec(moniker.app)
+      val override: TitusServerGroupSpec? = buildSpecFromDiff(defaults, workingSpec)
+      if (override != null) {
+        (overrides as MutableMap)[region] = override
       }
     }
 
@@ -392,7 +360,7 @@ class TitusClusterHandler(
         region = region
       ),
       capacity = capacity,
-      container = ContainerWithDigest(
+      container = DigestProvider(
         organization = image.dockerImageName.split("/").first(),
         image = image.dockerImageName.split("/").last(),
         digest = image.dockerImageDigest
@@ -440,8 +408,22 @@ class TitusClusterHandler(
   private fun Instant.iso() =
     atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE_TIME)
 
-  private fun TitusServerGroup.exportSpec() =
-    TitusServerGroupSpec(
+  private fun TitusServerGroup.exportSpec(application: String): TitusServerGroupSpec {
+    val defaults = TitusServerGroupSpec(
+      capacity = Capacity(1, 1, 1),
+      iamProfile = application + "InstanceProfile",
+      resources = convert(Resources()),
+      entryPoint = "",
+      constraints = Constraints(),
+      migrationPolicy = MigrationPolicy(),
+      dependencies = ClusterDependencies(),
+      capacityGroup = application,
+      env = emptyMap(),
+      containerAttributes = emptyMap(),
+      tags = emptyMap()
+    )
+
+    val thisSpec = TitusServerGroupSpec(
       capacity = capacity,
       capacityGroup = capacityGroup,
       constraints = constraints,
@@ -456,12 +438,12 @@ class TitusClusterHandler(
       tags = tags
     )
 
-  private fun Resources.exportSpec() =
-    ResourcesSpec(
-      cpu = cpu,
-      disk = disk,
-      gpu = gpu,
-      memory = memory,
-      networkMbps = networkMbps
-    )
+    return checkNotNull(buildSpecFromDiff(defaults, thisSpec))
+  }
+
+  private fun Resources.exportSpec(): ResourcesSpec? {
+    val defaults = Resources()
+    val thisSpec: ResourcesSpec = convert(this)
+    return buildSpecFromDiff(defaults, thisSpec)
+  }
 }

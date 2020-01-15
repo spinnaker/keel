@@ -11,10 +11,11 @@ interface ArtifactRepository {
   /**
    * Creates or updates a registered artifact
    */
-  // todo eb: https://github.com/spinnaker/keel/issues/655
   fun register(artifact: DeliveryArtifact)
 
-  fun get(name: String, type: ArtifactType): DeliveryArtifact
+  fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact>
+
+  fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
@@ -24,31 +25,35 @@ interface ArtifactRepository {
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
+  fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean
+
   fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
 
   /**
-   * @returns the versions we have for an artifact, optionally filtering by status if provided
+   * @returns the versions we have for an artifact, filtering by the artifact status information,
+   * and sorting with the artifact's sorting strategy
    */
   fun versions(
-    name: String,
-    type: ArtifactType,
-    statuses: List<ArtifactStatus> = emptyList()
-  ): List<String>
-
-  fun versions(
-    artifact: DeliveryArtifact,
-    statuses: List<ArtifactStatus> = enumValues<ArtifactStatus>().toList()
+    artifact: DeliveryArtifact
   ): List<String>
 
   /**
-   * @return the latest version of [artifact] approved for use in [targetEnvironment],
-   * optionally filtering by status if provided.
+   * Lists all versions, unsorted and regardless of status
+   */
+  fun versions(
+    name: String,
+    type: ArtifactType
+  ): List<String>
+
+  /**
+   * @return the latest version of [artifact] approved for use in [targetEnvironment]
+   *
+   * Only versions that meet the status requirements for an artifact can be approved
    */
   fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
-    targetEnvironment: String,
-    statuses: List<ArtifactStatus> = emptyList()
+    targetEnvironment: String
   ): String?
 
   /**
@@ -117,6 +122,11 @@ interface ArtifactRepository {
 class NoSuchArtifactException(name: String, type: ArtifactType) :
   RuntimeException("No $type artifact named $name is registered") {
   constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type)
+}
+
+class ArtifactNotFoundException(name: String, type: ArtifactType, reference: String, deliveryConfig: String?) :
+  RuntimeException("No $type artifact named $name with reference $reference in delivery config $deliveryConfig is registered") {
+  constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type, artifact.reference, artifact.deliveryConfigName)
 }
 
 class ArtifactAlreadyRegistered(name: String, type: ArtifactType) :

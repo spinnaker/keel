@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
@@ -50,8 +51,8 @@ import com.netflix.spinnaker.keel.clouddriver.model.ServiceJobProcesses
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroupImage
 import com.netflix.spinnaker.keel.diff.ResourceDiff
-import com.netflix.spinnaker.keel.docker.ContainerWithDigest
-import com.netflix.spinnaker.keel.docker.ContainerWithVersionedTag
+import com.netflix.spinnaker.keel.docker.DigestProvider
+import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.model.parseMoniker
@@ -90,6 +91,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
+import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import strikt.assertions.map
 
@@ -101,7 +103,11 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   val orcaService = mockk<OrcaService>()
   val objectMapper = ObjectMapper().registerKotlinModule()
   val resolvers = emptyList<Resolver<TitusClusterSpec>>()
-  val taskLauncher = TaskLauncher(orcaService, InMemoryDeliveryConfigRepository())
+  val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk()
+  val taskLauncher = TaskLauncher(
+    orcaService,
+    deliveryConfigRepository
+  )
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   val clock = Clock.systemDefaultZone()
 
@@ -120,7 +126,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
     ),
     _defaults = TitusServerGroupSpec(
-      container = ContainerWithDigest(
+      container = DigestProvider(
         organization = "spinnaker",
         image = "keel",
         digest = "sha:1111"
@@ -230,6 +236,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         )
       }
       coEvery { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
+      every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
     }
 
     after {
@@ -466,7 +473,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         before {
           coEvery { cloudDriverService.titusActiveServerGroup("us-east-1") } returns activeServerGroupResponseEast
           coEvery { cloudDriverService.titusActiveServerGroup("us-west-2") } returns activeServerGroupResponseWest
-          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.findDockerImages("testregistry", (spec.defaults.container!! as DigestProvider).repository()) } returns images
           coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
 
@@ -488,6 +495,27 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .hasSize(0)
           }
         }
+
+        test("has default values in defaults omitted") {
+          expectThat(spec.defaults.constraints)
+            .isNull()
+          expectThat(spec.defaults.entryPoint)
+            .isNull()
+          expectThat(spec.defaults.migrationPolicy)
+            .isNull()
+          expectThat(spec.defaults.resources)
+            .isNull()
+          expectThat(spec.defaults.iamProfile)
+            .isNull()
+          expectThat(spec.defaults.capacityGroup)
+            .isNull()
+          expectThat(spec.defaults.env)
+            .isNull()
+          expectThat(spec.defaults.containerAttributes)
+            .isNull()
+          expectThat(spec.defaults.tags)
+            .isNull()
+        }
       }
 
       context("export with overrides") {
@@ -499,9 +527,10 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .withDifferentEntryPoint()
               .withDifferentEnv()
               .withDoubleCapacity()
-          coEvery { cloudDriverService.findDockerImages("testregistry", spec.defaults.container.repository()) } returns images
+          coEvery { cloudDriverService.findDockerImages("testregistry", (spec.defaults.container!! as DigestProvider).repository()) } returns images
           coEvery { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf("registry" to "testregistry")
         }
+
         derivedContext<SubmittedResource<TitusClusterSpec>>("exported titus cluster spec") {
           deriveFixture {
             runBlocking {
@@ -510,8 +539,11 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
 
           test("has overrides matching differences in the server groups") {
-            val defaults = TitusServerGroupSpec(spec.defaults.container)
-            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, defaults)
+            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, spec.defaults)
+            val addedOrChangedProps = overrideDiff.children
+              .filter { it.isAdded || it.isChanged }
+              .map { it.propertyName }
+              .toSet()
             expectThat(resource.kind)
               .isEqualTo("cluster")
             expectThat(resource.apiVersion)
@@ -524,14 +556,29 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               .containsKey("us-west-2")
             expectThat(overrideDiff.hasChanges())
               .isTrue()
-            expectThat(overrideDiff.diff.childCount())
-              .isEqualTo(3)
-            expectThat(overrideDiff.affectedRootPropertyNames)
+            expectThat(addedOrChangedProps)
               .isEqualTo(setOf("entryPoint", "capacity", "env"))
+          }
+
+          test("has default values in overrides omitted") {
+            val override = spec.overrides["us-west-2"]!!
+            expectThat(override.constraints)
+              .isNull()
+            expectThat(override.migrationPolicy)
+              .isNull()
+            expectThat(override.resources)
+              .isNull()
+            expectThat(override.iamProfile)
+              .isNull()
+            expectThat(override.capacityGroup)
+              .isNull()
+            expectThat(override.containerAttributes)
+              .isNull()
+            expectThat(override.tags)
+              .isNull()
           }
         }
       }
-      // TODO: test for defaults omitted from export
     }
 
     context("figuring out tagging strategy") {
@@ -559,7 +606,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     }
 
     context("generate container") {
-      val container = ContainerWithDigest(
+      val container = DigestProvider(
         organization = "emburns",
         image = "spin-titus-demo",
         digest = "sha:1111"
@@ -579,7 +626,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           container = container.copy(digest = "sha:2222"),
           account = titusAccount)
         expect {
-          that(generatedContainer).isA<ContainerWithVersionedTag>().get { tagVersionStrategy }.isEqualTo(INCREASING_TAG)
+          that(generatedContainer).isA<VersionedTagProvider>().get { tagVersionStrategy }.isEqualTo(INCREASING_TAG)
         }
       }
     }
