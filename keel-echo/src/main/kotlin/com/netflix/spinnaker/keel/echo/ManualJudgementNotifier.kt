@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.echo
 
 import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.ManualJudgementConstraint
+import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
@@ -28,46 +29,48 @@ class ManualJudgementNotifier(
       event.environment.notifications.map {
         // TODO: run in parallel
         runBlocking {
-          echoService.sendNotification(
-            EchoNotification(
-              notificationType = EchoNotification.Type.valueOf(it.type.name),
-              to = listOf(it.address),
-              // templateGroup = TODO
-              severity = EchoNotification.Severity.NORMAL,
-              source = EchoNotification.Source(
-                // FIXME: Environment should probably have a reference to the application name...
-                application = event.environment.resources.firstOrNull()?.application
-                // TODO: anything for executionType, executionId, user?
-              ),
-              additionalContext = mapOf(
-                "formatter" to "MARKDOWN",
-                "subject" to "Manual artifact promotion approval",
-                "body" to
-                  ":warning: The artifact *${event.currentState.artifactVersion}* from delivery config " +
-                  "*${event.currentState.deliveryConfigName}* requires your manual approval for deployment " +
-                  "into the *${event.currentState.environmentName}* environment."
-              ),
-              interactiveActions = EchoNotification.InteractiveActions(
-                callbackServiceId = "keel",
-                callbackMessageId = event.currentState.uid ?: error("ConstraintState.uid not present"),
-                actions = listOf(
-                  EchoNotification.ButtonAction(
-                    name = "manual-judgement",
-                    label = "Approve",
-                    value = ConstraintStatus.OVERRIDE_PASS.name
-                  ),
-                  EchoNotification.ButtonAction(
-                    name = "manual-judgement",
-                    label = "Reject",
-                    value = ConstraintStatus.OVERRIDE_FAIL.name
-                  )
-                ),
-                color = "#fcba03"
-              )
-            )
-          )
+          echoService.sendNotification(event.toEchoNotification(it))
         }
       }
     }
+  }
+
+  private fun ConstraintStateChanged.toEchoNotification(config: NotificationConfig): EchoNotification {
+    return EchoNotification(
+      notificationType = EchoNotification.Type.valueOf(config.type.name),
+      to = listOf(config.address),
+      // templateGroup = TODO
+      severity = EchoNotification.Severity.NORMAL,
+      source = EchoNotification.Source(
+        // FIXME: Environment should probably have a reference to the application name...
+        application = environment.resources.firstOrNull()?.application
+        // TODO: anything for executionType, executionId, user?
+      ),
+      additionalContext = mapOf(
+        "formatter" to "MARKDOWN",
+        "subject" to "Manual artifact promotion approval",
+        "body" to
+          ":warning: The artifact *${currentState.artifactVersion}* from delivery config " +
+          "*${currentState.deliveryConfigName}* requires your manual approval for deployment " +
+          "into the *${currentState.environmentName}* environment."
+      ),
+      interactiveActions = EchoNotification.InteractiveActions(
+        callbackServiceId = "keel",
+        callbackMessageId = currentState.uid ?: error("ConstraintState.uid not present"),
+        actions = listOf(
+          EchoNotification.ButtonAction(
+            name = "manual-judgement",
+            label = "Approve",
+            value = ConstraintStatus.OVERRIDE_PASS.name
+          ),
+          EchoNotification.ButtonAction(
+            name = "manual-judgement",
+            label = "Reject",
+            value = ConstraintStatus.OVERRIDE_FAIL.name
+          )
+        ),
+        color = "#fcba03"
+      )
+    )
   }
 }
