@@ -11,11 +11,13 @@ import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryPausedRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryTaskTrackingRepository
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.supporting
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
@@ -73,6 +75,10 @@ class DefaultConfiguration {
   @Bean
   @ConditionalOnMissingBean(ResourceHandler::class)
   fun noResourcePlugins(): List<ResourceHandler<*, *>> = emptyList()
+
+  @Bean
+  @ConditionalOnMissingBean
+  fun taskTrackingRepository(): TaskTrackingRepository = InMemoryTaskTrackingRepository()
 
   @Bean
   fun resourceTypeIdentifier(

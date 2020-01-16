@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.orca
 
+import com.netflix.spinnaker.keel.activation.ApplicationDown
+import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import java.util.concurrent.Executors
@@ -16,13 +18,38 @@ class OrcaTaskMonitorAgent(
   private val taskTrackingRepository: TaskTrackingRepository,
   private val orcaService: OrcaService,
   private val publisher: ApplicationEventPublisher
+  // @Value("\${keel.orca-task-check.min-age-duration:60m}") private val resourceCheckMinAgeDuration: Duration
+
 ) {
+
+  private var enabled = false
+
+  @EventListener(ApplicationUp::class)
+  fun onApplicationUp() {
+    log.info("Application up, enabling scheduled resource checks")
+    enabled = true
+  }
+
+  @EventListener(ApplicationDown::class)
+  fun onApplicationDown() {
+    log.info("Application down, disabling scheduled resource checks")
+    enabled = false
+  }
 
   @EventListener(TaskCreatedEvent::class)
   fun onTaskEvent(event: TaskCreatedEvent) {
     taskTrackingRepository.store(event.taskRecord)
   }
-  // TODO: nuild actual logic of the agent - ignore this file for now
+
+//  @Scheduled(fixedDelayString = "\${keel.orca-task-check.frequency:PT1M}")
+//  fun checkTasks () {
+//    if (enabled) {
+//
+//    } else {
+//      log.debug("Scheduled orca task validation disabled")
+//    }
+//  }
+
   // TODO: check about the DiscoveryActivated thing
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
   private val executorService = Executors.newSingleThreadScheduledExecutor()
