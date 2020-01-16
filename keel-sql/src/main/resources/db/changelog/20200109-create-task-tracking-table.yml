@@ -41,7 +41,7 @@ databaseChangeLog:
         - addPrimaryKey:
             tableName: task_tracking
             constraintName: task_tracking_pk
-            columnNames: task_id, resource_id
+            columnNames: task_id
       rollback:
         - dropPrimaryKey:
             constraintName: task_tracking_pk
