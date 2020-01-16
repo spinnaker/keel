@@ -29,8 +29,7 @@ class CurrentlyDeployedDockerImageApprover(
       val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resourceId)
       val env = deliveryConfigRepository.environmentFor(resourceId)
 
-      if (resource.spec is TitusClusterSpec) {
-        val spec = resource.spec as TitusClusterSpec // needed because kotlin can't cast it automatically
+      (resource.spec as? TitusClusterSpec)?.let { spec ->
         if (spec.defaults.container != null && spec.defaults.container is ReferenceProvider) {
           val container = spec.defaults.container as ReferenceProvider
           val artifact = deliveryConfig.matchingArtifact(container.reference, DOCKER)

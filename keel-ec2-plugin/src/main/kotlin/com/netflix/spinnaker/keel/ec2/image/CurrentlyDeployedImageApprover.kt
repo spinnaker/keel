@@ -47,8 +47,7 @@ class CurrentlyDeployedImageApprover(
       val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resourceId)
       val env = deliveryConfigRepository.environmentFor(resourceId)
 
-      if (resource.spec is ClusterSpec) {
-        val spec = resource.spec as ClusterSpec // needed because kotlin can't cast it automatically
+      (resource.spec as? ClusterSpec)?.let { spec ->
         val artifact = when (spec.imageProvider) {
           is ArtifactImageProvider -> {
             spec.imageProvider.deliveryArtifact
