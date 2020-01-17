@@ -67,7 +67,9 @@ abstract class StatefulConstraintEvaluator<T : Constraint> : ConstraintEvaluator
         targetEnvironment.name,
         version,
         constraint.type)
-      ?: ConstraintState(
+
+    if (state == null) {
+      state = ConstraintState(
         deliveryConfigName = deliveryConfig.name,
         environmentName = targetEnvironment.name,
         artifactVersion = version,
@@ -77,6 +79,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint> : ConstraintEvaluator
         deliveryConfigRepository.storeConstraintState(it)
         eventPublisher.publishEvent(ConstraintStateChanged(targetEnvironment, constraint, null, it))
       }
+    }
 
     return when {
       state.failed() -> false
