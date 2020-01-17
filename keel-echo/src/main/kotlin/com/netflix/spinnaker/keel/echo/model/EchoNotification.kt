@@ -26,14 +26,8 @@ data class EchoNotification(
   )
 
   enum class Type {
-    BEARYCHAT,
     EMAIL,
-    GOOGLECHAT,
-    JIRA,
-    PAGER_DUTY,
-    PUBSUB,
-    SLACK,
-    SMS,
+    SLACK
   }
 
   enum class Severity {
