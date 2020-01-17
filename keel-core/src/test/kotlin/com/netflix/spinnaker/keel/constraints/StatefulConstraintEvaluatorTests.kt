@@ -22,11 +22,11 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.time.Instant
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
-import java.time.Instant
 
 internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
 
@@ -50,7 +50,8 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
         deliveryConfig: DeliveryConfig,
         targetEnvironment: Environment,
         constraint: FakeConstraint,
-        state: ConstraintState) =
+        state: ConstraintState
+      ) =
         delegate.canPromote(artifact, version, deliveryConfig, targetEnvironment, constraint, state)
     }
 
@@ -142,7 +143,6 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
         eventPublisher.publishEvent(capture(event))
       }
 
-
       expectThat(event.captured).isEqualTo(
         // We ignore the timestamp as it's dynamically generated
         expectedEvent.copy(
@@ -164,7 +164,6 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
         eventPublisher.publishEvent(capture(event))
       }
     }
-
   }
 
   private fun ConstraintState.createdAt(time: Instant) =
