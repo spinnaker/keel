@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.ConstraintStatus
+import com.netflix.spinnaker.keel.api.parseUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -27,14 +28,17 @@ class InteractiveNotificationCallbackController(
   )
   // TODO: This should be validated against write access to a service account. Service accounts should
   //  become a top-level property of either delivery configs or environments.
+  //
   // TODO(lfp): Related to the above, we'll need an additional authentication method for interactive constraint
   //  approval outside of the Spinnaker UI, e.g. in Slack, since X-SPINNAKER-USER will be extracted from the Slack
-  //  message and not provided by the UI. My plan is to include an OTP in the callback URL.
+  //  message and not provided by the UI. My plan is to include an OTP in the callback URL. Note that echo
+  //  does token/signature verification of messages, so there's relatively tight security there, but we still trust
+  //  the e-mail address without a Spinnaker user having authenticated here.
   fun handleInteractionCallback(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody callback: EchoNotification.InteractiveActionCallback
   ) {
-    val currentState = deliveryConfigRepository.getConstraintStateById(callback.messageId)
+    val currentState = deliveryConfigRepository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     log.debug("Updating constraint status based on notification interaction: " +

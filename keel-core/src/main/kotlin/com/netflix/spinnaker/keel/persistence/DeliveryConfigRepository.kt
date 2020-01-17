@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.UID
 
 interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfig> {
 
@@ -85,7 +86,7 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   ): ConstraintState?
 
   fun getConstraintStateById(
-    uid: String
+    uid: UID
   ): ConstraintState?
 
   /**

@@ -19,7 +19,7 @@ data class ConstraintState(
   val comment: String? = null,
   val attributes: ConstraintStateAttributes? = null,
   @JsonIgnore
-  var uid: String? = null
+  var uid: UID? = null
 ) {
   fun passed() = status.passes()
 

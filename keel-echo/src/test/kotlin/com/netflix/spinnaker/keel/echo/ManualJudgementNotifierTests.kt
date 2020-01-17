@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.NotificationFrequency
 import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.api.application
+import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.test.resource
@@ -58,7 +59,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
           constraint = manualJudgementConstraint,
           previousState = null,
           currentState = ConstraintState(
-            uid = "blah",
+            uid = randomUID(),
             deliveryConfigName = "test",
             environmentName = "test",
             artifactVersion = "v1.0.0",
@@ -134,7 +135,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
             ),
             interactiveActions = EchoNotification.InteractiveActions(
               callbackServiceId = "keel",
-              callbackMessageId = currentState.uid!!,
+              callbackMessageId = currentState.uid!!.toString(),
               actions = listOf(
                 EchoNotification.ButtonAction(
                   name = "manual-judgement",

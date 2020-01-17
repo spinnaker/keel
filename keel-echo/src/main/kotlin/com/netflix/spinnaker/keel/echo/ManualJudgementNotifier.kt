@@ -56,7 +56,7 @@ class ManualJudgementNotifier(
       ),
       interactiveActions = EchoNotification.InteractiveActions(
         callbackServiceId = "keel",
-        callbackMessageId = currentState.uid ?: error("ConstraintState.uid not present"),
+        callbackMessageId = currentState.uid?.toString() ?: error("ConstraintState.uid not present"),
         actions = listOf(
           EchoNotification.ButtonAction(
             name = "manual-judgement",

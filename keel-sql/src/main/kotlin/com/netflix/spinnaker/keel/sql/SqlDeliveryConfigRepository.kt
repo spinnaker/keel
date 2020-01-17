@@ -8,7 +8,9 @@ import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.UID
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.parseUID
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
@@ -355,7 +357,7 @@ class SqlDeliveryConfigRepository(
               ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(state.artifactVersion)
             )
             .fetchOne(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID)
-        } ?: randomUID().toString()
+        } ?: randomUID()
 
         val application = applicationByDeliveryConfigName(state.deliveryConfigName)
 
@@ -382,7 +384,6 @@ class SqlDeliveryConfigRepository(
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES))
               .execute()
 
-<<<<<<< HEAD
             txn
               .insertInto(CURRENT_CONSTRAINT)
               .set(CURRENT_CONSTRAINT.APPLICATION, application)
@@ -393,19 +394,8 @@ class SqlDeliveryConfigRepository(
               .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
               .execute()
           }
-=======
-          txn
-            .insertInto(CURRENT_CONSTRAINT)
-            .set(CURRENT_CONSTRAINT.APPLICATION, application)
-            .set(CURRENT_CONSTRAINT.ENVIRONMENT_UID, envUid)
-            .set(CURRENT_CONSTRAINT.TYPE, state.type)
-            .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, uid)
-            .onDuplicateKeyUpdate()
-            .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
-            .execute()
-
+          // Store generated UID in constraint state object so it can be used by caller
           state.uid = uid
->>>>>>> feat(constraints): Add interactive notifications for manual judgment
         }
       }
   }
@@ -467,7 +457,7 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  override fun getConstraintStateById(uid: String): ConstraintState? {
+  override fun getConstraintStateById(uid: UID): ConstraintState? {
     return jooq
       .select(
         DELIVERY_CONFIG.NAME,
@@ -482,7 +472,7 @@ class SqlDeliveryConfigRepository(
         ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES
       )
       .from(ENVIRONMENT_ARTIFACT_CONSTRAINT, DELIVERY_CONFIG, ENVIRONMENT)
-      .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(uid))
+      .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(uid.toString()))
       .and(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
       .and(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
       .fetchOne { (deliveryConfigName,
