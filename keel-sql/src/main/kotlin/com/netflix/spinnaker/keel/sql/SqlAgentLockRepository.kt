@@ -37,7 +37,7 @@ class SqlAgentLockRepository(
     var changed = withRetry {
       jooq.insertInto(AGENT_LOCK)
         .set(AGENT_LOCK.LOCK_NAME, agentName)
-        .set(AGENT_LOCK.EXPIRY, now.plusSeconds(lockTimeoutSeconds).toEpochMilli())
+        .set(AGENT_LOCK.EXPIRY, now.plusSqlConfigurationSeconds(lockTimeoutSeconds).toEpochMilli())
         .onDuplicateKeyIgnore()
         .execute()
     }
