@@ -6,24 +6,15 @@ import com.netflix.spinnaker.fiat.shared.EnableFiatAutoConfig
 import com.netflix.spinnaker.filters.AuthenticatedRequestFilter
 import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
-import com.netflix.spinnaker.keel.persistence.PausedRepository
-import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDiffFingerprintRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryPausedRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryTaskTrackingRepository
+import com.netflix.spinnaker.keel.persistence.*
+import com.netflix.spinnaker.keel.persistence.memory.*
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.supporting
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import de.huxhorn.sulky.ulid.ULID
+import io.github.resilience4j.retry.autoconfigure.RetryProperties
 import java.time.Clock
 import org.springframework.beans.factory.getBeansOfType
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -79,6 +70,11 @@ class DefaultConfiguration {
   @Bean
   @ConditionalOnMissingBean
   fun taskTrackingRepository(): TaskTrackingRepository = InMemoryTaskTrackingRepository()
+
+  @Bean
+  @ConditionalOnMissingBean
+  fun agentLockRepository(): AgentLockRepository = InMemoryAgentLockRepository()
+
 
   @Bean
   fun resourceTypeIdentifier(

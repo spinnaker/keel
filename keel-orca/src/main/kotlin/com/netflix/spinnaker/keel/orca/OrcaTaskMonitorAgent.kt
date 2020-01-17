@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
-import java.util.concurrent.Executors
+import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
@@ -18,9 +18,7 @@ class OrcaTaskMonitorAgent(
   private val taskTrackingRepository: TaskTrackingRepository,
   private val orcaService: OrcaService,
   private val publisher: ApplicationEventPublisher
-  // @Value("\${keel.orca-task-check.min-age-duration:60m}") private val resourceCheckMinAgeDuration: Duration
-
-) {
+) : ScheduledAgent {
 
   private var enabled = false
 
@@ -41,18 +39,12 @@ class OrcaTaskMonitorAgent(
     taskTrackingRepository.store(event.taskRecord)
   }
 
-//  @Scheduled(fixedDelayString = "\${keel.orca-task-check.frequency:PT1M}")
-//  fun checkTasks () {
-//    if (enabled) {
-//
-//    } else {
-//      log.debug("Scheduled orca task validation disabled")
-//    }
-//  }
+  override fun invoke() {
+    // 1. Get active tasks from task tracking table
+    // 2. get tasks status from orca
+    // 3. publish event
+  }
 
   // TODO: check about the DiscoveryActivated thing
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
-  private val executorService = Executors.newSingleThreadScheduledExecutor()
-//  private val lastResourceCheck: AtomicReference<Instant> = createDriftGauge("bla")
-//  private val _lastAgentRun = AtomicReference<Instant>(clock.instant())
 }
