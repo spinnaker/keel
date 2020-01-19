@@ -5,8 +5,8 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface EchoService {
-  @POST("/notifications")
-  suspend fun sendNotification(
+  @POST("/interactive-notifications")
+  suspend fun sendInteractiveNotification(
     @Body notification: EchoNotification
   )
 }

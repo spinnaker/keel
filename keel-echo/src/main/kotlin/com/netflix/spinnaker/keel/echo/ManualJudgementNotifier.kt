@@ -29,7 +29,7 @@ class ManualJudgementNotifier(
       event.environment.notifications.map {
         // TODO: run in parallel
         runBlocking {
-          echoService.sendNotification(event.toEchoNotification(it))
+          echoService.sendInteractiveNotification(event.toEchoNotification(it))
         }
       }
     }
