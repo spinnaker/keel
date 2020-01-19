@@ -73,7 +73,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
     context("manual judgement constraint state changed event received") {
       before {
         coEvery {
-          echoService.sendInteractiveNotification(any())
+          echoService.sendNotification(any())
         } just Runs
       }
 
@@ -83,7 +83,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         }.failed()
 
         coVerify(exactly = 0) {
-          echoService.sendInteractiveNotification(any())
+          echoService.sendNotification(any())
         }
       }
 
@@ -91,7 +91,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         subject.constraintStateChanged(event)
 
         coVerify(exactly = 1) {
-          echoService.sendInteractiveNotification(any())
+          echoService.sendNotification(any())
         }
       }
 
@@ -99,7 +99,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         subject.constraintStateChanged(event.withPreviousState())
 
         coVerify(exactly = 0) {
-          echoService.sendInteractiveNotification(any())
+          echoService.sendNotification(any())
         }
       }
 
@@ -110,7 +110,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         expectThat(event.environment.notifications.size).isGreaterThan(1)
 
         coVerify(exactly = event.environment.notifications.size) {
-          echoService.sendInteractiveNotification(any())
+          echoService.sendNotification(any())
         }
       }
 
@@ -158,7 +158,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         val notification = slot<EchoNotification>()
 
         coVerify {
-          echoService.sendInteractiveNotification(capture(notification))
+          echoService.sendNotification(capture(notification))
         }
 
         expectThat(notification.captured).isEqualTo(expectedNotification)
