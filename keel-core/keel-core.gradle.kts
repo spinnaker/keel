@@ -33,7 +33,7 @@ dependencies {
   api("org.springframework.boot:spring-boot-autoconfigure")
   api("com.netflix.frigga:frigga")
   api("com.netflix.spinnaker.kork:kork-core")
-  api("net.swiftzer.semver:semver:1.1.0")
+  api("net.swiftzer.semver:semver:1.1.1")
   api("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   api("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
 
