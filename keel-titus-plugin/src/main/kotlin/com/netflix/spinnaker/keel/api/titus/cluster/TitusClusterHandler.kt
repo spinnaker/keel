@@ -52,6 +52,9 @@ import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.orca.dependsOn
+import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
+import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
@@ -64,6 +67,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -112,31 +116,165 @@ class TitusClusterHandler(
     resourceDiff: ResourceDiff<Map<String, TitusServerGroup>>
   ): List<Task> =
     coroutineScope {
-      resourceDiff
+      val diffs = resourceDiff
         .toIndividualDiffs()
         .filter { diff -> diff.hasChanges() }
-        .map { diff ->
-          val desired = diff.desired
-          val job = when {
-            diff.isCapacityOnly() -> diff.resizeServerGroupJob()
-            else -> diff.upsertServerGroupJob() + resource.spec.deployWith.toOrcaJobProperties()
-          }
 
-          log.info("Upserting server group using task: {}", job)
+      val deferred: MutableList<Deferred<Task>> = mutableListOf()
+      val modifyDiffs = diffs.filter { it.isCapacityOnly() }
+      val createDiffs = diffs - modifyDiffs
 
-          async {
-            taskLauncher.submitJobToOrca(
-              resource = resource,
-              description = "Upsert server group ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}",
-              correlationId = "${resource.id}:${desired.location.region}",
-              job = job
-            )
-          }
-        }
-        .map { it.await() }
+      if (modifyDiffs.isNotEmpty()) {
+        deferred.addAll(
+          modifyInPlace(resource, modifyDiffs))
+      }
+
+      if (resource.spec.deployWith.isStaggered && createDiffs.isNotEmpty()) {
+        val tasks = upsertStaggered(resource, createDiffs)
+        return@coroutineScope tasks + deferred.map { it.await() }
+      }
+
+      deferred.addAll(
+        upsertUnstaggered(resource, createDiffs))
+
+      return@coroutineScope deferred.map { it.await() }
     }
 
-  override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
+  private suspend fun modifyInPlace(
+    resource: Resource<TitusClusterSpec>,
+    diffs: List<ResourceDiff<TitusServerGroup>>
+  ): List<Deferred<Task>> =
+    coroutineScope {
+      diffs.map { diff ->
+        val job = diff.resizeServerGroupJob()
+
+        log.info("Modifying server group in-place using task: $job")
+
+        async {
+          taskLauncher.submitJobToOrca(
+            resource = resource,
+            description = "Upsert server group ${diff.desired.moniker.name} in " +
+              "${diff.desired.location.account}/${diff.desired.location.region}",
+            correlationId = "${resource.id}:${diff.desired.location.region}",
+            job = job
+          )
+        }
+      }
+    }
+
+  private suspend fun upsertStaggered(
+    resource: Resource<TitusClusterSpec>,
+    diffs: List<ResourceDiff<TitusServerGroup>>
+  ): List<Task> =
+    coroutineScope {
+      val regionalDiffs = diffs.associateBy { it.desired.location.region }
+      val tasks: MutableList<Task> = mutableListOf()
+      var priorExecutionId: String? = null
+      val staggeredRegions = resource.spec.deployWith.stagger.map {
+        it.region
+      }
+        .toSet()
+
+      // If any, these are deployed in-parallel after all regions with a defined stagger
+      val unstaggeredRegions = regionalDiffs.keys - staggeredRegions
+
+      for (stagger in resource.spec.deployWith.stagger) {
+        if (!regionalDiffs.containsKey(stagger.region)) {
+          continue
+        }
+
+        val diff = regionalDiffs[stagger.region] as ResourceDiff<TitusServerGroup>
+        val stages: MutableList<Map<String, Any?>> = mutableListOf()
+        var refId = 0
+
+        if (priorExecutionId != null) {
+          stages.add(dependsOn(priorExecutionId))
+          refId++
+        }
+
+        val stage = (diff.upsertServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+          .toMutableMap()
+
+        // refId is never used again here, but will need to be incremented if we add on additional
+        // stages, such as when titus autoscale support is implemented.
+        refId++
+
+        /**
+         * If regions are staggered by time windows, add a `restrictedExecutionWindow`
+         * to the `createServerGroup` stage.
+         */
+        if (stagger.hours != null) {
+          val hours = stagger.hours!!.split("-").map { it.toInt() }
+          stage.putAll(restrictedExecutionWindow(hours[0], hours[1]))
+        }
+
+        stages.add(stage)
+
+        if (stagger.pauseTime != null) {
+          stages.add(
+            waitStage(stagger.pauseTime!!, stages.size))
+        }
+
+        val deferred = async {
+          taskLauncher.submitJobToOrca(
+            resource = resource,
+            description = "Upsert server group ${diff.desired.moniker.name} in " +
+              "${diff.desired.location.account}/${diff.desired.location.region}",
+            correlationId = "${resource.id}:${diff.desired.location.region}",
+            stages = stages
+          )
+        }
+
+        val task = deferred.await()
+        priorExecutionId = task.id
+        tasks.add(task)
+      }
+
+      if (unstaggeredRegions.isNotEmpty()) {
+        val unstaggeredDiffs = regionalDiffs
+          .filter { unstaggeredRegions.contains(it.key) }
+          .map { it.value }
+
+        tasks.addAll(
+          upsertUnstaggered(resource, unstaggeredDiffs, priorExecutionId)
+            .map { it.await() }
+        )
+      }
+
+      return@coroutineScope tasks
+    }
+
+  private suspend fun upsertUnstaggered(
+    resource: Resource<TitusClusterSpec>,
+    diffs: List<ResourceDiff<TitusServerGroup>>,
+    dependsOn: String? = null
+  ): List<Deferred<Task>> =
+    coroutineScope {
+      diffs.map { diff ->
+        val stages: MutableList<Map<String, Any?>> = mutableListOf()
+        var refId = 0
+
+        if (dependsOn != null) {
+          stages.add(dependsOn(dependsOn))
+          refId++
+        }
+
+        stages.add(diff.upsertServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+
+        log.info("Upserting server group using task: $stages")
+
+        async {
+          taskLauncher.submitJobToOrca(
+            resource = resource,
+            description = "Upsert server group ${diff.desired.moniker.name} in " +
+              "${diff.desired.location.account}/${diff.desired.location.region}",
+            correlationId = "${resource.id}:${diff.desired.location.region}",
+            stages = stages)
+        }
+      }
+    }
+
+    override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
       exportable.moniker,
@@ -239,11 +377,16 @@ class TitusClusterHandler(
     )
   }
 
-  private fun ResourceDiff<TitusServerGroup>.upsertServerGroupJob(): Map<String, Any?> =
+  private fun ResourceDiff<TitusServerGroup>.upsertServerGroupJob(startingRefId: Int = 0): Map<String, Any?> =
     with(desired) {
       mapOf(
         "application" to moniker.app,
         "credentials" to location.account,
+        "refId" to (startingRefId + 1).toString(),
+        "requisiteStageRefIds" to when (startingRefId) {
+          0 -> emptyList()
+          else -> listOf(startingRefId.toString())
+        },
         "region" to location.region,
         "network" to "default",
         // todo: does 30 minutes then rollback make sense?

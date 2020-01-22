@@ -27,6 +27,7 @@ import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.StaggeredRegion
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.TagVersionStrategy.INCREASING_TAG
@@ -124,6 +125,11 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     locations = SimpleLocations(
       account = titusAccount,
       regions = setOf(SimpleRegionSpec("us-east-1"), SimpleRegionSpec("us-west-2"))
+    ),
+    deployWith = RedBlack(
+      stagger = listOf(
+        StaggeredRegion(region = "us-east-1", pauseTime = Duration.ofHours(2), hours = "6-20"),
+        StaggeredRegion(region = "us-west-2", hours = "6-20"))
     ),
     _defaults = TitusServerGroupSpec(
       container = DigestProvider(
@@ -271,7 +277,12 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         coVerify { orcaService.orchestrate("keel@spinnaker", capture(slot)) }
 
         expectThat(slot.captured.job.first()) {
+          get("type").isEqualTo("dependsOnExecution")
+        }
+
+        expectThat(slot.captured.job[1]) {
           get("type").isEqualTo("createServerGroup")
+          get("restrictExecutionDuringTimeWindow").isEqualTo(true)
         }
       }
     }
