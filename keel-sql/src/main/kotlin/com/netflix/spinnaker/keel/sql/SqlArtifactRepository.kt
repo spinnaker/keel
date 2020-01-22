@@ -47,33 +47,30 @@ class SqlArtifactRepository(
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry
 ) : ArtifactRepository {
+  // todo: this is not retryable due to overall repository structure: https://github.com/spinnaker/keel/issues/740
   override fun register(artifact: DeliveryArtifact) {
-    val id: String = (sqlRetry.withRetry(READ) {
-      jooq
-        .select(DELIVERY_ARTIFACT.UID)
-        .from(DELIVERY_ARTIFACT)
-        .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
-          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
-          .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference)))
-        .fetchOne(DELIVERY_ARTIFACT.UID)
-    }
+    val id: String = (jooq
+      .select(DELIVERY_ARTIFACT.UID)
+      .from(DELIVERY_ARTIFACT)
+      .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)
+        .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+        .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
+        .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference)))
+      .fetchOne(DELIVERY_ARTIFACT.UID)
       ?: randomUID().toString())
 
-    sqlRetry.withRetry(WRITE) {
-      jooq.insertInto(DELIVERY_ARTIFACT)
-        .set(DELIVERY_ARTIFACT.UID, id)
-        .set(DELIVERY_ARTIFACT.FINGERPRINT, artifact.fingerprint())
-        .set(DELIVERY_ARTIFACT.NAME, artifact.name)
-        .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
-        .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
-        .set(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME, artifact.deliveryConfigName)
-        .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
-        .onDuplicateKeyUpdate()
-        .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
-        .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
-        .execute()
-    }
+    jooq.insertInto(DELIVERY_ARTIFACT)
+      .set(DELIVERY_ARTIFACT.UID, id)
+      .set(DELIVERY_ARTIFACT.FINGERPRINT, artifact.fingerprint())
+      .set(DELIVERY_ARTIFACT.NAME, artifact.name)
+      .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
+      .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
+      .set(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME, artifact.deliveryConfigName)
+      .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
+      .onDuplicateKeyUpdate()
+      .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
+      .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
+      .execute()
   }
 
   private fun DeliveryArtifact.detailsAsJson() =
