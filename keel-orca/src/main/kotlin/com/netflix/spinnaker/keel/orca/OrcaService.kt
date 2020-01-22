@@ -41,9 +41,6 @@ interface OrcaService {
     @Body trigger: HashMap<String, Any>
   ): TaskRefResponse
 
-  @GET("/tasks/{id}")
-  suspend fun getTask(@Path("id") id: String): ExecutionDetailResponse
-
   @GET("/pipelines/{id}")
   suspend fun getPipelineExecution(@Path("id") id: String): ExecutionDetailResponse
 

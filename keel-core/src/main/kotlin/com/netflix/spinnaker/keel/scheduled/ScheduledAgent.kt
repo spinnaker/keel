@@ -2,5 +2,6 @@ package com.netflix.spinnaker.keel.scheduled
 
 interface ScheduledAgent {
 
-  fun invoke()
+  val lockTimeoutSeconds: Long
+  suspend fun invokeAgent()
 }

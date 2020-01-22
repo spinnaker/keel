@@ -27,7 +27,7 @@ class SqlTaskTrackingRepository(
       .from(TASK_TRACKING)
       .fetch()
       .map { (resource_id, task_id, task_name) ->
-        TaskRecord(resource_id, task_id, task_name)
+        TaskRecord(task_id, task_name, resource_id)
       }
       .toSet()
   }

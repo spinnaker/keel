@@ -9,7 +9,11 @@ import io.github.resilience4j.retry.RetryConfig
 import io.vavr.control.Try
 import java.time.Clock
 import java.time.Duration
-import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
 import org.jooq.exception.SQLDialectNotSupportedException
 import org.springframework.scheduling.annotation.Scheduled
@@ -19,14 +23,21 @@ class SqlAgentLockRepository(
   private val clock: Clock,
   private val retryProperties: RetryProperties,
   private val agents: List<ScheduledAgent>
-) : AgentLockRepository {
+) : AgentLockRepository, CoroutineScope {
 
-  @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1m}")
-  fun invoke() {
+  override val coroutineContext: CoroutineContext = Dispatchers.IO
+
+  @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT10S}")
+  fun invokeAgent() {
     agents.forEach {
-      val lockAcquired = tryAcquireLock(it.javaClass.simpleName, TimeUnit.MINUTES.toSeconds(5))
+      val lockAcquired = tryAcquireLock(it.javaClass.simpleName, it.lockTimeoutSeconds)
       if (lockAcquired) {
-        it.invoke()
+
+        val job = launch {
+          it.invokeAgent()
+        }
+        runBlocking { job.join()
+        }
       }
     }
   }

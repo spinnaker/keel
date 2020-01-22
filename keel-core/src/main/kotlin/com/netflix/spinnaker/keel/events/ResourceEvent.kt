@@ -51,7 +51,9 @@ import java.time.Instant
   Type(value = ResourceCheckError::class, name = "ResourceCheckError"),
   Type(value = ResourceCheckUnresolvable::class, name = "ResourceCheckUnresolvable"),
   Type(value = ResourceActuationPaused::class, name = "ResourceActuationPaused"),
-  Type(value = ResourceActuationResumed::class, name = "ResourceActuationResumed")
+  Type(value = ResourceActuationResumed::class, name = "ResourceActuationResumed"),
+  Type(value = ResourceActuationFailed::class, name = "ResourceActuationFailed"),
+  Type(value = ResourceActuationSucceeded::class, name = "ResourceActuationSucceeded")
 )
 sealed class ResourceEvent {
   abstract val apiVersion: ApiVersion
@@ -271,6 +273,54 @@ data class ResourceActuationVetoed(
  * Actuation on the managed resource has resumed.
  */
 data class ResourceActuationResumed(
+  override val apiVersion: ApiVersion,
+  override val kind: String,
+  override val id: String,
+  override val application: String,
+  override val timestamp: Instant
+) : ResourceEvent() {
+  @JsonIgnore
+  override val ignoreRepeatedInHistory = true
+
+  constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
+    resource.apiVersion,
+    resource.kind,
+    resource.id.value,
+    resource.application,
+    clock.instant()
+  )
+}
+
+/**
+ * Actuation on the managed resource has failed.
+ *
+ * @property reason The reason why actuation failed.
+ */
+data class ResourceActuationFailed(
+  override val apiVersion: ApiVersion,
+  override val kind: String,
+  override val id: String,
+  override val application: String,
+  val reason: String?,
+  override val timestamp: Instant
+) : ResourceEvent() {
+  @JsonIgnore
+  override val ignoreRepeatedInHistory = true
+
+  constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
+    resource.apiVersion,
+    resource.kind,
+    resource.id.value,
+    resource.application,
+    reason,
+    clock.instant()
+  )
+}
+
+/**
+ * Actuation on the managed resource has succeeded.
+ */
+data class ResourceActuationSucceeded(
   override val apiVersion: ApiVersion,
   override val kind: String,
   override val id: String,
