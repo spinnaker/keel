@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Propagation.REQUIRED
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * A class used to orchestrate the deletion of delivery configs
+ * A class used to orchestrate the deletion of delivery configs and their associated resources
  */
 @Component
 class Cleaner(

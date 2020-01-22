@@ -28,6 +28,11 @@ import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.Instant.EPOCH
+import java.time.ZoneOffset
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Select
@@ -35,11 +40,6 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.select
 import org.jooq.util.mysql.MySQLDSL
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.Instant.EPOCH
-import java.time.ZoneOffset
 
 class SqlDeliveryConfigRepository(
   private val jooq: DSLContext,
@@ -138,25 +138,31 @@ class SqlDeliveryConfigRepository(
   }
 
   override fun deleteEnvironment(deliveryConfigName: String, environmentName: String) {
-    val deliveryConfigUid = getDeliveryConfigId(deliveryConfigName)
+    val deliveryConfigUid = sqlRetry.withRetry(READ) {
+      jooq.select(DELIVERY_CONFIG.UID)
+        .from(DELIVERY_CONFIG)
+        .where(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
+        .fetchOne(DELIVERY_CONFIG.UID)
+    }
+    val envUid = envUid(deliveryConfigName, environmentName)
     sqlRetry.withRetry(WRITE) {
       jooq.transaction { config ->
         val txn = DSL.using(config)
         txn
           .deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
-          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid(deliveryConfigName, environmentName)))
+          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid))
           .execute()
         txn
           .deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
-          .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid(deliveryConfigName, environmentName)))
+          .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
           .execute()
         txn
           .deleteFrom(ENVIRONMENT_RESOURCE)
-          .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(envUid(deliveryConfigName, environmentName)))
+          .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(envUid))
           .execute()
         txn
           .deleteFrom(ENVIRONMENT)
-          .where(ENVIRONMENT.UID.eq(envUid(deliveryConfigName, environmentName)))
+          .where(ENVIRONMENT.UID.eq(envUid))
           .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
           .execute()
       }
@@ -180,11 +186,6 @@ class SqlDeliveryConfigRepository(
         .where(ENVIRONMENT.DELIVERY_CONFIG_UID.`in`(deliveryConfigUIDs))
         .fetch(ENVIRONMENT.UID)
     }
-
-  private fun getDeliveryConfigId(name: String): Select<Record1<String>> =
-    select(DELIVERY_CONFIG.UID)
-      .from(DELIVERY_CONFIG)
-      .where(DELIVERY_CONFIG.NAME.eq(name))
 
   // todo: queries in this function aren't inherently retryable because of the cross-repository interactions
   // from where this is called: https://github.com/spinnaker/keel/issues/740

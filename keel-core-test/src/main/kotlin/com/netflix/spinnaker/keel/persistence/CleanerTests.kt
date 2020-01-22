@@ -16,15 +16,17 @@ import io.mockk.mockk
 import java.time.Clock
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expect
+import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.succeeded
 
-abstract class CleanerTests<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
+abstract class CleanerTests<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
   JUnit5Minutests {
 
-  abstract fun createDeliveryConfigRepository(resourceTypeIdentifier: ResourceTypeIdentifier): T
+  abstract fun createDeliveryConfigRepository(resourceTypeIdentifier: ResourceTypeIdentifier): D
   abstract fun createResourceRepository(): R
   abstract fun createArtifactRepository(): A
 
@@ -87,7 +89,7 @@ abstract class CleanerTests<T : DeliveryConfigRepository, R : ResourceRepository
     }
   }
 
-  fun tests() = rootContext<Fixture<T, R, A>>() {
+  fun tests() = rootContext<Fixture<D, R, A>>() {
     fixture {
       Fixture(
         deliveryConfigRepositoryProvider = this@CleanerTests::createDeliveryConfigRepository,
@@ -129,6 +131,13 @@ abstract class CleanerTests<T : DeliveryConfigRepository, R : ResourceRepository
         test("no longer present resources are removed") {
           expectThrows<NoSuchResourceException> { resourceRepository.get(firstResource.id) }
           expectThrows<ArtifactNotFoundException> { artifactRepository.get(name = artifact.name, type = artifact.type, reference = "org/image", deliveryConfigName = configName) }
+        }
+
+        test("correct resources still exist") {
+          expectCatching { resourceRepository.get(secondResource.id) }.succeeded()
+          expectCatching {
+            artifactRepository.get(name = newArtifact.name, type = newArtifact.type, reference = "myart", deliveryConfigName = configName)
+          }.succeeded()
         }
       }
 
