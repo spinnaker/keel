@@ -65,7 +65,16 @@ class OrcaTaskMonitorAgent(
             }
         }
         .mapValues { it.value.await() }
+        .filterValues { it.status.isComplete() }
         .map { (resourceId, taskDetails) ->
+           val succeeded = taskDetails.isSuccess()
+           when (succeeded) {
+             true -> publisher.publishEvent(
+               ResourceActuationSucceeded(
+                   resourceRepository.get(ResourceId(resourceId)), clock))
+             false -> publisher.publishEvent(
+               ResourceActuationFailed(
+                 resourceRepository.get(ResourceId(resourceId)), "", clock))  
           val taskStatus = taskDetails.status
           if (!taskStatus.isIncomplete()) {
             if (taskStatus.isSuccess()) {
