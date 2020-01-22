@@ -66,10 +66,10 @@ class ResourcePersister(
         )
       }
     )
+    deliveryConfigRepository.store(new)
     new.artifacts.forEach { artifact ->
       artifact.register()
     }
-    deliveryConfigRepository.store(new)
     if (old != null) {
       cleaner.removeResources(old, new)
     }
