@@ -100,7 +100,6 @@ class TaskLauncher(
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, subject)
-        // TODO: check this
         publisher.publishEvent(TaskCreatedEvent(TaskRecord(id = it.taskId, name = description, subject = subject)))
         Task(id = it.taskId, name = description)
       }

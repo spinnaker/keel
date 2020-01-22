@@ -18,9 +18,6 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
-// This agent will run every minute, will fetch all the records from task_tracking table,
-// and will publish the corresponding event [taskSucceeded / taskFailed] to the resource history log.
-
 @Component
 class OrcaTaskMonitorAgent(
   private val taskTrackingRepository: TaskTrackingRepository,
@@ -29,6 +26,8 @@ class OrcaTaskMonitorAgent(
   private val publisher: ApplicationEventPublisher,
   private val clock: Clock
 ) : ScheduledAgent {
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   // TODO gyardeni: check how long
   override val lockTimeoutSeconds = TimeUnit.MINUTES.toSeconds(1)
@@ -53,8 +52,8 @@ class OrcaTaskMonitorAgent(
   }
 
   // 1. Get active tasks from task tracking table
-  // 2. get tasks status from orca
-  // 3. publish event
+  // 2. For each task, call orca and ask for details
+  // 3. For each completed task, will emit an event for success/failure
   override suspend fun invokeAgent() {
     coroutineScope {
       taskTrackingRepository.getTasks()
@@ -67,31 +66,17 @@ class OrcaTaskMonitorAgent(
         .mapValues { it.value.await() }
         .filterValues { it.status.isComplete() }
         .map { (resourceId, taskDetails) ->
-           val succeeded = taskDetails.isSuccess()
-           when (succeeded) {
-             true -> publisher.publishEvent(
-               ResourceActuationSucceeded(
-                   resourceRepository.get(ResourceId(resourceId)), clock))
-             false -> publisher.publishEvent(
-               ResourceActuationFailed(
-                 resourceRepository.get(ResourceId(resourceId)), "", clock))  
-          val taskStatus = taskDetails.status
-          if (!taskStatus.isIncomplete()) {
-            if (taskStatus.isSuccess()) {
-              publisher.publishEvent(
-                ResourceActuationSucceeded(resourceRepository.get(
-                  ResourceId(resourceId)), clock))
-            }
-            if (taskStatus.isFailure()) {
-              // TODO: fetch the actual failure
-              publisher.publishEvent(
-                ResourceActuationFailed(resourceRepository.get(ResourceId(resourceId)), "", clock))
-            }
-            taskTrackingRepository.delete(taskDetails.id)
+          when (taskDetails.status.isSuccess()) {
+            true -> publisher.publishEvent(
+              ResourceActuationSucceeded(
+                resourceRepository.get(ResourceId(resourceId)), clock))
+            false -> publisher.publishEvent(
+              // TODO: fetch the actual failure message
+              ResourceActuationFailed(
+                resourceRepository.get(ResourceId(resourceId)), "", clock))
           }
+          taskTrackingRepository.delete(taskDetails.id)
         }
     }
   }
-
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
