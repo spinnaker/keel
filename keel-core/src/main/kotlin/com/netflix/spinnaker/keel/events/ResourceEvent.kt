@@ -52,8 +52,8 @@ import java.time.Instant
   Type(value = ResourceCheckUnresolvable::class, name = "ResourceCheckUnresolvable"),
   Type(value = ResourceActuationPaused::class, name = "ResourceActuationPaused"),
   Type(value = ResourceActuationResumed::class, name = "ResourceActuationResumed"),
-  Type(value = ResourceActuationFailed::class, name = "ResourceActuationFailed"),
-  Type(value = ResourceActuationSucceeded::class, name = "ResourceActuationSucceeded")
+  Type(value = ResourceTaskFailed::class, name = "ResourceTaskFailed"),
+  Type(value = ResourceTaskSucceeded::class, name = "ResourceTaskSucceeded")
 )
 sealed class ResourceEvent {
   abstract val apiVersion: ApiVersion
@@ -292,11 +292,11 @@ data class ResourceActuationResumed(
 }
 
 /**
- * Actuation on the managed resource has failed.
+ * Orca task the managed resource has failed.
  *
  * @property reason The reason why actuation failed.
  */
-data class ResourceActuationFailed(
+data class ResourceTaskFailed(
   override val apiVersion: ApiVersion,
   override val kind: String,
   override val id: String,
@@ -318,9 +318,9 @@ data class ResourceActuationFailed(
 }
 
 /**
- * Actuation on the managed resource has succeeded.
+ * Orca task for the managed resource has succeeded.
  */
-data class ResourceActuationSucceeded(
+data class ResourceTaskSucceeded(
   override val apiVersion: ApiVersion,
   override val kind: String,
   override val id: String,

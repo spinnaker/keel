@@ -1,14 +1,18 @@
 package com.netflix.spinnaker.keel.orca
 
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.api.ResourceId
-import com.netflix.spinnaker.keel.events.ResourceActuationFailed
-import com.netflix.spinnaker.keel.events.ResourceActuationSucceeded
+import com.netflix.spinnaker.keel.api.SubjectType
+import com.netflix.spinnaker.keel.events.ResourceTaskFailed
+import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
+import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.async
@@ -29,8 +33,9 @@ class OrcaTaskMonitorAgent(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  // TODO gyardeni: check how long
   override val lockTimeoutSeconds = TimeUnit.MINUTES.toSeconds(1)
+
+  private val mapper = configuredObjectMapper()
 
   private var enabled = false
 
@@ -66,17 +71,36 @@ class OrcaTaskMonitorAgent(
         .mapValues { it.value.await() }
         .filterValues { it.status.isComplete() }
         .map { (resourceId, taskDetails) ->
-          when (taskDetails.status.isSuccess()) {
-            true -> publisher.publishEvent(
-              ResourceActuationSucceeded(
-                resourceRepository.get(ResourceId(resourceId)), clock))
-            false -> publisher.publishEvent(
-              // TODO: fetch the actual failure message
-              ResourceActuationFailed(
-                resourceRepository.get(ResourceId(resourceId)), "", clock))
+
+          // only resource events are supported currently
+          if (resourceId.startsWith(SubjectType.RESOURCE.toString())) {
+            val id = resourceId.substringAfter(":")
+            try {
+              when (taskDetails.status.isSuccess()) {
+                true -> publisher.publishEvent(
+                  ResourceTaskSucceeded(
+                    resourceRepository.get(ResourceId(id)), clock))
+                false -> publisher.publishEvent(
+                  ResourceTaskFailed(
+                    resourceRepository.get(ResourceId(id)), taskDetails.execution.stages.getFailureMessage(), clock))
+              }
+            } catch (e: NoSuchResourceId) {
+              log.warn("No resource found for id $resourceId")
+            }
           }
           taskTrackingRepository.delete(taskDetails.id)
         }
     }
   }
-}
+
+    // make sure it's only 1 context per run
+    private fun List<Map<String, Any>>?.getFailureMessage(): String? {
+      if (this.isNullOrEmpty()) {
+        return ""
+      }
+      // since this is a single task, we expecting to get only 1 error message
+      val context: OrcaContext? = this.first()["context"]?.let { mapper.convertValue(it) }
+
+      return context?.exception?.details?.errors?.joinToString(",")
+    }
+  }

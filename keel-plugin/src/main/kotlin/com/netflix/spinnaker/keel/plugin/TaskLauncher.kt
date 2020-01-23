@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.plugin
 
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.SubjectType
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
@@ -70,7 +71,8 @@ class TaskLauncher(
       subject = resource.id.value,
       description = description,
       correlationId = correlationId,
-      stages = stages
+      stages = stages,
+      type = SubjectType.RESOURCE
     )
 
   suspend fun submitJobToOrca(
@@ -81,6 +83,29 @@ class TaskLauncher(
     description: String,
     correlationId: String,
     stages: List<Map<String, Any?>>,
+    artifacts: List<Artifact> = emptyList()
+  ): Task =
+    submitJobToOrca(
+      serviceAccount = serviceAccount,
+      application = application,
+      notifications = notifications,
+      subject = subject,
+      description = description,
+      correlationId = correlationId,
+      stages = stages,
+      type = SubjectType.CONSTRAIN,
+      artifacts = artifacts
+    )
+
+  suspend fun submitJobToOrca(
+    serviceAccount: String,
+    application: String,
+    notifications: List<EchoNotification>,
+    subject: String,
+    description: String,
+    correlationId: String,
+    stages: List<Map<String, Any?>>,
+    type: SubjectType,
     artifacts: List<Artifact> = emptyList()
   ): Task =
     orcaService
@@ -100,7 +125,8 @@ class TaskLauncher(
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, subject)
-        publisher.publishEvent(TaskCreatedEvent(TaskRecord(id = it.taskId, name = description, subject = subject)))
+        publisher.publishEvent(TaskCreatedEvent(
+          TaskRecord(id = it.taskId, name = description, subject = "$type:$subject")))
         Task(id = it.taskId, name = description)
       }
 

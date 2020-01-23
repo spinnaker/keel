@@ -74,3 +74,22 @@ data class ExecutionDetailResponse(
 data class OrcaExecutionStages(
   val stages: List<Map<String, Any>>?
 )
+
+data class GeneralErrorsDetails(
+  val stackTrace: String?,
+  val responseBody: String?,
+  val kind: String?,
+  val error: String,
+  val errors: List<String>
+)
+
+data class OrcaException(
+  val exceptionType: String,
+  val shouldRetry: Boolean,
+  val details: GeneralErrorsDetails
+)
+
+data class OrcaContext(
+  // fetching only exception for now
+  val exception: OrcaException
+)
