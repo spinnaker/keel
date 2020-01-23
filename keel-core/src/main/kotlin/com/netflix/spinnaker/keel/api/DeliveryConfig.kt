@@ -9,13 +9,16 @@ const val DEFAULT_SERVICE_ACCOUNT = "keel@spinnaker.io"
 data class DeliveryConfig(
   val name: String,
   val application: String,
+  val serviceAccount: String,
   val artifacts: Set<DeliveryArtifact> = emptySet(),
-  val environments: Set<Environment> = emptySet()
+  val environments: Set<Environment> = emptySet(),
+  val apiVersion: ApiVersion = ApiVersion("delivery.config.spinnaker.netflix.com", "v1")
 )
 
 data class SubmittedDeliveryConfig(
   val name: String,
   val application: String,
+  val serviceAccount: String,
   val artifacts: Set<DeliveryArtifact> = emptySet(),
   val environments: Set<SubmittedEnvironment> = emptySet()
 )

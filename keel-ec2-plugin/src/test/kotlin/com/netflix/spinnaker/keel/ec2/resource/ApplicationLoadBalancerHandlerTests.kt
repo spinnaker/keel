@@ -236,7 +236,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         val exportable = Exportable(
           cloudProvider = "aws",
           account = "test",
-          serviceAccount = "keel@spin.spin.spin",
+          user = "fzlem@netflix.com",
           moniker = parseMoniker("testapp-managedogge-wow"),
           regions = setOf("us-east-1"),
           kind = supportedKind.kind
@@ -253,7 +253,10 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
           expectThat(unresolvedDiff.hasChanges())
             .isTrue()
           // But diffs cleanly after resolvers are applied
-          val resolvedDiff = ResourceDiff(desired(resource), desired(normalize(export)))
+          val resolvedDiff = ResourceDiff(
+            desired(resource),
+            desired(normalize(export.copy(metadata = mapOf("serviceAccount" to "keel@spinnaker"))))
+          )
           expectThat(resolvedDiff.hasChanges())
             .isFalse()
         }

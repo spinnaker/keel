@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.resources
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.persistence.Cleaner
 import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
@@ -22,6 +23,8 @@ import com.netflix.spinnaker.keel.plugin.SimpleResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
+import dev.minutest.MinutestFixture
+import dev.minutest.Tests
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
@@ -44,6 +47,7 @@ import strikt.assertions.succeeded
 @AutoConfigureMockMvc
 internal class ResourcePersisterTests : JUnit5Minutests {
 
+  @MinutestFixture
   data class Fixture(
     val artifactRepository: InMemoryArtifactRepository = InMemoryArtifactRepository(),
     val resourceRepository: InMemoryResourceRepository = InMemoryResourceRepository(),
@@ -51,11 +55,13 @@ internal class ResourcePersisterTests : JUnit5Minutests {
   ) {
     private val clock: Clock = Clock.systemDefaultZone()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
+    private val cleaner: Cleaner = mockk(relaxUnitFun = true)
     private val subject: ResourcePersister = ResourcePersister(
       deliveryConfigRepository,
       artifactRepository,
       resourceRepository,
       listOf(DummyResourceHandler),
+      cleaner,
       clock,
       publisher
     )
@@ -86,6 +92,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
     }
   }
 
+  @Tests
   fun tests() = rootContext<Fixture> {
     fixture { Fixture() }
 
@@ -189,26 +196,29 @@ internal class ResourcePersisterTests : JUnit5Minutests {
             SubmittedDeliveryConfig(
               name = "keel-manifest",
               application = "keel",
+              serviceAccount = "keel@spinnaker",
               artifacts = setOf(DebianArtifact(name = "keel")),
               environments = setOf(
                 SubmittedEnvironment(
                   name = "test",
-                  resources = setOf(SubmittedResource(
-                    apiVersion = SPINNAKER_API_V1.subApi("test"),
-                    kind = "whatever",
-                    metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                    spec = DummyResourceSpec("test", "resource in test")
-                  )),
+                  resources = setOf(
+                    SubmittedResource(
+                      apiVersion = SPINNAKER_API_V1.subApi("test"),
+                      kind = "whatever",
+                      spec = DummyResourceSpec("test", "resource in test")
+                    )
+                  ),
                   constraints = emptySet()
                 ),
                 SubmittedEnvironment(
                   name = "prod",
-                  resources = setOf(SubmittedResource(
-                    apiVersion = SPINNAKER_API_V1.subApi("test"),
-                    kind = "whatever",
-                    metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                    spec = DummyResourceSpec("prod", "resource in prod")
-                  )),
+                  resources = setOf(
+                    SubmittedResource(
+                      apiVersion = SPINNAKER_API_V1.subApi("test"),
+                      kind = "whatever",
+                      spec = DummyResourceSpec("prod", "resource in prod")
+                    )
+                  ),
                   constraints = emptySet()
                 )
               )
@@ -272,6 +282,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
             SubmittedDeliveryConfig(
               name = "keel-manifest",
               application = "keel",
+              serviceAccount = "keel@spinnaker",
               artifacts = setOf(artifact),
               environments = setOf(
                 SubmittedEnvironment(

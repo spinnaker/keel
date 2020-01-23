@@ -65,7 +65,7 @@ class TaskLauncher(
     stages: List<Map<String, Any?>>
   ): Task =
     submitJobToOrca(
-      serviceAccount = resource.serviceAccount,
+      user = resource.serviceAccount,
       application = resource.application,
       notifications = resource.notifications,
       subject = resource.id.value,
@@ -76,7 +76,7 @@ class TaskLauncher(
     )
 
   suspend fun submitJobToOrca(
-    serviceAccount: String,
+    user: String,
     application: String,
     notifications: List<EchoNotification>,
     subject: String,
@@ -110,7 +110,7 @@ class TaskLauncher(
   ): Task =
     orcaService
       .orchestrate(
-        serviceAccount,
+        user,
         OrchestrationRequest(
           name = description,
           application = application,

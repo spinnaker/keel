@@ -141,7 +141,7 @@ class TitusClusterHandler(
       exportable.account,
       exportable.moniker,
       exportable.regions,
-      exportable.serviceAccount
+      exportable.user
     ).byRegion()
 
     if (serverGroups.isEmpty()) {
@@ -173,8 +173,7 @@ class TitusClusterHandler(
     return SubmittedResource(
       apiVersion = supportedKind.apiVersion,
       kind = supportedKind.kind,
-      spec = spec,
-      metadata = mapOf("serviceAccount" to exportable.serviceAccount)
+      spec = spec
     )
   }
 

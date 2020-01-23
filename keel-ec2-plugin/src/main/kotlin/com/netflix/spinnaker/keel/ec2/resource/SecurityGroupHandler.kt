@@ -142,7 +142,7 @@ class SecurityGroupHandler(
           async {
             try {
               cloudDriverService.getSecurityGroup(
-                exportable.serviceAccount,
+                exportable.user,
                 exportable.account,
                 CLOUD_PROVIDER,
                 summary!!.name,
@@ -189,10 +189,7 @@ class SecurityGroupHandler(
     return SubmittedResource(
       apiVersion = supportedKind.apiVersion,
       kind = supportedKind.kind,
-      spec = spec,
-      metadata = mapOf(
-        "serviceAccount" to exportable.serviceAccount
-      )
+      spec = spec
     )
   }
 
