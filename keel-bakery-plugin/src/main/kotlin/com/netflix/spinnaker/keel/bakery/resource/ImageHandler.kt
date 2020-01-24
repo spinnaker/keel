@@ -126,7 +126,7 @@ class ImageHandler(
 
     try {
       val taskRef = taskLauncher.submitJobToOrca(
-      serviceAccount = resource.serviceAccount,
+      user = resource.serviceAccount,
       application = resource.application,
       notifications = emptyList(),
       subject = description,
