@@ -1,8 +1,6 @@
 package com.netflix.spinnaker.keel.orca
 
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.netflix.spinnaker.keel.activation.ApplicationDown
-import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.SubjectType
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
@@ -36,20 +34,6 @@ class OrcaTaskMonitorAgent(
   override val lockTimeoutSeconds = TimeUnit.MINUTES.toSeconds(1)
 
   private val mapper = configuredObjectMapper()
-
-  private var enabled = false
-
-  @EventListener(ApplicationUp::class)
-  fun onApplicationUp() {
-    log.info("Application up, enabling scheduled resource checks")
-    enabled = true
-  }
-
-  @EventListener(ApplicationDown::class)
-  fun onApplicationDown() {
-    log.info("Application down, disabling scheduled resource checks")
-    enabled = false
-  }
 
   @EventListener(TaskCreatedEvent::class)
   fun onTaskEvent(event: TaskCreatedEvent) {

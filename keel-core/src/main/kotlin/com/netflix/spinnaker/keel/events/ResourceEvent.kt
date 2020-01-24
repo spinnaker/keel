@@ -304,8 +304,6 @@ data class ResourceTaskFailed(
   val reason: String?,
   override val timestamp: Instant
 ) : ResourceEvent() {
-  @JsonIgnore
-  override val ignoreRepeatedInHistory = true
 
   constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
@@ -327,8 +325,6 @@ data class ResourceTaskSucceeded(
   override val application: String,
   override val timestamp: Instant
 ) : ResourceEvent() {
-  @JsonIgnore
-  override val ignoreRepeatedInHistory = true
 
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,

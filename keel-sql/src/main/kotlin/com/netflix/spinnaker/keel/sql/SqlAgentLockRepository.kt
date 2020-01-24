@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spinnaker.keel.activation.ApplicationDown
+import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.AGENT_LOCK
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
@@ -16,6 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
 import org.jooq.exception.SQLDialectNotSupportedException
+import org.slf4j.LoggerFactory
+import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 
 class SqlAgentLockRepository(
@@ -26,19 +30,41 @@ class SqlAgentLockRepository(
 ) : AgentLockRepository, CoroutineScope {
 
   override val coroutineContext: CoroutineContext = Dispatchers.IO
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
+  private var enabled = false
+
+  @EventListener(ApplicationUp::class)
+  fun onApplicationUp() {
+    log.info("Application up, enabling scheduled agents")
+    enabled = true
+  }
+
+  @EventListener(ApplicationDown::class)
+  fun onApplicationDown() {
+    log.info("Application down, disabling scheduled agents")
+    enabled = false
+  }
 
   @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT10S}")
   fun invokeAgent() {
-    agents.forEach {
-      val lockAcquired = tryAcquireLock(it.javaClass.simpleName, it.lockTimeoutSeconds)
-      if (lockAcquired) {
+    if (enabled) {
+      agents.forEach {
+        val agentName: String = it.javaClass.simpleName
+        val lockAcquired = tryAcquireLock(agentName, it.lockTimeoutSeconds)
+        if (lockAcquired) {
 
-        val job = launch {
-          it.invokeAgent()
-        }
-        runBlocking { job.join()
+          val job = launch {
+            it.invokeAgent()
+          }
+          runBlocking {
+            job.join()
+          }
+          log.debug("invoking $agentName completed")
         }
       }
+    } else {
+      log.debug("invoking agent disabled")
     }
   }
 

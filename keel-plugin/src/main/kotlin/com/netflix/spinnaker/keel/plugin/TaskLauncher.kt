@@ -93,7 +93,7 @@ class TaskLauncher(
       description = description,
       correlationId = correlationId,
       stages = stages,
-      type = SubjectType.CONSTRAIN,
+      type = SubjectType.CONSTRAINT,
       artifacts = artifacts
     )
 
