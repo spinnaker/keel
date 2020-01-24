@@ -86,7 +86,7 @@ class TaskLauncher(
     artifacts: List<Artifact> = emptyList()
   ): Task =
     submitJobToOrca(
-      serviceAccount = serviceAccount,
+      user = user,
       application = application,
       notifications = notifications,
       subject = subject,
@@ -98,7 +98,7 @@ class TaskLauncher(
     )
 
   suspend fun submitJobToOrca(
-    serviceAccount: String,
+    user: String,
     application: String,
     notifications: List<EchoNotification>,
     subject: String,
