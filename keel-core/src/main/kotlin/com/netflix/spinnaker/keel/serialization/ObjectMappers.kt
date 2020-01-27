@@ -15,6 +15,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.serialization.mixins.MixinModule
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
@@ -37,6 +38,7 @@ private fun <T : ObjectMapper> T.configureMe(): T =
     registerKotlinModule()
       .registerULIDModule()
       .registerModule(JavaTimeModule())
+      .registerModule(MixinModule())
       .configureSaneDateTimeRepresentation()
       .disable(FAIL_ON_UNKNOWN_PROPERTIES)
       .enable(ACCEPT_CASE_INSENSITIVE_ENUMS)

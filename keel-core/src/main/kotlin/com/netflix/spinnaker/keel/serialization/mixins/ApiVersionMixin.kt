@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 Netflix, Inc.
+ * Copyright 2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,23 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.serialization.mixins
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
+import com.netflix.spinnaker.keel.api.ApiVersion
 
-data class ApiVersion(
+@MixinFor(ApiVersion::class)
+@JsonSerialize(using = ToStringSerializer::class)
+abstract class ApiVersionMixin(
   val group: String,
   val version: String
 ) {
+
+  @JsonCreator
   constructor(value: String) :
     this(value.substringBefore("/"), value.substringAfter("/"))
 
-  override fun toString() = "$group/$version"
-
-  fun subApi(prefix: String) = copy(group = "$prefix.$group")
-
   @JsonIgnore
-  val prefix: String = group.substringBefore(".")
+  abstract fun getPrefix(): String
 }
-
-val SPINNAKER_API_V1 = ApiVersion("spinnaker.netflix.com", "v1")
