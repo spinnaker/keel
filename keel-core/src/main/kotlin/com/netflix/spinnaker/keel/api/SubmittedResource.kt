@@ -32,5 +32,14 @@ data class SubmittedResource<T : ResourceSpec>(
 val <T : ResourceSpec> SubmittedResource<T>.id: String
   get() = "${apiVersion.substringBefore(".")}:$kind:${spec.id}"
 
-fun <T : ResourceSpec> SubmittedResource<T>.toResource(): Resource<T> =
-  Resource(apiVersion, kind, metadata, spec)
+fun <T : ResourceSpec> SubmittedResource<T>.normalize(): Resource<T> =
+  Resource(
+    apiVersion = apiVersion,
+    kind = kind,
+    metadata = metadata + mapOf(
+      "id" to id,
+      "uid" to randomUID().toString(),
+      "application" to spec.application
+    ),
+    spec = spec
+  )

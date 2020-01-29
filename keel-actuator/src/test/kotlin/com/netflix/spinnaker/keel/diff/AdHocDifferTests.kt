@@ -23,12 +23,12 @@ import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.normalize
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.test.DummyResource
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
-import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.test.submittedResource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -46,14 +46,11 @@ class AdHocDifferTests : JUnit5Minutests {
     val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val subject = AdHocDiffer(listOf(plugin1, plugin2))
-    val resource = resource(
-      apiVersion = "plugin1.$SPINNAKER_API_V1",
-      kind = "foo"
-    )
     val subResource = submittedResource(
       apiVersion = "plugin1.$SPINNAKER_API_V1",
       kind = "foo"
     )
+    val resource = subResource.normalize()
     val deliveryConfig = SubmittedDeliveryConfig(
       name = "keel-manifest",
       application = "keel",
@@ -83,9 +80,6 @@ class AdHocDifferTests : JUnit5Minutests {
       every { plugin2.name } returns "plugin2"
       every { plugin2.supportedKind } returns SupportedKind("plugin2.$SPINNAKER_API_V1", "bar", DummyResourceSpec::class.java)
 
-      coEvery {
-        plugin1.normalize(subResource)
-      } returns resource
       coEvery {
         plugin1.desired(resource)
       } returns DummyResource(resource.spec)

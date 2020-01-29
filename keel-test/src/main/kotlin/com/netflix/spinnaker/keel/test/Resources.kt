@@ -105,6 +105,9 @@ fun <T : ResourceSpec> submittedResource(
   SubmittedResource(
     apiVersion = apiVersion,
     kind = kind,
+    metadata = mapOf(
+      "serviceAccount" to "keel@spinnaker"
+    ),
     spec = spec
   )
 

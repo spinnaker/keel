@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.normalize
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
@@ -94,8 +95,8 @@ class ResourcePersister(
     }
 
   fun <T : ResourceSpec> create(resource: SubmittedResource<T>): Resource<T> =
-    handlerFor(resource)
-      .normalize(resource)
+    resource
+      .normalize()
       .also {
         log.debug("Creating $it")
         resourceRepository.store(it)
