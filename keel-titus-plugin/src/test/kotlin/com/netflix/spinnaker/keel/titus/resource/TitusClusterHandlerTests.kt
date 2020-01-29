@@ -51,7 +51,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.ServiceJobProcesses
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroupImage
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.model.Moniker
@@ -265,7 +265,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
       test("resolving diff a diff creates a new server group") {
         runBlocking {
-          upsert(resource, ResourceDiff(serverGroups.byRegion(), emptyMap()))
+          upsert(resource, DefaultResourceDiff(serverGroups.byRegion(), emptyMap()))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -315,7 +315,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -350,7 +350,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity().withDifferentRuntimeOptions()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -443,7 +443,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentRuntimeOptions(),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -544,7 +544,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
 
           test("has overrides matching differences in the server groups") {
-            val overrideDiff = ResourceDiff(spec.overrides["us-west-2"]!!, spec.defaults)
+            val overrideDiff = DefaultResourceDiff(spec.overrides["us-west-2"]!!, spec.defaults)
             val addedOrChangedProps = overrideDiff.children
               .filter { it.isAdded || it.isChanged }
               .map { it.propertyName }

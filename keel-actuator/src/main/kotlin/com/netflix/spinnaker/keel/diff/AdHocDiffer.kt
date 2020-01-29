@@ -48,7 +48,7 @@ class AdHocDiffer(
       resource = submittedResource.normalize()
       resourceId = resource.id
       val (desired, current) = plugin.resolve(resource)
-      val diff = ResourceDiff(desired, current)
+      val diff = DefaultResourceDiff(desired, current)
 
       when {
         current == null -> DiffResult(status = MISSING, resourceId = resourceId, resource = resource)

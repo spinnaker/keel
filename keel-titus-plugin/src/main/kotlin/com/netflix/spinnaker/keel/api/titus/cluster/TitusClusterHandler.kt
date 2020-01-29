@@ -44,6 +44,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.VersionedTagProvider
@@ -295,12 +296,6 @@ class TitusClusterHandler(
    */
   private fun ResourceDiff<TitusServerGroup>.isCapacityOnly(): Boolean =
     current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
-
-  private fun ResourceDiff<Map<String, TitusServerGroup>>.toIndividualDiffs() =
-    desired
-      .map { (region, desired) ->
-        ResourceDiff(desired, current?.get(region))
-      }
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->

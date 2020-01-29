@@ -14,7 +14,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
@@ -243,7 +243,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
         coEvery { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
 
         runBlocking {
-          handler.upsert(resource, ResourceDiff(image, null))
+          handler.upsert(resource, DefaultResourceDiff(image, null))
         }
 
         expectThat(request.captured.trigger.artifacts)
@@ -255,7 +255,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
         coEvery { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
 
         runBlocking {
-          handler.upsert(resource, ResourceDiff(image, null))
+          handler.upsert(resource, DefaultResourceDiff(image, null))
         }
 
         expectThat(request.captured.job.first())

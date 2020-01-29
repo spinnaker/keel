@@ -17,7 +17,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.ec2.resolvers.ApplicationLoadBalancerDefaultsResolver
@@ -199,7 +199,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         runBlocking {
           val current = current(resource)
           val desired = desired(resource)
-          upsert(resource, ResourceDiff(desired = desired, current = current))
+          upsert(resource, DefaultResourceDiff(desired = desired, current = current))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -226,7 +226,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         val diff = runBlocking {
           val current = current(resource)
           val desired = desired(resource)
-          ResourceDiff(desired = desired, current = current)
+          DefaultResourceDiff(desired = desired, current = current)
         }
 
         expectThat(diff.diff.childCount()).isEqualTo(0)
@@ -249,11 +249,11 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
 
         runBlocking {
           // Export differs from the model prior to the application of resolvers
-          val unresolvedDiff = ResourceDiff(resource, resource.copy(spec = export.spec))
+          val unresolvedDiff = DefaultResourceDiff(resource, resource.copy(spec = export.spec))
           expectThat(unresolvedDiff.hasChanges())
             .isTrue()
           // But diffs cleanly after resolvers are applied
-          val resolvedDiff = ResourceDiff(
+          val resolvedDiff = DefaultResourceDiff(
             desired(resource),
             desired(
               export
@@ -279,7 +279,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         runBlocking {
           val current = current(newResource)
           val desired = desired(newResource)
-          val diff = ResourceDiff(desired = desired, current = current)
+          val diff = DefaultResourceDiff(desired = desired, current = current)
 
           expectThat(diff.diff) {
             get { childCount() }.isEqualTo(1)

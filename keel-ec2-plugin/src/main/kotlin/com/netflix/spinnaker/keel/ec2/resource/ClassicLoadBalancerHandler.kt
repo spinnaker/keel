@@ -17,7 +17,9 @@ import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
@@ -268,19 +270,13 @@ class ClassicLoadBalancerHandler(
       .mapNotNull { it.await() }
       .associateBy { it.location.region }
 
-  private fun ResourceDiff<Map<String, ClassicLoadBalancer>>.toIndividualDiffs() =
-    desired
-      .map { (region, desired) ->
-        ResourceDiff(desired, current?.get(region))
-      }
-
   private fun ClassicLoadBalancerSpec.generateOverrides(
     regionalClbs: Map<String, ClassicLoadBalancer>
   ) =
     regionalClbs.forEach { (region, clb) ->
-      val dependenciesDiff = ResourceDiff(clb.dependencies, dependencies).hasChanges()
-      val listenersDiff = ResourceDiff(clb.listeners, listeners).hasChanges()
-      val healthCheckDiff = ResourceDiff(clb.healthCheck, healthCheck).hasChanges()
+      val dependenciesDiff = DefaultResourceDiff(clb.dependencies, dependencies).hasChanges()
+      val listenersDiff = DefaultResourceDiff(clb.listeners, listeners).hasChanges()
+      val healthCheckDiff = DefaultResourceDiff(clb.healthCheck, healthCheck).hasChanges()
 
       if (dependenciesDiff || listenersDiff || healthCheckDiff) {
         (overrides as MutableMap)[region] = ClassicLoadBalancerOverride(

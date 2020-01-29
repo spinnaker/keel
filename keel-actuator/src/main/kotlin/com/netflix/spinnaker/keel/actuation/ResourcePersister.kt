@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.normalize
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceDeleted
@@ -117,7 +117,7 @@ class ResourcePersister(
     val existing = resourceRepository.get(id) as Resource<T>
     val resource = existing.withSpec(updated.spec, handler.supportedKind.specClass)
 
-    val diff = ResourceDiff(resource.spec, existing.spec)
+    val diff = DefaultResourceDiff(resource.spec, existing.spec)
 
     return if (diff.hasChanges()) {
       log.debug("Resource {} updated: {}", resource.id, diff.toDebug())

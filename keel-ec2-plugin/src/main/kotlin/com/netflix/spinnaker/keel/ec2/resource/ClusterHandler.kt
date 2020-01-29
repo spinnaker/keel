@@ -42,6 +42,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
 import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
@@ -358,12 +359,6 @@ class ClusterHandler(
       spec = spec
     )
   }
-
-  private fun ResourceDiff<Map<String, ServerGroup>>.toIndividualDiffs() =
-    desired
-      .map { (region, desired) ->
-        ResourceDiff(desired, current?.get(region))
-      }
 
   private fun List<ResourceDiff<ServerGroup>>.createsNewServerGroups() =
     any {

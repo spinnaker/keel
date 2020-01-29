@@ -46,7 +46,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.clouddriver.model.SuspendedProcess
 import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.TargetTrackingConfiguration
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
@@ -348,7 +348,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         runBlocking {
           upsert(
             resource,
-            ResourceDiff(
+            DefaultResourceDiff(
               serverGroups.map {
                 it.copy(scaling = Scaling(), capacity = Capacity(2, 2, 2))
               }.byRegion(),
@@ -381,7 +381,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       test("annealing a diff creates staggered server groups with scaling policies upserted in the same orchestration") {
         runBlocking {
-          upsert(resource, ResourceDiff(serverGroups.byRegion(), emptyMap()))
+          upsert(resource, DefaultResourceDiff(serverGroups.byRegion(), emptyMap()))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -567,7 +567,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withMissingAppVersion()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -591,7 +591,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -625,7 +625,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -670,7 +670,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withNoScalingPolicies()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           modified.byRegion(),
           serverGroups.byRegion()
         )
@@ -705,7 +705,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             )
           )
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           modified.byRegion(),
           serverGroups.byRegion()
         )
@@ -747,7 +747,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             .withDoubleCapacity()
             .withNoScalingPolicies()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -782,7 +782,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             .withDoubleCapacity()
             .withDifferentInstanceType()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )
@@ -874,7 +874,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentInstanceType(),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
         )
-        val diff = ResourceDiff(
+        val diff = DefaultResourceDiff(
           serverGroups.byRegion(),
           modified.byRegion()
         )

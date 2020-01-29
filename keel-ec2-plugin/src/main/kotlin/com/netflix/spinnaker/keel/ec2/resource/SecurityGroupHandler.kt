@@ -36,7 +36,9 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupModel
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
@@ -191,17 +193,12 @@ class SecurityGroupHandler(
     )
   }
 
-  private fun ResourceDiff<Map<String, SecurityGroup>>.toIndividualDiffs() =
-    desired.map { (region, desire) ->
-      ResourceDiff(desire, current?.getOrDefault(region, null))
-    }
-
   private fun SecurityGroupSpec.generateOverrides(
     regionalGroups: Map<String, SecurityGroup>
   ) =
     regionalGroups.forEach { (region, securityGroup) ->
       val inboundDiff =
-        ResourceDiff(securityGroup.inboundRules, this.inboundRules)
+        DefaultResourceDiff(securityGroup.inboundRules, this.inboundRules)
           .hasChanges()
       val vpcDiff = securityGroup.location.vpc != this.locations.vpc
       val descriptionDiff = securityGroup.description != this.description

@@ -15,7 +15,9 @@ import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
@@ -276,12 +278,6 @@ class ApplicationLoadBalancerHandler(
       .mapNotNull { it.await() }
       .associateBy { it.location.region }
 
-  private fun ResourceDiff<Map<String, ApplicationLoadBalancer>>.toIndividualDiffs() =
-    desired
-      .map { (region, desired) ->
-        ResourceDiff(desired, current?.get(region))
-      }
-
   private fun ResourceDiff<ApplicationLoadBalancer>.toUpsertJob(): Job =
     with(desired) {
       Job(
@@ -326,9 +322,9 @@ class ApplicationLoadBalancerHandler(
     regionalAlbs: Map<String, ApplicationLoadBalancer>
   ) =
     regionalAlbs.forEach { (region, alb) ->
-      val dependenciesDiff = ResourceDiff(alb.dependencies, dependencies).hasChanges()
-      val listenersDiff = ResourceDiff(alb.listeners, listeners).hasChanges()
-      val targetGroupDiff = ResourceDiff(alb.targetGroups, targetGroups).hasChanges()
+      val dependenciesDiff = DefaultResourceDiff(alb.dependencies, dependencies).hasChanges()
+      val listenersDiff = DefaultResourceDiff(alb.listeners, listeners).hasChanges()
+      val targetGroupDiff = DefaultResourceDiff(alb.targetGroups, targetGroups).hasChanges()
 
       if (dependenciesDiff || listenersDiff || targetGroupDiff) {
         (overrides as MutableMap)[region] = ApplicationLoadBalancerOverride(
