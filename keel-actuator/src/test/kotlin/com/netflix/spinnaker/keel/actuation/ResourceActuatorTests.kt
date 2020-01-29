@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
-import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.randomUID
@@ -54,7 +53,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     val resourceRepository = InMemoryResourceRepository()
     val diffFingerprintRepository = InMemoryDiffFingerprintRepository()
     val resourcePauser: ResourcePauser = mockk() {
-      every { isPaused(any<ResourceId>()) } returns false
+      every { isPaused(any<String>()) } returns false
       every { isPaused(any<Resource<*>>()) } returns false
     }
     val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)

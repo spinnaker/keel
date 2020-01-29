@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
-import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ResourceState.Diff
@@ -57,13 +56,9 @@ import java.time.Instant
 sealed class ResourceEvent {
   abstract val apiVersion: String
   abstract val kind: String
-  abstract val id: String // TODO: should be ResourceId but Jackson can't handle inline classes
+  abstract val id: String
   abstract val application: String
   abstract val timestamp: Instant
-
-  val resourceId: ResourceId
-    @JsonIgnore
-    get() = ResourceId(id)
 
   /**
    * Should repeated events of the same type
@@ -90,7 +85,7 @@ data class ResourceCreated(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -113,7 +108,7 @@ data class ResourceUpdated(
   constructor(resource: Resource<*>, delta: Map<String, Any?>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     delta,
     clock.instant()
@@ -130,7 +125,7 @@ data class ResourceDeleted(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -159,7 +154,7 @@ data class ResourceMissing(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -184,7 +179,7 @@ data class ResourceDeltaDetected(
   constructor(resource: Resource<*>, delta: Map<String, Any?>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     delta,
     clock.instant()
@@ -208,7 +203,7 @@ data class ResourceActuationLaunched(
     this(
       resource.apiVersion,
       resource.kind,
-      resource.id.value,
+      resource.id,
       resource.application,
       plugin,
       tasks,
@@ -235,7 +230,7 @@ data class ResourceActuationPaused(
   constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     reason,
     clock.instant()
@@ -261,7 +256,7 @@ data class ResourceActuationVetoed(
   constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     reason,
     clock.instant()
@@ -284,7 +279,7 @@ data class ResourceActuationResumed(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -307,7 +302,7 @@ data class ResourceTaskFailed(
   constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     reason,
     clock.instant()
@@ -328,7 +323,7 @@ data class ResourceTaskSucceeded(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -351,7 +346,7 @@ data class ResourceDeltaResolved(
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant()
   )
@@ -374,7 +369,7 @@ data class ResourceValid(
     this(
       resource.apiVersion,
       resource.kind,
-      resource.id.value,
+      resource.id,
       resource.application,
       clock.instant()
     )
@@ -398,7 +393,7 @@ data class ResourceCheckUnresolvable(
     this(
       resource.apiVersion,
       resource.kind,
-      resource.id.value,
+      resource.id,
       resource.application,
       clock.instant(),
       exception.message
@@ -420,7 +415,7 @@ data class ResourceCheckError(
   constructor(resource: Resource<*>, exception: Throwable, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
-    resource.id.value,
+    resource.id,
     resource.application,
     clock.instant(),
     exception.javaClass,

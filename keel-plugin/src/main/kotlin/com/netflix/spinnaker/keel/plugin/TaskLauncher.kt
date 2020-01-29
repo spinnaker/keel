@@ -68,7 +68,7 @@ class TaskLauncher(
       user = resource.serviceAccount,
       application = resource.application,
       notifications = resource.notifications,
-      subject = resource.id.value,
+      subject = resource.id,
       description = description,
       correlationId = correlationId,
       stages = stages,

@@ -25,7 +25,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus
  * This powers the UI view of resource status.
  */
 data class ResourceSummary(
-  val id: ResourceId,
+  val id: String,
   val kind: String,
   val status: ResourceStatus,
   val moniker: Moniker?,

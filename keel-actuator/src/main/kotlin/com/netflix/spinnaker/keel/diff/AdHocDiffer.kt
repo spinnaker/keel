@@ -18,7 +18,6 @@
 package com.netflix.spinnaker.keel.diff
 
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedResource
@@ -41,7 +40,7 @@ class AdHocDiffer(
   private val handlers: List<ResourceHandler<*, *>>
 ) {
   suspend fun <T : ResourceSpec> calculate(submittedResource: SubmittedResource<T>): DiffResult {
-    var resourceId: ResourceId? = null
+    var resourceId: String? = null
     var resource: Resource<T>? = null
     return try {
       val plugin = handlerFor(submittedResource)

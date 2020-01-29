@@ -16,16 +16,21 @@
 package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
-import com.netflix.spinnaker.keel.serialization.ResourceIdDeserializer
+import com.netflix.spinnaker.keel.serialization.SubmittedResourceDeserializer
 
 /**
- * Note: You cannot reliably parse the application name from the resource id.
- * The application is a property on the resource spec.
+ * External representation of a resource that would be submitted to the API
  */
-@JsonSerialize(using = ToStringSerializer::class)
-@JsonDeserialize(using = ResourceIdDeserializer::class)
-data class ResourceId(val value: String) {
-  override fun toString(): String = value
-}
+@JsonDeserialize(using = SubmittedResourceDeserializer::class)
+data class SubmittedResource<T : ResourceSpec>(
+  val metadata: Map<String, Any?> = emptyMap(),
+  val apiVersion: String,
+  val kind: String,
+  val spec: T
+)
+
+val <T : ResourceSpec> SubmittedResource<T>.id: String
+  get() = "${apiVersion.substringBefore(".")}:$kind:${spec.id}"
+
+fun <T : ResourceSpec> SubmittedResource<T>.toResource(): Resource<T> =
+  Resource(apiVersion, kind, metadata, spec)

@@ -11,5 +11,5 @@ data class Exportable(
   val kind: String
 ) {
   fun toResourceId() =
-    "$cloudProvider:$kind:$account:${moniker.name}".let(::ResourceId)
+    "$cloudProvider:$kind:$account:${moniker.name}"
 }

@@ -37,7 +37,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    */
   fun normalize(resource: SubmittedResource<S>): Resource<S> {
     val metadata = resource.metadata + mapOf(
-      "id" to resource.id.toString(),
+      "id" to resource.id,
       "uid" to randomUID().toString(),
       "application" to resource.spec.application
     )

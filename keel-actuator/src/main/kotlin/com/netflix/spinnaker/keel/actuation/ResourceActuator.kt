@@ -153,7 +153,7 @@ class ResourceActuator(
         ResourceActuationVetoed(
           resource.apiVersion,
           resource.kind,
-          resource.id.value,
+          resource.id,
           resource.spec.application,
           response.message,
           clock.instant()))

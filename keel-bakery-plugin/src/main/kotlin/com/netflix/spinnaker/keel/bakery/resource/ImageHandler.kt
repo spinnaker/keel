@@ -129,7 +129,7 @@ class ImageHandler(
       notifications = emptyList(),
       subject = description,
       description = description,
-      correlationId = resource.id.toString(),
+      correlationId = resource.id,
       stages = listOf(
         Job(
           "bake",
@@ -157,7 +157,7 @@ class ImageHandler(
 
   override suspend fun actuationInProgress(resource: Resource<ImageSpec>): Boolean =
     orcaService
-      .getCorrelatedExecutions(resource.id.toString())
+      .getCorrelatedExecutions(resource.id)
       .isNotEmpty()
 
   private suspend fun findBaseAmi(baseImage: String, serviceAccount: String): String {
