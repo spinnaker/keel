@@ -17,5 +17,5 @@ package com.netflix.spinnaker.keel.ec2
 
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 
-val SPINNAKER_EC2_API_V1 = SPINNAKER_API_V1.subApi("ec2")
+val SPINNAKER_EC2_API_V1 = "ec2.$SPINNAKER_API_V1".toString()
 const val CLOUD_PROVIDER = "aws"

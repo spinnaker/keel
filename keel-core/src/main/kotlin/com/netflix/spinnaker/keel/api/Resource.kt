@@ -22,8 +22,8 @@ import com.netflix.spinnaker.keel.serialization.SubmittedResourceDeserializer
  * Internal representation of a resource.
  */
 data class Resource<T : ResourceSpec>(
-  val apiVersion: ApiVersion,
-  val kind: String, // TODO: create a type
+  val apiVersion: String,
+  val kind: String,
   val metadata: Map<String, Any?>,
   val spec: T
 ) {
@@ -65,13 +65,13 @@ data class Resource<T : ResourceSpec>(
 @JsonDeserialize(using = SubmittedResourceDeserializer::class)
 data class SubmittedResource<T : ResourceSpec>(
   val metadata: Map<String, Any?> = emptyMap(),
-  val apiVersion: ApiVersion,
+  val apiVersion: String,
   val kind: String,
   val spec: T
 )
 
 val <T : ResourceSpec> SubmittedResource<T>.id: ResourceId
-  get() = "${apiVersion.prefix}:$kind:${spec.id}".let(::ResourceId)
+  get() = "${apiVersion.substringBefore(".")}:$kind:${spec.id}".let(::ResourceId)
 
 val <T : ResourceSpec> Resource<T>.id: ResourceId
   get() = metadata.getValue("id").toString().let(::ResourceId)

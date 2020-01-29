@@ -83,7 +83,7 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
         SubmittedEnvironment(
           name = "test",
           resources = setOf(SubmittedResource(
-            apiVersion = SPINNAKER_API_V1.subApi("test"),
+            apiVersion = "test.$SPINNAKER_API_V1",
             kind = "whatever",
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("test", "resource in test", "keel")
@@ -92,7 +92,7 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
         SubmittedEnvironment(
           name = "prod",
           resources = setOf(SubmittedResource(
-            apiVersion = SPINNAKER_API_V1.subApi("test"),
+            apiVersion = "test.$SPINNAKER_API_V1",
             kind = "whatever",
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("prod", "resource in prod", "keel")

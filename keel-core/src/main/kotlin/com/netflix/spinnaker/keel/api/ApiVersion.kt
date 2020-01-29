@@ -15,26 +15,4 @@
  */
 package com.netflix.spinnaker.keel.api
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
-
-@JsonSerialize(using = ToStringSerializer::class)
-data class ApiVersion(
-  val group: String,
-  val version: String
-) {
-  @JsonCreator
-  constructor(value: String) :
-    this(value.substringBefore("/"), value.substringAfter("/"))
-
-  override fun toString() = "$group/$version"
-
-  fun subApi(prefix: String) = copy(group = "$prefix.$group")
-
-  @JsonIgnore
-  val prefix: String = group.substringBefore(".")
-}
-
-val SPINNAKER_API_V1 = ApiVersion("spinnaker.netflix.com", "v1")
+val SPINNAKER_API_V1 = "spinnaker.netflix.com/v1"

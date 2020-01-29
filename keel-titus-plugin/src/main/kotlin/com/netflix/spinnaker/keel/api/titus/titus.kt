@@ -19,5 +19,5 @@ package com.netflix.spinnaker.keel.api.titus
 
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 
-val SPINNAKER_TITUS_API_V1 = SPINNAKER_API_V1.subApi("titus")
+val SPINNAKER_TITUS_API_V1 = "titus.$SPINNAKER_API_V1".toString()
 const val CLOUD_PROVIDER = "titus"

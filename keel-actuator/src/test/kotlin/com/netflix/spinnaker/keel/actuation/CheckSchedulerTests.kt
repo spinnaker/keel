@@ -24,13 +24,13 @@ internal object CheckSchedulerTests : JUnit5Minutests {
   private val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
   private val resources = listOf(
     resource(
-      apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+      apiVersion = "ec2.$SPINNAKER_API_V1",
       kind = "security-group",
       id = "ec2:security-group:prod:ap-south-1:keel-sg",
       application = "keel"
     ),
     resource(
-      apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+      apiVersion = "ec2.$SPINNAKER_API_V1",
       kind = "cluster",
       id = "ec2:cluster:prod:keel",
       application = "keel"

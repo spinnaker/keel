@@ -26,7 +26,7 @@ internal class TelemetryListenerTests : JUnit5Minutests {
   private val registry = spyk<Registry>(NoopRegistry())
   private val counter = mockk<Counter>(relaxUnitFun = true)
   private val event = ResourceValid(
-    apiVersion = SPINNAKER_API_V1.subApi("ec2"),
+    apiVersion = "ec2.$SPINNAKER_API_V1",
     kind = "cluster",
     id = "ec2:cluster:prod:keel-main",
     application = "fnord",

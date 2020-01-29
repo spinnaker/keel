@@ -47,11 +47,11 @@ class AdHocDifferTests : JUnit5Minutests {
     val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val subject = AdHocDiffer(listOf(plugin1, plugin2))
     val resource = resource(
-      apiVersion = SPINNAKER_API_V1.subApi("plugin1"),
+      apiVersion = "plugin1.$SPINNAKER_API_V1",
       kind = "foo"
     )
     val subResource = submittedResource(
-      apiVersion = SPINNAKER_API_V1.subApi("plugin1"),
+      apiVersion = "plugin1.$SPINNAKER_API_V1",
       kind = "foo"
     )
     val deliveryConfig = SubmittedDeliveryConfig(
@@ -79,9 +79,9 @@ class AdHocDifferTests : JUnit5Minutests {
 
     before {
       every { plugin1.name } returns "plugin1"
-      every { plugin1.supportedKind } returns SupportedKind(SPINNAKER_API_V1.subApi("plugin1"), "foo", DummyResourceSpec::class.java)
+      every { plugin1.supportedKind } returns SupportedKind("plugin1.$SPINNAKER_API_V1", "foo", DummyResourceSpec::class.java)
       every { plugin2.name } returns "plugin2"
-      every { plugin2.supportedKind } returns SupportedKind(SPINNAKER_API_V1.subApi("plugin2"), "bar", DummyResourceSpec::class.java)
+      every { plugin2.supportedKind } returns SupportedKind("plugin2.$SPINNAKER_API_V1", "bar", DummyResourceSpec::class.java)
 
       coEvery {
         plugin1.normalize(subResource)

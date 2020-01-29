@@ -84,7 +84,7 @@ class ConvertExampleFilesTest : JUnit5Minutests {
     }
 
     context("image") {
-      mapper.registerSubtypes(NamedType(ImageSpec::class.java, "${SPINNAKER_API_V1.subApi("bakery")}/image"))
+      mapper.registerSubtypes(NamedType(ImageSpec::class.java, "${"bakery.$SPINNAKER_API_V1"}/image"))
       val file = this.javaClass.getResource("/examples/image-example.yml").readText()
 
       test("yml can be parsed") {

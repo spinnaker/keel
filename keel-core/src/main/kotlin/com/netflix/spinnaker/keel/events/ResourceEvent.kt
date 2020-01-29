@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
-import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.api.ResourceId
@@ -56,7 +55,7 @@ import java.time.Instant
   Type(value = ResourceTaskSucceeded::class, name = "ResourceTaskSucceeded")
 )
 sealed class ResourceEvent {
-  abstract val apiVersion: ApiVersion
+  abstract val apiVersion: String
   abstract val kind: String
   abstract val id: String // TODO: should be ResourceId but Jackson can't handle inline classes
   abstract val application: String
@@ -81,7 +80,7 @@ sealed class ResourceEvent {
  * A new resource was registered for management.
  */
 data class ResourceCreated(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -104,7 +103,7 @@ data class ResourceCreated(
  * updated version).
  */
 data class ResourceUpdated(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -122,7 +121,7 @@ data class ResourceUpdated(
 }
 
 data class ResourceDeleted(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -148,7 +147,7 @@ abstract class ResourceCheckResult : ResourceEvent() {
  * A managed resource does not currently exist in the cloud.
  */
 data class ResourceMissing(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -172,7 +171,7 @@ data class ResourceMissing(
  * @property delta The difference between the "base" spec (desired) and "working" spec (actual).
  */
 data class ResourceDeltaDetected(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -197,7 +196,7 @@ data class ResourceDeltaDetected(
  * resource.
  */
 data class ResourceActuationLaunched(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -223,7 +222,7 @@ data class ResourceActuationLaunched(
  * @property reason The reason why actuation was paused.
  */
 data class ResourceActuationPaused(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -249,7 +248,7 @@ data class ResourceActuationPaused(
  * @property reason The reason why actuation was vetoed.
  */
 data class ResourceActuationVetoed(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -273,7 +272,7 @@ data class ResourceActuationVetoed(
  * Actuation on the managed resource has resumed.
  */
 data class ResourceActuationResumed(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -297,7 +296,7 @@ data class ResourceActuationResumed(
  * @property reason The reason why actuation failed.
  */
 data class ResourceTaskFailed(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -319,7 +318,7 @@ data class ResourceTaskFailed(
  * Orca task for the managed resource has succeeded.
  */
 data class ResourceTaskSucceeded(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -340,7 +339,7 @@ data class ResourceTaskSucceeded(
  * (or the resource did not exist).
  */
 data class ResourceDeltaResolved(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -359,7 +358,7 @@ data class ResourceDeltaResolved(
 }
 
 data class ResourceValid(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -382,7 +381,7 @@ data class ResourceValid(
 }
 
 data class ResourceCheckUnresolvable(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,
@@ -407,7 +406,7 @@ data class ResourceCheckUnresolvable(
 }
 
 data class ResourceCheckError(
-  override val apiVersion: ApiVersion,
+  override val apiVersion: String,
   override val kind: String,
   override val id: String,
   override val application: String,

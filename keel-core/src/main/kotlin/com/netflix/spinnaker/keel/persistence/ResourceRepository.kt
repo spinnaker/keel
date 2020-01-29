@@ -15,7 +15,6 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
@@ -51,7 +50,7 @@ import java.time.Duration
 
 data class ResourceHeader(
   val id: ResourceId,
-  val apiVersion: ApiVersion,
+  val apiVersion: String,
   val kind: String
 ) {
   constructor(resource: Resource<*>) : this(

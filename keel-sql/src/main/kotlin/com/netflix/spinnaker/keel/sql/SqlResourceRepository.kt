@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceId
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -66,7 +65,7 @@ open class SqlResourceRepository(
         .from(RESOURCE)
         .fetch()
         .map { (apiVersion, kind, id) ->
-          ResourceHeader(ResourceId(id), ApiVersion(apiVersion), kind)
+          ResourceHeader(ResourceId(id), apiVersion, kind)
         }
         .forEach(callback)
     }
@@ -103,10 +102,10 @@ open class SqlResourceRepository(
    */
   private fun constructResource(apiVersion: String, kind: String, metadata: String, spec: String) =
     Resource(
-      ApiVersion(apiVersion),
+      apiVersion,
       kind,
       objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-      objectMapper.readValue(spec, resourceTypeIdentifier.identify(apiVersion.let(::ApiVersion), kind))
+      objectMapper.readValue(spec, resourceTypeIdentifier.identify(apiVersion, kind))
     )
 
   override fun hasManagedResources(application: String): Boolean {
@@ -149,10 +148,10 @@ open class SqlResourceRepository(
         .fetch()
         .map { (apiVersion, kind, metadata, spec) ->
           Resource(
-            ApiVersion(apiVersion),
+            apiVersion,
             kind,
             objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-            objectMapper.readValue(spec, resourceTypeIdentifier.identify(apiVersion.let(::ApiVersion), kind))
+            objectMapper.readValue(spec, resourceTypeIdentifier.identify(apiVersion, kind))
           )
         }
     }

@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.plugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.jsontype.NamedType
-import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -190,7 +189,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
 }
 
 data class SupportedKind<SPEC : ResourceSpec>(
-  val apiVersion: ApiVersion,
+  val apiVersion: String,
   val kind: String,
   val specClass: Class<SPEC>
 ) {
@@ -205,7 +204,7 @@ data class SupportedKind<SPEC : ResourceSpec>(
  * @throws UnsupportedKind if no appropriate handlers are found in the list.
  */
 fun Collection<ResourceHandler<*, *>>.supporting(
-  apiVersion: ApiVersion,
+  apiVersion: String,
   kind: String
 ): ResourceHandler<*, *> =
   find {
@@ -213,5 +212,5 @@ fun Collection<ResourceHandler<*, *>>.supporting(
   }
     ?: throw UnsupportedKind(apiVersion, kind)
 
-class UnsupportedKind(apiVersion: ApiVersion, kind: String) :
+class UnsupportedKind(apiVersion: String, kind: String) :
   IllegalStateException("No resource handler supporting \"$kind\" in \"$apiVersion\" is available")

@@ -88,7 +88,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
               SubmittedEnvironment(
                 name = "test",
                 resources = setOf(SubmittedResource(
-                  apiVersion = SPINNAKER_API_V1.subApi("test"),
+                  apiVersion = "test.$SPINNAKER_API_V1",
                   kind = "whatever",
                   spec = DummyResourceSpec(data = "resource in test")
                 ))
@@ -96,7 +96,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
               SubmittedEnvironment(
                 name = "prod",
                 resources = setOf(SubmittedResource(
-                  apiVersion = SPINNAKER_API_V1.subApi("test"),
+                  apiVersion = "test.$SPINNAKER_API_V1",
                   kind = "whatever",
                   spec = DummyResourceSpec(data = "resource in prod")
                 )),

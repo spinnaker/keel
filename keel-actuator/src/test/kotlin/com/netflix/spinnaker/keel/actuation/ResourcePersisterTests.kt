@@ -109,7 +109,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
           before {
             create(SubmittedResource(
               metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-              apiVersion = SPINNAKER_API_V1.subApi("test"),
+              apiVersion = "test.$SPINNAKER_API_V1",
               kind = "whatever",
               spec = DummyResourceSpec(data = "o hai")
             ))
@@ -203,7 +203,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
                   name = "test",
                   resources = setOf(
                     SubmittedResource(
-                      apiVersion = SPINNAKER_API_V1.subApi("test"),
+                      apiVersion = "test.$SPINNAKER_API_V1",
                       kind = "whatever",
                       spec = DummyResourceSpec("test", "resource in test")
                     )
@@ -214,7 +214,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
                   name = "prod",
                   resources = setOf(
                     SubmittedResource(
-                      apiVersion = SPINNAKER_API_V1.subApi("test"),
+                      apiVersion = "test.$SPINNAKER_API_V1",
                       kind = "whatever",
                       spec = DummyResourceSpec("prod", "resource in prod")
                     )
@@ -255,7 +255,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
             }
 
           val resource1 = SubmittedResource(
-            apiVersion = SPINNAKER_API_V1.subApi("test"),
+            apiVersion = "test.$SPINNAKER_API_V1",
             kind = "whatever",
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("test", "resource in test")
@@ -267,7 +267,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
             }
 
           val resource2 = SubmittedResource(
-            apiVersion = SPINNAKER_API_V1.subApi("test"),
+            apiVersion = "test.$SPINNAKER_API_V1",
             kind = "whatever",
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("prod", "resource in prod")
@@ -328,7 +328,7 @@ internal object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(
   configuredObjectMapper(), emptyList()
 ) {
   override val supportedKind =
-    SupportedKind(SPINNAKER_API_V1.subApi("test"), "whatever", DummyResourceSpec::class.java)
+    SupportedKind("test.$SPINNAKER_API_V1", "whatever", DummyResourceSpec::class.java)
 
   override suspend fun current(resource: Resource<DummyResourceSpec>): DummyResourceSpec? {
     TODO("not implemented")

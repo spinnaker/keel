@@ -45,7 +45,7 @@ class ImageHandler(
 ) : ResourceHandler<ImageSpec, Image>(objectMapper, resolvers) {
 
   override val supportedKind =
-    SupportedKind(SPINNAKER_API_V1.subApi("bakery"), "image", ImageSpec::class.java)
+    SupportedKind("bakery.$SPINNAKER_API_V1", "image", ImageSpec::class.java)
 
   override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
     with(resource) {

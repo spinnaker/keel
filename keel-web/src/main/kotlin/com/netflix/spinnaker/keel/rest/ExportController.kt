@@ -67,7 +67,7 @@ class ExportController(
     @RequestHeader("X-SPINNAKER-USER") user: String
   ): SubmittedResource<*> {
     val provider = cloudProviderOverrides[cloudProvider] ?: cloudProvider
-    val apiVersion = SPINNAKER_API_V1.subApi(provider)
+    val apiVersion = "$provider.$SPINNAKER_API_V1"
     val kind = typeToKind.getOrDefault(type.toLowerCase(), type.toLowerCase())
     val handler = handlers.supporting(apiVersion, kind)
     val exportable = Exportable(
