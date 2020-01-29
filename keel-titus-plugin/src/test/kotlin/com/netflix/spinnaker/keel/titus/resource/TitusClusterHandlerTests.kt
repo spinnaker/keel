@@ -215,7 +215,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         clock,
         taskLauncher,
         publisher,
-        objectMapper,
         resolvers
       )
     }

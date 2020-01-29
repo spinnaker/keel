@@ -17,7 +17,6 @@
  */
 package com.netflix.spinnaker.keel.api.titus.cluster
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.Exportable
@@ -78,9 +77,8 @@ class TitusClusterHandler(
   private val clock: Clock,
   private val taskLauncher: TaskLauncher,
   private val publisher: ApplicationEventPublisher,
-  objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
-) : ResourceHandler<TitusClusterSpec, Map<String, TitusServerGroup>>(objectMapper, resolvers) {
+) : ResourceHandler<TitusClusterSpec, Map<String, TitusServerGroup>>(resolvers) {
 
   override val supportedKind =
     SupportedKind(SPINNAKER_TITUS_API_V1, "cluster", TitusClusterSpec::class.java)

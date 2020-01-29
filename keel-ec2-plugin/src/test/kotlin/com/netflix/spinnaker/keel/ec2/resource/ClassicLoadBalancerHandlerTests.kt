@@ -157,7 +157,6 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
         cloudDriverCache,
         orcaService,
         taskLauncher,
-        mapper,
         normalizers
       )
     }

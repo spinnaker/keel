@@ -10,7 +10,6 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.plugin.SimpleResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.util.UUID
 
 val TEST_API = "test.$SPINNAKER_API_V1"
@@ -140,9 +139,7 @@ fun randomString(length: Int = 8) =
     .joinToString("")
     .substring(0 until length)
 
-object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(
-  configuredObjectMapper(), emptyList()
-) {
+object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(emptyList()) {
   override val supportedKind =
     SupportedKind(TEST_API, "whatever", DummyResourceSpec::class.java)
 

@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.DebianArtifact
@@ -77,9 +76,8 @@ class ClusterHandler(
   private val taskLauncher: TaskLauncher,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
-  objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
-) : ResourceHandler<ClusterSpec, Map<String, ServerGroup>>(objectMapper, resolvers) {
+) : ResourceHandler<ClusterSpec, Map<String, ServerGroup>>(resolvers) {
 
   override val supportedKind =
     SupportedKind(SPINNAKER_EC2_API_V1, "cluster", ClusterSpec::class.java)

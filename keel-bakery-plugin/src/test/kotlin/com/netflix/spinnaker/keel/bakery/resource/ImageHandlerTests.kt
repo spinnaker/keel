@@ -21,7 +21,6 @@ import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -58,7 +57,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
       imageService,
       publisher,
       taskLauncher,
-      configuredObjectMapper(),
       emptyList()
     )
     val resource = resource(

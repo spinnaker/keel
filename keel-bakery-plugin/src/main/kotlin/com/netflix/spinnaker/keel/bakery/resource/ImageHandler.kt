@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.bakery.resource
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DebianArtifact
@@ -40,9 +39,8 @@ class ImageHandler(
   private val imageService: ImageService,
   private val publisher: ApplicationEventPublisher,
   private val taskLauncher: TaskLauncher,
-  objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
-) : ResourceHandler<ImageSpec, Image>(objectMapper, resolvers) {
+) : ResourceHandler<ImageSpec, Image>(resolvers) {
 
   override val supportedKind =
     SupportedKind("bakery.$SPINNAKER_API_V1", "image", ImageSpec::class.java)

@@ -123,7 +123,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val vpcRegion2: Network =
       Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-east-17"),
     override val handler: SecurityGroupHandler =
-      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers),
+      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, normalizers),
 
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
@@ -211,7 +211,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
     override val vpcRegion2: Network =
       Network(CLOUD_PROVIDER, randomUUID().toString(), "vpc1", "prod", "us-east-17"),
     override val handler: SecurityGroupHandler =
-      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, objectMapper, normalizers),
+      SecurityGroupHandler(cloudDriverService, cloudDriverCache, orcaService, taskLauncher, normalizers),
     override val securityGroupSpec: SecurityGroupSpec =
       SecurityGroupSpec(
         moniker = Moniker(

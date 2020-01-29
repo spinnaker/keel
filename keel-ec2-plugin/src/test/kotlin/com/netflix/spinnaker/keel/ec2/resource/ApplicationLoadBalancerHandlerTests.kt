@@ -166,7 +166,6 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         cloudDriverCache,
         orcaService,
         taskLauncher,
-        mapper,
         normalizers
       )
     }

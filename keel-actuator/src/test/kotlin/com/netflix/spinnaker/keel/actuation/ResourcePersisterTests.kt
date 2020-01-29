@@ -21,7 +21,6 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepos
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.plugin.SimpleResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import dev.minutest.MinutestFixture
 import dev.minutest.Tests
@@ -324,9 +323,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
   }
 }
 
-internal object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(
-  configuredObjectMapper(), emptyList()
-) {
+internal object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(emptyList()) {
   override val supportedKind =
     SupportedKind("test.$SPINNAKER_API_V1", "whatever", DummyResourceSpec::class.java)
 

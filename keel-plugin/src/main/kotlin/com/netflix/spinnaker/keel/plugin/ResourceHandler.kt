@@ -1,7 +1,5 @@
 package com.netflix.spinnaker.keel.plugin
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -20,7 +18,6 @@ import org.slf4j.LoggerFactory
  * If those two are the same, use [SimpleResourceHandler] instead.
  */
 abstract class ResourceHandler<S : ResourceSpec, R : Any>(
-  private val objectMapper: ObjectMapper,
   private val resolvers: List<Resolver<*>>
 ) : KeelPlugin {
 
@@ -167,25 +164,6 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    * `false` otherwise.
    */
   open suspend fun actuationInProgress(resource: Resource<S>): Boolean = false
-
-  /**
-   * Used to register the [ResourceSpec] sub-type supported by this handler with Jackson so we can
-   * serialize and deserialize it. Do not override this or call it, or even look at it. You never
-   * saw this method, alright?
-   */
-  fun registerResourceKind(objectMappers: Iterable<ObjectMapper>) {
-    with(supportedKind) {
-      log.info("Registering ResourceSpec sub-type {}: {}", typeId, specClass.simpleName)
-      objectMappers.forEach { it.registerSubtypes(namedType) }
-    }
-  }
-
-  /**
-   * Convenient version of `registerResourceKind(Iterable<ObjectMapper>)` for tests, etc.
-   */
-  fun registerResourceKind(vararg objectMappers: ObjectMapper) {
-    registerResourceKind(objectMappers.toList())
-  }
 }
 
 data class SupportedKind<SPEC : ResourceSpec>(
@@ -194,7 +172,6 @@ data class SupportedKind<SPEC : ResourceSpec>(
   val specClass: Class<SPEC>
 ) {
   val typeId = "$apiVersion/$kind"
-  val namedType = NamedType(specClass, typeId)
 }
 
 /**

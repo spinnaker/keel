@@ -286,7 +286,6 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         taskLauncher,
         clock,
         publisher,
-        objectMapper,
         normalizers
       )
     }
