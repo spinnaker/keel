@@ -110,7 +110,7 @@ class SecurityGroupHandler(
           log.info("${verb.first} security group using task: $job")
 
           async {
-            taskLauncher.submitJobToOrca(
+            taskLauncher.submitJob(
               resource = resource,
               description = "${verb.first} security group ${spec.moniker.name} in ${spec.location.account}/${spec.location.region}",
               correlationId = "${resource.id}:${spec.location.region}",

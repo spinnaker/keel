@@ -140,7 +140,7 @@ class ClusterHandler(
           log.info("Modifying server group in-place using task: {}", job)
 
           async {
-            taskLauncher.submitJobToOrca(
+            taskLauncher.submitJob(
               resource = resource,
               description = "Upsert server group ${diff.desired.moniker.name} in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
@@ -180,7 +180,7 @@ class ClusterHandler(
           log.info("Upserting server group using task: {}", stages)
 
           async {
-            taskLauncher.submitJobToOrca(
+            taskLauncher.submitJob(
               resource = resource,
               description = "Upsert server group ${diff.desired.moniker.name} in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
@@ -252,7 +252,7 @@ class ClusterHandler(
         }
 
         val deferred = async {
-          taskLauncher.submitJobToOrca(
+          taskLauncher.submitJob(
             resource = resource,
             description = "Upsert server group ${diff.desired.moniker.name} in " +
               "${diff.desired.location.account}/${diff.desired.location.region}",

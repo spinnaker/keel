@@ -123,7 +123,7 @@ class ImageHandler(
     val description = "Bake ${resourceDiff.desired.appVersion}"
 
     try {
-      val taskRef = taskLauncher.submitJobToOrca(
+      val taskRef = taskLauncher.submitJob(
       user = resource.serviceAccount,
       application = resource.application,
       notifications = emptyList(),

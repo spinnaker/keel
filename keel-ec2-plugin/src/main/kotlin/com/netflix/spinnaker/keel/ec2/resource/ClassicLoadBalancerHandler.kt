@@ -90,7 +90,7 @@ class ClassicLoadBalancerHandler(
           val description = "$action ${resource.kind} load balancer ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}"
 
           async {
-            taskLauncher.submitJobToOrca(
+            taskLauncher.submitJob(
               resource = resource,
               description = description,
               correlationId = "${resource.id}:${desired.location.region}",

@@ -24,8 +24,8 @@ import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
+import com.netflix.spinnaker.keel.plugin.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.plugin.Resolver
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.test.resource
 import de.danielbechler.diff.node.DiffNode
@@ -69,7 +69,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
     every { environmentFor(any()) } returns Environment("test")
   }
   private val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
-  private val taskLauncher = TaskLauncher(
+  private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     deliveryConfigRepository,
     publisher

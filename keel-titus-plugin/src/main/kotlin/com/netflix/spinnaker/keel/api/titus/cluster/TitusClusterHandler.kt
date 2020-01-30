@@ -123,7 +123,7 @@ class TitusClusterHandler(
           log.info("Upserting server group using task: {}", job)
 
           async {
-            taskLauncher.submitJobToOrca(
+            taskLauncher.submitJob(
               resource = resource,
               description = "Upsert server group ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}",
               correlationId = "${resource.id}:${desired.location.region}",
