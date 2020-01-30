@@ -16,6 +16,7 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -42,7 +43,6 @@ import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
-import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -112,7 +112,7 @@ class SecurityGroupHandler(
           async {
             taskLauncher.submitJob(
               resource = resource,
-              description = "${verb.first} security group ${spec.moniker.name} in ${spec.location.account}/${spec.location.region}",
+              description = "${verb.first} security group ${spec.moniker} in ${spec.location.account}/${spec.location.region}",
               correlationId = "${resource.id}:${spec.location.region}",
               job = job
             )
@@ -127,7 +127,7 @@ class SecurityGroupHandler(
         cloudDriverCache.securityGroupByName(
           account = exportable.account,
           region = region,
-          name = exportable.moniker.name
+          name = exportable.moniker.toString()
         )
       } catch (e: ResourceNotFound) {
         null
@@ -163,7 +163,7 @@ class SecurityGroupHandler(
       }
 
     if (securityGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find security group: ${exportable.moniker.name} " +
+      throw ResourceNotFound("Could not find security group: ${exportable.moniker} " +
         "in account: ${exportable.account}")
     }
 
@@ -243,7 +243,7 @@ class SecurityGroupHandler(
               serviceAccount,
               spec.locations.account,
               CLOUD_PROVIDER,
-              spec.moniker.name,
+              spec.moniker.toString(),
               region.name,
               cloudDriverCache.networkBy(spec.locations.vpc, spec.locations.account, region.name).id
             )
@@ -320,7 +320,7 @@ class SecurityGroupHandler(
         "application" to moniker.app,
         "credentials" to location.account,
         "cloudProvider" to CLOUD_PROVIDER,
-        "name" to moniker.name,
+        "name" to moniker.toString(),
         "regions" to listOf(location.region),
         "vpcId" to cloudDriverCache.networkBy(location.vpc, location.account, location.region).id,
         "description" to description,
@@ -346,7 +346,7 @@ class SecurityGroupHandler(
         "application" to moniker.app,
         "credentials" to location.account,
         "cloudProvider" to CLOUD_PROVIDER,
-        "name" to moniker.name,
+        "name" to moniker.toString(),
         "regions" to listOf(location.region),
         "vpcId" to cloudDriverCache.networkBy(location.vpc, location.account, location.region).id,
         "description" to description,
@@ -372,7 +372,7 @@ class SecurityGroupHandler(
         "type" to protocol.name.toLowerCase(),
         "startPort" to portRange.startPort,
         "endPort" to portRange.endPort,
-        "name" to securityGroup.moniker.name
+        "name" to securityGroup.moniker.toString()
       )
       is CrossAccountReferenceRule -> mapOf(
         "type" to protocol.name.toLowerCase(),

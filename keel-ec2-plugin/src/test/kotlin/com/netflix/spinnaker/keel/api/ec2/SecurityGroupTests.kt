@@ -1,8 +1,8 @@
 package com.netflix.spinnaker.keel.api.ec2
 
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.TCP
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
-import com.netflix.spinnaker.keel.model.Moniker
 import de.danielbechler.diff.node.DiffNode.State.CHANGED
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -186,7 +186,7 @@ internal object SecurityGroupTests : JUnit5Minutests {
           this,
           copy(
             inboundRules = inboundRules
-              .plus(ReferenceRule(TCP, moniker.name, PortRange(80, 80)))
+              .plus(ReferenceRule(TCP, moniker.toString(), PortRange(80, 80)))
               .toSet()
           )
         )

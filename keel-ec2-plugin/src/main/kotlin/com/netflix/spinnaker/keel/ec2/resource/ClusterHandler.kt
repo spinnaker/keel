@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -46,7 +47,8 @@ import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.Task
-import com.netflix.spinnaker.keel.model.Moniker
+import com.netflix.spinnaker.keel.model.orcaClusterMoniker
+import com.netflix.spinnaker.keel.model.serverGroup
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -142,7 +144,7 @@ class ClusterHandler(
           async {
             taskLauncher.submitJob(
               resource = resource,
-              description = "Upsert server group ${diff.desired.moniker.name} in " +
+              description = "Upsert server group ${diff.desired.moniker} in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
               correlationId = "${resource.id}:${diff.desired.location.region}",
               stages = job)
@@ -182,7 +184,7 @@ class ClusterHandler(
           async {
             taskLauncher.submitJob(
               resource = resource,
-              description = "Upsert server group ${diff.desired.moniker.name} in " +
+              description = "Upsert server group ${diff.desired.moniker} in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
               correlationId = "${resource.id}:${diff.desired.location.region}",
               stages = stages)
@@ -254,7 +256,7 @@ class ClusterHandler(
         val deferred = async {
           taskLauncher.submitJob(
             resource = resource,
-            description = "Upsert server group ${diff.desired.moniker.name} in " +
+            description = "Upsert server group ${diff.desired.moniker} in " +
               "${diff.desired.location.account}/${diff.desired.location.region}",
             correlationId = "${resource.id}:${diff.desired.location.region}",
             stages = stages
@@ -295,7 +297,7 @@ class ClusterHandler(
       .byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker.name} " +
+      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
         "in account: ${exportable.account} for export")
     }
 
@@ -713,12 +715,12 @@ class ClusterHandler(
         async {
           try {
             activeServerGroup(
-              serviceAccount,
-              moniker.app,
-              account,
-              moniker.name,
-              it,
-              CLOUD_PROVIDER
+              user = serviceAccount,
+              app = moniker.app,
+              account = account,
+              cluster = moniker.toString(),
+              region = it,
+              cloudProvider = CLOUD_PROVIDER
             )
               .toServerGroup()
           } catch (e: HttpException) {

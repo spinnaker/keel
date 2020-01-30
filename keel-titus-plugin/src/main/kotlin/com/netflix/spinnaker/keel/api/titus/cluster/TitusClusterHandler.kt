@@ -20,6 +20,7 @@ package com.netflix.spinnaker.keel.api.titus.cluster
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -49,7 +50,8 @@ import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.Task
-import com.netflix.spinnaker.keel.model.Moniker
+import com.netflix.spinnaker.keel.model.orcaClusterMoniker
+import com.netflix.spinnaker.keel.model.serverGroup
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -125,7 +127,7 @@ class TitusClusterHandler(
           async {
             taskLauncher.submitJob(
               resource = resource,
-              description = "Upsert server group ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}",
+              description = "Upsert server group ${desired.moniker} in ${desired.location.account}/${desired.location.region}",
               correlationId = "${resource.id}:${desired.location.region}",
               job = job
             )
@@ -143,7 +145,7 @@ class TitusClusterHandler(
     ).byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker.name} " +
+      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
         "in account: ${exportable.account} for export")
     }
 
@@ -338,7 +340,7 @@ class TitusClusterHandler(
               serviceAccount,
               moniker.app,
               account,
-              moniker.name,
+              moniker.toString(),
               it,
               CLOUD_PROVIDER
             )

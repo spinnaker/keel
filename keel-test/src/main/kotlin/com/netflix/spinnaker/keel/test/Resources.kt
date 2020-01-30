@@ -75,7 +75,7 @@ fun <T : Monikered> resource(
   apiVersion = apiVersion,
   kind = kind,
   spec = spec,
-  id = spec.moniker.name,
+  id = spec.moniker.toString(),
   application = spec.application
 )
 

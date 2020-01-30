@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -21,7 +22,6 @@ import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.Job
-import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -85,7 +85,7 @@ class ApplicationLoadBalancerHandler(
             resourceDiff.current == null -> "Creating"
             else -> "Upserting"
           }
-          val description = "$action ${resource.kind} load balancer ${desired.moniker.name} in ${desired.location.account}/${desired.location.region}"
+          val description = "$action ${resource.kind} load balancer ${desired.moniker} in ${desired.location.account}/${desired.location.region}"
 
           async {
             taskLauncher.submitJob(
@@ -102,13 +102,13 @@ class ApplicationLoadBalancerHandler(
   override suspend fun export(exportable: Exportable): ApplicationLoadBalancerSpec {
     val albs = cloudDriverService.getApplicationLoadBalancer(
       account = exportable.account,
-      name = exportable.moniker.name,
+      name = exportable.moniker.toString(),
       regions = exportable.regions,
       serviceAccount = exportable.user
     )
 
     if (albs.isEmpty()) {
-      throw ResourceNotFound("Could not find application load balancer: ${exportable.moniker.name} " +
+      throw ResourceNotFound("Could not find application load balancer: ${exportable.moniker} " +
         "in account: ${exportable.account}")
     }
 
@@ -181,7 +181,7 @@ class ApplicationLoadBalancerHandler(
     serviceAccount: String
   ) = getApplicationLoadBalancer(
     account = spec.locations.account,
-    name = spec.moniker.name,
+    name = spec.moniker.toString(),
     regions = spec.locations.regions.map { it.name }.toSet(),
     serviceAccount = serviceAccount
   )
@@ -281,7 +281,7 @@ class ApplicationLoadBalancerHandler(
           "application" to moniker.app,
           "credentials" to location.account,
           "cloudProvider" to CLOUD_PROVIDER,
-          "name" to moniker.name,
+          "name" to moniker.toString(),
           "region" to location.region,
           "availabilityZones" to mapOf(location.region to location.availabilityZones),
           "loadBalancerType" to loadBalancerType.toString().toLowerCase(),
