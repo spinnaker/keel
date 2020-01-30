@@ -19,7 +19,6 @@ import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.PortRange
@@ -122,7 +121,7 @@ class SecurityGroupHandler(
         .map { it.await() }
     }
 
-  override suspend fun export(exportable: Exportable): SubmittedResource<SecurityGroupSpec> {
+  override suspend fun export(exportable: Exportable): SecurityGroupSpec {
     val summaries = exportable.regions.associateWith { region ->
       try {
         cloudDriverCache.securityGroupByName(
@@ -186,11 +185,7 @@ class SecurityGroupHandler(
 
     spec.generateOverrides(securityGroups)
 
-    return SubmittedResource(
-      apiVersion = supportedKind.apiVersion,
-      kind = supportedKind.kind,
-      spec = spec
-    )
+    return spec
   }
 
   private fun SecurityGroupSpec.generateOverrides(

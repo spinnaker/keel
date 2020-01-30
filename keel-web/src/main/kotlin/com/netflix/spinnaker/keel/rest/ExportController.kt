@@ -88,7 +88,11 @@ class ExportController(
     return runBlocking {
       withTracingContext(exportable) {
         log.info("Exporting resource ${exportable.toResourceId()}")
-        handler.export(exportable)
+        SubmittedResource(
+          apiVersion = apiVersion,
+          kind = kind,
+          spec = handler.export(exportable)
+        )
       }
     }
   }

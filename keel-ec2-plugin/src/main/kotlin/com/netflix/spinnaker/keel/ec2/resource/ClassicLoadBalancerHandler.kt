@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancer
@@ -102,7 +101,7 @@ class ClassicLoadBalancerHandler(
         .map { it.await() }
     }
 
-  override suspend fun export(exportable: Exportable): SubmittedResource<ClassicLoadBalancerSpec> {
+  override suspend fun export(exportable: Exportable): ClassicLoadBalancerSpec {
     val clbs = cloudDriverService.getClassicLoadBalancer(
       account = exportable.account,
       name = exportable.moniker.name,
@@ -162,11 +161,7 @@ class ClassicLoadBalancerHandler(
 
     spec.generateOverrides(clbs)
 
-    return SubmittedResource(
-      apiVersion = supportedKind.apiVersion,
-      kind = supportedKind.kind,
-      spec = spec
-    )
+    return spec
   }
 
   override suspend fun actuationInProgress(resource: Resource<ClassicLoadBalancerSpec>): Boolean =

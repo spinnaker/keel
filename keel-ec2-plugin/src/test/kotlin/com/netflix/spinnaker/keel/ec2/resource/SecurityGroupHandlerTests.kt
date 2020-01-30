@@ -42,7 +42,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.RETROFIT_NOT_FOUND
-import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -307,17 +306,13 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
         val export = runBlocking {
           handler.export(exportable)
         }
-        expectThat(export.kind)
-          .isEqualTo("security-group")
-        expectThat(export.apiVersion)
-          .isEqualTo(SPINNAKER_EC2_API_V1)
-        expectThat(export.spec.locations.regions)
+        expectThat(export.locations.regions)
           .hasSize(2)
-        expectThat(export.spec.overrides)
+        expectThat(export.overrides)
           .hasSize(0)
 
         // The export cleanly diffs against the fixture spec
-        val diff = DefaultResourceDiff(securityGroupSpec, export.spec)
+        val diff = DefaultResourceDiff(securityGroupSpec, export)
         expectThat(diff.hasChanges())
           .isFalse()
       }

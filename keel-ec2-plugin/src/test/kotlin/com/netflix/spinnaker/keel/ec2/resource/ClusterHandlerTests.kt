@@ -10,7 +10,6 @@ import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.StaggeredRegion
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -49,7 +48,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.TargetTrackingConfiguration
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.RETROFIT_NOT_FOUND
-import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.model.Moniker
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -447,7 +445,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
       }
 
-      derivedContext<SubmittedResource<ClusterSpec>>("exported cluster spec") {
+      derivedContext<ClusterSpec>("exported cluster spec") {
         deriveFixture {
           runBlocking {
             export(exportable)
@@ -455,15 +453,11 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
 
         test("has the expected basic properties") {
-          expectThat(kind)
-            .isEqualTo("cluster")
-          expectThat(apiVersion)
-            .isEqualTo(SPINNAKER_EC2_API_V1)
-          expectThat(spec.locations.regions)
+          expectThat(locations.regions)
             .hasSize(2)
-          expectThat(spec.defaults.scaling!!.targetTrackingPolicies)
+          expectThat(defaults.scaling!!.targetTrackingPolicies)
             .hasSize(1)
-          expectThat(spec.overrides)
+          expectThat(overrides)
             .hasSize(0)
         }
 
@@ -485,34 +479,34 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           val exported = runBlocking {
             export(exportable)
           }
-          expectThat(exported.spec.locations.vpc)
+          expectThat(exported.locations.vpc)
             .isNull()
-          expectThat(exported.spec.locations.subnet)
+          expectThat(exported.locations.subnet)
             .isNull()
-          expectThat(exported.spec.defaults.health)
+          expectThat(exported.defaults.health)
             .isNotNull()
-          expectThat(exported.spec.defaults.health!!.cooldown)
+          expectThat(exported.defaults.health!!.cooldown)
             .isNull()
-          expectThat(exported.spec.defaults.health!!.warmup)
+          expectThat(exported.defaults.health!!.warmup)
             .isNull()
-          expectThat(exported.spec.defaults.health!!.healthCheckType)
+          expectThat(exported.defaults.health!!.healthCheckType)
             .isNull()
-          expectThat(exported.spec.defaults.health!!.enabledMetrics)
+          expectThat(exported.defaults.health!!.enabledMetrics)
             .isNull()
-          expectThat(exported.spec.defaults.health!!.cooldown)
+          expectThat(exported.defaults.health!!.cooldown)
             .isNull()
-          expectThat(exported.spec.defaults.health!!.terminationPolicies)
+          expectThat(exported.defaults.health!!.terminationPolicies)
             .isEqualTo(setOf(TerminationPolicy.NewestInstance))
 
-          expectThat(exported.spec.defaults.launchConfiguration!!.ebsOptimized)
+          expectThat(exported.defaults.launchConfiguration!!.ebsOptimized)
             .isNull()
-          expectThat(exported.spec.defaults.launchConfiguration!!.instanceMonitoring)
+          expectThat(exported.defaults.launchConfiguration!!.instanceMonitoring)
             .isNull()
-          expectThat(exported.spec.defaults.launchConfiguration!!.ramdiskId)
+          expectThat(exported.defaults.launchConfiguration!!.ramdiskId)
             .isNull()
-          expectThat(exported.spec.defaults.launchConfiguration!!.iamRole)
+          expectThat(exported.defaults.launchConfiguration!!.iamRole)
             .isNotNull()
-          expectThat(exported.spec.defaults.launchConfiguration!!.keyPair)
+          expectThat(exported.defaults.launchConfiguration!!.keyPair)
             .isNotNull()
         }
       }

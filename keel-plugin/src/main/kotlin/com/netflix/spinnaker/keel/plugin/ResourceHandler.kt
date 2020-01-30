@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.plugin
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.diff.ResourceDiff
 import com.netflix.spinnaker.keel.events.Task
@@ -129,11 +128,9 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
   open suspend fun delete(resource: Resource<S>): List<Task> = TODO("Not implemented")
 
   /**
-   * Generate a Keel SubmittedResource definition from currently existing resources.
+   * Generate a spec from currently existing resources.
    */
-  open suspend fun export(
-    exportable: Exportable
-  ): SubmittedResource<*> {
+  open suspend fun export(exportable: Exportable): S {
     TODO("Not implemented")
   }
 

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
-import com.netflix.spinnaker.keel.api.normalize
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
@@ -244,22 +243,16 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         val export = runBlocking {
           export(exportable)
         }
-        expectThat(export.kind)
-          .isEqualTo("application-load-balancer")
 
         runBlocking {
           // Export differs from the model prior to the application of resolvers
-          val unresolvedDiff = DefaultResourceDiff(resource, resource.copy(spec = export.spec))
+          val unresolvedDiff = DefaultResourceDiff(resource, resource.copy(spec = export))
           expectThat(unresolvedDiff.hasChanges())
             .isTrue()
           // But diffs cleanly after resolvers are applied
           val resolvedDiff = DefaultResourceDiff(
             desired(resource),
-            desired(
-              export
-                .copy(metadata = mapOf("serviceAccount" to "keel@spinnaker"))
-                .normalize()
-            )
+            desired(resource.copy(spec = export))
           )
           expectThat(resolvedDiff.hasChanges())
             .isFalse()

@@ -5,7 +5,6 @@ import com.netflix.spinnaker.keel.api.ClusterDependencies
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
@@ -286,7 +285,7 @@ class ClusterHandler(
       return@coroutineScope tasks
     }
 
-  override suspend fun export(exportable: Exportable): SubmittedResource<ClusterSpec> {
+  override suspend fun export(exportable: Exportable): ClusterSpec {
     val serverGroups = cloudDriverService.getServerGroups(
       account = exportable.account,
       moniker = exportable.moniker,
@@ -353,11 +352,7 @@ class ClusterHandler(
         .filter { it.value.location.region != base.location.region }
     )
 
-    return SubmittedResource(
-      apiVersion = supportedKind.apiVersion,
-      kind = supportedKind.kind,
-      spec = spec
-    )
+    return spec
   }
 
   private fun List<ResourceDiff<ServerGroup>>.createsNewServerGroups() =

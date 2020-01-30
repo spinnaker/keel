@@ -23,7 +23,6 @@ import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.TagVersionStrategy.INCREASING_TAG
@@ -135,7 +134,7 @@ class TitusClusterHandler(
         .map { it.await() }
     }
 
-  override suspend fun export(exportable: Exportable): SubmittedResource<TitusClusterSpec> {
+  override suspend fun export(exportable: Exportable): TitusClusterSpec {
     val serverGroups = cloudDriverService.getServerGroups(
       exportable.account,
       exportable.moniker,
@@ -169,11 +168,7 @@ class TitusClusterHandler(
         .filter { it.value.location.region != base.location.region }
     )
 
-    return SubmittedResource(
-      apiVersion = supportedKind.apiVersion,
-      kind = supportedKind.kind,
-      spec = spec
-    )
+    return spec
   }
 
   // todo eb: this should generate a reference...
