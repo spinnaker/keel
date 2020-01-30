@@ -6,10 +6,10 @@ import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
+import com.netflix.spinnaker.keel.bakery.BAKERY_API_V1
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.api.ImageSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -43,7 +43,7 @@ class ImageHandler(
 ) : ResourceHandler<ImageSpec, Image>(resolvers) {
 
   override val supportedKind =
-    SupportedKind("bakery.$SPINNAKER_API_V1", "image", ImageSpec::class.java)
+    SupportedKind(BAKERY_API_V1, "image", ImageSpec::class.java)
 
   override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
     with(resource) {

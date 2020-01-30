@@ -13,6 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel
 
-val SPINNAKER_API_V1 = "spinnaker.netflix.com/v1"
+const val SPINNAKER_API_V1 = "spinnaker.netflix.com/v1"

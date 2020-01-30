@@ -1,10 +1,10 @@
 package com.netflix.spinnaker.keel.test
 
+import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.SubmittedResource
@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.plugin.SimpleResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import java.util.UUID
 
-val TEST_API = "test.$SPINNAKER_API_V1"
+const val TEST_API = "test.$SPINNAKER_API_V1"
 
 fun resource(
   apiVersion: String = TEST_API,

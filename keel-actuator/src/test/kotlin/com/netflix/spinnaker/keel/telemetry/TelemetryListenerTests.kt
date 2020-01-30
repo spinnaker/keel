@@ -4,7 +4,7 @@ import com.netflix.spectator.api.Counter
 import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spectator.api.Registry
 import com.netflix.spectator.api.Tag
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.events.ResourceValid
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
