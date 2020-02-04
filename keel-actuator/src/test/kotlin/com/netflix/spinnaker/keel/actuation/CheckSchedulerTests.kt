@@ -1,12 +1,15 @@
 package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
+import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Called
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -21,6 +24,25 @@ internal object CheckSchedulerTests : JUnit5Minutests {
   private val resourceActuator = mockk<ResourceActuator>(relaxUnitFun = true)
   private val environmentPromotionChecker = mockk<EnvironmentPromotionChecker>()
   private val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
+
+  class DummyScheduledAgent(override val lockTimeoutSeconds: Long) : ScheduledAgent {
+    override suspend fun invokeAgent() {
+    }
+  }
+
+  private val dummyAgent = mockk<DummyScheduledAgent>() {
+    every {
+      lockTimeoutSeconds
+    } returns 5
+    coEvery {
+      invokeAgent()
+    } returns Unit
+  }
+
+  private val agentLockRepository = mockk<AgentLockRepository>() {
+
+    every { agents } returns listOf(dummyAgent)
+  }
   private val resources = listOf(
     resource(
       apiVersion = "ec2.$SPINNAKER_API_V1",
@@ -45,7 +67,8 @@ internal object CheckSchedulerTests : JUnit5Minutests {
         environmentPromotionChecker = environmentPromotionChecker,
         resourceCheckMinAgeDuration = Duration.ofMinutes(5),
         resourceCheckBatchSize = 2,
-        publisher = publisher
+        publisher = publisher,
+        agentLockRepository = agentLockRepository
       )
     }
 
@@ -80,5 +103,36 @@ internal object CheckSchedulerTests : JUnit5Minutests {
         }
       }
     }
+
+//    context("test invoke agents") {
+//      before {
+//        onApplicationUp()
+//        every {
+//          agentLockRepository.tryAcquireLock(any(), any())
+//        } returns true
+//      }
+//
+//      test("invoke a single agent") {
+//        runBlocking {
+//          invokeAgent()
+//        }
+//
+//        coVerify {
+//          agentLockRepository.agents.first().invokeAgent()
+//        }
+
+//        agentLockRepository.agents.forEach { agent ->
+//          coVerify {
+//            //  coEvery {
+//            agent.invokeAgent()
+//            // }
+//          }
+//        }
+
+//      }
+//      after {
+//        onApplicationDown()
+//      }
+//    }
   }
 }

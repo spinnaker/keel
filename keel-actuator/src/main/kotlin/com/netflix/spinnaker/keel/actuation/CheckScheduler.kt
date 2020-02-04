@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
+import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.PeriodicallyCheckedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -26,7 +27,8 @@ class CheckScheduler(
   private val environmentPromotionChecker: EnvironmentPromotionChecker,
   @Value("\${keel.resource-check.min-age-duration:60s}") private val resourceCheckMinAgeDuration: Duration,
   @Value("\${keel.resource-check.batch-size:1}") private val resourceCheckBatchSize: Int,
-  private val publisher: ApplicationEventPublisher
+  private val publisher: ApplicationEventPublisher,
+  private val agentLockRepository: AgentLockRepository
 ) : CoroutineScope {
   override val coroutineContext: CoroutineContext = Dispatchers.IO
 
@@ -81,6 +83,27 @@ class CheckScheduler(
       log.debug("Scheduled environment validation complete")
     } else {
       log.debug("Scheduled environment validation disabled")
+    }
+  }
+
+  @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1M}")
+  fun invokeAgent() {
+    if (enabled) {
+      agentLockRepository.agents.forEach {
+        val agentName: String = it.javaClass.simpleName
+        val lockAcquired = agentLockRepository.tryAcquireLock(agentName, it.lockTimeoutSeconds)
+        if (lockAcquired) {
+          val job = launch {
+            it.invokeAgent()
+          }
+          runBlocking {
+            job.join()
+          }
+          log.debug("invoking $agentName completed")
+        }
+      }
+    } else {
+      log.debug("invoking agent disabled")
     }
   }
 
