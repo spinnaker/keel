@@ -2,8 +2,11 @@ package com.netflix.spinnaker.keel.serialization
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.BeanDescription
+import com.fasterxml.jackson.databind.DeserializationConfig
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
 import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
@@ -11,8 +14,10 @@ import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_WITH_ZONE
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_KEYS_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.cfg.MapperConfig
+import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector
+import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.jsontype.TypeResolverBuilder
 import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -21,8 +26,17 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.USE_NATIVE_TY
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.netflix.spinnaker.keel.api.ArtifactType.deb
+import com.netflix.spinnaker.keel.api.ArtifactType.docker
 import com.netflix.spinnaker.keel.api.Constraint
+import com.netflix.spinnaker.keel.api.DebianArtifact
+import com.netflix.spinnaker.keel.api.DebianSemVerVersioningStrategy
+import com.netflix.spinnaker.keel.api.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.DockerArtifact
+import com.netflix.spinnaker.keel.api.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.api.VersioningStrategy
+import com.netflix.spinnaker.keel.api.VersioningStrategyDeserializer
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
@@ -42,7 +56,7 @@ fun configuredYamlMapper(): YAMLMapper =
 
 private fun <T : ObjectMapper> T.configureMe(): T =
   apply {
-    registerModule(DefaultJsonTypeInfoModule)
+    registerModule(KeelApiModule)
       .registerKotlinModule()
       .registerULIDModule()
       .registerModule(JavaTimeModule())
@@ -51,23 +65,49 @@ private fun <T : ObjectMapper> T.configureMe(): T =
       .enable(ACCEPT_CASE_INSENSITIVE_ENUMS)
   }
 
-object DefaultJsonTypeInfoModule : SimpleModule() {
+/**
+ * TODO: move this to its own home as it's becoming increasingly complex
+ */
+object KeelApiModule : SimpleModule("Keel API") {
+  val types = setOf(Constraint::class.java, DeliveryArtifact::class.java)
+
   override fun setupModule(context: SetupContext) {
-    context.insertAnnotationIntrospector(object : NopAnnotationIntrospector() {
-      override fun findTypeResolver(config: MapperConfig<*>, ac: AnnotatedClass, baseType: JavaType): TypeResolverBuilder<*>? {
-        // This is the equivalent of using a @JsonTypeInfo annotation with the specified settings.
-        // We don't want to transitively ship jackson-annotations, though. Sub-types need to be
-        // registered programmatically.
-        return if (baseType.rawClass == Constraint::class.java) {
-          StdTypeResolverBuilder()
-            .init(JsonTypeInfo.Id.NAME, null)
-            .inclusion(JsonTypeInfo.As.EXISTING_PROPERTY)
-            .typeProperty("type")
-        } else {
-          super.findTypeResolver(config, ac, baseType)
+    with(context) {
+      insertAnnotationIntrospector(object : NopAnnotationIntrospector() {
+        override fun findTypeResolver(config: MapperConfig<*>, ac: AnnotatedClass, baseType: JavaType): TypeResolverBuilder<*>? {
+          // This is the equivalent of using a @JsonTypeInfo annotation with the specified settings.
+          // We don't want to transitively ship jackson-annotations, though. Sub-types need to be
+          // registered programmatically.
+          return if (baseType.rawClass in types) {
+            StdTypeResolverBuilder()
+              .init(JsonTypeInfo.Id.NAME, null)
+              .inclusion(JsonTypeInfo.As.EXISTING_PROPERTY)
+              .typeProperty("type")
+          } else {
+            super.findTypeResolver(config, ac, baseType)
+          }
         }
-      }
-    })
+      })
+
+      addDeserializers(object : Deserializers.Base() {
+        override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? {
+          return when (type.rawClass) {
+            VersioningStrategy::class.java -> VersioningStrategyDeserializer
+            else -> null
+          }
+        }
+      })
+
+      registerSubtypes(
+        NamedType(DebianSemVerVersioningStrategy::class.java, deb.name),
+        NamedType(DockerVersioningStrategy::class.java, docker.name)
+      )
+
+      registerSubtypes(
+        NamedType(DebianArtifact::class.java, deb.name),
+        NamedType(DockerArtifact::class.java, docker.name)
+      )
+    }
   }
 }
 

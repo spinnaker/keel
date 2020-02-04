@@ -265,7 +265,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     val artifact = get(
       deliveryConfig.name,
       environmentArtifactPin.reference,
-      ArtifactType.valueOf(environmentArtifactPin.type.toUpperCase()))
+      ArtifactType.valueOf(environmentArtifactPin.type.toLowerCase()))
 
     val artifactId = getId(artifact) ?: throw NoSuchArtifactException(artifact)
 
@@ -280,7 +280,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
         PinnedEnvironment(
           deliveryConfigName = deliveryConfig.name,
           targetEnvironment = it.value.targetEnvironment,
-          artifact = get(deliveryConfig.name, it.value.reference, ArtifactType.valueOf(it.value.type.toUpperCase())),
+          artifact = get(deliveryConfig.name, it.value.reference, ArtifactType.valueOf(it.value.type.toLowerCase())),
           version = it.value.version!!)
       }
 
@@ -303,7 +303,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
       k.deliveryConfig == deliveryConfig &&
         k.environment == targetEnvironment &&
         v.reference == reference &&
-        v.type == type.value()
+        v.type == type.name
     }
       .forEach { pinnedVersions.remove(it.key) }
   }

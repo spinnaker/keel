@@ -18,8 +18,6 @@
 package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.semver.shaded.DebianVersionComparator
 import com.netflix.spinnaker.keel.api.SortType.INCREASING
@@ -33,13 +31,11 @@ import org.springframework.util.comparator.NullSafeComparator
 /**
  * Strategy for how to sort versions of artifacts.
  */
-@JsonDeserialize(using = VersioningStrategyDeserializer::class)
 sealed class VersioningStrategy(
   @JsonIgnore
   open val comparator: Comparator<String>
 )
 
-@JsonDeserialize(using = JsonDeserializer.None::class)
 object DebianSemVerVersioningStrategy : VersioningStrategy(DEBIAN_VERSION_COMPARATOR) {
   override fun toString(): String =
     javaClass.simpleName
@@ -49,7 +45,6 @@ object DebianSemVerVersioningStrategy : VersioningStrategy(DEBIAN_VERSION_COMPAR
   }
 }
 
-@JsonDeserialize(using = JsonDeserializer.None::class)
 data class DockerVersioningStrategy(
   val strategy: TagVersionStrategy,
   val captureGroupRegex: String? = null
@@ -138,7 +133,7 @@ val DEBIAN_VERSION_COMPARATOR: Comparator<String> = object : Comparator<String> 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
 
-class VersioningStrategyDeserializer : PropertyNamePolymorphicDeserializer<VersioningStrategy>(VersioningStrategy::class.java) {
+object VersioningStrategyDeserializer : PropertyNamePolymorphicDeserializer<VersioningStrategy>(VersioningStrategy::class.java) {
   override fun identifySubType(fieldNames: Collection<String>): Class<out VersioningStrategy> =
     when {
       "tagVersionStrategy" in fieldNames -> DockerVersioningStrategy::class.java
