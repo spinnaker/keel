@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.persistence.memory
 import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 
-class InMemoryTaskTrackingRepository() : TaskTrackingRepository {
+class InMemoryTaskTrackingRepository : TaskTrackingRepository {
 
   private val tasks: MutableSet<TaskRecord> = mutableSetOf()
   override fun store(task: TaskRecord) {
