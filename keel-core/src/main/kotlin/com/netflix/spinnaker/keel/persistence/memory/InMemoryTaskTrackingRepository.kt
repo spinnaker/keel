@@ -2,8 +2,11 @@ package com.netflix.spinnaker.keel.persistence.memory
 
 import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
+import java.time.Clock
 
-class InMemoryTaskTrackingRepository : TaskTrackingRepository {
+class InMemoryTaskTrackingRepository(
+  private val clock: Clock = Clock.systemDefaultZone()
+) : TaskTrackingRepository {
 
   private val tasks: MutableSet<TaskRecord> = mutableSetOf()
   override fun store(task: TaskRecord) {
