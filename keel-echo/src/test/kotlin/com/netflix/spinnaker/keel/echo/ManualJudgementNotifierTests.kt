@@ -47,9 +47,9 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
             name = "test",
             notifications = setOf(
               NotificationConfig(
-                type = NotificationType.SLACK,
+                type = NotificationType.slack,
                 address = "#test",
-                frequency = NotificationFrequency.NORMAL
+                frequency = NotificationFrequency.normal
               )
             ),
             resources = setOf(
@@ -119,7 +119,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
 
         val expectedNotification = with(event) {
           EchoNotification(
-            notificationType = EchoNotification.Type.valueOf(config.type.value().toUpperCase()),
+            notificationType = EchoNotification.Type.valueOf(config.type.name.toUpperCase()),
             to = listOf(config.address),
             severity = EchoNotification.Severity.NORMAL,
             source = EchoNotification.Source(
@@ -177,9 +177,9 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
       environment = environment.copy(
         notifications = environment.notifications +
           NotificationConfig(
-            type = NotificationType.EMAIL,
+            type = NotificationType.email,
             address = "john@doe.com",
-            frequency = NotificationFrequency.NORMAL)
+            frequency = NotificationFrequency.normal)
         )
     )
 }

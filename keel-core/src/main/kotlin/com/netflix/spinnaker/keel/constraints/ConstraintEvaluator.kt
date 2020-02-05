@@ -61,7 +61,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint> : ConstraintEvaluator
     targetEnvironment: Environment
   ): Boolean {
     val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, supportedType.type)
-    val state = deliveryConfigRepository
+    var state = deliveryConfigRepository
       .getConstraintState(
         deliveryConfig.name,
         targetEnvironment.name,

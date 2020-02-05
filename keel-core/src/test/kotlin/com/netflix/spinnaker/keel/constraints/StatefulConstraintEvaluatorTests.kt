@@ -12,7 +12,6 @@ import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.test.deliveryConfig
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -42,8 +41,6 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       override val eventPublisher: ApplicationEventPublisher,
       val delegate: StatefulConstraintEvaluator<FakeConstraint>
     ) : StatefulConstraintEvaluator<FakeConstraint>() {
-      override val constraintType = FakeConstraint::class.java
-
       override fun canPromote(
         artifact: DeliveryArtifact,
         version: String,
@@ -53,6 +50,8 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
         state: ConstraintState
       ) =
         delegate.canPromote(artifact, version, deliveryConfig, targetEnvironment, constraint, state)
+
+      override val supportedType = SupportedConstraintType<FakeConstraint>("fake")
     }
 
     val artifact = DebianArtifact("fnord")
@@ -63,9 +62,9 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       name = "test",
       notifications = setOf(
         NotificationConfig(
-          type = NotificationType.SLACK,
+          type = NotificationType.slack,
           address = "#test",
-          frequency = NotificationFrequency.NORMAL
+          frequency = NotificationFrequency.normal
         )
       ),
       resources = setOf(resource()),
@@ -76,7 +75,8 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       name = "test",
       application = "fnord",
       artifacts = setOf(artifact),
-      environments = setOf(environment)
+      environments = setOf(environment),
+      serviceAccount = "keel@spinnaker"
     )
 
     val pendingConstraintState = ConstraintState(

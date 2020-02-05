@@ -37,7 +37,7 @@ class ManualJudgementNotifier(
 
   private fun ConstraintStateChanged.toEchoNotification(config: NotificationConfig): EchoNotification {
     return EchoNotification(
-      notificationType = EchoNotification.Type.valueOf(config.type.name),
+      notificationType = EchoNotification.Type.valueOf(config.type.name.toUpperCase()),
       to = listOf(config.address),
       // templateGroup = TODO
       severity = EchoNotification.Severity.NORMAL,

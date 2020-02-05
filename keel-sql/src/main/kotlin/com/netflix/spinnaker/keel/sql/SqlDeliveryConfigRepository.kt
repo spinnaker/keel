@@ -357,7 +357,7 @@ class SqlDeliveryConfigRepository(
               ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(state.artifactVersion)
             )
             .fetchOne(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID)
-        } ?: randomUID()
+        } ?: randomUID().toString()
 
         val application = applicationByDeliveryConfigName(state.deliveryConfigName)
 
@@ -395,7 +395,7 @@ class SqlDeliveryConfigRepository(
               .execute()
           }
           // Store generated UID in constraint state object so it can be used by caller
-          state.uid = uid
+          state.uid = parseUID(uid)
         }
       }
   }
