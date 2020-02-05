@@ -48,7 +48,6 @@ import com.netflix.spinnaker.keel.api.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.UID
 import com.netflix.spinnaker.keel.api.VersioningStrategy
-import com.netflix.spinnaker.keel.api.VersioningStrategyDeserializer
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
@@ -160,6 +159,14 @@ object TagVersionStrategyDeserializer : StdDeserializer<TagVersionStrategy>(TagV
       .find { it.friendlyName == value }
       ?: throw ctxt.weirdStringException(value, TagVersionStrategy::class.java, "not one of the values accepted for Enum class: %s")
   }
+}
+
+object VersioningStrategyDeserializer : PropertyNamePolymorphicDeserializer<VersioningStrategy>(VersioningStrategy::class.java) {
+  override fun identifySubType(fieldNames: Collection<String>): Class<out VersioningStrategy> =
+    when {
+      "tagVersionStrategy" in fieldNames -> DockerVersioningStrategy::class.java
+      else -> DebianSemVerVersioningStrategy::class.java
+    }
 }
 
 private fun ObjectMapper.registerULIDModule(): ObjectMapper =

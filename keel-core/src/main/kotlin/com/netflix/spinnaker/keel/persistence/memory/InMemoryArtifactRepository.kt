@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.PromotionStatus
 import com.netflix.spinnaker.keel.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.api.PromotionStatus.PREVIOUS
+import com.netflix.spinnaker.keel.api.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
