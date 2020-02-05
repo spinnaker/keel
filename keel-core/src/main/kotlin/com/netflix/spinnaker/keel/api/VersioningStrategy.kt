@@ -105,11 +105,11 @@ class TagComparator(
   }
 }
 
-val SEMVER_COMPARATOR: Comparator<SemVer> = Comparator<SemVer> { a, b ->
+val SEMVER_COMPARATOR: Comparator<SemVer> = Comparator { a, b ->
   b.compareTo(a)
 }
 
-val INCREASING_COMPARATOR: Comparator<Int> = Comparator<Int> { a, b ->
+val INCREASING_COMPARATOR: Comparator<Int> = Comparator { a, b ->
   b - a
 }
 

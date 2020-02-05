@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.serialization
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.BeanDescription
 import com.fasterxml.jackson.databind.DeserializationConfig
@@ -98,6 +100,8 @@ object KeelApiModule : SimpleModule("Keel API") {
         }
       })
 
+      setMixInAnnotations(DeliveryArtifact::class.java, DeliveryArtifactMixin::class.java)
+
       registerSubtypes(
         NamedType(DebianSemVerVersioningStrategy::class.java, deb.name),
         NamedType(DockerVersioningStrategy::class.java, docker.name)
@@ -109,6 +113,14 @@ object KeelApiModule : SimpleModule("Keel API") {
       )
     }
   }
+}
+
+private interface DeliveryArtifactMixin {
+  @get:JsonProperty(access = WRITE_ONLY)
+  val deliveryConfigName: String
+
+  @get:JsonProperty(access = WRITE_ONLY)
+  val versioningStrategy: VersioningStrategy
 }
 
 private fun ObjectMapper.registerULIDModule(): ObjectMapper =
