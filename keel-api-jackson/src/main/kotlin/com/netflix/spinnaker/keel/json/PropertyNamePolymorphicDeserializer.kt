@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.serialization
+package com.netflix.spinnaker.keel.json
 
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
