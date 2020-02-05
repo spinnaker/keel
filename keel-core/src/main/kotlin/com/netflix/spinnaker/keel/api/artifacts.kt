@@ -26,6 +26,12 @@ import net.swiftzer.semver.SemVer
 import org.slf4j.LoggerFactory
 import org.springframework.util.comparator.NullSafeComparator
 
+val DockerArtifact.organization
+  get() = name.split("/").first()
+
+val DockerArtifact.image
+  get() = name.split("/").last()
+
 val VersioningStrategy.comparator: Comparator<String>
   get() = when (this) {
     is DebianSemVerVersioningStrategy -> DEBIAN_VERSION_COMPARATOR

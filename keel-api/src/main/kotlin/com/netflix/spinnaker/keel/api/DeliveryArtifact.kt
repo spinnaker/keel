@@ -1,11 +1,7 @@
 package com.netflix.spinnaker.keel.api
 
-import com.netflix.spinnaker.keel.api.ArtifactType.deb
-import com.netflix.spinnaker.keel.api.ArtifactType.docker
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.SEMVER_TAG
-
 enum class ArtifactType {
-  deb, docker;
+  deb, docker
 }
 
 enum class ArtifactStatus {
@@ -27,22 +23,16 @@ data class DebianArtifact(
   val statuses: List<ArtifactStatus> = emptyList(),
   override val versioningStrategy: VersioningStrategy = DebianSemVerVersioningStrategy
 ) : DeliveryArtifact() {
-  override val type = deb
+  override val type = ArtifactType.deb
 }
 
 data class DockerArtifact(
   override val name: String,
   override val deliveryConfigName: String? = null,
   override val reference: String = name,
-  val tagVersionStrategy: TagVersionStrategy = SEMVER_TAG,
+  val tagVersionStrategy: TagVersionStrategy = TagVersionStrategy.SEMVER_TAG,
   val captureGroupRegex: String? = null,
   override val versioningStrategy: VersioningStrategy = DockerVersioningStrategy(tagVersionStrategy, captureGroupRegex)
 ) : DeliveryArtifact() {
-  override val type = docker
+  override val type = ArtifactType.docker
 }
-
-val DockerArtifact.organization
-  get() = name.split("/").first()
-
-val DockerArtifact.image
-  get() = name.split("/").last()
