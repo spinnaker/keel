@@ -4,25 +4,34 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.BeanDescription
 import com.fasterxml.jackson.databind.DeserializationConfig
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_WITH_ZONE_ID
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_KEYS_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.cfg.MapperConfig
 import com.fasterxml.jackson.databind.deser.Deserializers
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.jsontype.TypeResolverBuilder
 import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.Serializers
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.USE_NATIVE_TYPE_ID
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
@@ -36,6 +45,7 @@ import com.netflix.spinnaker.keel.api.DebianSemVerVersioningStrategy
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DockerArtifact
 import com.netflix.spinnaker.keel.api.DockerVersioningStrategy
+import com.netflix.spinnaker.keel.api.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.UID
 import com.netflix.spinnaker.keel.api.VersioningStrategy
 import com.netflix.spinnaker.keel.api.VersioningStrategyDeserializer
@@ -91,13 +101,26 @@ object KeelApiModule : SimpleModule("Keel API") {
         }
       })
 
+      addSerializers(object : Serializers.Base() {
+        override fun findSerializer(config: SerializationConfig, type: JavaType, beanDesc: BeanDescription): JsonSerializer<*>? =
+          when (type.rawClass) {
+            TagVersionStrategy::class.java -> TagVersionStrategySerializer
+            else -> null
+          }
+      })
+
       addDeserializers(object : Deserializers.Base() {
-        override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? {
-          return when (type.rawClass) {
+        override fun findEnumDeserializer(type: Class<*>, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
+          when (type) {
+            TagVersionStrategy::class.java -> TagVersionStrategyDeserializer
+            else -> null
+          }
+
+        override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
+          when (type.rawClass) {
             VersioningStrategy::class.java -> VersioningStrategyDeserializer
             else -> null
           }
-        }
       })
 
       setMixInAnnotations(DeliveryArtifact::class.java, DeliveryArtifactMixin::class.java)
@@ -121,6 +144,22 @@ private interface DeliveryArtifactMixin {
 
   @get:JsonProperty(access = WRITE_ONLY)
   val versioningStrategy: VersioningStrategy
+}
+
+object TagVersionStrategySerializer : StdSerializer<TagVersionStrategy>(TagVersionStrategy::class.java) {
+  override fun serialize(value: TagVersionStrategy, gen: JsonGenerator, provider: SerializerProvider) {
+    gen.writeString(value.friendlyName)
+  }
+}
+
+object TagVersionStrategyDeserializer : StdDeserializer<TagVersionStrategy>(TagVersionStrategy::class.java) {
+  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): TagVersionStrategy {
+    val value = p.text
+    return TagVersionStrategy
+      .values()
+      .find { it.friendlyName == value }
+      ?: throw ctxt.weirdStringException(value, TagVersionStrategy::class.java, "not one of the values accepted for Enum class: %s")
+  }
 }
 
 private fun ObjectMapper.registerULIDModule(): ObjectMapper =
