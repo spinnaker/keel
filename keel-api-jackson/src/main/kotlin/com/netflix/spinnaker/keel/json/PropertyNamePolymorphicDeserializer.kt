@@ -1,9 +1,8 @@
 package com.netflix.spinnaker.keel.json
 
-import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 
 /**
  * Base class for deserializing a polymorphic type by looking at the fields present in the JSON to
@@ -13,13 +12,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode
  * `@JsonDeserialize(using = MyDeserializer::class)` on the base class and
  * `@JsonDeserialize(using = JsonDeserializer.None::class)` on _all_ the sub-types.
  */
-abstract class PropertyNamePolymorphicDeserializer<T>(clazz: Class<T>) : StdDeserializer<T>(clazz) {
+abstract class PropertyNamePolymorphicDeserializer<T>(clazz: Class<T>) : StdNodeBasedDeserializer<T>(clazz) {
 
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): T {
-    val obj = p.codec.readTree<ObjectNode>(p)
-    val fieldNames = obj.fieldNames().asSequence().toSet()
-    val subType: Class<out T> = identifySubType(fieldNames)
-    return p.codec.treeToValue(obj, subType)
+  override fun convert(root: JsonNode, context: DeserializationContext): T {
+    val subType = identifySubType(root.fieldNames().asSequence().toList())
+    return context.parser.codec.treeToValue(root, subType)
   }
 
   protected abstract fun identifySubType(fieldNames: Collection<String>): Class<out T>
