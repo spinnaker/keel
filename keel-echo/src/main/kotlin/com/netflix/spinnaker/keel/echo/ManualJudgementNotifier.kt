@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
+import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import kotlinx.coroutines.runBlocking
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
@@ -16,8 +17,13 @@ import org.springframework.stereotype.Component
  * out notifications so that users can take action.
  */
 class ManualJudgementNotifier(
+  private val dynamicConfigService: DynamicConfigService,
   private val echoService: EchoService
 ) {
+
+  companion object {
+    const val INTERACTIVE_NOTIFICATIONS_ENABLED = "keel.constraints.manual-judgement.interactive-notifications"
+  }
 
   @EventListener(ConstraintStateChanged::class)
   fun constraintStateChanged(event: ConstraintStateChanged) {
@@ -54,23 +60,27 @@ class ManualJudgementNotifier(
           "*${currentState.deliveryConfigName}* requires your manual approval for deployment " +
           "into the *${currentState.environmentName}* environment."
       ),
-      interactiveActions = EchoNotification.InteractiveActions(
-        callbackServiceId = "keel",
-        callbackMessageId = currentState.uid?.toString() ?: error("ConstraintState.uid not present"),
-        actions = listOf(
-          EchoNotification.ButtonAction(
-            name = "manual-judgement",
-            label = "Approve",
-            value = ConstraintStatus.OVERRIDE_PASS.name
+      interactiveActions = if (dynamicConfigService.isEnabled(INTERACTIVE_NOTIFICATIONS_ENABLED, false)) {
+        EchoNotification.InteractiveActions(
+          callbackServiceId = "keel",
+          callbackMessageId = currentState.uid?.toString() ?: error("ConstraintState.uid not present"),
+          actions = listOf(
+            EchoNotification.ButtonAction(
+              name = "manual-judgement",
+              label = "Approve",
+              value = ConstraintStatus.OVERRIDE_PASS.name
+            ),
+            EchoNotification.ButtonAction(
+              name = "manual-judgement",
+              label = "Reject",
+              value = ConstraintStatus.OVERRIDE_FAIL.name
+            )
           ),
-          EchoNotification.ButtonAction(
-            name = "manual-judgement",
-            label = "Reject",
-            value = ConstraintStatus.OVERRIDE_FAIL.name
-          )
-        ),
-        color = "#fcba03"
-      )
+          color = "#fcba03"
+        )
+      } else {
+        null
+      }
     )
   }
 }

@@ -12,11 +12,13 @@ import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
@@ -25,6 +27,7 @@ import strikt.api.expectThat
 import strikt.assertions.failed
 import strikt.assertions.isEqualTo
 import strikt.assertions.isGreaterThan
+import strikt.assertions.isNull
 
 internal class ManualJudgementNotifierTests : JUnit5Minutests {
 
@@ -35,8 +38,9 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
   data class Fixture(
     val event: ConstraintStateChanged
   ) {
+    val dynamicConfigService: DynamicConfigService = mockk(relaxed = true)
     val echoService: EchoService = mockk(relaxed = true)
-    val subject = ManualJudgementNotifier(echoService = echoService)
+    val subject = ManualJudgementNotifier(dynamicConfigService = dynamicConfigService, echoService = echoService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -75,6 +79,10 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         coEvery {
           echoService.sendNotification(any())
         } just Runs
+
+        every {
+          dynamicConfigService.isEnabled(ManualJudgementNotifier.INTERACTIVE_NOTIFICATIONS_ENABLED, false)
+        } returns true
       }
 
       test("throws an exception if the constraint state uid is not present") {
@@ -162,6 +170,25 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         }
 
         expectThat(notification.captured).isEqualTo(expectedNotification)
+      }
+    }
+
+    context("with interactive notifications disabled") {
+      before {
+        every {
+          dynamicConfigService.isEnabled(ManualJudgementNotifier.INTERACTIVE_NOTIFICATIONS_ENABLED, false)
+        } returns false
+      }
+
+      test("no interactive actions are included in the notification") {
+        subject.constraintStateChanged(event)
+        val notification = slot<EchoNotification>()
+
+        coVerify {
+          echoService.sendNotification(capture(notification))
+        }
+
+        expectThat(notification.captured.interactiveActions).isNull()
       }
     }
   }
