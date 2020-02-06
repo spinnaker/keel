@@ -1,29 +1,29 @@
 package com.netflix.spinnaker.keel.echo
 
+import com.netflix.spinnaker.config.ManualJudgementNotificationConfig
 import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
-import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import kotlinx.coroutines.runBlocking
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.annotation.Configuration
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
 @Component
+@Configuration
+@EnableConfigurationProperties(ManualJudgementNotificationConfig::class)
 /**
  * Listens for [ConstraintStateChanged] events where the constraint is a [ManualJudgementConstraint] and sends
  * out notifications so that users can take action.
  */
 class ManualJudgementNotifier(
-  private val dynamicConfigService: DynamicConfigService,
+  private val notificationConfig: ManualJudgementNotificationConfig,
   private val echoService: EchoService
 ) {
-
-  companion object {
-    const val INTERACTIVE_NOTIFICATIONS_ENABLED = "keel.constraints.manual-judgement.interactive-notifications"
-  }
 
   @EventListener(ConstraintStateChanged::class)
   fun constraintStateChanged(event: ConstraintStateChanged) {
@@ -60,7 +60,7 @@ class ManualJudgementNotifier(
           "*${currentState.deliveryConfigName}* requires your manual approval for deployment " +
           "into the *${currentState.environmentName}* environment."
       ),
-      interactiveActions = if (dynamicConfigService.isEnabled(INTERACTIVE_NOTIFICATIONS_ENABLED, false)) {
+      interactiveActions = if (notificationConfig.enabled) {
         EchoNotification.InteractiveActions(
           callbackServiceId = "keel",
           callbackMessageId = currentState.uid?.toString() ?: error("ConstraintState.uid not present"),

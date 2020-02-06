@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.echo
 
+import com.netflix.spinnaker.config.ManualJudgementNotificationConfig
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.Environment
@@ -12,7 +13,6 @@ import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.test.resource
-import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Runs
@@ -38,9 +38,9 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
   data class Fixture(
     val event: ConstraintStateChanged
   ) {
-    val dynamicConfigService: DynamicConfigService = mockk(relaxed = true)
+    val notificationConfig: ManualJudgementNotificationConfig = mockk(relaxed = true)
     val echoService: EchoService = mockk(relaxed = true)
-    val subject = ManualJudgementNotifier(dynamicConfigService = dynamicConfigService, echoService = echoService)
+    val subject = ManualJudgementNotifier(notificationConfig = notificationConfig, echoService = echoService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -81,7 +81,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         } just Runs
 
         every {
-          dynamicConfigService.isEnabled(ManualJudgementNotifier.INTERACTIVE_NOTIFICATIONS_ENABLED, false)
+          notificationConfig.enabled
         } returns true
       }
 
@@ -176,7 +176,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
     context("with interactive notifications disabled") {
       before {
         every {
-          dynamicConfigService.isEnabled(ManualJudgementNotifier.INTERACTIVE_NOTIFICATIONS_ENABLED, false)
+          notificationConfig.enabled
         } returns false
       }
 
