@@ -189,6 +189,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         }
 
         expectThat(notification.captured.interactiveActions).isNull()
+        expectThat((notification.captured.additionalContext?.get("body") as String).contains(ManualJudgementNotifier.MANUAL_JUDGEMENT_DOC_URL))
       }
     }
   }

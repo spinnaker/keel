@@ -24,6 +24,10 @@ class ManualJudgementNotifier(
   private val notificationConfig: ManualJudgementNotificationConfig,
   private val echoService: EchoService
 ) {
+  companion object {
+    const val MANUAL_JUDGEMENT_DOC_URL =
+      "https://www.spinnaker.io/guides/user/managed-delivery/environment-constraints/#manual-judgement"
+  }
 
   @EventListener(ConstraintStateChanged::class)
   fun constraintStateChanged(event: ConstraintStateChanged) {
@@ -58,7 +62,11 @@ class ManualJudgementNotifier(
         "body" to
           ":warning: The artifact *${currentState.artifactVersion}* from delivery config " +
           "*${currentState.deliveryConfigName}* requires your manual approval for deployment " +
-          "into the *${currentState.environmentName}* environment."
+          "into the *${currentState.environmentName}* environment." +
+          if (!notificationConfig.enabled)
+            " Please consult the <$MANUAL_JUDGEMENT_DOC_URL|documentation> on how to approve the deployment."
+          else
+            ""
       ),
       interactiveActions = if (notificationConfig.enabled) {
         EchoNotification.InteractiveActions(
