@@ -1,4 +1,6 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
+
+import com.netflix.spinnaker.keel.api.Constraint
 
 /**
  * A constraint that requires that an artifact has been successfully promoted to a previous

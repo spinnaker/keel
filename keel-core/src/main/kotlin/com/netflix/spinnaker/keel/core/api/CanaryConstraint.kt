@@ -1,6 +1,7 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.netflix.spinnaker.keel.api.StatefulConstraint
 import java.time.Duration
 
 // TODO: doesn't support sliding look-back, custom metric scope, or extended scope parameters (will default to asg)

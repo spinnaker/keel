@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core
 
 /**
  * Sub-classes of this exception type may be thrown during resource desired state resolution

@@ -6,6 +6,8 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TA
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.core.DEBIAN_VERSION_COMPARATOR
+import com.netflix.spinnaker.keel.core.comparator
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat

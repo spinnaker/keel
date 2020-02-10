@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.model
+package com.netflix.spinnaker.keel.core
 
 import com.netflix.frigga.Names
 import com.netflix.spinnaker.keel.api.Moniker

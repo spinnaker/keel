@@ -15,7 +15,7 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
 data class Capacity(
   val min: Int,

@@ -1,5 +1,6 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
+import com.netflix.spinnaker.keel.api.StatefulConstraint
 import java.time.Duration
 
 data class ManualJudgementConstraint(

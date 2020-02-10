@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
 import de.huxhorn.sulky.ulid.ULID
 

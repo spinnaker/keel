@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude

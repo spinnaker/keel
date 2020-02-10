@@ -1,9 +1,10 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.constraints
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.netflix.spinnaker.keel.core.api.UID
 import java.time.Duration
 import java.time.Instant
 

@@ -1,5 +1,6 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core.api
 
+import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintEvaluator
 import java.time.DateTimeException
 import java.time.ZoneId

@@ -15,12 +15,11 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.core
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.semver.shaded.DebianVersionComparator
 import com.netflix.spinnaker.keel.api.artifacts.DebianSemVerVersioningStrategy
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.SortType.INCREASING
 import com.netflix.spinnaker.keel.api.artifacts.SortType.SEMVER
@@ -30,12 +29,6 @@ import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import net.swiftzer.semver.SemVer
 import org.slf4j.LoggerFactory
 import org.springframework.util.comparator.NullSafeComparator
-
-val DockerArtifact.organization
-  get() = name.split("/").first()
-
-val DockerArtifact.image
-  get() = name.split("/").last()
 
 val VersioningStrategy.comparator: Comparator<String>
   get() = when (this) {

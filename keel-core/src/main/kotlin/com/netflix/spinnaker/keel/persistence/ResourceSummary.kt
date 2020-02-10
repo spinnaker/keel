@@ -15,9 +15,10 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.persistence.ResourceStatus
+import com.netflix.spinnaker.keel.api.Locations
+import com.netflix.spinnaker.keel.api.Moniker
 
 /**
  * A summary version of a resource that contains identifying information, location information, and status.
