@@ -1,11 +1,11 @@
-package com.netflix.spinnaker.keel.plugin
+package com.netflix.spinnaker.keel.api.plugins
 
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.diff.ResourceDiff
-import com.netflix.spinnaker.keel.events.Task
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -17,7 +17,9 @@ import org.slf4j.LoggerFactory
  */
 abstract class ResourceHandler<S : ResourceSpec, R : Any>(
   private val resolvers: List<Resolver<*>>
-) : KeelPlugin {
+) {
+  val name: String
+    get() = javaClass.simpleName
 
   protected val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 

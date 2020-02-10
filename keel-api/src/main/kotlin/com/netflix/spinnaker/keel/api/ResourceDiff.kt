@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.diff
+package com.netflix.spinnaker.keel.api
 
 interface ResourceDiff<T : Any> {
   val desired: T

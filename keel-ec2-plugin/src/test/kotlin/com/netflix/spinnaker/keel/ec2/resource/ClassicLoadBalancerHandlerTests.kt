@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
+import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.ClassicLoadBalancerModel
@@ -25,7 +26,6 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.test.resource
 import de.danielbechler.diff.node.DiffNode

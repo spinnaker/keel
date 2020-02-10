@@ -26,10 +26,11 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.INCREASING_TAG
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
@@ -52,7 +53,6 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext

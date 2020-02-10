@@ -2,13 +2,13 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.parseUID
 import com.netflix.spinnaker.keel.api.randomUID

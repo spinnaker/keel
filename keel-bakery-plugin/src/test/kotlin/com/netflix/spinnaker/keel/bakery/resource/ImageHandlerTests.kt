@@ -1,10 +1,10 @@
 package com.netflix.spinnaker.keel.bakery.resource
 
 import com.netflix.spinnaker.igor.ArtifactService
-import com.netflix.spinnaker.keel.api.ArtifactStatus.FINAL
-import com.netflix.spinnaker.keel.api.ArtifactStatus.SNAPSHOT
-import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.NoKnownArtifactVersions
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.UnknownBaseImage
 import com.netflix.spinnaker.keel.bakery.api.BaseLabel.RELEASE

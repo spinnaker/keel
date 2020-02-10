@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.api.artifacts
 
 enum class ArtifactType {
   deb, docker

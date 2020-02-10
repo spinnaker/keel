@@ -7,11 +7,11 @@ import com.netflix.spinnaker.keel.actuation.ResourcePersister
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.api.ConstraintStatus.PENDING
-import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.api.SubmittedResource
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository

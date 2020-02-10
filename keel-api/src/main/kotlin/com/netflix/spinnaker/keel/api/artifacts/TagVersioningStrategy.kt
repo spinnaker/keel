@@ -15,10 +15,10 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api
+package com.netflix.spinnaker.keel.api.artifacts
 
-import com.netflix.spinnaker.keel.api.SortType.INCREASING
-import com.netflix.spinnaker.keel.api.SortType.SEMVER
+import com.netflix.spinnaker.keel.api.artifacts.SortType.INCREASING
+import com.netflix.spinnaker.keel.api.artifacts.SortType.SEMVER
 
 /**
  * Different options for versioning for tags

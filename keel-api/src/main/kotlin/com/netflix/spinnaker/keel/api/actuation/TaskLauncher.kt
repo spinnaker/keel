@@ -1,9 +1,7 @@
-package com.netflix.spinnaker.keel.plugin
+package com.netflix.spinnaker.keel.api.actuation
 
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SubjectType
-import com.netflix.spinnaker.keel.events.Task
 
 interface TaskLauncher {
   suspend fun submitJob(

@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.keel.serialization.SubmittedEnvironmentDeserializer
 

@@ -1,11 +1,7 @@
 package com.netflix.spinnaker.keel.persistence.memory
 
-import com.netflix.spinnaker.keel.api.ArtifactStatus
-import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.api.ArtifactVersions
-import com.netflix.spinnaker.keel.api.DebianArtifact
-import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.api.EnvironmentArtifactsSummary
@@ -14,6 +10,10 @@ import com.netflix.spinnaker.keel.api.PromotionStatus
 import com.netflix.spinnaker.keel.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.api.PromotionStatus.PREVIOUS
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException

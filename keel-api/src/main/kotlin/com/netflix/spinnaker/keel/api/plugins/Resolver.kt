@@ -16,7 +16,7 @@
  *
  */
 
-package com.netflix.spinnaker.keel.plugin
+package com.netflix.spinnaker.keel.api.plugins
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec

@@ -19,8 +19,13 @@ package com.netflix.spinnaker.keel.api
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.semver.shaded.DebianVersionComparator
-import com.netflix.spinnaker.keel.api.SortType.INCREASING
-import com.netflix.spinnaker.keel.api.SortType.SEMVER
+import com.netflix.spinnaker.keel.api.artifacts.DebianSemVerVersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.SortType.INCREASING
+import com.netflix.spinnaker.keel.api.artifacts.SortType.SEMVER
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
+import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import net.swiftzer.semver.SemVer
 import org.slf4j.LoggerFactory

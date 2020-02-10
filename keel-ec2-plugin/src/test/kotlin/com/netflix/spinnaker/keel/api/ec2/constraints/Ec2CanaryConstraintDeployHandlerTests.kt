@@ -6,6 +6,8 @@ import com.netflix.spinnaker.keel.api.CanarySource
 import com.netflix.spinnaker.keel.api.Capacity
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.actuation.Task
+import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
@@ -23,9 +25,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.SuspendedProcess
 import com.netflix.spinnaker.keel.constraints.CanaryConstraintConfigurationProperties
 import com.netflix.spinnaker.keel.ec2.constraints.Ec2CanaryConstraintDeployHandler
 import com.netflix.spinnaker.keel.ec2.resolvers.ImageResolver
-import com.netflix.spinnaker.keel.events.Task
 import com.netflix.spinnaker.keel.model.parseMoniker
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.CapturingSlot

@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.api
 
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+
 data class EnvironmentArtifactsSummary(
   val name: String,
   val artifacts: Collection<ArtifactVersions>

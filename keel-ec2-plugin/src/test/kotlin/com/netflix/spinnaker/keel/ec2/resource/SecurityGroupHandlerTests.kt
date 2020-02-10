@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.PortRange
@@ -31,6 +32,7 @@ import com.netflix.spinnaker.keel.api.ec2.SecurityGroupOverride
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.TCP
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.SelfReferenceRule
+import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Network
@@ -50,8 +52,6 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
-import com.netflix.spinnaker.keel.plugin.Resolver
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests

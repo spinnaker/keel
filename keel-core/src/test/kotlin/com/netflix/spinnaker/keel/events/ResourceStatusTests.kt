@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.events
 
 import com.netflix.spinnaker.keel.api.ResourceCurrentlyUnresolvable
+import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.exceptions.InvalidResourceFormatException
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING

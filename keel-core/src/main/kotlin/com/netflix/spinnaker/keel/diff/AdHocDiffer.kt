@@ -23,14 +23,14 @@ import com.netflix.spinnaker.keel.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.normalize
+import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
+import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.diff.DiffStatus.DIFF
 import com.netflix.spinnaker.keel.diff.DiffStatus.ERROR
 import com.netflix.spinnaker.keel.diff.DiffStatus.MISSING
 import com.netflix.spinnaker.keel.diff.DiffStatus.NO_DIFF
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
-import com.netflix.spinnaker.keel.plugin.ResourceHandler
-import com.netflix.spinnaker.keel.plugin.supporting
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking

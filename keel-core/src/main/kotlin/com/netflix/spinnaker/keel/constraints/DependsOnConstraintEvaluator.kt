@@ -1,9 +1,9 @@
 package com.netflix.spinnaker.keel.constraints
 
-import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator.Companion.getConstraintForEnvironment
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import org.springframework.context.ApplicationEventPublisher

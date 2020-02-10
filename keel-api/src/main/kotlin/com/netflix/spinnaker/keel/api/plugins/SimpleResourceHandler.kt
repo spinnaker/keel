@@ -13,9 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spinnaker.keel.plugin
+package com.netflix.spinnaker.keel.api.plugins
 
-interface KeelPlugin {
-  val name: String
-    get() = javaClass.simpleName
+import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceSpec
+
+abstract class SimpleResourceHandler<T : ResourceSpec>(
+  resolvers: List<Resolver<*>>
+) : ResourceHandler<T, T>(resolvers) {
+
+  /**
+   * If you need to do any resolution of the desired value into a different type you should
+   * implement [ResourceHandler] instead of [SimpleResourceHandler].
+   */
+  override suspend fun toResolvedType(resource: Resource<T>): T = resource.spec
 }

@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.events
+package com.netflix.spinnaker.keel.api.actuation
 
 /**
  * A task launched to resolve a diff in a resource.
