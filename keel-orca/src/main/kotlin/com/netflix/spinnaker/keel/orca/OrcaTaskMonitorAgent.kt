@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.orca
 
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.netflix.spinnaker.keel.api.SubjectType
+import com.netflix.spinnaker.keel.api.SubjectType.RESOURCE
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
@@ -55,7 +55,7 @@ class OrcaTaskMonitorAgent(
         .filterValues { it.status.isComplete() }
         .map { (resourceId, taskDetails) ->
           // only resource events are currently supported
-          if (resourceId.startsWith(SubjectType.RESOURCE.toString())) {
+          if (resourceId.startsWith(RESOURCE.toString())) {
             val id = resourceId.substringAfter(":")
             try {
               when (taskDetails.status.isSuccess()) {
@@ -75,13 +75,23 @@ class OrcaTaskMonitorAgent(
     }
   }
 
-    // make sure it's only 1 context per run
-    private fun List<Map<String, Any>>?.getFailureMessage(): String? {
-      if (this.isNullOrEmpty()) {
-        return ""
-      }
-      val context: OrcaContext? = this.first()["context"]?.let { mapper.convertValue(it) }
+  // get the exception - can be either general orca exception or kato specific
+  private fun List<Map<String, Any>>?.getFailureMessage(): String? {
 
-      return context?.exception?.details?.errors?.joinToString(",")
+    this?.forEach { it ->
+      val context: OrcaContext? = it["context"]?.let { mapper.convertValue(it) }
+
+      // find the first exception and return
+      if (context?.exception != null) {
+        return context.exception.details.errors.joinToString(",")
+      }
+
+      if (context?.katoException != null) {
+        val katoError: KatoException? = context.katoException.first()["exception"]?.let { mapper.convertValue(it) }
+        return katoError?.message
+      }
     }
+
+    return ""
   }
+}
