@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.persistence.memory
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.ResourceId
+import com.netflix.spinnaker.keel.api.UID
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.resources
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -56,7 +56,7 @@ class InMemoryDeliveryConfigRepository(
     configs.remove(name)
   }
 
-  override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: ResourceId) {
+  override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: String) {
     val config = get(deliveryConfigName)
     val newResources = config.environments
       .find { it.name == environmentName }
@@ -79,14 +79,14 @@ class InMemoryDeliveryConfigRepository(
     )
   }
 
-  override fun environmentFor(resourceId: ResourceId): Environment =
+  override fun environmentFor(resourceId: String): Environment =
     configs
       .values
       .flatMap { it.environments }
       .firstOrNull { it.resourceIds.contains(resourceId) }
       ?: throw OrphanedResourceException(resourceId)
 
-  override fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig =
+  override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     configs
       .values
       .firstOrNull { it.resourceIds.contains(resourceId) }
@@ -118,6 +118,9 @@ class InMemoryDeliveryConfigRepository(
   ): ConstraintState? =
     constraints["$deliveryConfigName:$environmentName:$artifactVersion:$type"]
 
+  override fun getConstraintStateById(uid: UID) =
+    constraints[uid.toString()]
+
   override fun constraintStateFor(
     deliveryConfigName: String,
     environmentName: String,
@@ -148,9 +151,9 @@ class InMemoryDeliveryConfigRepository(
     constraints.clear()
   }
 
-  private val Environment.resourceIds: Iterable<ResourceId>
+  private val Environment.resourceIds: Iterable<String>
     get() = resources.map { it.id }
 
-  private val DeliveryConfig.resourceIds: Iterable<ResourceId>
+  private val DeliveryConfig.resourceIds: Iterable<String>
     get() = resources.map { it.id }
 }

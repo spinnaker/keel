@@ -25,7 +25,7 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
     val constrainedEnvironment = Environment(
       name = "staging",
       constraints = setOf(
-        DependsOnConstraint("test")
+        DependsOnConstraint(environment = "test")
       )
     )
     val previousEnvironment = Environment(
@@ -41,7 +41,7 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
 
     val artifactRepository: ArtifactRepository = mockk(relaxUnitFun = true)
 
-    val subject = DependsOnConstraintEvaluator(artifactRepository)
+    val subject = DependsOnConstraintEvaluator(artifactRepository, mockk())
   }
 
   fun tests() = rootContext<Fixture> {

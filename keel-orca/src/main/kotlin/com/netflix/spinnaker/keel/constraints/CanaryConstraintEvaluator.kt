@@ -18,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 /**
@@ -62,9 +63,10 @@ class CanaryConstraintEvaluator(
   private val handlers: List<CanaryConstraintDeployHandler>,
   private val orcaService: OrcaService,
   override val deliveryConfigRepository: DeliveryConfigRepository,
-  private val clock: Clock
+  private val clock: Clock,
+  override val eventPublisher: ApplicationEventPublisher
 ) : StatefulConstraintEvaluator<CanaryConstraint>() {
-  override val constraintType = CanaryConstraint::class.java
+  override val supportedType = SupportedConstraintType<CanaryConstraint>("canary")
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
   private val correlatedMessagePrefix = "Correlated canary tasks found"
 

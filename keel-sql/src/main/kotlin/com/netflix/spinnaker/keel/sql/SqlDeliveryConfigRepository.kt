@@ -1,15 +1,16 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.ArtifactType
 import com.netflix.spinnaker.keel.api.ConstraintState
 import com.netflix.spinnaker.keel.api.ConstraintStatus
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceId
+import com.netflix.spinnaker.keel.api.UID
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.parseUID
 import com.netflix.spinnaker.keel.api.randomUID
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
@@ -25,7 +26,6 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIF
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import java.time.Clock
@@ -45,10 +45,9 @@ class SqlDeliveryConfigRepository(
   private val jooq: DSLContext,
   private val clock: Clock,
   private val resourceTypeIdentifier: ResourceTypeIdentifier,
+  private val mapper: ObjectMapper,
   private val sqlRetry: SqlRetry
 ) : DeliveryConfigRepository {
-
-  private val mapper = configuredObjectMapper()
 
   override fun getByApplication(application: String): Collection<DeliveryConfig> =
     sqlRetry.withRetry(READ) {
@@ -129,7 +128,7 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: ResourceId) {
+  override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: String) {
     sqlRetry.withRetry(WRITE) {
       jooq.deleteFrom(ENVIRONMENT_RESOURCE)
         .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(envUid(deliveryConfigName, environmentName)))
@@ -243,7 +242,7 @@ class SqlDeliveryConfigRepository(
         environment.resources.forEach { resource ->
           jooq.insertInto(ENVIRONMENT_RESOURCE)
             .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUID)
-            .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(resource.id.value)))
+            .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(resource.id)))
             .onDuplicateKeyIgnore()
             .execute()
         }
@@ -312,12 +311,12 @@ class SqlDeliveryConfigRepository(
         }
       }
 
-  override fun environmentFor(resourceId: ResourceId): Environment =
+  override fun environmentFor(resourceId: String): Environment =
     sqlRetry.withRetry(READ) {
       jooq
         .select(ENVIRONMENT.UID, ENVIRONMENT.NAME, ENVIRONMENT.CONSTRAINTS, ENVIRONMENT.NOTIFICATIONS)
         .from(ENVIRONMENT, ENVIRONMENT_RESOURCE, RESOURCE)
-        .where(RESOURCE.ID.eq(resourceId.value))
+        .where(RESOURCE.ID.eq(resourceId))
         .and(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(RESOURCE.UID))
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
         .fetchOne { (uid, name, constraintsJson, notificationsJson) ->
@@ -330,13 +329,13 @@ class SqlDeliveryConfigRepository(
         }
     } ?: throw OrphanedResourceException(resourceId)
 
-  override fun deliveryConfigFor(resourceId: ResourceId): DeliveryConfig =
+  override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     // TODO: this implementation could be more efficient by sharing code with get(name)
     sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_CONFIG.NAME)
         .from(ENVIRONMENT, ENVIRONMENT_RESOURCE, RESOURCE, DELIVERY_CONFIG)
-        .where(RESOURCE.ID.eq(resourceId.value))
+        .where(RESOURCE.ID.eq(resourceId))
         .and(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(RESOURCE.UID))
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
         .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
@@ -395,6 +394,8 @@ class SqlDeliveryConfigRepository(
               .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
               .execute()
           }
+          // Store generated UID in constraint state object so it can be used by caller
+          state.uid = parseUID(uid)
         }
       }
   }
@@ -427,6 +428,54 @@ class SqlDeliveryConfigRepository(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(artifactVersion),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE.eq(type)
         )
+        .fetchOne { (deliveryConfigName,
+                      environmentName,
+                      artifactVersion,
+                      constraintType,
+                      status,
+                      createdAt,
+                      judgedBy,
+                      judgedAt,
+                      comment,
+                      attributes) ->
+          ConstraintState(
+            deliveryConfigName,
+            environmentName,
+            artifactVersion,
+            constraintType,
+            ConstraintStatus.valueOf(status),
+            createdAt.toInstant(ZoneOffset.UTC),
+            judgedBy,
+            when (judgedAt) {
+              null -> null
+              else -> judgedAt.toInstant(ZoneOffset.UTC)
+            },
+            comment,
+            mapper.readValue(attributes)
+          )
+        }
+    }
+  }
+
+  override fun getConstraintStateById(uid: UID): ConstraintState? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(
+          DELIVERY_CONFIG.NAME,
+          ENVIRONMENT.NAME,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_AT,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.COMMENT,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES
+        )
+        .from(ENVIRONMENT_ARTIFACT_CONSTRAINT, DELIVERY_CONFIG, ENVIRONMENT)
+        .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.eq(uid.toString()))
+        .and(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
+        .and(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
         .fetchOne { (deliveryConfigName,
                       environmentName,
                       artifactVersion,
@@ -595,10 +644,10 @@ class SqlDeliveryConfigRepository(
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(uid))
         .fetch { (apiVersion, kind, metadata, spec) ->
           Resource(
-            ApiVersion(apiVersion),
+            apiVersion,
             kind,
             mapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-            mapper.readValue(spec, resourceTypeIdentifier.identify(ApiVersion(apiVersion), kind))
+            mapper.readValue(spec, resourceTypeIdentifier.identify(apiVersion, kind))
           )
         }
     }
@@ -634,10 +683,10 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  private val ResourceId.uid: Select<Record1<String>>
+  private val String.uid: Select<Record1<String>>
     get() = select(RESOURCE.UID)
       .from(RESOURCE)
-      .where(RESOURCE.ID.eq(this.value))
+      .where(RESOURCE.ID.eq(this))
 
   private fun environmentUidByName(deliveryConfigName: String, environmentName: String): String? =
     sqlRetry.withRetry(READ) {

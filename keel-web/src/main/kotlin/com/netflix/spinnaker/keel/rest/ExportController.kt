@@ -1,10 +1,9 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.Exportable
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.SubmittedResource
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
-import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.model.parseMoniker
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
@@ -12,14 +11,11 @@ import com.netflix.spinnaker.keel.plugin.supporting
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -71,7 +67,7 @@ class ExportController(
     @RequestHeader("X-SPINNAKER-USER") user: String
   ): SubmittedResource<*> {
     val provider = cloudProviderOverrides[cloudProvider] ?: cloudProvider
-    val apiVersion = SPINNAKER_API_V1.subApi(provider)
+    val apiVersion = "$provider.$SPINNAKER_API_V1"
     val kind = typeToKind.getOrDefault(type.toLowerCase(), type.toLowerCase())
     val handler = handlers.supporting(apiVersion, kind)
     val exportable = Exportable(
@@ -92,14 +88,12 @@ class ExportController(
     return runBlocking {
       withTracingContext(exportable) {
         log.info("Exporting resource ${exportable.toResourceId()}")
-        handler.export(exportable)
+        SubmittedResource(
+          apiVersion = apiVersion,
+          kind = kind,
+          spec = handler.export(exportable)
+        )
       }
     }
-  }
-
-  @ExceptionHandler(ResourceNotFound::class)
-  @ResponseStatus(HttpStatus.NOT_FOUND)
-  fun onNotFound(e: ResourceNotFound) {
-    log.info(e.message)
   }
 }

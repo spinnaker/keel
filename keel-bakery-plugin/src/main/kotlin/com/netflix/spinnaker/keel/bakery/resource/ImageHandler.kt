@@ -1,16 +1,15 @@
 package com.netflix.spinnaker.keel.bakery.resource
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DebianArtifact
 import com.netflix.spinnaker.keel.api.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
+import com.netflix.spinnaker.keel.bakery.BAKERY_API_V1
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.api.ImageSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -27,7 +26,6 @@ import com.netflix.spinnaker.keel.plugin.Resolver
 import com.netflix.spinnaker.keel.plugin.ResourceHandler
 import com.netflix.spinnaker.keel.plugin.SupportedKind
 import com.netflix.spinnaker.keel.plugin.TaskLauncher
-import com.netflix.spinnaker.kork.artifacts.model.Artifact
 import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
 
@@ -40,12 +38,11 @@ class ImageHandler(
   private val imageService: ImageService,
   private val publisher: ApplicationEventPublisher,
   private val taskLauncher: TaskLauncher,
-  objectMapper: ObjectMapper,
   resolvers: List<Resolver<*>>
-) : ResourceHandler<ImageSpec, Image>(objectMapper, resolvers) {
+) : ResourceHandler<ImageSpec, Image>(resolvers) {
 
   override val supportedKind =
-    SupportedKind(SPINNAKER_API_V1.subApi("bakery"), "image", ImageSpec::class.java)
+    SupportedKind(BAKERY_API_V1, "image", ImageSpec::class.java)
 
   override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
     with(resource) {
@@ -110,28 +107,29 @@ class ImageHandler(
     val appVersion = AppVersion.parseName(resourceDiff.desired.appVersion)
     val packageName = appVersion.packageName
     val version = resourceDiff.desired.appVersion.substringAfter("$packageName-")
-    val artifact = Artifact.builder()
-      .type("DEB")
-      .customKind(false)
-      .name(resource.spec.artifactName)
-      .version(version)
-      .location("rocket")
-      .reference("/${packageName}_${version}_all.deb")
-      .metadata(mapOf())
-      .provenance("n/a")
-      .build()
+    val artifactRef = "/${packageName}_${version}_all.deb"
+    val artifact = mapOf(
+      "type" to "DEB",
+      "customKind" to false,
+      "name" to resource.spec.artifactName,
+      "version" to version,
+      "location" to "rocket",
+      "reference" to artifactRef,
+      "metadata" to emptyMap<String, Any>(),
+      "provenance" to "n/a"
+      )
 
     log.info("baking new image for {}", resource.spec.artifactName)
     val description = "Bake ${resourceDiff.desired.appVersion}"
 
     try {
-      val taskRef = taskLauncher.submitJobToOrca(
+      val taskRef = taskLauncher.submitJob(
       user = resource.serviceAccount,
       application = resource.application,
-      notifications = emptyList(),
+      notifications = emptySet(),
       subject = description,
       description = description,
-      correlationId = resource.id.toString(),
+      correlationId = resource.id,
       stages = listOf(
         Job(
           "bake",
@@ -140,7 +138,7 @@ class ImageHandler(
             "baseOs" to resource.spec.baseOs,
             "baseLabel" to resource.spec.baseLabel.name.toLowerCase(),
             "cloudProviderType" to "aws",
-            "package" to artifact.reference.substringAfterLast("/"),
+            "package" to artifactRef.substringAfterLast("/"),
             "regions" to resource.spec.regions,
             "storeType" to resource.spec.storeType.name.toLowerCase(),
             "user" to "keel",
@@ -150,7 +148,7 @@ class ImageHandler(
       ),
       artifacts = listOf(artifact)
     )
-      return listOf(Task(id = taskRef.id, name = description)) // TODO: wow, this is ugly
+      return listOf(Task(id = taskRef.id, name = description))
     } catch (e: Exception) {
       log.error("Error launching orca bake for: ${description.toLowerCase()}")
       return emptyList()
@@ -159,7 +157,7 @@ class ImageHandler(
 
   override suspend fun actuationInProgress(resource: Resource<ImageSpec>): Boolean =
     orcaService
-      .getCorrelatedExecutions(resource.id.toString())
+      .getCorrelatedExecutions(resource.id)
       .isNotEmpty()
 
   private suspend fun findBaseAmi(baseImage: String, serviceAccount: String): String {

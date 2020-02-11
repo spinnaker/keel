@@ -14,7 +14,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.USE_NATIVE_TY
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.netflix.spinnaker.keel.api.UID
+import com.netflix.spinnaker.keel.json.registerKeelApiModule
+import de.huxhorn.sulky.ulid.ULID
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
@@ -34,7 +35,8 @@ fun configuredYamlMapper(): YAMLMapper =
 
 private fun <T : ObjectMapper> T.configureMe(): T =
   apply {
-    registerKotlinModule()
+    registerKeelApiModule()
+      .registerKotlinModule()
       .registerULIDModule()
       .registerModule(JavaTimeModule())
       .configureSaneDateTimeRepresentation()
@@ -44,8 +46,8 @@ private fun <T : ObjectMapper> T.configureMe(): T =
 
 private fun ObjectMapper.registerULIDModule(): ObjectMapper =
   registerModule(SimpleModule("ULID").apply {
-    addSerializer(UID::class.java, ToStringSerializer())
-    addDeserializer(UID::class.java, ULIDDeserializer())
+    addSerializer(ULID.Value::class.java, ToStringSerializer())
+    addDeserializer(ULID.Value::class.java, ULIDDeserializer())
   })
 
 private fun ObjectMapper.configureSaneDateTimeRepresentation(): ObjectMapper =

@@ -5,14 +5,13 @@ plugins {
 }
 
 dependencies {
-  api(project(":keel-actuator"))
-  api(project(":keel-plugin"))
+  api(project(":keel-core"))
   api(project(":keel-clouddriver"))
   api(project(":keel-eureka"))
   api(project(":keel-artifact"))
-  api(project(":keel-veto"))
   api(project(":keel-sql"))
   api(project(":keel-docker"))
+  api(project(":keel-echo"))
 
   implementation(project(":keel-bakery-plugin"))
   implementation(project(":keel-ec2-plugin"))

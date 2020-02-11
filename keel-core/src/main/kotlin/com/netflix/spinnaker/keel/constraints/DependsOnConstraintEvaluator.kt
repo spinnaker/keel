@@ -6,14 +6,16 @@ import com.netflix.spinnaker.keel.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator.Companion.getConstraintForEnvironment
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
 class DependsOnConstraintEvaluator(
-  private val artifactRepository: ArtifactRepository
+  private val artifactRepository: ArtifactRepository,
+  override val eventPublisher: ApplicationEventPublisher
 ) : ConstraintEvaluator<DependsOnConstraint> {
 
-  override val constraintType = DependsOnConstraint::class.java
+  override val supportedType = SupportedConstraintType<DependsOnConstraint>("depends-on")
 
   override fun canPromote(
     artifact: DeliveryArtifact,
@@ -21,7 +23,7 @@ class DependsOnConstraintEvaluator(
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment
   ): Boolean {
-    val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, constraintType)
+    val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, supportedType.type)
 
     val requiredEnvironment = deliveryConfig
       .environments

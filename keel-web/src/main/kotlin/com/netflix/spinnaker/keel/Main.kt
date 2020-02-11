@@ -16,7 +16,9 @@
 package com.netflix.spinnaker.keel
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
+import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.info.InstanceIdSupplier
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -77,6 +79,9 @@ class KeelApplication {
   @Autowired(required = false)
   var plugins: List<KeelPlugin> = emptyList()
 
+  @Autowired(required = false)
+  var constraintEvaluators: List<ConstraintEvaluator<*>> = emptyList()
+
   @Autowired
   lateinit var objectMappers: List<ObjectMapper>
 
@@ -84,8 +89,22 @@ class KeelApplication {
   fun registerResourceSpecSubtypes() {
     plugins
       .filterIsInstance<ResourceHandler<*, *>>()
-      .forEach { handler ->
-        handler.registerResourceKind(objectMappers)
+      .map { it.supportedKind }
+      .forEach { kind ->
+        log.info("Registering ResourceSpec sub-type {}: {}", kind, kind.specClass.simpleName)
+        val namedType = NamedType(kind.specClass, kind.typeId)
+        objectMappers.forEach { it.registerSubtypes(namedType) }
+      }
+  }
+
+  @PostConstruct
+  fun registerConstraintSubtypes() {
+    constraintEvaluators
+      .map { it.supportedType }
+      .forEach { constraintType ->
+        log.info("Registering Constraint sub-type {}: {}", constraintType.name, constraintType.type.simpleName)
+        val namedType = NamedType(constraintType.type, constraintType.name)
+        objectMappers.forEach { it.registerSubtypes(namedType) }
       }
   }
 
