@@ -91,10 +91,10 @@ data class OrcaException(
 )
 
 data class KatoException(
-  val cause: String,
+  val cause: String?,
   val message: String,
   val type: String,
-  val operation: String
+  val operation: String?
 )
 
 data class OrcaContext(

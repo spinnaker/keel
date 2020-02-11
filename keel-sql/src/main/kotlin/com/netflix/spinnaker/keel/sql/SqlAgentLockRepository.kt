@@ -13,44 +13,6 @@ class SqlAgentLockRepository(
   private val sqlRetry: SqlRetry
 ) : AgentLockRepository {
 
-  // override val coroutineContext: CoroutineContext = Dispatchers.IO
-//  private val log by lazy { LoggerFactory.getLogger(javaClass) }
-
-//  private var enabled = false
-//
-//  @EventListener(ApplicationUp::class)
-//  fun onApplicationUp() {
-//    log.info("Application up, enabling scheduled agents")
-//    enabled = true
-//  }
-//
-//  @EventListener(ApplicationDown::class)
-//  fun onApplicationDown() {
-//    log.info("Application down, disabling scheduled agents")
-//    enabled = false
-//  }
-//
-//  @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1M}")
-//  fun invokeAgent() {
-//    if (enabled) {
-//      agents.forEach {
-//        val agentName: String = it.javaClass.simpleName
-//        val lockAcquired = tryAcquireLock(agentName, it.lockTimeoutSeconds)
-//        if (lockAcquired) {
-//          val job = launch {
-//            it.invokeAgent()
-//          }
-//          runBlocking {
-//            job.join()
-//          }
-//          log.debug("invoking $agentName completed")
-//        }
-//      }
-//    } else {
-//      log.debug("invoking agent disabled")
-//    }
-//  }
-
   override fun tryAcquireLock(agentName: String, lockTimeoutSeconds: Long): Boolean {
     val now = clock.instant()
 
