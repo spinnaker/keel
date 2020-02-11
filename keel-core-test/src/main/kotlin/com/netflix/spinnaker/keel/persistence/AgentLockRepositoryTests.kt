@@ -69,11 +69,5 @@ abstract class AgentLockRepositoryTests<T : AgentLockRepository> : JUnit5Minutes
         }
       }
     }
-
-    context("invoking agent") {
-      test("application is down") {
-        // invokeAgent()
-      }
-    }
   }
 }

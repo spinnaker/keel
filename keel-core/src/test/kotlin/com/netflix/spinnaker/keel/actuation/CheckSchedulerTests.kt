@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Called
-import io.mockk.coEvery
+import io.mockk.clearAllMocks
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -30,19 +30,16 @@ internal object CheckSchedulerTests : JUnit5Minutests {
     }
   }
 
-  private val dummyAgent = mockk<DummyScheduledAgent>() {
+  private val dummyAgent = mockk<DummyScheduledAgent>(relaxUnitFun = true) {
     every {
       lockTimeoutSeconds
     } returns 5
-    coEvery {
-      invokeAgent()
-    } returns Unit
   }
 
-  private val agentLockRepository = mockk<AgentLockRepository>() {
-
+  private var agentLockRepository = mockk<AgentLockRepository>(relaxUnitFun = true) {
     every { agents } returns listOf(dummyAgent)
   }
+
   private val resources = listOf(
     resource(
       apiVersion = "ec2.$SPINNAKER_API_V1",
@@ -104,35 +101,26 @@ internal object CheckSchedulerTests : JUnit5Minutests {
       }
     }
 
-//    context("test invoke agents") {
-//      before {
-//        onApplicationUp()
-//        every {
-//          agentLockRepository.tryAcquireLock(any(), any())
-//        } returns true
-//      }
-//
-//      test("invoke a single agent") {
-//        runBlocking {
-//          invokeAgent()
-//        }
-//
-//        coVerify {
-//          agentLockRepository.agents.first().invokeAgent()
-//        }
+    context("test invoke agents") {
+      before {
+        onApplicationUp()
+      }
 
-//        agentLockRepository.agents.forEach { agent ->
-//          coVerify {
-//            //  coEvery {
-//            agent.invokeAgent()
-//            // }
-//          }
-//        }
+      test("invoke a single agent") {
+        every {
+          agentLockRepository.tryAcquireLock(any(), any())
+        } returns true
 
-//      }
-//      after {
-//        onApplicationDown()
-//      }
-//    }
+        invokeAgent()
+
+        coVerify {
+          dummyAgent.invokeAgent()
+        }
+      }
+      after {
+        onApplicationDown()
+        clearAllMocks()
+      }
+    }
   }
 }
