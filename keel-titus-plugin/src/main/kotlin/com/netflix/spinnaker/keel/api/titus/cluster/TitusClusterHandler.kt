@@ -17,19 +17,24 @@
  */
 package com.netflix.spinnaker.keel.api.titus.cluster
 
-import com.netflix.spinnaker.keel.api.Capacity
-import com.netflix.spinnaker.keel.api.ClusterDependencies
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.TagVersionStrategy
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.INCREASING_TAG
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
-import com.netflix.spinnaker.keel.api.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.api.actuation.Task
+import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.plugins.Resolver
+import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
+import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
@@ -43,23 +48,20 @@ import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
-import com.netflix.spinnaker.keel.diff.ResourceDiff
+import com.netflix.spinnaker.keel.core.api.Capacity
+import com.netflix.spinnaker.keel.core.api.ClusterDependencies
+import com.netflix.spinnaker.keel.core.orcaClusterMoniker
+import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
-import com.netflix.spinnaker.keel.events.Task
-import com.netflix.spinnaker.keel.model.orcaClusterMoniker
-import com.netflix.spinnaker.keel.model.serverGroup
+import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.plugin.Resolver
-import com.netflix.spinnaker.keel.plugin.ResourceHandler
-import com.netflix.spinnaker.keel.plugin.SupportedKind
-import com.netflix.spinnaker.keel.plugin.TaskLauncher
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
-import com.netflix.spinnaker.keel.plugin.convert
 import com.netflix.spinnaker.keel.retrofit.isNotFound
+import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -81,6 +83,8 @@ class TitusClusterHandler(
   private val publisher: ApplicationEventPublisher,
   resolvers: List<Resolver<*>>
 ) : ResourceHandler<TitusClusterSpec, Map<String, TitusServerGroup>>(resolvers) {
+
+  private val mapper = configuredObjectMapper()
 
   override val supportedKind =
     SupportedKind(SPINNAKER_TITUS_API_V1, "cluster", TitusClusterSpec::class.java)
@@ -149,7 +153,9 @@ class TitusClusterHandler(
         "in account: ${exportable.account} for export")
     }
 
-    val base = serverGroups.values.first()
+    // let's assume that the largest server group is the most important and should be the base
+    val base = serverGroups.values.maxBy { it.capacity.desired ?: it.capacity.max }
+      ?: throw ExportError("Unable to calculate the server group with the largest capacity from server groups $serverGroups")
 
     val locations = SimpleLocations(
       account = exportable.account,
@@ -416,7 +422,7 @@ class TitusClusterHandler(
     val defaults = TitusServerGroupSpec(
       capacity = Capacity(1, 1, 1),
       iamProfile = application + "InstanceProfile",
-      resources = convert(Resources()),
+      resources = mapper.convertValue(Resources()),
       entryPoint = "",
       constraints = Constraints(),
       migrationPolicy = MigrationPolicy(),
@@ -447,7 +453,7 @@ class TitusClusterHandler(
 
   private fun Resources.exportSpec(): ResourcesSpec? {
     val defaults = Resources()
-    val thisSpec: ResourcesSpec = convert(this)
+    val thisSpec: ResourcesSpec = mapper.convertValue(this)
     return buildSpecFromDiff(defaults, thisSpec)
   }
 }
