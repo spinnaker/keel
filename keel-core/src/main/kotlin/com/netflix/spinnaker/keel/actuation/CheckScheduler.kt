@@ -94,12 +94,10 @@ class CheckScheduler(
         val agentName: String = it.javaClass.simpleName
         val lockAcquired = agentLockRepository.tryAcquireLock(agentName, it.lockTimeoutSeconds)
         if (lockAcquired) {
-          val job = launch {
-            it.invokeAgent()
-          }
-          runBlocking {
-            job.join()
-          }
+            runBlocking {
+              log.debug("invoking $agentName")
+              it.invokeAgent()
+            }
           log.debug("invoking $agentName completed")
         }
       }
