@@ -1,9 +1,9 @@
 package com.netflix.spinnaker.keel.orca
 
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SubjectType
+import com.netflix.spinnaker.keel.api.actuation.SubjectType
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.randomUID
+import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
@@ -149,7 +149,7 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
         } returns executionDetailResponse(
           event.taskRecord.id,
           OrcaExecutionStatus.TERMINAL,
-          OrcaExecutionStages(listOf(orcaContext(katoException = katoExceptions())))
+          OrcaExecutionStages(listOf(orcaContext(katoException = clouddriverExceptions())))
         )
 
         runBlocking {
@@ -254,13 +254,13 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
     mapOf("context" to
       OrcaContext(
         exception = exception,
-        katoException = katoException
+        clouddriverException = katoException
       ))
 
-  private fun katoExceptions():
+  private fun clouddriverExceptions():
     List<Map<String, Any>> = (
     listOf(mapOf(
-      "exception" to KatoException(
+      "exception" to ClouddriverException(
         cause = "",
         message = "The following security groups do not exist: 'keeldemo-main-elb' in 'test' vpc-46f5a223",
         operation = "",

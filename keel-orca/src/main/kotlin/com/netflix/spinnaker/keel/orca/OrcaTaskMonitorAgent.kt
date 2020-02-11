@@ -64,7 +64,7 @@ class OrcaTaskMonitorAgent(
                     resourceRepository.get(id), clock))
                 false -> publisher.publishEvent(
                   ResourceTaskFailed(
-                    resourceRepository.get(id), taskDetails.execution.stages.getFailureMessage(), clock))
+                    resourceRepository.get(id), taskDetails.execution.stages.getFailureMessage() ?: "", clock))
               }
             } catch (e: NoSuchResourceId) {
               log.warn("No resource found for id $resourceId")
@@ -86,12 +86,12 @@ class OrcaTaskMonitorAgent(
         return context.exception.details.errors.joinToString(",")
       }
 
-      if (context?.katoException != null) {
-        val katoError: KatoException? = context.katoException.first()["exception"]?.let { mapper.convertValue(it) }
-        return katoError?.message
+      if (context?.clouddriverException != null) {
+        val clouddriverError: ClouddriverException? = context.clouddriverException.first()["exception"]?.let { mapper.convertValue(it) }
+        return clouddriverError?.message
       }
     }
 
-    return ""
+    return null
   }
 }

@@ -90,7 +90,7 @@ data class OrcaException(
   val details: GeneralErrorsDetails
 )
 
-data class KatoException(
+data class ClouddriverException(
   val cause: String?,
   val message: String,
   val type: String,
@@ -101,5 +101,5 @@ data class OrcaContext(
   // fetching only orca general and kato exceptions for now
   val exception: OrcaException?,
   @JsonAlias("kato.tasks")
-  val katoException: List<Map<String, Any>>?
+  val clouddriverException: List<Map<String, Any>>?
 )
