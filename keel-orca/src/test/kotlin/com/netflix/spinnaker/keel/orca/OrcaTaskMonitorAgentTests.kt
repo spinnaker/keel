@@ -216,8 +216,6 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
     }
   }
 
-  // }
-
   private fun executionDetailResponse(
     id: String = randomUID().toString(),
     status: OrcaExecutionStatus = OrcaExecutionStatus.RUNNING,

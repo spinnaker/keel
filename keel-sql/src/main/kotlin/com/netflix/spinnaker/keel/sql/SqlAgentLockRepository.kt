@@ -3,6 +3,8 @@ package com.netflix.spinnaker.keel.sql
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.AGENT_LOCK
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
+import com.netflix.spinnaker.keel.sql.RetryCategory.READ
+import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import java.time.Clock
 import org.jooq.DSLContext
 
@@ -16,7 +18,7 @@ class SqlAgentLockRepository(
   override fun tryAcquireLock(agentName: String, lockTimeoutSeconds: Long): Boolean {
     val now = clock.instant()
 
-    var changed = sqlRetry.withRetry(RetryCategory.WRITE) {
+    var changed = sqlRetry.withRetry(WRITE) {
       jooq.insertInto(AGENT_LOCK)
         .set(AGENT_LOCK.LOCK_NAME, agentName)
         .set(AGENT_LOCK.EXPIRY, now.plusSeconds(lockTimeoutSeconds).toEpochMilli())
@@ -25,7 +27,7 @@ class SqlAgentLockRepository(
     }
 
     if (changed == 0) {
-      changed = sqlRetry.withRetry(RetryCategory.WRITE) {
+      changed = sqlRetry.withRetry(WRITE) {
         jooq.update(AGENT_LOCK)
           .set(AGENT_LOCK.EXPIRY, now.plusSeconds(lockTimeoutSeconds).toEpochMilli())
           .where(
@@ -40,7 +42,7 @@ class SqlAgentLockRepository(
   }
 
   override fun getLockedAgents(): List<String> {
-    return sqlRetry.withRetry(RetryCategory.READ) {
+    return sqlRetry.withRetry(READ) {
       jooq.select(AGENT_LOCK.LOCK_NAME)
         .from(AGENT_LOCK)
         .fetch(AGENT_LOCK.LOCK_NAME)
