@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.PeriodicallyCheckedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,23 +33,23 @@ class CheckScheduler(
 ) : CoroutineScope {
   override val coroutineContext: CoroutineContext = Dispatchers.IO
 
-  private var enabled = false
+  private val enabled = AtomicBoolean(false)
 
   @EventListener(ApplicationUp::class)
   fun onApplicationUp() {
     log.info("Application up, enabling scheduled resource checks")
-    enabled = true
+    enabled.set(true)
   }
 
   @EventListener(ApplicationDown::class)
   fun onApplicationDown() {
     log.info("Application down, disabling scheduled resource checks")
-    enabled = false
+    enabled.set(false)
   }
 
   @Scheduled(fixedDelayString = "\${keel.resource-check.frequency:PT1S}")
   fun checkResources() {
-    if (enabled) {
+    if (enabled.get()) {
       log.debug("Starting scheduled resource validation…")
       publisher.publishEvent(ScheduledResourceCheckStarting)
 
@@ -68,7 +69,7 @@ class CheckScheduler(
 
   @Scheduled(fixedDelayString = "\${keel.environment-check.frequency:PT1S}")
   fun checkEnvironments() {
-    if (enabled) {
+    if (enabled.get()) {
       log.debug("Starting scheduled environment validation…")
       publisher.publishEvent(ScheduledEnvironmentCheckStarting)
 
@@ -88,17 +89,15 @@ class CheckScheduler(
 
   @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1M}")
   fun invokeAgent() {
-    if (enabled) {
+    if (enabled.get()) {
       agentLockRepository.agents.forEach {
         val agentName: String = it.javaClass.simpleName
         val lockAcquired = agentLockRepository.tryAcquireLock(agentName, it.lockTimeoutSeconds)
         if (lockAcquired) {
-          val job = launch {
-            it.invokeAgent()
-          }
-          runBlocking {
-            job.join()
-          }
+            runBlocking {
+              log.debug("invoking $agentName")
+              it.invokeAgent()
+            }
           log.debug("invoking $agentName completed")
         }
       }
