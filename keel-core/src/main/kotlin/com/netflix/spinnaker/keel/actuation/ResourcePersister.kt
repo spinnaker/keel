@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.id
 import com.netflix.spinnaker.keel.core.api.normalize
+import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
@@ -77,8 +78,10 @@ class ResourcePersister(
     try {
       validate(new)
     } catch (e: ValidationException) {
-      log.warn("Validation of ${new.name} failed, deleting delivery config")
-      deleteDeliveryConfig(new.name)
+      log.warn("Validation of ${new.name} failed, deleting already persisted resources")
+      new.resources.forEach { resource ->
+        resourceRepository.delete(resource.id)
+      }
       throw e
     }
 
