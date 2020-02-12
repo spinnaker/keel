@@ -11,8 +11,6 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.core.api.SubmittedResource
-import com.netflix.spinnaker.keel.core.api.id
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
@@ -21,7 +19,6 @@ import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceDeleted
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
-import com.netflix.spinnaker.keel.exceptions.ValidationException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.Cleaner
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -63,11 +60,9 @@ class ResourcePersister(
         Environment(
           name = env.name,
           resources = env.resources.mapTo(mutableSetOf()) { resource ->
-            upsert(
-              resource.copy(
-                metadata = mapOf("serviceAccount" to deliveryConfig.serviceAccount) + resource.metadata
-              )
-            )
+            resource
+              .copy(metadata = mapOf("serviceAccount" to deliveryConfig.serviceAccount) + resource.metadata)
+              .normalize()
           },
           constraints = env.constraints,
           notifications = env.notifications
@@ -75,20 +70,16 @@ class ResourcePersister(
       }
     )
 
-    try {
-      validate(new)
-    } catch (e: ValidationException) {
-      log.warn("Validation of ${new.name} failed, deleting already persisted resources")
-      new.resources.forEach { resource ->
-        resourceRepository.delete(resource.id)
-      }
-      throw e
-    }
+    validate(new)
 
+    new.resources.forEach { resource ->
+      upsert(resource)
+    }
     new.artifacts.forEach { artifact ->
       artifact.register()
     }
     deliveryConfigRepository.store(new)
+
     if (old != null) {
       cleaner.removeResources(old, new)
     }
@@ -103,7 +94,7 @@ class ResourcePersister(
     val distinct = resources.distinct()
 
     if (resources.size != distinct.size) {
-      val duplicates = resources.subtract(distinct).distinct()
+      val duplicates = resources.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList()
       val envToResources: Map<String, MutableList<String>> = config.environments
         .map { env -> env.name to env.resources.map { it.id }.toMutableList() }.toMap()
       val envsAndDuplicateResources = envToResources
@@ -122,7 +113,7 @@ class ResourcePersister(
     cleaner.delete(deliveryConfigName)
   }
 
-  fun <T : ResourceSpec> upsert(resource: SubmittedResource<T>): Resource<T> =
+  fun <T : ResourceSpec> upsert(resource: Resource<T>): Resource<T> =
     resource.let {
       if (it.id.isRegistered()) {
         update(it.id, it)
@@ -131,9 +122,8 @@ class ResourcePersister(
       }
     }
 
-  fun <T : ResourceSpec> create(resource: SubmittedResource<T>): Resource<T> =
+  fun <T : ResourceSpec> create(resource: Resource<T>): Resource<T> =
     resource
-      .normalize()
       .also {
         log.debug("Creating $it")
         resourceRepository.store(it)
@@ -141,13 +131,13 @@ class ResourcePersister(
       }
 
   @Suppress("UNCHECKED_CAST")
-  private fun <T : ResourceSpec> handlerFor(resource: SubmittedResource<T>) =
+  private fun <T : ResourceSpec> handlerFor(resource: Resource<T>) =
     handlers.supporting(
       resource.apiVersion,
       resource.kind
     ) as ResourceHandler<T, *>
 
-  fun <T : ResourceSpec> update(id: String, updated: SubmittedResource<T>): Resource<T> {
+  fun <T : ResourceSpec> update(id: String, updated: Resource<T>): Resource<T> {
     log.debug("Updating $id")
     val handler = handlerFor(updated)
     @Suppress("UNCHECKED_CAST")
