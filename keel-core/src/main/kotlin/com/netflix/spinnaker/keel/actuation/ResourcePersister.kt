@@ -19,6 +19,8 @@ import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceDeleted
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
+import com.netflix.spinnaker.keel.exceptions.ValidationException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.Cleaner
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -71,6 +73,15 @@ class ResourcePersister(
         )
       }
     )
+
+    try {
+      validate(new)
+    } catch (e: ValidationException) {
+      log.warn("Validation of ${new.name} failed, deleting delivery config")
+      deleteDeliveryConfig(new.name)
+      throw e
+    }
+
     new.artifacts.forEach { artifact ->
       artifact.register()
     }
@@ -79,6 +90,29 @@ class ResourcePersister(
       cleaner.removeResources(old, new)
     }
     return new
+  }
+
+  /**
+   * Validates that resources have unique ids, throws an exception if invalid
+   */
+  private fun validate(config: DeliveryConfig) {
+    val resources = config.environments.map { it.resources }.flatten().map { it.id }
+    val distinct = resources.distinct()
+
+    if (resources.size != distinct.size) {
+      val duplicates = resources.subtract(distinct).distinct()
+      val envToResources: Map<String, MutableList<String>> = config.environments
+        .map { env -> env.name to env.resources.map { it.id }.toMutableList() }.toMap()
+      val envsAndDuplicateResources = envToResources
+        .filterValues { rs: List<String> ->
+          // remove all the resources we don't care about from this mapping
+          rs.filter { it in duplicates }
+          // if there are resources left that we care about, leave it in the map
+          rs.isNotEmpty()
+        }
+      log.error("Validation failed for ${config.name}, duplicates found: $envsAndDuplicateResources")
+      throw DuplicateResourceIdException(duplicates, envsAndDuplicateResources)
+    }
   }
 
   fun deleteDeliveryConfig(deliveryConfigName: String) {

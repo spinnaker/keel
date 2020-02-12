@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
@@ -16,6 +17,7 @@ import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import com.netflix.spinnaker.keel.persistence.Cleaner
 import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
@@ -26,6 +28,7 @@ import dev.minutest.MinutestFixture
 import dev.minutest.Tests
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.time.Clock
@@ -34,6 +37,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.failed
 import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isA
@@ -54,7 +58,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
   ) {
     private val clock: Clock = Clock.systemDefaultZone()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
-    private val cleaner: Cleaner = mockk(relaxUnitFun = true)
+    val cleaner: Cleaner = mockk(relaxUnitFun = true)
     private val subject: ResourcePersister = ResourcePersister(
       deliveryConfigRepository,
       artifactRepository,
@@ -319,7 +323,88 @@ internal class ResourcePersisterTests : JUnit5Minutests {
           }
         }
       }
+
+      context("a delivery config with non-unique resource ids errors while persisting ") {
+        before {
+          every { cleaner.delete("keel-manifest") } returns createDeliveryConfig()
+        }
+        test("an error is thrown and config is deleted") {
+          expectCatching {
+            create(
+              SubmittedDeliveryConfig(
+                name = "keel-manifest",
+                application = "keel",
+                serviceAccount = "keel@spinnaker",
+                artifacts = setOf(DebianArtifact(name = "keel")),
+                environments = setOf(
+                  SubmittedEnvironment(
+                    name = "test",
+                    resources = setOf(
+                      SubmittedResource(
+                        apiVersion = "test.$SPINNAKER_API_V1",
+                        kind = "whatever",
+                        spec = DummyResourceSpec("test", "im a twin", "keel")
+                      )
+                    ),
+                    constraints = emptySet()
+                  ),
+                  SubmittedEnvironment(
+                    name = "prod",
+                    resources = setOf(
+                      SubmittedResource(
+                        apiVersion = "test.$SPINNAKER_API_V1",
+                        kind = "whatever",
+                        spec = DummyResourceSpec("test", "im a twin", "keel")
+                      )
+                    ),
+                    constraints = emptySet()
+                  )
+                )
+              )
+            )
+          }.failed()
+            .isA<DuplicateResourceIdException>()
+
+          verify(exactly = 1) { cleaner.delete("keel-manifest") }
+        }
+      }
     }
+  }
+
+  // dummy response form the resource cleaner
+  private fun createDeliveryConfig(): DeliveryConfig {
+    return DeliveryConfig(
+      name = "keel-manifest",
+      application = "keel",
+      serviceAccount = "keel@spinnaker",
+      artifacts = setOf(DebianArtifact(name = "keel")),
+      environments = setOf(
+        Environment(
+          name = "test",
+          resources = setOf(
+            Resource(
+              apiVersion = "test.$SPINNAKER_API_V1",
+              kind = "whatever",
+              spec = DummyResourceSpec("test", "im a twin", "keel"),
+              metadata = mapOf("serviceAccount" to "keel@spinnaker", "id" to "test", "application" to "keel")
+            )
+          ),
+          constraints = emptySet()
+        ),
+        Environment(
+          name = "prod",
+          resources = setOf(
+            Resource(
+              apiVersion = "test.$SPINNAKER_API_V1",
+              kind = "whatever",
+              spec = DummyResourceSpec("test", "im a twin", "keel"),
+              metadata = mapOf("serviceAccount" to "keel@spinnaker", "id" to "test", "application" to "keel")
+            )
+          ),
+          constraints = emptySet()
+        )
+      )
+    )
   }
 }
 
