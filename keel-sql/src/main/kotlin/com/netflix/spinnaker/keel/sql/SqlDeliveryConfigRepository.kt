@@ -40,6 +40,7 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.select
 import org.jooq.util.mysql.MySQLDSL
+import org.slf4j.LoggerFactory
 
 class SqlDeliveryConfigRepository(
   private val jooq: DSLContext,
@@ -48,6 +49,7 @@ class SqlDeliveryConfigRepository(
   private val mapper: ObjectMapper,
   private val sqlRetry: SqlRetry
 ) : DeliveryConfigRepository {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun getByApplication(application: String): Collection<DeliveryConfig> =
     sqlRetry.withRetry(READ) {
@@ -103,6 +105,24 @@ class SqlDeliveryConfigRepository(
           .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(uid))
           .execute()
       }
+      sqlRetry.withRetry(WRITE) {
+        jooq
+          .select(CURRENT_CONSTRAINT.APPLICATION, CURRENT_CONSTRAINT.TYPE)
+          .from(CURRENT_CONSTRAINT)
+          .where(CURRENT_CONSTRAINT.ENVIRONMENT_UID.eq(uid))
+          .fetch { (application, type) ->
+            jooq.deleteFrom(CURRENT_CONSTRAINT)
+              .where(
+                CURRENT_CONSTRAINT.APPLICATION.eq(application),
+                CURRENT_CONSTRAINT.ENVIRONMENT_UID.eq(uid),
+                CURRENT_CONSTRAINT.TYPE.eq(type))
+              .execute()
+          }
+        jooq
+          .deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
+          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(uid))
+          .execute()
+      }
     }
     return deliveryConfigUIDs.size
   }
@@ -149,10 +169,6 @@ class SqlDeliveryConfigRepository(
       jooq.transaction { config ->
         val txn = DSL.using(config)
         txn
-          .deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
-          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid))
-          .execute()
-        txn
           .select(CURRENT_CONSTRAINT.APPLICATION, CURRENT_CONSTRAINT.TYPE)
           .from(CURRENT_CONSTRAINT)
           .where(CURRENT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid))
@@ -164,6 +180,10 @@ class SqlDeliveryConfigRepository(
                 CURRENT_CONSTRAINT.TYPE.eq(type))
               .execute()
           }
+        txn
+          .deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
+          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid))
+          .execute()
         txn
           .deleteFrom(ENVIRONMENT_ARTIFACT_VERSIONS)
           .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid))
@@ -562,31 +582,41 @@ class SqlDeliveryConfigRepository(
         }
     }
 
-    return constraintResult.map { (envId,
-                                    artifactVersion,
-                                    type,
-                                    createdAt,
-                                    status,
-                                    judgedBy,
-                                    judgedAt,
-                                    comment,
-                                    attributes) ->
-      ConstraintState(
-        deliveryConfigsByEnv[envId]
-          ?: error("Environment id $envId does not belong to a delivery-config"),
-        environmentNames[envId] ?: error("Invalid environment id $envId"),
-        artifactVersion,
-        type,
-        ConstraintStatus.valueOf(status),
-        createdAt.toInstant(ZoneOffset.UTC),
-        judgedBy,
-        when (judgedAt) {
-          null -> null
-          else -> judgedAt.toInstant(ZoneOffset.UTC)
-        },
-        comment,
-        mapper.readValue(attributes)
-      )
+    return constraintResult.mapNotNull { (envId,
+                                           artifactVersion,
+                                           type,
+                                           createdAt,
+                                           status,
+                                           judgedBy,
+                                           judgedAt,
+                                           comment,
+                                           attributes) ->
+      if (deliveryConfigsByEnv.containsKey(envId) && environmentNames.containsKey(envId)) {
+        ConstraintState(
+          deliveryConfigsByEnv[envId]
+            ?: error("Environment id $envId does not belong to a delivery-config"),
+          environmentNames[envId] ?: error("Invalid environment id $envId"),
+          artifactVersion,
+          type,
+          ConstraintStatus.valueOf(status),
+          createdAt.toInstant(ZoneOffset.UTC),
+          judgedBy,
+          when (judgedAt) {
+            null -> null
+            else -> judgedAt.toInstant(ZoneOffset.UTC)
+          },
+          comment,
+          mapper.readValue(attributes)
+        )
+      } else {
+        log.warn(
+          "constraint state for " +
+            "envId=$envId, " +
+            "artifactVersion=$artifactVersion, " +
+            "type=$type, " +
+            " does not belong to a valid environment.")
+        null
+      }
     }
   }
 
