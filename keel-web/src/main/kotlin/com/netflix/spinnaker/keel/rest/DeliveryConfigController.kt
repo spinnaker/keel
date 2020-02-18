@@ -9,8 +9,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.EnvironmentDiff
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import io.swagger.v3.oas.annotations.Operation
@@ -32,8 +31,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/delivery-configs"])
 class DeliveryConfigController(
   private val resourcePersister: ResourcePersister,
-  private val deliveryConfigRepository: DeliveryConfigRepository,
-  private val artifactRepository: ArtifactRepository,
+  private val combinedRepository: CombinedRepository,
   private val adHocDiffer: AdHocDiffer
 ) {
   @Operation(
@@ -57,14 +55,14 @@ class DeliveryConfigController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun get(@PathVariable("name") name: String): DeliveryConfig =
-    deliveryConfigRepository.get(name)
+    combinedRepository.deliveryConfigRepository.get(name)
 
   @DeleteMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun delete(@PathVariable("name") name: String): DeliveryConfig {
-    val deliveryConfig = deliveryConfigRepository.get(name)
+    val deliveryConfig = combinedRepository.deliveryConfigRepository.get(name)
     log.info("Deleting delivery config $name: $deliveryConfig")
     resourcePersister.deleteDeliveryConfig(name)
     return deliveryConfig
@@ -96,8 +94,8 @@ class DeliveryConfigController(
   fun getArtifacts(
     @PathVariable("name") name: String
   ): List<EnvironmentArtifactsSummary> =
-    deliveryConfigRepository.get(name).let {
-      artifactRepository.versionsByEnvironment(it)
+    combinedRepository.deliveryConfigRepository.get(name).let {
+      combinedRepository.artifactRepository.versionsByEnvironment(it)
     }
 
   @GetMapping(
@@ -109,7 +107,7 @@ class DeliveryConfigController(
     @PathVariable("environment") environment: String,
     @RequestParam("limit") limit: Int?
   ): List<ConstraintState> =
-    deliveryConfigRepository.constraintStateFor(name, environment, limit ?: DEFAULT_MAX_EVENTS)
+    combinedRepository.deliveryConfigRepository.constraintStateFor(name, environment, limit ?: DEFAULT_MAX_EVENTS)
 
   @PostMapping(
     path = ["/{name}/environment/{environment}/constraint"],
@@ -124,14 +122,14 @@ class DeliveryConfigController(
     @PathVariable("environment") environment: String,
     @RequestBody status: UpdatedConstraintStatus
   ) {
-    val currentState = deliveryConfigRepository.getConstraintState(
+    val currentState = combinedRepository.deliveryConfigRepository.getConstraintState(
       name,
       environment,
       status.artifactVersion,
       status.type) ?: throw InvalidConstraintException(
       "$name/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
 
-    deliveryConfigRepository.storeConstraintState(
+    combinedRepository.deliveryConfigRepository.storeConstraintState(
       currentState.copy(
         status = status.status,
         comment = status.comment ?: currentState.comment,

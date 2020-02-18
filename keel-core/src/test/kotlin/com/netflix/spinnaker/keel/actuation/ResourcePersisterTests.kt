@@ -19,11 +19,13 @@ import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import com.netflix.spinnaker.keel.persistence.Cleaner
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.get
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
+import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import dev.minutest.MinutestFixture
 import dev.minutest.Tests
 import dev.minutest.junit.JUnit5Minutests
@@ -51,19 +53,14 @@ internal class ResourcePersisterTests : JUnit5Minutests {
 
   @MinutestFixture
   data class Fixture(
-    val artifactRepository: InMemoryArtifactRepository = InMemoryArtifactRepository(),
-    val resourceRepository: InMemoryResourceRepository = InMemoryResourceRepository(),
-    val deliveryConfigRepository: InMemoryDeliveryConfigRepository = InMemoryDeliveryConfigRepository()
+    val combinedRepository: CombinedRepository = combinedInMemoryRepository()
   ) {
     private val clock: Clock = Clock.systemDefaultZone()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
     val cleaner: Cleaner = mockk(relaxUnitFun = true)
     private val subject: ResourcePersister = ResourcePersister(
-      deliveryConfigRepository,
-      artifactRepository,
-      resourceRepository,
+      combinedRepository,
       listOf(DummyResourceHandler),
-      cleaner,
       clock,
       publisher
     )
@@ -82,7 +79,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
     }
 
     fun resourcesDueForCheck() =
-      resourceRepository.itemsDueForCheck(Duration.ofMinutes(1), Int.MAX_VALUE)
+      combinedRepository.resourceRepository.itemsDueForCheck(Duration.ofMinutes(1), Int.MAX_VALUE)
 
     fun create(submittedDeliveryConfig: SubmittedDeliveryConfig) {
       deliveryConfig = subject.upsert(submittedDeliveryConfig)
@@ -96,9 +93,9 @@ internal class ResourcePersisterTests : JUnit5Minutests {
     context("persisting individual resources") {
 
       after {
-        deliveryConfigRepository.dropAll()
-        artifactRepository.dropAll()
-        resourceRepository.dropAll()
+        (combinedRepository.deliveryConfigRepository as InMemoryDeliveryConfigRepository).dropAll()
+        (combinedRepository.artifactRepository as InMemoryArtifactRepository).dropAll()
+        (combinedRepository.resourceRepository as InMemoryResourceRepository).dropAll()
       }
 
       context("resource lifecycle") {
@@ -113,7 +110,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
           }
 
           test("stores the resource") {
-            val persistedResource = resourceRepository.get<DummyResourceSpec>(resource.id)
+            val persistedResource = combinedRepository.resourceRepository.get<DummyResourceSpec>(resource.id)
             expectThat(persistedResource) {
               get { id }.isEqualTo(resource.id)
               get { spec.data }.isEqualTo("o hai")
@@ -140,7 +137,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
             }
 
             test("stores the updated resource") {
-              expectThat(resourceRepository.get<DummyResourceSpec>(resource.id))
+              expectThat(combinedRepository.resourceRepository.get<DummyResourceSpec>(resource.id))
                 .get { spec.data }
                 .isEqualTo("kthxbye")
             }
@@ -182,9 +179,9 @@ internal class ResourcePersisterTests : JUnit5Minutests {
 
     context("persisting delivery config manifests") {
       after {
-        deliveryConfigRepository.dropAll()
-        artifactRepository.dropAll()
-        resourceRepository.dropAll()
+        (combinedRepository.deliveryConfigRepository as InMemoryDeliveryConfigRepository).dropAll()
+        (combinedRepository.artifactRepository as InMemoryArtifactRepository).dropAll()
+        (combinedRepository.resourceRepository as InMemoryResourceRepository).dropAll()
       }
 
       context("a delivery config with new artifacts and resources is persisted") {
@@ -224,21 +221,21 @@ internal class ResourcePersisterTests : JUnit5Minutests {
         }
 
         test("delivery config is persisted") {
-          expectCatching { deliveryConfigRepository.get(deliveryConfig.name) }
+          expectCatching { combinedRepository.deliveryConfigRepository.get(deliveryConfig.name) }
             .succeeded()
         }
 
         test("artifacts are persisted") {
-          expectThat(artifactRepository.isRegistered("keel", deb)).isTrue()
+          expectThat(combinedRepository.artifactRepository.isRegistered("keel", deb)).isTrue()
           verify { publisher.publishEvent(ArtifactRegisteredEvent(DebianArtifact(name = "keel", deliveryConfigName = "keel-manifest"))) }
         }
 
         test("individual resources are persisted") {
-          expectThat(resourceRepository.size()).isEqualTo(2)
+          expectThat((combinedRepository.resourceRepository as InMemoryResourceRepository).size()).isEqualTo(2)
 
           deliveryConfig.resources.map { it.id }.forEach { id ->
             expectCatching {
-              resourceRepository.get<DummyResourceSpec>(id)
+              combinedRepository.resourceRepository.get<DummyResourceSpec>(id)
             }.succeeded()
           }
         }
@@ -248,7 +245,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
         before {
           val artifact = DebianArtifact(name = "keel", deliveryConfigName = "keel-manifest")
             .also {
-              artifactRepository.register(it)
+              combinedRepository.artifactRepository.register(it)
             }
 
           val resource1 = SubmittedResource(
@@ -294,17 +291,17 @@ internal class ResourcePersisterTests : JUnit5Minutests {
         }
 
         test("delivery config is persisted") {
-          expectCatching { deliveryConfigRepository.get(deliveryConfig.name) }
+          expectCatching { combinedRepository.deliveryConfigRepository.get(deliveryConfig.name) }
             .succeeded()
         }
 
         test("resources are not duplicated") {
-          expectThat(resourceRepository.size()).isEqualTo(2)
+          expectThat((combinedRepository.resourceRepository as InMemoryResourceRepository).size()).isEqualTo(2)
         }
 
         test("resources are updated") {
           deliveryConfig.resources.forEach { resource ->
-            expectThat(resourceRepository.get<ResourceSpec>(resource.id))
+            expectThat(combinedRepository.resourceRepository.get<ResourceSpec>(resource.id))
               .get { spec }
               .isEqualTo(resource.spec)
               .isA<DummyResourceSpec>()
@@ -352,7 +349,7 @@ internal class ResourcePersisterTests : JUnit5Minutests {
           }.failed()
             .isA<DuplicateResourceIdException>()
 
-          expectThat(resourceRepository.size()).isEqualTo(0)
+          expectThat((combinedRepository.resourceRepository as InMemoryResourceRepository).size()).isEqualTo(0)
         }
       }
     }

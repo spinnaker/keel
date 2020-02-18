@@ -16,16 +16,11 @@ import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
-import com.netflix.spinnaker.keel.events.ResourceDeleted
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.Cleaner
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
-import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.get
 import java.time.Clock
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -35,18 +30,15 @@ import org.springframework.transaction.annotation.Transactional
 
 @Component
 class ResourcePersister(
-  private val deliveryConfigRepository: DeliveryConfigRepository,
-  private val artifactRepository: ArtifactRepository,
-  private val resourceRepository: ResourceRepository,
+  private val combinedRepository: CombinedRepository,
   private val handlers: List<ResourceHandler<*, *>>,
-  private val cleaner: Cleaner,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher
 ) {
   @Transactional(propagation = REQUIRED)
   fun upsert(deliveryConfig: SubmittedDeliveryConfig): DeliveryConfig {
     val old = try {
-      deliveryConfigRepository.get(deliveryConfig.name)
+      combinedRepository.deliveryConfigRepository.get(deliveryConfig.name)
     } catch (e: NoSuchDeliveryConfigException) {
       null
     }
@@ -78,10 +70,10 @@ class ResourcePersister(
     new.artifacts.forEach { artifact ->
       artifact.register()
     }
-    deliveryConfigRepository.store(new)
+    combinedRepository.deliveryConfigRepository.store(new)
 
     if (old != null) {
-      cleaner.removeResources(old, new)
+      combinedRepository.removeResources(old, new)
     }
     return new
   }
@@ -110,7 +102,7 @@ class ResourcePersister(
   }
 
   fun deleteDeliveryConfig(deliveryConfigName: String) {
-    cleaner.delete(deliveryConfigName)
+    combinedRepository.delete(deliveryConfigName)
   }
 
   fun <T : ResourceSpec> upsert(resource: Resource<T>): Resource<T> =
@@ -126,7 +118,7 @@ class ResourcePersister(
     resource
       .also {
         log.debug("Creating $it")
-        resourceRepository.store(it)
+        combinedRepository.resourceRepository.store(it)
         publisher.publishEvent(ResourceCreated(it, clock))
       }
 
@@ -141,7 +133,7 @@ class ResourcePersister(
     log.debug("Updating $id")
     val handler = handlerFor(updated)
     @Suppress("UNCHECKED_CAST")
-    val existing = resourceRepository.get(id) as Resource<T>
+    val existing = combinedRepository.resourceRepository.get(id) as Resource<T>
     val resource = existing.withSpec(updated.spec, handler.supportedKind.specClass)
 
     val diff = DefaultResourceDiff(resource.spec, existing.spec)
@@ -150,7 +142,7 @@ class ResourcePersister(
       log.debug("Resource {} updated: {}", resource.id, diff.toDebug())
       resource
         .also {
-          resourceRepository.store(it)
+          combinedRepository.resourceRepository.store(it)
           publisher.publishEvent(ResourceUpdated(it, diff.toUpdateJson(), clock))
         }
     } else {
@@ -166,24 +158,16 @@ class ResourcePersister(
     return copy(spec = spec as T)
   }
 
-  fun deleteResource(id: String): Resource<out ResourceSpec> =
-    resourceRepository
-      .get<ResourceSpec>(id)
-      .also {
-        resourceRepository.delete(id)
-        publisher.publishEvent(ResourceDeleted(it, clock))
-      }
-
   private fun String.isRegistered(): Boolean =
     try {
-      resourceRepository.get(this)
+      combinedRepository.resourceRepository.get(this)
       true
     } catch (e: NoSuchResourceException) {
       false
     }
 
   private fun DeliveryArtifact.register() {
-    artifactRepository.register(this)
+    combinedRepository.artifactRepository.register(this)
     publisher.publishEvent(ArtifactRegisteredEvent(this))
   }
 

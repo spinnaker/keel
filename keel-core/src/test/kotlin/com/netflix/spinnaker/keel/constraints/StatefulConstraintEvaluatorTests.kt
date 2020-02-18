@@ -9,7 +9,9 @@ import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -29,13 +31,14 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
 
   class Fixture {
     val deliveryConfigRepository: DeliveryConfigRepository = mockk(relaxed = true)
+    val combinedRepository: CombinedRepository = combinedMockRepository(deliveryConfigRepository = deliveryConfigRepository)
     val eventPublisher: ApplicationEventPublisher = mockk(relaxed = true)
     val fakeStatefulConstraintEvaluatorDelegate: StatefulConstraintEvaluator<FakeConstraint> = mockk(relaxed = true)
 
     class FakeConstraint : StatefulConstraint("fake")
 
     class FakeStatefulConstraintEvaluator(
-      override val deliveryConfigRepository: DeliveryConfigRepository,
+      override val combinedRepository: CombinedRepository,
       override val eventPublisher: ApplicationEventPublisher,
       val delegate: StatefulConstraintEvaluator<FakeConstraint>
     ) : StatefulConstraintEvaluator<FakeConstraint>() {
@@ -86,7 +89,7 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
     )
 
     val subject = FakeStatefulConstraintEvaluator(
-      deliveryConfigRepository, eventPublisher, fakeStatefulConstraintEvaluatorDelegate)
+      combinedRepository, eventPublisher, fakeStatefulConstraintEvaluatorDelegate)
   }
 
   fun tests() = rootContext<Fixture> {

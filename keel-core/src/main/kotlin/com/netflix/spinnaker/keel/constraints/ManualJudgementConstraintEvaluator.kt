@@ -4,14 +4,14 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import java.time.Clock
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
 class ManualJudgementConstraintEvaluator(
-  override val deliveryConfigRepository: DeliveryConfigRepository,
+  override val combinedRepository: CombinedRepository,
   private val clock: Clock,
   override val eventPublisher: ApplicationEventPublisher
 ) : StatefulConstraintEvaluator<ManualJudgementConstraint>() {
@@ -31,7 +31,8 @@ class ManualJudgementConstraintEvaluator(
     }
 
     if (state.timedOut(constraint.timeout, clock.instant())) {
-      deliveryConfigRepository
+      combinedRepository
+        .deliveryConfigRepository
         .storeConstraintState(
           state.copy(
             status = ConstraintStatus.FAIL,
