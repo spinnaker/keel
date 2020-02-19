@@ -33,7 +33,7 @@ class JavaTimePropertyCustomizer : PropertyCustomizer {
         // See https://github.com/springdoc/springdoc-openapi/issues/441
         type("string")
         format(format)
-        properties = emptyMap()
+        properties = null
       }
     }
 }

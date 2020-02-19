@@ -245,6 +245,7 @@ class ApiTests : JUnit5Minutests {
         .and {
           path("type").textValue().isEqualTo("string")
           path("format").textValue().isEqualTo("duration")
+          path("properties").isMissing()
         }
     }
 
@@ -253,6 +254,7 @@ class ApiTests : JUnit5Minutests {
         .and {
           path("type").textValue().isEqualTo("string")
           path("format").textValue().isEqualTo("date-time")
+          path("properties").isMissing()
         }
     }
 
@@ -271,6 +273,13 @@ class ApiTests : JUnit5Minutests {
     test("can load schema properties from a YAML file") {
       at("/components/schemas/ClusterSpec/description")
         .isTextual()
+    }
+
+    test("can overrides a property's required status from a YAML file") {
+      at("/components/schemas/ClusterSpec/required")
+        .isArray()
+        .map { it.textValue() }
+        .doesNotContain("locations")
     }
   }
 }
