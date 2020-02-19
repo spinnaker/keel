@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
+import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -105,7 +106,13 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       .versionsByEnvironment(manifest)
       .first { it.name == environment.name }
       .artifacts
-      .first { it.name == artifact.name && it.type == artifact.type }
+      .first {
+        if (artifact is DebianArtifact) {
+          it.name == artifact.name && it.type == artifact.type && artifact.statuses == it.statuses.toList()
+        } else {
+          it.name == artifact.name && it.type == artifact.type
+        }
+      }
       .versions
   }
 
@@ -431,6 +438,12 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             .isEqualTo(version4)
             .isEqualTo(pin1.version)
         }
+
+        test("pinned version cannot be vetoed") {
+          subject.pinEnvironment(manifest, pin1)
+          expectThat(subject.markAsVetoedIn(manifest, artifact2, pin1.version!!, pin1.targetEnvironment))
+            .isFalse()
+        }
       }
     }
 
@@ -463,6 +476,53 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           that(subject.getAll().size).isEqualTo(3)
           that(subject.getAll(docker).size).isEqualTo(1)
           that(subject.getAll(deb).size).isEqualTo(2)
+        }
+      }
+    }
+
+    context("the latest version is vetoed") {
+      before {
+        subject.flush()
+        persist()
+        subject.approveVersionFor(manifest, artifact2, version4, environment2.name)
+        subject.approveVersionFor(manifest, artifact2, version5, environment2.name)
+        subject.markAsVetoedIn(manifest, artifact2, version5, environment2.name)
+      }
+
+      test("latestVersionApprovedIn reflects the veto") {
+        expectThat(subject.latestVersionApprovedIn(manifest, artifact2, environment2.name))
+          .isEqualTo(version4)
+      }
+
+      test("vetoedEnvironmentVersions reflects the veto") {
+        expectThat(subject.vetoedEnvironmentVersions(manifest))
+          .isEqualTo(
+            listOf(
+              EnvironmentArtifactVetoes(
+                deliveryConfigName = manifest.name,
+                targetEnvironment = environment2.name,
+                artifact = artifact2,
+                versions = mutableSetOf(version5)
+              )
+            )
+          )
+      }
+
+      test("version status reflects the veto") {
+        expectThat(versionsIn(environment2, artifact2)) {
+          get(ArtifactVersionStatus::vetoed).containsExactly(version5)
+          get(ArtifactVersionStatus::approved).containsExactly(version4)
+        }
+      }
+
+      test("unveto the vetoed version") {
+        subject.deleteVeto(manifest, artifact2, version5, environment2.name)
+
+        expectThat(subject.latestVersionApprovedIn(manifest, artifact2, environment2.name))
+          .isEqualTo(version5)
+        expectThat(versionsIn(environment2, artifact2)) {
+          get(ArtifactVersionStatus::vetoed).isEmpty()
+          get(ArtifactVersionStatus::approved).containsExactlyInAnyOrder(version4, version5)
         }
       }
     }

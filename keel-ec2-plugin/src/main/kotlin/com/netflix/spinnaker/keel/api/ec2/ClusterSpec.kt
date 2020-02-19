@@ -5,12 +5,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.netflix.spinnaker.keel.api.ArtifactVersioned
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.UnhappyControl
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
@@ -36,7 +39,11 @@ fun ClusterSpec.resolve(): Set<ServerGroup> =
       dependencies = resolveDependencies(it.name),
       health = resolveHealth(it.name),
       scaling = resolveScaling(it.name),
-      tags = defaults.tags + overrides[it.name]?.tags
+      tags = defaults.tags + overrides[it.name]?.tags,
+      deliveryArtifact = deliveryArtifact,
+      artifactVersion = artifactVersion,
+      maxDiffCount = maxDiffCount,
+      unhappyWaitTime = unhappyWaitTime
     )
   }
     .toSet()
@@ -105,8 +112,17 @@ data class ClusterSpec(
   override val locations: SubnetAwareLocations,
   private val _defaults: ServerGroupSpec,
   @JsonInclude(NON_EMPTY)
-  val overrides: Map<String, ServerGroupSpec> = emptyMap()
-) : Monikered, Locatable<SubnetAwareLocations> {
+  val overrides: Map<String, ServerGroupSpec> = emptyMap(),
+  @JsonIgnore
+  override val deliveryArtifact: DeliveryArtifact? = null,
+  @JsonIgnore
+  override val artifactVersion: String? = null,
+  @JsonIgnore
+  override val maxDiffCount: Int? = 2,
+  @JsonIgnore
+  // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
+  override val unhappyWaitTime: Duration? = Duration.ZERO
+) : Monikered, Locatable<SubnetAwareLocations>, ArtifactVersioned, UnhappyControl {
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
 
