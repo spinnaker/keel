@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.type.TypeBase
 import io.swagger.v3.core.converter.AnnotatedType
 import java.lang.reflect.ParameterizedType
 
-internal val AnnotatedType.baseType: Class<*>
+internal val AnnotatedType.rawClass: Class<*>
   get() = type.let {
     when (it) {
       is TypeBase -> it.rawClass

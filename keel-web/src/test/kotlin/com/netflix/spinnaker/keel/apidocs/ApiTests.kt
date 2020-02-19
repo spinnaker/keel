@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -47,6 +49,7 @@ import strikt.jackson.has
 import strikt.jackson.isArray
 import strikt.jackson.isMissing
 import strikt.jackson.isObject
+import strikt.jackson.isTextual
 import strikt.jackson.path
 import strikt.jackson.textValue
 
@@ -113,21 +116,6 @@ class ApiTests : JUnit5Minutests {
         )
     }
 
-    test("contains a schema for Constraint with all sub-types") {
-      at("/components/schemas/Constraint")
-        .isObject()
-        .path("oneOf")
-        .isArray()
-        .findValuesAsText("\$ref")
-        .containsExactlyInAnyOrder(
-          constructRef("CanaryConstraint"),
-          constructRef("DependsOnConstraint"),
-          constructRef("ManualJudgementConstraint"),
-          constructRef("PipelineConstraint"),
-          constructRef("TimeWindowConstraint")
-        )
-    }
-
     sequenceOf(
       ApplicationLoadBalancerSpec::class,
       ClassicLoadBalancerSpec::class,
@@ -144,6 +132,21 @@ class ApiTests : JUnit5Minutests {
         }
       }
 
+    test("contains a schema for Constraint with all sub-types") {
+      at("/components/schemas/Constraint")
+        .isObject()
+        .path("oneOf")
+        .isArray()
+        .findValuesAsText("\$ref")
+        .containsExactlyInAnyOrder(
+          constructRef("CanaryConstraint"),
+          constructRef("DependsOnConstraint"),
+          constructRef("ManualJudgementConstraint"),
+          constructRef("PipelineConstraint"),
+          constructRef("TimeWindowConstraint")
+        )
+    }
+
     sequenceOf(
       CanaryConstraint::class,
       DependsOnConstraint::class,
@@ -154,6 +157,30 @@ class ApiTests : JUnit5Minutests {
       .map(KClass<*>::simpleName)
       .forEach { type ->
         test("Constraint sub-type $type has its own schema") {
+          at("/components/schemas/$type")
+            .isObject()
+        }
+      }
+
+    test("contains a schema for DeliveryArtifact with all sub-types") {
+      at("/components/schemas/DeliveryArtifact")
+        .isObject()
+        .path("oneOf")
+        .isArray()
+        .findValuesAsText("\$ref")
+        .containsExactlyInAnyOrder(
+          constructRef("DebianArtifact"),
+          constructRef("DockerArtifact")
+        )
+    }
+
+    sequenceOf(
+      DebianArtifact::class,
+      DockerArtifact::class
+    )
+      .map(KClass<*>::simpleName)
+      .forEach { type ->
+        test("DeliveryArtifact sub-type $type has its own schema") {
           at("/components/schemas/$type")
             .isObject()
         }
@@ -239,6 +266,11 @@ class ApiTests : JUnit5Minutests {
       at("/components/schemas/Moniker/properties/stack/nullable")
         .booleanValue()
         .isTrue()
+    }
+
+    test("can load schema properties from a YAML file") {
+      at("/components/schemas/ClusterSpec/description")
+        .isTextual()
     }
   }
 }

@@ -27,7 +27,7 @@ class JavaTimePropertyCustomizer : PropertyCustomizer {
 
   override fun customize(property: Schema<*>?, type: AnnotatedType): Schema<*>? =
     property?.apply {
-      val format = formattedTypes[type.baseType]
+      val format = formattedTypes[type.rawClass]
       if (format != null) {
         // OpenAPI ignores the return value so we have to just modify the schema in place.
         // See https://github.com/springdoc/springdoc-openapi/issues/441

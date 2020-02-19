@@ -32,16 +32,16 @@ class KotlinOptionalPropertyConverter : BaseModelConverter() {
   ): Schema<*>? =
     super.resolve(annotatedType, context, chain)
       ?.also { schema ->
-        if (annotatedType.baseType.isKotlinClass()) {
+        if (annotatedType.rawClass.isKotlinClass()) {
           if (annotatedType.isResolveAsRef) {
-            val referencedSchema = context.definedModels[annotatedType.baseType.simpleName]
+            val referencedSchema = context.definedModels[annotatedType.rawClass.simpleName]
             if (referencedSchema == null) {
-              log.warn("Referenced schema ${annotatedType.baseType.simpleName} not found")
+              log.warn("Referenced schema ${annotatedType.rawClass.simpleName} not found")
             } else {
-              applyRequired(annotatedType.baseType.kotlin, referencedSchema)
+              applyRequired(annotatedType.rawClass.kotlin, referencedSchema)
             }
           } else {
-            applyRequired(annotatedType.baseType.kotlin, schema)
+            applyRequired(annotatedType.rawClass.kotlin, schema)
           }
         }
       }
