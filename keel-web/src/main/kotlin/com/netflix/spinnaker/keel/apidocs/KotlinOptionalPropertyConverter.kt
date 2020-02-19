@@ -53,14 +53,17 @@ class KotlinOptionalPropertyConverter : BaseModelConverter() {
     if (constructor == null) {
       log.warn("No JsonCreator or constructor found for ${kotlinClass.qualifiedName}")
     } else {
-      schema.properties.forEach { (name, _) ->
+      schema.properties.forEach { (name, propertySchema) ->
         val param = constructor.findParameterByName(name)
         if (param == null) {
           log.warn("No parameter $name found on JsonCreator or constructor for ${kotlinClass.qualifiedName}")
-        } else if (!param.isOptional && !param.type.isMarkedNullable) {
-          if (schema.required == null || !schema.required.contains(name)) {
-            schema.addRequiredItem(name)
+        } else {
+          if (!param.isOptional && !param.type.isMarkedNullable) {
+            if (schema.required == null || !schema.required.contains(name)) {
+              schema.addRequiredItem(name)
+            }
           }
+          propertySchema.nullable = param.type.isMarkedNullable
         }
       }
     }

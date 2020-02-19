@@ -38,8 +38,11 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
+import strikt.assertions.isTrue
 import strikt.assertions.map
 import strikt.jackson.at
+import strikt.jackson.booleanValue
 import strikt.jackson.has
 import strikt.jackson.isArray
 import strikt.jackson.isMissing
@@ -224,6 +227,18 @@ class ApiTests : JUnit5Minutests {
           path("type").textValue().isEqualTo("string")
           path("format").textValue().isEqualTo("date-time")
         }
+    }
+
+    test("non-nullable properties are marked as non-nullable in the schema") {
+      at("/components/schemas/Moniker/properties/app/nullable")
+        .booleanValue()
+        .isFalse()
+    }
+
+    test("nullable properties are marked as nullable in the schema") {
+      at("/components/schemas/Moniker/properties/stack/nullable")
+        .booleanValue()
+        .isTrue()
     }
   }
 }
