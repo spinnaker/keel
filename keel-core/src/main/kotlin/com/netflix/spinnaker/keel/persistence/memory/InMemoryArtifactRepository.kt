@@ -356,7 +356,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
               type = artifact.type,
               statuses = when (artifact) {
                 is DebianArtifact -> artifact.statuses
-                else -> emptyList()
+                else -> emptySet()
               },
               versions = ArtifactVersionStatus(
                 current = statuses.filterValues { it == CURRENT }.keys.firstOrNull(),

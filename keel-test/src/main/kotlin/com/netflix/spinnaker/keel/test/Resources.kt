@@ -1,13 +1,13 @@
 package com.netflix.spinnaker.keel.test
 
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
-import com.netflix.spinnaker.keel.api.ArtifactVersioned
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.VersionedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.SimpleResourceHandler
@@ -157,7 +157,7 @@ data class DummyArtifactVersionedResourceSpec(
   override val application: String = "fnord",
   override val artifactVersion: String? = "fnord-42.0",
   override val deliveryArtifact: DeliveryArtifact? = DebianArtifact(name = "fnord")
-) : ResourceSpec, ArtifactVersioned
+) : ResourceSpec, VersionedArtifact
 
 data class DummyResource(
   val id: String = randomString(),

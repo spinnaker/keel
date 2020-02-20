@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.api
 
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 
-interface ArtifactVersioned {
+interface VersionedArtifact {
   val deliveryArtifact: DeliveryArtifact?
   val artifactVersion: String?
 }

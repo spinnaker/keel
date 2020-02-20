@@ -67,7 +67,7 @@ class ImageResolver(
   private suspend fun resolveFromReference(
     resource: Resource<ClusterSpec>,
     imageProvider: ReferenceArtifactImageProvider
-  ): VersionedNameImage {
+  ): VersionedNamedImage {
     val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
     val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == deb }
       ?: throw NoMatchingArtifactException(deliveryConfig.name, deb, imageProvider.reference)
@@ -78,7 +78,7 @@ class ImageResolver(
   private suspend fun resolveFromArtifact(
     resource: Resource<ClusterSpec>,
     artifact: DebianArtifact
-  ): VersionedNameImage {
+  ): VersionedNamedImage {
     val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
     val environment = deliveryConfigRepository.environmentFor(resource.id)
     val account = defaultImageAccount
@@ -95,13 +95,13 @@ class ImageResolver(
       regions = regions
     ) ?: throw NoImageFoundForRegions(artifactVersion, regions)
 
-    return VersionedNameImage(image, artifact, artifactVersion)
+    return VersionedNamedImage(image, artifact, artifactVersion)
   }
 
   private suspend fun resolveFromJenkinsJob(
     resource: Resource<ClusterSpec>,
     imageProvider: JenkinsImageProvider
-  ): VersionedNameImage {
+  ): VersionedNamedImage {
     val image = imageService.getNamedImageFromJenkinsInfo(
       imageProvider.packageName,
       dynamicConfigService.getConfig("images.default-account", "test"),
@@ -111,10 +111,10 @@ class ImageResolver(
     ) ?: throw NoImageFound(imageProvider.packageName)
 
     log.info("Image found for {}: {}", imageProvider.packageName, image)
-    return VersionedNameImage(image, null, null)
+    return VersionedNamedImage(image, null, null)
   }
 
-  private fun Resource<ClusterSpec>.withVirtualMachineImages(image: VersionedNameImage): Resource<ClusterSpec> {
+  private fun Resource<ClusterSpec>.withVirtualMachineImages(image: VersionedNamedImage): Resource<ClusterSpec> {
     val imageIdByRegion = image
       .namedImage
       .amis

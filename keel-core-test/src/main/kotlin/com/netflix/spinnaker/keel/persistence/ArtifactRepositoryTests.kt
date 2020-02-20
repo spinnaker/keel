@@ -44,9 +44,9 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     val subject: T
   ) {
     // the artifact built off a feature branch
-    val artifact1 = DebianArtifact("keeldemo", deliveryConfigName = "my-manifest", reference = "candidate", statuses = listOf(SNAPSHOT))
+    val artifact1 = DebianArtifact("keeldemo", deliveryConfigName = "my-manifest", reference = "candidate", statuses = setOf(SNAPSHOT))
     // the artifact built off of master
-    val artifact2 = DebianArtifact("keeldemo", deliveryConfigName = "my-manifest", reference = "master", statuses = listOf(RELEASE))
+    val artifact2 = DebianArtifact("keeldemo", deliveryConfigName = "my-manifest", reference = "master", statuses = setOf(RELEASE))
     val artifact3 = DockerArtifact("docker", deliveryConfigName = "my-manifest", reference = "docker-artifact")
     val environment1 = Environment("test")
     val environment2 = Environment("staging")
@@ -108,7 +108,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       .artifacts
       .first {
         if (artifact is DebianArtifact) {
-          it.name == artifact.name && it.type == artifact.type && artifact.statuses == it.statuses.toList()
+          it.name == artifact.name && it.type == artifact.type && artifact.statuses == it.statuses
         } else {
           it.name == artifact.name && it.type == artifact.type
         }
@@ -210,7 +210,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         }
 
         test("querying for all returns all") {
-          val artifactWithAll = artifact1.copy(statuses = emptyList())
+          val artifactWithAll = artifact1.copy(statuses = emptySet())
           expectThat(subject.versions(artifactWithAll)).containsExactly(version5, version4, version3, version2, version1)
         }
 
