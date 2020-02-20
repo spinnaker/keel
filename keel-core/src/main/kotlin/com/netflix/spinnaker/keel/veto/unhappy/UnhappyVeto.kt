@@ -121,7 +121,7 @@ class UnhappyVeto(
     val waitingTime = waitingTime(resource)
     if (waitingTime == Duration.ZERO) {
       return "Resource is unhappy and our $maxDiffs actions have not fixed it. " +
-        "Resource will remain paused until the diff changes or manually unpaused."
+        "Resource will remain paused until the diff changes or the resource is manually unpaused."
     }
     return "Resource is unhappy and our $maxDiffs actions have not fixed it. We will try again after " +
       "$waitingTime, or if the diff changes."
