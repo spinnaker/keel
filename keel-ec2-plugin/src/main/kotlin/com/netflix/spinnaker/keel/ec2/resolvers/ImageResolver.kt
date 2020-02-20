@@ -42,7 +42,7 @@ class ImageResolver(
   override val supportedKind: String = "cluster"
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  data class VersionedNameImage(
+  data class VersionedNamedImage(
     val namedImage: NamedImage,
     val artifact: DeliveryArtifact?,
     val version: String?
