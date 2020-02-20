@@ -39,6 +39,7 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
+import strikt.assertions.exactly
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
@@ -64,7 +65,7 @@ import strikt.jackson.textValue
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
-class ApiTests : JUnit5Minutests {
+class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var mvc: MockMvc
 
@@ -85,14 +86,15 @@ class ApiTests : JUnit5Minutests {
      * Ensures that [GenericWildcardTypeModelConverter] is being used for all cases of things that
      * contain `ResourceSpec`.
      */
+    test("schema for Resource's spec property is a reference to ResourceSpec") {
+      at("/components/schemas/Resource/properties/spec/\$ref")
+        .textValue()
+        .isEqualTo(constructRef("ResourceSpec"))
+    }
+
     sequenceOf(Resource::class, SubmittedResource::class)
       .map(KClass<*>::simpleName)
       .forEach { type ->
-        test("schema for $type's spec property is a reference to ResourceSpec") {
-          at("/components/schemas/$type/properties/spec/\$ref")
-            .textValue()
-            .isEqualTo(constructRef("ResourceSpec"))
-        }
 
         test("does not contain parameterized type versions of schema for $type") {
           at("/components/schemas/${type}Object").isMissing()
@@ -215,29 +217,29 @@ class ApiTests : JUnit5Minutests {
     test("data class parameters without default values are required") {
       at("/components/schemas/SubmittedResource/required")
         .isArray()
-        .map { it.textValue() }
+        .textValues()
         .contains("apiVersion", "kind", "spec")
     }
 
     test("data class parameters with default values are not required") {
       at("/components/schemas/SubmittedResource/required")
         .isArray()
-        .map { it.textValue() }
+        .textValues()
         .doesNotContain("metadata")
     }
 
     test("nullable data class parameters with default values are not required") {
       at("/components/schemas/SecurityGroupSpec/required")
         .isArray()
-        .map { it.textValue() }
+        .textValues()
         .doesNotContain("description")
     }
 
     test("prefers @JsonCreator properties to default constructor") {
       at("/components/schemas/ClusterSpec/required")
         .isArray()
-        .map { it.textValue() }
-        .containsExactlyInAnyOrder("imageProvider", "locations", "moniker")
+        .textValues()
+        .containsExactlyInAnyOrder("imageProvider", "moniker")
     }
 
     test("duration properties are duration format strings") {
@@ -270,16 +272,25 @@ class ApiTests : JUnit5Minutests {
         .isTrue()
     }
 
-    test("can load schema properties from a YAML file") {
-      at("/components/schemas/ClusterSpec/description")
+    test("a class annotated with @Description can have a description") {
+      at("/components/schemas/SubmittedResource/description")
         .isTextual()
     }
 
-    test("can overrides a property's required status from a YAML file") {
-      at("/components/schemas/ClusterSpec/required")
+    test("a property annotated with @Description can have a description") {
+      at("/components/schemas/SubmittedResource/properties/spec/allOf")
         .isArray()
-        .map { it.textValue() }
-        .doesNotContain("locations")
+        .one {
+          path("description").isTextual()
+        }
+    }
+
+    test("property required-ness can be overridden with the @Optional annotation") {
+      at("/components/schemas/SubmittedResource/properties/spec/allOf")
+        .isArray()
+        .one {
+          path("description").isTextual()
+        }
     }
   }
 }
@@ -287,3 +298,11 @@ class ApiTests : JUnit5Minutests {
 // TODO: move to strikt.jackson
 private fun Assertion.Builder<ArrayNode>.findValuesAsText(fieldName: String): Assertion.Builder<Iterable<String>> =
   get { findValuesAsText(fieldName) }
+
+// TODO: move to strikt.jackson
+private fun Assertion.Builder<ArrayNode>.textValues(): Assertion.Builder<Iterable<String>> =
+  map { it.textValue() }
+
+// TODO: move to strikt.core
+infix fun <T : Iterable<E>, E> Assertion.Builder<T>.one(predicate: Assertion.Builder<E>.() -> Unit): Assertion.Builder<T> =
+  exactly(1, predicate)
