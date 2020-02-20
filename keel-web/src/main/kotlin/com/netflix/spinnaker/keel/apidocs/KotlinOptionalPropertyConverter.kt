@@ -62,6 +62,12 @@ class KotlinOptionalPropertyConverter : BaseModelConverter() {
             if (schema.required == null || !schema.required.contains(name)) {
               schema.addRequiredItem(name)
             }
+          } else {
+            schema.required?.remove(name)
+            // it's not valid to have an empty required array so we should set it to null if it's empty
+            if (schema.required?.isEmpty() == true) {
+              schema.required = null
+            }
           }
           propertySchema.nullable = param.type.isMarkedNullable
         }
