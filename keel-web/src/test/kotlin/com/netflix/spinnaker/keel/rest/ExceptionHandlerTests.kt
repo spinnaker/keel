@@ -10,7 +10,6 @@ import com.netflix.spinnaker.keel.test.TEST_API
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expect
-import strikt.assertions.getValue
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.size
@@ -125,7 +124,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
         expect {
           that(apiError.details) {
             isA<ParsingErrorDetails>().and {
-              get { error }.isEqualTo(ParsingError.ILLEGAL_VALUE)
+              get { error }.isEqualTo(ParsingError.INVALID_VALUE)
               get { path }.size.isEqualTo(2)
               get { pathExpression }.isEqualTo(".environments[0]")
             }
@@ -193,7 +192,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
         expect {
           that(apiError.details) {
             isA<ParsingErrorDetails>().and {
-              get { error }.isEqualTo(ParsingError.ILLEGAL_VALUE)
+              get { error }.isEqualTo(ParsingError.INVALID_VALUE)
               get { path }.size.isEqualTo(4)
               get { pathExpression }.isEqualTo(".environments[0].resources[0]")
             }

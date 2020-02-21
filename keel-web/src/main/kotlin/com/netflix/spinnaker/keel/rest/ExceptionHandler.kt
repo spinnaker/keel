@@ -87,8 +87,8 @@ class ExceptionHandler(
         else -> when (rootCause) {
           null -> ParsingError.OTHER
           is MissingKotlinParameterException -> ParsingError.MISSING_PROPERTY
-          is IllegalStateException -> ParsingError.ILLEGAL_VALUE
-          is IllegalArgumentException -> ParsingError.ILLEGAL_VALUE
+          is IllegalStateException -> ParsingError.INVALID_VALUE
+          is IllegalArgumentException -> ParsingError.INVALID_VALUE
           is MismatchedInputException -> ParsingError.INVALID_TYPE
           is InvalidTypeIdException -> ParsingError.INVALID_TYPE
           is InvalidFormatException -> ParsingError.INVALID_FORMAT
@@ -162,9 +162,9 @@ data class ApiError(
 
 enum class ParsingError {
   MISSING_PROPERTY,
-  ILLEGAL_VALUE,
   INVALID_TYPE,
   INVALID_FORMAT,
+  INVALID_VALUE, // used when we can't determine if the problem is type or format
   OTHER;
 
   @JsonValue
