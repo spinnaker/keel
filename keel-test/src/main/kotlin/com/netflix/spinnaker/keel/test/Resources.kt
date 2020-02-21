@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
 import de.danielbechler.diff.introspection.ObjectDiffProperty
+import java.time.Duration
 import java.util.UUID
 
 const val TEST_API = "test.$SPINNAKER_API_V1"
@@ -137,7 +138,11 @@ data class DummyResourceSpec(
   override val id: String = randomString(),
   val data: String = randomString(),
   override val application: String = "fnord"
-) : ResourceSpec
+) : ResourceSpec {
+  val intData: Int = 1234
+  val boolData: Boolean = true
+  val timeData: Duration = Duration.ofMinutes(5)
+}
 
 data class DummyLocatableResourceSpec(
   override val id: String = randomString(),
