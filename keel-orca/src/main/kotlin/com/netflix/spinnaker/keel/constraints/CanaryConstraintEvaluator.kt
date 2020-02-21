@@ -93,7 +93,7 @@ class CanaryConstraintEvaluator(
           }
         }
       }
-      combinedRepository.deliveryConfigRepository.storeConstraintState(
+      combinedRepository.storeConstraintState(
         state.copy(
           status = ConstraintStatus.FAIL,
           judgedBy = judge,
@@ -104,7 +104,7 @@ class CanaryConstraintEvaluator(
     }
 
     if (status.passed(constraint)) {
-      combinedRepository.deliveryConfigRepository.storeConstraintState(
+      combinedRepository.storeConstraintState(
         state.copy(
           status = ConstraintStatus.PASS,
           judgedBy = judge,
@@ -128,7 +128,7 @@ class CanaryConstraintEvaluator(
         "another artifact version may still be under evaluation."
 
       if (state.comment != message) {
-        combinedRepository.deliveryConfigRepository.storeConstraintState(state.copy(comment = message))
+        combinedRepository.storeConstraintState(state.copy(comment = message))
       }
 
       return false
@@ -136,7 +136,7 @@ class CanaryConstraintEvaluator(
 
     if (regionsToTrigger.isEmpty()) {
       if (!status.anyRunning()) {
-        combinedRepository.deliveryConfigRepository.storeConstraintState(
+        combinedRepository.storeConstraintState(
           state.copy(
             status = ConstraintStatus.FAIL,
             judgedBy = judge,
@@ -144,7 +144,7 @@ class CanaryConstraintEvaluator(
             attributes = attributes.copy(status = status),
             comment = "Failure encountered launching canaries"))
       } else if (attributes.status != status) {
-        combinedRepository.deliveryConfigRepository.storeConstraintState(
+        combinedRepository.storeConstraintState(
           state.copy(
             attributes = attributes.copy(status = status)))
       }
@@ -169,7 +169,7 @@ class CanaryConstraintEvaluator(
       }
         .toSet())
 
-    combinedRepository.deliveryConfigRepository.storeConstraintState(
+    combinedRepository.storeConstraintState(
       state.copy(
         attributes = attributes,
         comment = "Running canaries in ${attributes.launchedRegions}"))

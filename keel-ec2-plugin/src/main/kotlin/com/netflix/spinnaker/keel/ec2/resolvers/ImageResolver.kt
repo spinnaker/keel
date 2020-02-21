@@ -66,7 +66,7 @@ class ImageResolver(
     resource: Resource<ClusterSpec>,
     imageProvider: ReferenceArtifactImageProvider
   ): VersionedNamedImage {
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.deliveryConfigFor(resource.id)
+    val deliveryConfig = combinedRepository.deliveryConfigFor(resource.id)
     val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == deb }
       ?: throw NoMatchingArtifactException(deliveryConfig.name, deb, imageProvider.reference)
 
@@ -77,12 +77,12 @@ class ImageResolver(
     resource: Resource<ClusterSpec>,
     artifact: DebianArtifact
   ): VersionedNamedImage {
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.deliveryConfigFor(resource.id)
-    val environment = combinedRepository.deliveryConfigRepository.environmentFor(resource.id)
+    val deliveryConfig = combinedRepository.deliveryConfigFor(resource.id)
+    val environment = combinedRepository.environmentFor(resource.id)
     val account = defaultImageAccount
     val regions = resource.spec.locations.regions.map { it.name }
 
-    val artifactVersion = combinedRepository.artifactRepository.latestVersionApprovedIn(
+    val artifactVersion = combinedRepository.latestVersionApprovedIn(
       deliveryConfig,
       artifact,
       environment.name

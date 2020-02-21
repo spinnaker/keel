@@ -37,7 +37,7 @@ class AuthorizationSupport(
 
   fun userCanModifyResource(name: String): Boolean =
     try {
-      val resource = combinedRepository.resourceRepository.get(name)
+      val resource = combinedRepository.getResource(name)
       userCanModifySpec(resource.serviceAccount, resource.id)
     } catch (e: NoSuchResourceException) {
       // If resource doesn't exist return true so a 404 is propagated from the controller.

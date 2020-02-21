@@ -63,7 +63,7 @@ class PipelineConstraintEvaluator(
 
     // TODO: if the constraint has timed out but the pipeline is still running, should we cancel it?
     if (timedOut(constraint, state, attributes)) {
-      combinedRepository.deliveryConfigRepository
+      combinedRepository
         .storeConstraintState(
           state.copy(
             status = FAIL,
@@ -102,11 +102,11 @@ class PipelineConstraintEvaluator(
         )
       }
 
-      combinedRepository.deliveryConfigRepository.storeConstraintState(state.copy(attributes = attributes))
+      combinedRepository.storeConstraintState(state.copy(attributes = attributes))
       return false
     } else if (attributes?.executionId == null) {
       // If we don't have an executionId or available retries, fail
-      combinedRepository.deliveryConfigRepository
+      combinedRepository
         .storeConstraintState(
           state.copy(
             status = FAIL,
@@ -122,7 +122,7 @@ class PipelineConstraintEvaluator(
       // Persist the pipeline status if changed
       if (attributes.lastExecutionStatus !=
         (state.attributes as PipelineConstraintStateAttributes?)?.lastExecutionStatus) {
-        combinedRepository.deliveryConfigRepository
+        combinedRepository
           .storeConstraintState(
             state.copy(attributes = attributes))
       }
@@ -146,7 +146,7 @@ class PipelineConstraintEvaluator(
         attributes = attributes)
     }
 
-    combinedRepository.deliveryConfigRepository.storeConstraintState(newState)
+    combinedRepository.storeConstraintState(newState)
     return status.isSuccess()
   }
 

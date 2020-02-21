@@ -96,7 +96,7 @@ class OrcaTaskLauncher(
       }
 
   private val Resource<*>.notifications: Set<NotificationConfig>
-    get() = combinedRepository.deliveryConfigRepository
+    get() = combinedRepository
       .environmentFor(id)
       .notifications
       .toSet()

@@ -38,7 +38,7 @@ class InteractiveNotificationCallbackController(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody callback: EchoNotification.InteractiveActionCallback
   ) {
-    val currentState = combinedRepository.deliveryConfigRepository.getConstraintStateById(parseUID(callback.messageId))
+    val currentState = combinedRepository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     log.debug("Updating constraint status based on notification interaction: " +

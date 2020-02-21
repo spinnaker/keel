@@ -47,7 +47,7 @@ class ApplicationController(
     @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean
   ): Map<String, Any> {
     if (includeDetails) {
-      var resources = combinedRepository.resourceRepository.getSummaryByApplication(application)
+      var resources = combinedRepository.getSummaryByApplication(application)
       resources = resources.map { summary ->
         if (resourcePauser.resourceIsPaused(summary.id)) {
           // we only update the status if the individual resource is paused,
@@ -57,7 +57,7 @@ class ApplicationController(
           summary
         }
       }
-      val constraintStates = combinedRepository.deliveryConfigRepository.constraintStateFor(application)
+      val constraintStates = combinedRepository.constraintStateFor(application)
 
       return mapOf(
         "applicationPaused" to resourcePauser.applicationIsPaused(application),
@@ -68,7 +68,7 @@ class ApplicationController(
     }
     return mapOf(
       "applicationPaused" to resourcePauser.applicationIsPaused(application),
-      "hasManagedResources" to combinedRepository.resourceRepository.hasManagedResources(application)
+      "hasManagedResources" to combinedRepository.hasManagedResources(application)
     )
   }
 

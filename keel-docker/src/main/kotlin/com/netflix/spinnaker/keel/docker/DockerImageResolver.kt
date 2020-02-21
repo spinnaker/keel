@@ -75,8 +75,8 @@ abstract class DockerImageResolver<T : ResourceSpec>(
     if (container is DigestProvider) {
       return resource
     }
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.deliveryConfigFor(resource.id)
-    val environment = combinedRepository.deliveryConfigRepository.environmentFor(resource.id)
+    val deliveryConfig = combinedRepository.deliveryConfigFor(resource.id)
+    val environment = combinedRepository.environmentFor(resource.id)
     val artifact = getArtifact(container, deliveryConfig)
     val account = getAccountFromSpec(resource)
     val tag: String = findTagGivenDeliveryConfig(deliveryConfig, environment, artifact)
@@ -100,7 +100,7 @@ abstract class DockerImageResolver<T : ResourceSpec>(
     }
 
   fun findTagGivenDeliveryConfig(deliveryConfig: DeliveryConfig, environment: Environment, artifact: DeliveryArtifact) =
-    combinedRepository.artifactRepository.latestVersionApprovedIn(
+    combinedRepository.latestVersionApprovedIn(
       deliveryConfig,
       artifact,
       environment.name

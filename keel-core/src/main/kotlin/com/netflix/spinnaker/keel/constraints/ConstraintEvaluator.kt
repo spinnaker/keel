@@ -59,7 +59,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint> : ConstraintEvaluator
     targetEnvironment: Environment
   ): Boolean {
     val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, supportedType.type)
-    var state = combinedRepository.deliveryConfigRepository
+    var state = combinedRepository
       .getConstraintState(
         deliveryConfig.name,
         targetEnvironment.name,
@@ -74,7 +74,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint> : ConstraintEvaluator
         type = constraint.type,
         status = ConstraintStatus.PENDING
       ).also {
-        combinedRepository.deliveryConfigRepository.storeConstraintState(it)
+        combinedRepository.storeConstraintState(it)
         eventPublisher.publishEvent(ConstraintStateChanged(targetEnvironment, constraint, null, it))
       }
     }

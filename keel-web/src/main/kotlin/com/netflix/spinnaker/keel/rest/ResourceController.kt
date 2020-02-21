@@ -53,7 +53,7 @@ class ResourceController(
   )
   fun get(@PathVariable("id") id: String): Resource<*> {
     log.debug("Getting: $id")
-    return combinedRepository.resourceRepository.get(id)
+    return combinedRepository.getResource(id)
   }
 
   @GetMapping(
@@ -64,7 +64,7 @@ class ResourceController(
     if (resourcePauser.isPaused(id)) { // todo eb: we could make determining status easier and more straight forward.
       PAUSED
     } else {
-      combinedRepository.resourceRepository.getStatus(id)
+      combinedRepository.getResourceStatus(id)
     }
 
   @PostMapping(

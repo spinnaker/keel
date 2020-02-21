@@ -27,8 +27,8 @@ class AdminController(
     @PathVariable("application") application: String
   ) {
     log.debug("Deleting all data for application: $application")
-    combinedRepository.deliveryConfigRepository.getByApplication(application).forEach { config ->
-      combinedRepository.delete(config.name)
+    combinedRepository.getDeliveryConfigsByApplication(application).forEach { config ->
+      combinedRepository.deleteDeliveryConfig(config.name)
     }
   }
 

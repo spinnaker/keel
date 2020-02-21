@@ -81,8 +81,8 @@ class ArtifactController(
       "A version to pin is required."
     }
 
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.get(pin.deliveryConfigName)
-    combinedRepository.artifactRepository.pinEnvironment(deliveryConfig, pin.copy(pinnedBy = user))
+    val deliveryConfig = combinedRepository.getDeliveryConfig(pin.deliveryConfigName)
+    combinedRepository.pinEnvironment(deliveryConfig, pin.copy(pinnedBy = user))
   }
 
   @DeleteMapping(
@@ -90,8 +90,8 @@ class ArtifactController(
   )
   @ResponseStatus(ACCEPTED)
   fun deletePin(@RequestBody pin: EnvironmentArtifactPin) {
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.get(pin.deliveryConfigName)
-    combinedRepository.artifactRepository.deletePin(deliveryConfig, pin.targetEnvironment, pin.reference, valueOf(pin.type.toUpperCase()))
+    val deliveryConfig = combinedRepository.getDeliveryConfig(pin.deliveryConfigName)
+    combinedRepository.deletePin(deliveryConfig, pin.targetEnvironment, pin.reference, valueOf(pin.type.toUpperCase()))
   }
 
   @DeleteMapping(
@@ -102,8 +102,8 @@ class ArtifactController(
     @PathVariable("deliveryConfig") deliveryConfigName: String,
     @PathVariable("targetEnvironment") targetEnvironment: String
   ) {
-    val deliveryConfig = combinedRepository.deliveryConfigRepository.get(deliveryConfigName)
-    combinedRepository.artifactRepository.deletePin(deliveryConfig, targetEnvironment)
+    val deliveryConfig = combinedRepository.getDeliveryConfig(deliveryConfigName)
+    combinedRepository.deletePin(deliveryConfig, targetEnvironment)
   }
 
   @PostMapping(
@@ -114,13 +114,13 @@ class ArtifactController(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody veto: EnvironmentArtifactVeto
   ) {
-    val deliveryConfig = deliveryConfigRepository.get(veto.deliveryConfigName)
-    val artifact = artifactRepository.get(
+    val deliveryConfig = combinedRepository.getDeliveryConfig(veto.deliveryConfigName)
+    val artifact = combinedRepository.getArtifact(
       deliveryConfigName = veto.deliveryConfigName,
       reference = veto.reference,
       type = valueOf(veto.type))
 
-    artifactRepository.markAsVetoedIn(deliveryConfig, artifact, veto.version, veto.targetEnvironment, true)
+    combinedRepository.markAsVetoedIn(deliveryConfig, artifact, veto.version, veto.targetEnvironment, true)
   }
 
   @DeleteMapping(
@@ -134,12 +134,12 @@ class ArtifactController(
     @PathVariable("reference") reference: String,
     @PathVariable("version") version: String
   ) {
-    val deliveryConfig = deliveryConfigRepository.get(deliveryConfigName)
-    val artifact = artifactRepository.get(
+    val deliveryConfig = combinedRepository.getDeliveryConfig(deliveryConfigName)
+    val artifact = combinedRepository.getArtifact(
       deliveryConfigName = deliveryConfigName,
       reference = reference,
       type = valueOf(type))
-    artifactRepository.deleteVeto(deliveryConfig, artifact, version, targetEnvironment)
+    combinedRepository.deleteVeto(deliveryConfig, artifact, version, targetEnvironment)
   }
 
   @GetMapping(
@@ -150,7 +150,7 @@ class ArtifactController(
     @PathVariable name: String,
     @PathVariable type: ArtifactType
   ): List<String> =
-    combinedRepository.artifactRepository.versions(name, type)
+    combinedRepository.artifactVersions(name, type)
 
   // Debian Artifacts should contain a releaseStatus in the metadata
   private fun Artifact.isFromArtifactEvent() =

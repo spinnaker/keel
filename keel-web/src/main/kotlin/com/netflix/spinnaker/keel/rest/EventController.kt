@@ -32,10 +32,10 @@ class EventController(
     @RequestParam("limit") limit: Int?
   ): List<ResourceEvent> {
     log.debug("Getting state history for: $id")
-    val resource = combinedRepository.resourceRepository.get(id)
+    val resource = combinedRepository.getResource(id)
     val pauseScope = resourcePauser.getPauseScope(resource)
-    return combinedRepository.resourceRepository
-      .eventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
+    return combinedRepository
+      .resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
       .also {
         if (pauseScope != null) {
           // for user clarity we add a pause event to the resource history if the resource is paused.

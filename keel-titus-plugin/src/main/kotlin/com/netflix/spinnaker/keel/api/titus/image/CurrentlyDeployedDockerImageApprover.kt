@@ -21,16 +21,16 @@ class CurrentlyDeployedDockerImageApprover(
   fun onArtifactVersionDeployed(event: ArtifactVersionDeployed) =
     runBlocking {
       val resourceId = event.resourceId
-      val resource = combinedRepository.resourceRepository.get(resourceId)
-      val deliveryConfig = combinedRepository.deliveryConfigRepository.deliveryConfigFor(resourceId)
-      val env = combinedRepository.deliveryConfigRepository.environmentFor(resourceId)
+      val resource = combinedRepository.getResource(resourceId)
+      val deliveryConfig = combinedRepository.deliveryConfigFor(resourceId)
+      val env = combinedRepository.environmentFor(resourceId)
 
       (resource.spec as? TitusClusterSpec)?.let { spec ->
         if (spec.defaults.container != null && spec.defaults.container is ReferenceProvider) {
           val container = spec.defaults.container as ReferenceProvider
           val artifact = deliveryConfig.matchingArtifact(container.reference, docker)
 
-          val approvedForEnv = combinedRepository.artifactRepository.isApprovedFor(
+          val approvedForEnv = combinedRepository.isApprovedFor(
             deliveryConfig = deliveryConfig,
             artifact = artifact,
             version = event.artifactVersion,
@@ -38,7 +38,7 @@ class CurrentlyDeployedDockerImageApprover(
           )
           // should only mark as successfully deployed if it's already approved for the environment
           if (approvedForEnv) {
-            val wasSuccessfullyDeployed = combinedRepository.artifactRepository.wasSuccessfullyDeployedTo(
+            val wasSuccessfullyDeployed = combinedRepository.wasSuccessfullyDeployedTo(
               deliveryConfig = deliveryConfig,
               artifact = artifact,
               version = event.artifactVersion,
@@ -46,7 +46,7 @@ class CurrentlyDeployedDockerImageApprover(
             )
             if (!wasSuccessfullyDeployed) {
               log.info("Marking {} as deployed in {} for config {} because it is already deployed", event.artifactVersion, env.name, deliveryConfig.name)
-              combinedRepository.artifactRepository.markAsSuccessfullyDeployedTo(
+              combinedRepository.markAsSuccessfullyDeployedTo(
                 deliveryConfig = deliveryConfig,
                 artifact = artifact,
                 version = event.artifactVersion,

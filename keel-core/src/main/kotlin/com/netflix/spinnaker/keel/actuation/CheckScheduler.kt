@@ -4,7 +4,6 @@ import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.CombinedRepository
-import com.netflix.spinnaker.keel.persistence.PeriodicallyCheckedRepository
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -53,9 +52,9 @@ class CheckScheduler(
 
       val job = launch {
         combinedRepository
-          .resourceRepository
-          .launchForEachItem {
-            resourceActuator.checkResource(it)
+          .resourcesDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+          .forEach {
+            launch { resourceActuator.checkResource(it) }
           }
       }
 
@@ -74,9 +73,9 @@ class CheckScheduler(
 
       val job = launch {
         combinedRepository
-          .deliveryConfigRepository
-          .launchForEachItem {
-            environmentPromotionChecker.checkEnvironments(it)
+          .deliveryConfigsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+          .forEach {
+            launch { environmentPromotionChecker.checkEnvironments(it) }
           }
       }
 
@@ -104,13 +103,6 @@ class CheckScheduler(
     } else {
       log.debug("invoking agent disabled")
     }
-  }
-
-  private fun <T : Any> PeriodicallyCheckedRepository<T>.launchForEachItem(block: suspend CoroutineScope.(T) -> Unit) {
-    itemsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
-      .forEach {
-        launch { block(it) }
-      }
   }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
