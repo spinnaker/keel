@@ -228,7 +228,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
         expect {
           that(apiError.details) {
             isA<ParsingErrorDetails>().and {
-              get { error }.isEqualTo(ParsingError.ILLEGAL_VALUE)
+              get { error }.isEqualTo(ParsingError.INVALID_TYPE)
               get { path }.size.isEqualTo(5)
               get { pathExpression }.isEqualTo(".environments[0].resources[0].intData")
             }
@@ -266,6 +266,41 @@ class ExceptionHandlerTests : JUnit5Minutests {
               get { error }.isEqualTo(ParsingError.INVALID_FORMAT)
               get { path }.size.isEqualTo(5)
               get { pathExpression }.isEqualTo(".environments[0].resources[0].timeData")
+            }
+          }
+        }
+      }
+    }
+
+    context("resource with invalid value for enum field") {
+      fixture {
+        Fixture(
+          """
+            ---
+            name: fnord
+            application: fnord
+            serviceAccount: keel@netlix.com
+            artifacts: []
+            environments:
+            - name: test
+              constraints: []
+              notifications: []
+              resources:
+              - apiVersion: $TEST_API
+                kind: "whatever"
+                spec:
+                  enumData: "wrong"
+          """.trimIndent()
+        )
+      }
+
+      test("should cause an ApiError with the expected details") {
+        expect {
+          that(apiError.details) {
+            isA<ParsingErrorDetails>().and {
+              get { error }.isEqualTo(ParsingError.INVALID_TYPE)
+              get { path }.size.isEqualTo(5)
+              get { pathExpression }.isEqualTo(".environments[0].resources[0].enumData")
             }
           }
         }

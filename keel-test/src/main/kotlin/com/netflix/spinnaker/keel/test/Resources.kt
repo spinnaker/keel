@@ -134,6 +134,8 @@ fun <T : ResourceSpec> submittedResource(
     spec = spec
   )
 
+enum class DummyEnum { VALUE }
+
 data class DummyResourceSpec(
   override val id: String = randomString(),
   val data: String = randomString(),
@@ -142,6 +144,7 @@ data class DummyResourceSpec(
   val intData: Int = 1234
   val boolData: Boolean = true
   val timeData: Duration = Duration.ofMinutes(5)
+  val enumData: DummyEnum = DummyEnum.VALUE
 }
 
 data class DummyLocatableResourceSpec(

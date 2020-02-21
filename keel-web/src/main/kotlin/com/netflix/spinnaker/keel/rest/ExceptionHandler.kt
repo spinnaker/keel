@@ -88,10 +88,10 @@ class ExceptionHandler(
           null -> ParsingError.OTHER
           is MissingKotlinParameterException -> ParsingError.MISSING_PROPERTY
           is IllegalStateException -> ParsingError.ILLEGAL_VALUE
-          is InvalidFormatException -> ParsingError.ILLEGAL_VALUE
           is IllegalArgumentException -> ParsingError.ILLEGAL_VALUE
           is MismatchedInputException -> ParsingError.INVALID_TYPE
           is InvalidTypeIdException -> ParsingError.INVALID_TYPE
+          is InvalidFormatException -> ParsingError.INVALID_FORMAT
           is DateTimeParseException -> ParsingError.INVALID_FORMAT
           else -> ParsingError.OTHER
         }
