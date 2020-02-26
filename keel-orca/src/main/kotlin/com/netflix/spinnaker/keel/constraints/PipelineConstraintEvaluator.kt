@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.model.toOrcaNotification
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import java.time.Clock
 import java.util.HashMap
 import kotlinx.coroutines.runBlocking
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component
 @Component
 class PipelineConstraintEvaluator(
   private val orcaService: OrcaService,
-  override val combinedRepository: CombinedRepository,
+  override val repository: KeelRepository,
   override val eventPublisher: ApplicationEventPublisher,
   private val clock: Clock
 ) : StatefulConstraintEvaluator<PipelineConstraint>() {
@@ -63,7 +63,7 @@ class PipelineConstraintEvaluator(
 
     // TODO: if the constraint has timed out but the pipeline is still running, should we cancel it?
     if (timedOut(constraint, state, attributes)) {
-      combinedRepository
+      repository
         .storeConstraintState(
           state.copy(
             status = FAIL,
@@ -102,11 +102,11 @@ class PipelineConstraintEvaluator(
         )
       }
 
-      combinedRepository.storeConstraintState(state.copy(attributes = attributes))
+      repository.storeConstraintState(state.copy(attributes = attributes))
       return false
     } else if (attributes?.executionId == null) {
       // If we don't have an executionId or available retries, fail
-      combinedRepository
+      repository
         .storeConstraintState(
           state.copy(
             status = FAIL,
@@ -122,7 +122,7 @@ class PipelineConstraintEvaluator(
       // Persist the pipeline status if changed
       if (attributes.lastExecutionStatus !=
         (state.attributes as PipelineConstraintStateAttributes?)?.lastExecutionStatus) {
-        combinedRepository
+        repository
           .storeConstraintState(
             state.copy(attributes = attributes))
       }
@@ -146,7 +146,7 @@ class PipelineConstraintEvaluator(
         attributes = attributes)
     }
 
-    combinedRepository.storeConstraintState(newState)
+    repository.storeConstraintState(newState)
     return status.isSuccess()
   }
 

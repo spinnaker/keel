@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.pause.ResourcePauser
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.HttpStatus.NO_CONTENT
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/admin"])
 class AdminController(
-  private val combinedRepository: CombinedRepository,
+  private val repository: KeelRepository,
   private val resourcePauser: ResourcePauser
 ) {
   private val log by lazy { getLogger(javaClass) }
@@ -27,8 +27,8 @@ class AdminController(
     @PathVariable("application") application: String
   ) {
     log.debug("Deleting all data for application: $application")
-    combinedRepository.getDeliveryConfigsByApplication(application).forEach { config ->
-      combinedRepository.deleteDeliveryConfig(config.name)
+    repository.getDeliveryConfigsByApplication(application).forEach { config ->
+      repository.deleteDeliveryConfig(config.name)
     }
   }
 

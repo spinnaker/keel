@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
 import org.slf4j.LoggerFactory
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/notifications/callback"])
 class InteractiveNotificationCallbackController(
-  private val combinedRepository: CombinedRepository
+  private val repository: KeelRepository
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -38,14 +38,13 @@ class InteractiveNotificationCallbackController(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody callback: EchoNotification.InteractiveActionCallback
   ) {
-    val currentState = combinedRepository.getConstraintStateById(parseUID(callback.messageId))
+    val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     log.debug("Updating constraint status based on notification interaction: " +
       "user = $user, status = ${callback.actionPerformed.value}")
 
-    combinedRepository
-      .deliveryConfigRepository
+    repository
       .storeConstraintState(
         currentState.copy(
           status = ConstraintStatus.valueOf(callback.actionPerformed.value),

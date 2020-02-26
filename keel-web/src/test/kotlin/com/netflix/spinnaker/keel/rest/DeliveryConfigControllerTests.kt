@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
@@ -67,7 +67,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
   lateinit var artifactRepository: InMemoryArtifactRepository
 
   @Autowired
-  lateinit var combinedRepository: CombinedRepository
+  lateinit var repository: KeelRepository
 
   fun tests() = rootContext {
     after {
@@ -78,7 +78,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
     context("getting a delivery config manifest") {
       before {
-        combinedRepository.upsertDeliveryConfig(
+        repository.upsertDeliveryConfig(
           SubmittedDeliveryConfig(
             name = "keel-manifest",
             application = "keel",

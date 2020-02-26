@@ -19,11 +19,8 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.core.api.resources
-import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import java.time.Clock
 import java.time.Duration
@@ -49,14 +46,14 @@ class CombinedRepository(
   val deliveryConfigRepository: DeliveryConfigRepository,
   val artifactRepository: ArtifactRepository,
   val resourceRepository: ResourceRepository,
-  val clock: Clock,
-  val publisher: ApplicationEventPublisher
-) {
+  override val clock: Clock,
+  override val publisher: ApplicationEventPublisher
+) : KeelRepository {
 
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+  override val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @Transactional(propagation = Propagation.REQUIRED)
-  fun upsertDeliveryConfig(submittedDeliveryConfig: SubmittedDeliveryConfig): DeliveryConfig {
+  override fun upsertDeliveryConfig(submittedDeliveryConfig: SubmittedDeliveryConfig): DeliveryConfig {
     val new = DeliveryConfig(
       name = submittedDeliveryConfig.name,
       application = submittedDeliveryConfig.application,
@@ -78,6 +75,84 @@ class CombinedRepository(
 
     validate(new)
     return upsertDeliveryConfig(new)
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  override fun upsertDeliveryConfig(deliveryConfig: DeliveryConfig): DeliveryConfig {
+    val old = try {
+      getDeliveryConfig(deliveryConfig.name)
+    } catch (e: NoSuchDeliveryConfigException) {
+      null
+    }
+
+    deliveryConfig.resources.forEach { resource ->
+      upsert(resource)
+    }
+    deliveryConfig.artifacts.forEach { artifact ->
+      register(artifact)
+    }
+    storeDeliveryConfig(deliveryConfig)
+
+    if (old != null) {
+      removeResources(old, deliveryConfig)
+    }
+    return deliveryConfig
+  }
+
+  /**
+   * Deletes a delivery config and everything in it.
+   */
+  @Transactional(propagation = Propagation.REQUIRED)
+  override fun deleteDeliveryConfig(deliveryConfigName: String): DeliveryConfig {
+    val deliveryConfig = deliveryConfigRepository.get(deliveryConfigName)
+
+    deliveryConfig.environments.forEach { environment ->
+      environment.resources.forEach { resource ->
+        // resources must be removed from the environment then deleted
+        deliveryConfigRepository.deleteResourceFromEnv(deliveryConfig.name, environment.name, resource.id)
+        deleteResource(resource.id)
+      }
+      deliveryConfigRepository.deleteEnvironment(deliveryConfig.name, environment.name)
+    }
+
+    deliveryConfig.artifacts.forEach { artifact ->
+      artifactRepository.delete(artifact)
+    }
+
+    deliveryConfigRepository.delete(deliveryConfig.name)
+
+    return deliveryConfig
+  }
+
+  /**
+   * Removes artifacts, environments, and resources that were present in the [old]
+   * delivery config and are not present in the [new] delivery config
+   */
+  override fun removeResources(old: DeliveryConfig, new: DeliveryConfig) {
+    val newResources = new.resources.map { it.id }
+    old.artifacts.forEach { artifact ->
+      if (artifact !in new.artifacts) {
+        log.debug("Updating config ${new.name}: removing artifact $artifact")
+        artifactRepository.delete(artifact)
+      }
+    }
+
+    old.environments
+      .forEach { environment ->
+        environment.resources.forEach { resource ->
+          if (resource.id !in newResources) {
+            log.debug("Updating config ${new.name}: removing resource ${resource.id} in environment ${environment.name}")
+            deliveryConfigRepository.deleteResourceFromEnv(
+              deliveryConfigName = old.name, environmentName = environment.name, resourceId = resource.id
+            )
+            deleteResource(resource.id)
+          }
+        }
+        if (environment.name !in new.environments.map { it.name }) {
+          log.debug("Updating config ${new.name}: removing environment ${environment.name}")
+          deliveryConfigRepository.deleteEnvironment(new.name, environment.name)
+        }
+      }
   }
 
   /**
@@ -111,277 +186,179 @@ class CombinedRepository(
       }
     }.toSet()
 
-  @Transactional(propagation = Propagation.REQUIRED)
-  fun upsertDeliveryConfig(deliveryConfig: DeliveryConfig): DeliveryConfig {
-    val old = try {
-      getDeliveryConfig(deliveryConfig.name)
-    } catch (e: NoSuchDeliveryConfigException) {
-      null
-    }
-
-    deliveryConfig.resources.forEach { resource ->
-      upsert(resource)
-    }
-    deliveryConfig.artifacts.forEach { artifact ->
-      register(artifact)
-    }
-    storeDeliveryConfig(deliveryConfig)
-
-    if (old != null) {
-      removeResources(old, deliveryConfig)
-    }
-    return deliveryConfig
-  }
-
-  fun <T : ResourceSpec> upsert(resource: Resource<T>) {
-    val existingResource = try {
-      getResource(resource.id)
-    } catch (e: NoSuchResourceException) {
-      null
-    }
-    if (existingResource != null) {
-      val diff = DefaultResourceDiff(resource.spec, existingResource.spec)
-      if (diff.hasChanges()) {
-        log.debug("Updating ${resource.id}")
-        storeResource(resource)
-        publisher.publishEvent(ResourceUpdated(resource, diff.toDeltaJson(), clock))
-      }
-    } else {
-      log.debug("Creating $resource")
-      storeResource(resource)
-      publisher.publishEvent(ResourceCreated(resource, clock))
-    }
-  }
-
-  /**
-   * Deletes a delivery config and everything in it.
-   */
-  @Transactional(propagation = Propagation.REQUIRED)
-  fun deleteDeliveryConfig(deliveryConfigName: String): DeliveryConfig {
-    val deliveryConfig = deliveryConfigRepository.get(deliveryConfigName)
-
-    deliveryConfig.environments.forEach { environment ->
-      environment.resources.forEach { resource ->
-        // resources must be removed from the environment then deleted
-        deliveryConfigRepository.deleteResourceFromEnv(deliveryConfig.name, environment.name, resource.id)
-        deleteResource(resource.id)
-      }
-      deliveryConfigRepository.deleteEnvironment(deliveryConfig.name, environment.name)
-    }
-
-    deliveryConfig.artifacts.forEach { artifact ->
-      artifactRepository.delete(artifact)
-    }
-
-    deliveryConfigRepository.delete(deliveryConfig.name)
-
-    return deliveryConfig
-  }
-
-  /**
-   * Removes artifacts, environments, and resources that were present in the [old]
-   * delivery config and are not present in the [new] delivery config
-   */
-  fun removeResources(old: DeliveryConfig, new: DeliveryConfig) {
-    val newResources = new.resources.map { it.id }
-    old.artifacts.forEach { artifact ->
-      if (artifact !in new.artifacts) {
-        log.debug("Updating config ${new.name}: removing artifact $artifact")
-        artifactRepository.delete(artifact)
-      }
-    }
-
-    old.environments
-      .forEach { environment ->
-        environment.resources.forEach { resource ->
-          if (resource.id !in newResources) {
-            log.debug("Updating config ${new.name}: removing resource ${resource.id} in environment ${environment.name}")
-            deliveryConfigRepository.deleteResourceFromEnv(
-              deliveryConfigName = old.name, environmentName = environment.name, resourceId = resource.id
-            )
-            deleteResource(resource.id)
-          }
-        }
-        if (environment.name !in new.environments.map { it.name }) {
-          log.debug("Updating config ${new.name}: removing environment ${environment.name}")
-          deliveryConfigRepository.deleteEnvironment(new.name, environment.name)
-        }
-      }
-  }
-
   // START Delivery config methods
-  fun storeDeliveryConfig(deliveryConfig: DeliveryConfig) =
+  override fun storeDeliveryConfig(deliveryConfig: DeliveryConfig) =
     deliveryConfigRepository.store(deliveryConfig)
 
-  fun getDeliveryConfig(name: String): DeliveryConfig =
+  override fun getDeliveryConfig(name: String): DeliveryConfig =
     deliveryConfigRepository.get(name)
 
-  fun environmentFor(resourceId: String): Environment =
+  override fun environmentFor(resourceId: String): Environment =
     deliveryConfigRepository.environmentFor(resourceId)
 
-  fun deliveryConfigFor(resourceId: String): DeliveryConfig =
+  override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     deliveryConfigRepository.deliveryConfigFor(resourceId)
 
-  fun getDeliveryConfigsByApplication(application: String): Collection<DeliveryConfig> =
+  override fun getDeliveryConfigsByApplication(application: String): Collection<DeliveryConfig> =
     deliveryConfigRepository.getByApplication(application)
 
-  fun deleteDeliveryConfigByApplication(application: String): Int =
+  override fun deleteDeliveryConfigByApplication(application: String): Int =
     deliveryConfigRepository.deleteByApplication(application)
 
-  fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: String) =
+  override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: String) =
     deliveryConfigRepository.deleteResourceFromEnv(deliveryConfigName, environmentName, resourceId)
 
-  fun deleteEnvironment(deliveryConfigName: String, environmentName: String) =
+  override fun deleteEnvironment(deliveryConfigName: String, environmentName: String) =
     deliveryConfigRepository.deleteEnvironment(deliveryConfigName, environmentName)
 
-  fun storeConstraintState(state: ConstraintState) =
+  override fun storeConstraintState(state: ConstraintState) =
     deliveryConfigRepository.storeConstraintState(state)
 
-  fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String): ConstraintState? =
+  override fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String): ConstraintState? =
     deliveryConfigRepository.getConstraintState(deliveryConfigName, environmentName, artifactVersion, type)
 
-  fun getConstraintStateById(uid: UID): ConstraintState? =
+  override fun getConstraintStateById(uid: UID): ConstraintState? =
     deliveryConfigRepository.getConstraintStateById(uid)
 
-  fun deleteConstraintState(deliveryConfigName: String, environmentName: String, type: String) =
+  override fun deleteConstraintState(deliveryConfigName: String, environmentName: String, type: String) =
     deliveryConfigRepository.deleteConstraintState(deliveryConfigName, environmentName, type)
 
-  fun constraintStateFor(application: String): List<ConstraintState> =
+  override fun constraintStateFor(application: String): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(application)
 
-  fun constraintStateFor(deliveryConfigName: String, environmentName: String, limit: Int): List<ConstraintState> =
+  override fun constraintStateFor(deliveryConfigName: String, environmentName: String, limit: Int): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(deliveryConfigName, environmentName, limit)
 
-  fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
+  override fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
     deliveryConfigRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods
-  fun allResources(callback: (ResourceHeader) -> Unit) =
+  override fun allResources(callback: (ResourceHeader) -> Unit) =
     resourceRepository.allResources(callback)
 
-  fun getResource(id: String): Resource<out ResourceSpec> =
+  override fun getResource(id: String): Resource<out ResourceSpec> =
     resourceRepository.get(id)
 
-  fun hasManagedResources(application: String): Boolean =
+  override fun hasManagedResources(application: String): Boolean =
     resourceRepository.hasManagedResources(application)
 
-  fun getResourceIdsByApplication(application: String): List<String> =
+  override fun getResourceIdsByApplication(application: String): List<String> =
     resourceRepository.getResourceIdsByApplication(application)
 
-  fun getResourcesByApplication(application: String): List<Resource<*>> =
+  override fun getResourcesByApplication(application: String): List<Resource<*>> =
     resourceRepository.getResourcesByApplication(application)
 
-  fun getSummaryByApplication(application: String): List<ResourceSummary> =
+  override fun getSummaryByApplication(application: String): List<ResourceSummary> =
     resourceRepository.getSummaryByApplication(application)
 
-  fun storeResource(resource: Resource<*>) =
+  override fun storeResource(resource: Resource<*>) =
     resourceRepository.store(resource)
 
-  fun deleteResource(id: String) =
+  override fun deleteResource(id: String) =
     resourceRepository.delete(id)
 
-  fun deleteResourcesByApplication(application: String): Int =
+  override fun deleteResourcesByApplication(application: String): Int =
     resourceRepository.deleteByApplication(application)
 
-  fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent> =
+  override fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent> =
     resourceRepository.eventHistory(id, limit)
 
-  fun resourceLastEvent(id: String): ResourceEvent? =
+  override fun resourceLastEvent(id: String): ResourceEvent? =
     resourceRepository.lastEvent(id)
 
-  fun resourceAppendHistory(event: ResourceEvent) =
+  override fun resourceAppendHistory(event: ResourceEvent) =
     resourceRepository.appendHistory(event)
 
-  fun resourcesDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>> =
+  override fun resourcesDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>> =
     resourceRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
 
-  fun getResourceStatus(id: String): ResourceStatus =
+  override fun getResourceStatus(id: String): ResourceStatus =
     resourceRepository.getStatus(id)
   // END ResourceRepository methods
 
   // START ArtifactRepository methods
-  fun register(artifact: DeliveryArtifact) {
+  override fun register(artifact: DeliveryArtifact) {
     artifactRepository.register(artifact)
     publisher.publishEvent(ArtifactRegisteredEvent(artifact))
   }
 
-  fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> =
+  override fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> =
     artifactRepository.get(name, type, deliveryConfigName)
 
-  fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact =
+  override fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact =
     artifactRepository.get(name, type, reference, deliveryConfigName)
 
-  fun getArtifact(deliveryConfigName: String, reference: String, type: ArtifactType): DeliveryArtifact =
+  override fun getArtifact(deliveryConfigName: String, reference: String, type: ArtifactType): DeliveryArtifact =
     artifactRepository.get(deliveryConfigName, reference, type)
 
-  fun isRegistered(name: String, type: ArtifactType): Boolean =
+  override fun isRegistered(name: String, type: ArtifactType): Boolean =
     artifactRepository.isRegistered(name, type)
 
-  fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
+  override fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
     artifactRepository.getAll(type)
 
-  fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean =
+  override fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean =
     artifactRepository.store(name, type, version, status)
 
-  fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
+  override fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
     artifactRepository.store(artifact, version, status)
 
-  fun deleteArtifact(artifact: DeliveryArtifact) =
+  override fun deleteArtifact(artifact: DeliveryArtifact) =
     artifactRepository.delete(artifact)
 
-  fun artifactVersions(artifact: DeliveryArtifact): List<String> =
+  override fun artifactVersions(artifact: DeliveryArtifact): List<String> =
     artifactRepository.versions(artifact)
 
-  fun artifactVersions(name: String, type: ArtifactType): List<String> =
+  override fun artifactVersions(name: String, type: ArtifactType): List<String> =
     artifactRepository.versions(name, type)
 
-  fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, targetEnvironment: String): String? =
+  override fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, targetEnvironment: String): String? =
     artifactRepository.latestVersionApprovedIn(deliveryConfig, artifact, targetEnvironment)
 
-  fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
     artifactRepository.approveVersionFor(deliveryConfig, artifact, version, targetEnvironment)
 
-  fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
     artifactRepository.isApprovedFor(deliveryConfig, artifact, version, targetEnvironment)
 
-  fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.markAsDeployingTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
     artifactRepository.wasSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  fun versionsByEnvironment(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactsSummary> =
+  override fun versionsByEnvironment(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactsSummary> =
     artifactRepository.versionsByEnvironment(deliveryConfig)
 
-  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin) =
+  override fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin) =
     artifactRepository.pinEnvironment(deliveryConfig, environmentArtifactPin)
 
-  fun pinnedEnvironments(deliveryConfig: DeliveryConfig): List<PinnedEnvironment> =
+  override fun pinnedEnvironments(deliveryConfig: DeliveryConfig): List<PinnedEnvironment> =
     artifactRepository.pinnedEnvironments(deliveryConfig)
 
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String) =
+  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String) =
     artifactRepository.deletePin(deliveryConfig, targetEnvironment)
 
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String, type: ArtifactType) =
+  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String, type: ArtifactType) =
     artifactRepository.deletePin(deliveryConfig, targetEnvironment, reference, type)
 
-  fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes> =
+  override fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes> =
     artifactRepository.vetoedEnvironmentVersions(deliveryConfig)
 
-  fun markAsVetoedIn(
+  override fun markAsVetoedIn(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
     targetEnvironment: String,
-    force: Boolean = false
+    force: Boolean
   ): Boolean =
     artifactRepository.markAsVetoedIn(deliveryConfig, artifact, version, targetEnvironment, force)
 
-  fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.deleteVeto(deliveryConfig, artifact, version, targetEnvironment)
   // END ArtifactRepository methods
 }

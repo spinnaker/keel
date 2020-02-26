@@ -20,7 +20,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.DiffResult
 import com.netflix.spinnaker.keel.pause.ResourcePauser
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/resources"])
 class ResourceController(
-  private val combinedRepository: CombinedRepository,
+  private val repository: KeelRepository,
   private val resourcePauser: ResourcePauser,
   private val adHocDiffer: AdHocDiffer
 ) {
@@ -53,7 +53,7 @@ class ResourceController(
   )
   fun get(@PathVariable("id") id: String): Resource<*> {
     log.debug("Getting: $id")
-    return combinedRepository.getResource(id)
+    return repository.getResource(id)
   }
 
   @GetMapping(
@@ -64,7 +64,7 @@ class ResourceController(
     if (resourcePauser.isPaused(id)) { // todo eb: we could make determining status easier and more straight forward.
       PAUSED
     } else {
-      combinedRepository.getResourceStatus(id)
+      repository.getResourceStatus(id)
     }
 
   @PostMapping(

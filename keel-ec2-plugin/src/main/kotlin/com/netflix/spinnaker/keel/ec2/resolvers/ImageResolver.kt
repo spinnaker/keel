@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.ec2.NoImageFound
 import com.netflix.spinnaker.keel.ec2.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.ec2.NoImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import kotlinx.coroutines.runBlocking
@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component
 @Component
 class ImageResolver(
   private val dynamicConfigService: DynamicConfigService,
-  private val combinedRepository: CombinedRepository,
+  private val repository: KeelRepository,
   private val imageService: ImageService
 ) : Resolver<ClusterSpec> {
 
@@ -66,7 +66,7 @@ class ImageResolver(
     resource: Resource<ClusterSpec>,
     imageProvider: ReferenceArtifactImageProvider
   ): VersionedNamedImage {
-    val deliveryConfig = combinedRepository.deliveryConfigFor(resource.id)
+    val deliveryConfig = repository.deliveryConfigFor(resource.id)
     val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == deb }
       ?: throw NoMatchingArtifactException(deliveryConfig.name, deb, imageProvider.reference)
 
@@ -77,12 +77,12 @@ class ImageResolver(
     resource: Resource<ClusterSpec>,
     artifact: DebianArtifact
   ): VersionedNamedImage {
-    val deliveryConfig = combinedRepository.deliveryConfigFor(resource.id)
-    val environment = combinedRepository.environmentFor(resource.id)
+    val deliveryConfig = repository.deliveryConfigFor(resource.id)
+    val environment = repository.environmentFor(resource.id)
     val account = defaultImageAccount
     val regions = resource.spec.locations.regions.map { it.name }
 
-    val artifactVersion = combinedRepository.latestVersionApprovedIn(
+    val artifactVersion = repository.latestVersionApprovedIn(
       deliveryConfig,
       artifact,
       environment.name

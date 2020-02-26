@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.actuation
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class CheckScheduler(
-  private val combinedRepository: CombinedRepository,
+  private val repository: KeelRepository,
   private val resourceActuator: ResourceActuator,
   private val environmentPromotionChecker: EnvironmentPromotionChecker,
   @Value("\${keel.resource-check.min-age-duration:60s}") private val resourceCheckMinAgeDuration: Duration,
@@ -51,7 +51,7 @@ class CheckScheduler(
       publisher.publishEvent(ScheduledResourceCheckStarting)
 
       val job = launch {
-        combinedRepository
+        repository
           .resourcesDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
           .forEach {
             launch { resourceActuator.checkResource(it) }
@@ -72,7 +72,7 @@ class CheckScheduler(
       publisher.publishEvent(ScheduledEnvironmentCheckStarting)
 
       val job = launch {
-        combinedRepository
+        repository
           .deliveryConfigsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
           .forEach {
             launch { environmentPromotionChecker.checkEnvironments(it) }

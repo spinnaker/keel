@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.EnvironmentDiff
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import io.swagger.v3.oas.annotations.Operation
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/delivery-configs"])
 class DeliveryConfigController(
-  private val combinedRepository: CombinedRepository,
+  private val repository: KeelRepository,
   private val adHocDiffer: AdHocDiffer
 ) {
   @Operation(
@@ -46,23 +46,23 @@ class DeliveryConfigController(
     )
     deliveryConfig: SubmittedDeliveryConfig
   ): DeliveryConfig =
-    combinedRepository.upsertDeliveryConfig(deliveryConfig)
+    repository.upsertDeliveryConfig(deliveryConfig)
 
   @GetMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun get(@PathVariable("name") name: String): DeliveryConfig =
-    combinedRepository.getDeliveryConfig(name)
+    repository.getDeliveryConfig(name)
 
   @DeleteMapping(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun delete(@PathVariable("name") name: String): DeliveryConfig {
-    val deliveryConfig = combinedRepository.getDeliveryConfig(name)
+    val deliveryConfig = repository.getDeliveryConfig(name)
     log.info("Deleting delivery config $name: $deliveryConfig")
-    combinedRepository.deleteDeliveryConfig(name)
+    repository.deleteDeliveryConfig(name)
     return deliveryConfig
   }
 
@@ -81,7 +81,7 @@ class DeliveryConfigController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) =
-    // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
+  // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
     //  in [ExceptionHandler])
     mapOf("status" to "valid")
 
@@ -92,8 +92,8 @@ class DeliveryConfigController(
   fun getArtifacts(
     @PathVariable("name") name: String
   ): List<EnvironmentArtifactsSummary> =
-    combinedRepository.getDeliveryConfig(name).let {
-      combinedRepository.versionsByEnvironment(it)
+    repository.getDeliveryConfig(name).let {
+      repository.versionsByEnvironment(it)
     }
 
   @GetMapping(
@@ -105,7 +105,7 @@ class DeliveryConfigController(
     @PathVariable("environment") environment: String,
     @RequestParam("limit") limit: Int?
   ): List<ConstraintState> =
-    combinedRepository.constraintStateFor(name, environment, limit ?: DEFAULT_MAX_EVENTS)
+    repository.constraintStateFor(name, environment, limit ?: DEFAULT_MAX_EVENTS)
 
   @PostMapping(
     path = ["/{name}/environment/{environment}/constraint"],
@@ -120,14 +120,14 @@ class DeliveryConfigController(
     @PathVariable("environment") environment: String,
     @RequestBody status: UpdatedConstraintStatus
   ) {
-    val currentState = combinedRepository.getConstraintState(
+    val currentState = repository.getConstraintState(
       name,
       environment,
       status.artifactVersion,
       status.type) ?: throw InvalidConstraintException(
       "$name/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
 
-    combinedRepository.storeConstraintState(
+    repository.storeConstraintState(
       currentState.copy(
         status = status.status,
         comment = status.comment ?: currentState.comment,

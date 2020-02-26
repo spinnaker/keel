@@ -24,7 +24,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DockerImageResolver
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -34,11 +34,11 @@ import org.springframework.stereotype.Component
  */
 @Component
 class TitusImageResolver(
-  combinedRepository: CombinedRepository,
+  repository: KeelRepository,
   private val cloudDriverCache: CloudDriverCache,
   private val cloudDriverService: CloudDriverService
 ) : DockerImageResolver<TitusClusterSpec>(
-  combinedRepository
+  repository
 ) {
   override val apiVersion: String = SPINNAKER_TITUS_API_V1
   override val supportedKind: String = "cluster"

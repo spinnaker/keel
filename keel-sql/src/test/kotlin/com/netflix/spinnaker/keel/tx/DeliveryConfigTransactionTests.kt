@@ -9,8 +9,8 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.test.DummyResourceHandler
@@ -61,12 +61,12 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
   lateinit var deliveryConfigRepository: DeliveryConfigRepository
 
   @Autowired
-  lateinit var combinedRepository: CombinedRepository
+  lateinit var repository: KeelRepository
 
   @Autowired
   lateinit var jooq: DSLContext
 
-  private fun CombinedRepository.allResourceNames(): List<String> =
+  private fun KeelRepository.allResourceNames(): List<String> =
     mutableListOf<String>()
       .also { list ->
         allResources { list.add(it.id) }
@@ -117,24 +117,24 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
           })
         } throws DataAccessException("o noes")
 
-        expectCatching { combinedRepository.upsertDeliveryConfig(submittedManifest) }
+        expectCatching { repository.upsertDeliveryConfig(submittedManifest) }
           .failed()
           .isA<DataAccessException>()
       }
 
       test("the delivery config is not persisted") {
-        expectCatching { combinedRepository.getDeliveryConfig("keel-manifest") }
+        expectCatching { repository.getDeliveryConfig("keel-manifest") }
           .failed()
           .isA<NoSuchDeliveryConfigName>()
       }
 
       test("the other resources are not persisted") {
-        expectThat(combinedRepository.allResourceNames())
+        expectThat(repository.allResourceNames())
           .isEmpty()
       }
 
       test("the artifact is not persisted") {
-        expectThat(combinedRepository.isRegistered("keel", deb))
+        expectThat(repository.isRegistered("keel", deb))
           .isFalse()
       }
     }
@@ -143,19 +143,19 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
       before {
         every { artifactRepository.register(any()) } throws DataAccessException("o noes")
 
-        expectCatching { combinedRepository.upsertDeliveryConfig(submittedManifest) }
+        expectCatching { repository.upsertDeliveryConfig(submittedManifest) }
           .failed()
           .isA<DataAccessException>()
       }
 
       test("the delivery config is not persisted") {
-        expectCatching { combinedRepository.getDeliveryConfig("keel-manifest") }
+        expectCatching { repository.getDeliveryConfig("keel-manifest") }
           .failed()
           .isA<NoSuchDeliveryConfigName>()
       }
 
       test("the resources are not persisted") {
-        expectThat(combinedRepository.allResourceNames())
+        expectThat(repository.allResourceNames())
           .isEmpty()
       }
     }
@@ -164,18 +164,18 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
       before {
         every { deliveryConfigRepository.store(any()) } throws DataAccessException("o noes")
 
-        expectCatching { combinedRepository.upsertDeliveryConfig(submittedManifest) }
+        expectCatching { repository.upsertDeliveryConfig(submittedManifest) }
           .failed()
           .isA<DataAccessException>()
       }
 
       test("the resources are not persisted") {
-        expectThat(combinedRepository.allResourceNames())
+        expectThat(repository.allResourceNames())
           .isEmpty()
       }
 
       test("the artifact not persisted") {
-        expectThat(combinedRepository.isRegistered("keel", deb))
+        expectThat(repository.isRegistered("keel", deb))
           .isFalse()
       }
     }

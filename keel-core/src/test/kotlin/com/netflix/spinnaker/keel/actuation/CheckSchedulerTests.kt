@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -18,7 +18,7 @@ import org.springframework.context.ApplicationEventPublisher
 
 internal object CheckSchedulerTests : JUnit5Minutests {
 
-  private val combinedRepository: CombinedRepository = mockk()
+  private val repository: KeelRepository = mockk()
   private val resourceActuator = mockk<ResourceActuator>(relaxUnitFun = true)
   private val environmentPromotionChecker = mockk<EnvironmentPromotionChecker>()
   private val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
@@ -56,7 +56,7 @@ internal object CheckSchedulerTests : JUnit5Minutests {
   fun tests() = rootContext<CheckScheduler> {
     fixture {
       CheckScheduler(
-        combinedRepository = combinedRepository,
+        repository = repository,
         resourceActuator = resourceActuator,
         environmentPromotionChecker = environmentPromotionChecker,
         resourceCheckMinAgeDuration = Duration.ofMinutes(5),
@@ -79,7 +79,7 @@ internal object CheckSchedulerTests : JUnit5Minutests {
         onApplicationUp()
 
         every {
-          combinedRepository.resourcesDueForCheck(any(), any())
+          repository.resourcesDueForCheck(any(), any())
         } returns resources
       }
 
