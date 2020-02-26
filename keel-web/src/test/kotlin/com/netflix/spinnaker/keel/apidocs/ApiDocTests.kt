@@ -69,17 +69,20 @@ class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var mvc: MockMvc
 
+  val api: JsonNode by lazy {
+    mvc
+      .perform(get("/v3/api-docs").accept(APPLICATION_JSON_VALUE))
+      .andExpect(status().isOk)
+      .andReturn()
+      .response
+      .contentAsString
+      .also(::println)
+      .let { jacksonObjectMapper().readTree(it) }
+  }
+
   fun tests() = rootContext<Assertion.Builder<JsonNode>> {
     fixture {
-      mvc
-        .perform(get("/v3/api-docs").accept(APPLICATION_JSON_VALUE))
-        .andExpect(status().isOk)
-        .andReturn()
-        .response
-        .contentAsString
-        .also(::println)
-        .let { jacksonObjectMapper().readTree(it) }
-        .let { expectThat(it).describedAs("API Docs response") }
+      expectThat(api).describedAs("API Docs response")
     }
 
     /**
