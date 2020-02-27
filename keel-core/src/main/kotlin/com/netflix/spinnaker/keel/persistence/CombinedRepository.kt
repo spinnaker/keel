@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import java.time.Clock
 import java.time.Duration
@@ -156,13 +157,18 @@ class CombinedRepository(
   }
 
   /**
-   * Validates that resources have unique ids, throws an exception if invalid
+   * Run validation checks against delivery config to ensure:
+   *
+   * - resources have unique ids
+   * - artifacts have unique references
+   *
+   * Throws an exception if config fails any checks
    */
   private fun validate(config: DeliveryConfig) {
     val resources = config.environments.map { it.resources }.flatten().map { it.id }
-    val distinct = resources.distinct()
+    val distinctResources = resources.distinct()
 
-    if (resources.size != distinct.size) {
+    if (resources.size != distinctResources.size) {
       val duplicates = resources.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList()
       val envToResources: Map<String, MutableList<String>> = config.environments
         .map { env -> env.name to env.resources.map { it.id }.toMutableList() }.toMap()
@@ -175,6 +181,15 @@ class CombinedRepository(
         }
       log.error("Validation failed for ${config.name}, duplicates found: $envsAndDuplicateResources")
       throw DuplicateResourceIdException(duplicates, envsAndDuplicateResources)
+    }
+
+    val refs = config.artifacts.map { it.reference }
+    val distinctRefs = refs.distinct()
+
+    if (refs.size != distinctRefs.size) {
+      val duplicates = resources.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList()
+      log.error("Validation failed for ${config.name}, duplicates found: $duplicates")
+      throw DuplicateArtifactReferenceException(duplicates)
     }
   }
 
