@@ -115,6 +115,6 @@ fun Assertion.Builder<ValidationResults>.isValid() = assert("is valid") { subjec
   if (subject.isValid) {
     pass()
   } else {
-    fail(subject)
+    fail(subject, "found ${subject.items.size} validation errors: %s")
   }
 }
