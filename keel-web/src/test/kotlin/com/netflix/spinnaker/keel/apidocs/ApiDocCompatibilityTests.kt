@@ -6,7 +6,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
-import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import kotlin.reflect.KClass
@@ -56,15 +55,23 @@ class ApiDocCompatibilityTests : JUnit5Minutests {
       SchemaValidator("Keel", api)
     }
 
-    mapOf(
-      "EC2 cluster" to "/examples/cluster-example.yml",
-      "EC2 application load balancer" to "/examples/alb-example.yml",
-      "EC2 classic load balancer" to "/examples/clb-example.yml"
-    ).forEach { (description, path) ->
-      test("$description example is valid") {
-        expectThat(validate<SubmittedResource<*>>(path))
-          .describedAs(description)
-          .isValid()
+    context("resource definitions") {
+      mapOf(
+        "EC2 cluster" to "/examples/cluster-example.yml",
+        "EC2 application load balancer" to "/examples/alb-example.yml",
+        "EC2 classic load balancer" to "/examples/clb-example.yml",
+        "EC2 cluster with auto-scaling" to "/examples/ec2-cluster-with-autoscaling-example.yml",
+        "Bakery image" to "/examples/image-example.yml",
+        "EC2 security group" to "/examples/security-group-example.yml",
+        "Simple Titus cluster" to "/examples/simple-titus-cluster-example.yml",
+        "Titus cluster" to "/examples/titus-cluster-example.yml",
+        "Titus cluster with artifact" to "/examples/titus-cluster-with-artifact-example.yml"
+      ).forEach { (description, path) ->
+        test("$description example is valid") {
+          expectThat(validate<SubmittedResource<*>>(path))
+            .describedAs(description)
+            .isValid()
+        }
       }
     }
   }
