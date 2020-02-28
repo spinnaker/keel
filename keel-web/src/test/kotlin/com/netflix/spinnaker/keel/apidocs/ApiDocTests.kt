@@ -295,6 +295,12 @@ class ApiDocTests : JUnit5Minutests {
           path("description").isTextual()
         }
     }
+
+    test("property with type Map<String, Any?> does not restrict the value type to object") {
+      at("/components/schemas/SubmittedResource/properties/metadata")
+        .not()
+        .has("additionalProperties")
+    }
   }
 }
 
