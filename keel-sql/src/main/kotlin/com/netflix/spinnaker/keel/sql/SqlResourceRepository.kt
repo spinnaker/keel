@@ -7,14 +7,15 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.ResourceSummary
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -49,8 +50,9 @@ open class SqlResourceRepository(
           .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(*chunk.toTypedArray()))
           .execute()
 
-        jooq.deleteFrom(RESOURCE_EVENT)
-          .where(RESOURCE_EVENT.UID.`in`(*chunk.toTypedArray()))
+        jooq.deleteFrom(EVENT)
+          .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+          .and(EVENT.UID.`in`(*chunk.toTypedArray()))
           .execute()
       }
     }
@@ -203,11 +205,12 @@ open class SqlResourceRepository(
     require(limit > 0) { "limit must be a positive integer" }
     return sqlRetry.withRetry(READ) {
       jooq
-        .select(RESOURCE_EVENT.JSON)
-        .from(RESOURCE_EVENT, RESOURCE)
-        .where(RESOURCE.ID.eq(id))
-        .and(RESOURCE.UID.eq(RESOURCE_EVENT.UID))
-        .orderBy(RESOURCE_EVENT.TIMESTAMP.desc())
+        .select(EVENT.JSON)
+        .from(EVENT, RESOURCE)
+        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+        .and(RESOURCE.ID.eq(id))
+        .and(RESOURCE.UID.eq(EVENT.UID))
+        .orderBy(EVENT.TIMESTAMP.desc())
         .limit(limit)
         .fetch()
         .map { (json) ->
@@ -223,11 +226,12 @@ open class SqlResourceRepository(
   override fun appendHistory(event: ResourceEvent) {
     if (event.ignoreRepeatedInHistory) {
       val previousEvent = jooq
-        .select(RESOURCE_EVENT.JSON)
-        .from(RESOURCE_EVENT, RESOURCE)
-        .where(RESOURCE.ID.eq(event.id))
-        .and(RESOURCE.UID.eq(RESOURCE_EVENT.UID))
-        .orderBy(RESOURCE_EVENT.TIMESTAMP.desc())
+        .select(EVENT.JSON)
+        .from(EVENT, RESOURCE)
+        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+        .and(RESOURCE.ID.eq(event.id))
+        .and(RESOURCE.UID.eq(EVENT.UID))
+        .orderBy(EVENT.TIMESTAMP.desc())
         .limit(1)
         .fetchOne()
         ?.let { (json) ->
@@ -238,10 +242,11 @@ open class SqlResourceRepository(
     }
 
     jooq
-      .insertInto(RESOURCE_EVENT)
-      .set(RESOURCE_EVENT.UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.id)))
-      .set(RESOURCE_EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
-      .set(RESOURCE_EVENT.JSON, objectMapper.writeValueAsString(event))
+      .insertInto(EVENT)
+      .set(EVENT.SCOPE, Scope.RESOURCE.name)
+      .set(EVENT.UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.id)))
+      .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+      .set(EVENT.JSON, objectMapper.writeValueAsString(event))
       .execute()
   }
 
@@ -260,8 +265,9 @@ open class SqlResourceRepository(
         .execute()
     }
     sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(RESOURCE_EVENT)
-        .where(RESOURCE_EVENT.UID.eq(uid.toString()))
+      jooq.deleteFrom(EVENT)
+        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+        .and(EVENT.UID.eq(uid.toString()))
         .execute()
     }
     sqlRetry.withRetry(WRITE) {

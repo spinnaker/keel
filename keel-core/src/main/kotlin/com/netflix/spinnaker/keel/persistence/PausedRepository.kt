@@ -17,6 +17,8 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
+import java.time.Instant
+
 /**
  * A repository to track what scopes are paused, starting with application
  */
@@ -37,4 +39,9 @@ interface PausedRepository {
   enum class Scope {
     APPLICATION, RESOURCE;
   }
+
+  data class PauseAction(
+    private val scope: Scope,
+    private val timestamp: Instant
+  )
 }

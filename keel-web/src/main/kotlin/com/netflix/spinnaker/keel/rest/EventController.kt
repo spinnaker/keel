@@ -38,7 +38,8 @@ class EventController(
       .resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
       .also {
         if (pauseScope != null) {
-          // for user clarity we add a pause event to the resource history if the resource is paused.
+          // val justBefore = it.indexOfFirst { event -> event.timestamp }
+          // for user clarity we add a pause event to the resource history if the resource or parent app is paused.
           val events = it.toMutableList()
           events.add(
             0,

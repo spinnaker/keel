@@ -54,12 +54,11 @@ import java.time.Instant
   Type(value = ResourceTaskFailed::class, name = "ResourceTaskFailed"),
   Type(value = ResourceTaskSucceeded::class, name = "ResourceTaskSucceeded")
 )
-sealed class ResourceEvent {
+sealed class ResourceEvent : PersistentEvent() {
+  override val scope = Scope.RESOURCE
   abstract val apiVersion: String
   abstract val kind: String
   abstract val id: String
-  abstract val application: String
-  abstract val timestamp: Instant
 
   /**
    * Should repeated events of the same type
