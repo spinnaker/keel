@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
+import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import dev.minutest.junit.JUnit5Minutests
@@ -47,6 +48,7 @@ class ApiDocCompatibilityTests : JUnit5Minutests {
       .andReturn()
       .response
       .contentAsString
+      .also(::println)
       .let { jacksonObjectMapper().readTree(it) }
   }
 
@@ -72,6 +74,14 @@ class ApiDocCompatibilityTests : JUnit5Minutests {
             .describedAs(description)
             .isValid()
         }
+      }
+    }
+
+    context("delivery configs") {
+      test("example delivery config is valid") {
+        expectThat(validate<SubmittedDeliveryConfig>("/examples/delivery-config-example.yml"))
+          .describedAs("example delivery config")
+          .isValid()
       }
     }
   }
