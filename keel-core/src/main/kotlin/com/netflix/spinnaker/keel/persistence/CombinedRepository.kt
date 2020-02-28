@@ -165,34 +165,45 @@ class CombinedRepository(
    * Throws an exception if config fails any checks
    */
   private fun validate(config: DeliveryConfig) {
+
+    // helper function to get duplicates in a list
+    val duplicates: (List<String>) -> List<String> =
+      { ls -> ls.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList() }
+
+    /**
+     * check: resources have unique ids
+     */
+
     val resources = config.environments.map { it.resources }.flatten().map { it.id }
+    val duplicateResources = duplicates(resources)
 
-    val dupes = { ls: List<String> -> ls.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList() }
-
-    val distinctResources = resources.distinct()
-
-    if (resources.size != distinctResources.size) {
-      val duplicates = dupes(resources)
+    if (duplicateResources.isNotEmpty()) {
       val envToResources: Map<String, MutableList<String>> = config.environments
         .map { env -> env.name to env.resources.map { it.id }.toMutableList() }.toMap()
       val envsAndDuplicateResources = envToResources
         .filterValues { rs: MutableList<String> ->
           // remove all the resources we don't care about from this mapping
-          rs.removeIf { it !in duplicates }
+          rs.removeIf { it !in duplicateResources }
           // if there are resources left that we care about, leave it in the map
           rs.isNotEmpty()
         }
-      log.error("Validation failed for ${config.name}, duplicates found: $envsAndDuplicateResources")
-      throw DuplicateResourceIdException(duplicates, envsAndDuplicateResources)
+      log.error("Validation failed for ${config.name}, duplicates resource ids found: $envsAndDuplicateResources")
+      throw DuplicateResourceIdException(duplicateResources, envsAndDuplicateResources)
     }
 
+    /**
+     * check: artifacts have unique references
+     */
     val refs = config.artifacts.map { it.reference }
-    val distinctRefs = refs.distinct()
+    val duplicateRefs = duplicates(refs)
 
-    if (refs.size != distinctRefs.size) {
-      val duplicates = refs.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList()
-      log.error("Validation failed for ${config.name}, duplicates found: $duplicates")
-      throw DuplicateArtifactReferenceException(duplicates)
+    if (duplicateRefs.isNotEmpty()) {
+      val duplicatesArtifactNameToRef: Map<String, String> = config.artifacts
+        .filter { duplicateRefs.contains(it.reference) }
+        .map { art -> art.name to art.reference }.toMap()
+
+      log.error("Validation failed for ${config.name}, duplicate artifact references found: $duplicatesArtifactNameToRef")
+      throw DuplicateArtifactReferenceException(duplicatesArtifactNameToRef)
     }
   }
 
