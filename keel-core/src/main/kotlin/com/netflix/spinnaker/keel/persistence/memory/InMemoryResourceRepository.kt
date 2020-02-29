@@ -19,7 +19,9 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -34,7 +36,8 @@ class InMemoryResourceRepository(
 ) : ResourceRepository {
 
   private val resources = mutableMapOf<String, Resource<*>>()
-  private val events = mutableMapOf<String, MutableList<ResourceEvent>>()
+  private val resourceEvents = mutableMapOf<String, MutableList<ResourceEvent>>()
+  private val applicationEvents = mutableMapOf<String, MutableList<ApplicationEvent>>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
 
   override fun deleteByApplication(application: String): Int {
@@ -47,7 +50,7 @@ class InMemoryResourceRepository(
       .singleOrNull()
       ?.also {
         resources.remove(it)
-        events.remove(it)
+        resourceEvents.remove(it)
         lastCheckTimes.remove(it)
       }
     return size
@@ -97,18 +100,34 @@ class InMemoryResourceRepository(
       .singleOrNull()
       ?.also {
         resources.remove(it)
-        events.remove(it)
+        resourceEvents.remove(it)
       }
       ?: throw NoSuchResourceId(id)
   }
 
+  override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
+    require(limit > 0) { "limit must be a positive integer" }
+    return applicationEvents[application]?.take(limit) ?: throw NoSuchApplication(application)
+  }
+
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
     require(limit > 0) { "limit must be a positive integer" }
-    return events[id]?.take(limit) ?: throw NoSuchResourceId(id)
+    return resourceEvents[id]?.take(limit) ?: throw NoSuchResourceId(id)
   }
 
   override fun appendHistory(event: ResourceEvent) {
-    events.computeIfAbsent(event.id) {
+    resourceEvents.computeIfAbsent(event.id) {
+      mutableListOf()
+    }
+      .let {
+        if (!event.ignoreRepeatedInHistory || event.javaClass != it.firstOrNull()?.javaClass) {
+          it.add(0, event)
+        }
+      }
+  }
+
+  override fun appendHistory(event: ApplicationEvent) {
+    applicationEvents.computeIfAbsent(event.application) {
       mutableListOf()
     }
       .let {
@@ -135,7 +154,7 @@ class InMemoryResourceRepository(
 
   fun dropAll() {
     resources.clear()
-    events.clear()
+    resourceEvents.clear()
     lastCheckTimes.clear()
   }
 

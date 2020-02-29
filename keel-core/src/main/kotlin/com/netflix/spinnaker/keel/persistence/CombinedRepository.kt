@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.core.api.resources
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
@@ -292,6 +293,9 @@ class CombinedRepository(
 
   override fun deleteResourcesByApplication(application: String): Int =
     resourceRepository.deleteByApplication(application)
+
+  override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> =
+    resourceRepository.applicationEventHistory(application, limit)
 
   override fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent> =
     resourceRepository.eventHistory(id, limit)

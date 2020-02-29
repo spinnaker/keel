@@ -33,7 +33,7 @@ import strikt.api.expect
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-class ResourcePauserTests : JUnit5Minutests {
+class ActuationPauserTests : JUnit5Minutests {
   class Fixture {
     val resource1 = resource()
     val resource2 = resource()
@@ -46,7 +46,7 @@ class ResourcePauserTests : JUnit5Minutests {
     }
     val pausedRepository = InMemoryPausedRepository()
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    val subject = ResourcePauser(resourceRepository, pausedRepository, publisher)
+    val subject = ActuationPauser(resourceRepository, pausedRepository, publisher)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -67,7 +67,7 @@ class ResourcePauserTests : JUnit5Minutests {
           that(subject.isPaused(resource1)).isFalse()
           that(subject.isPaused(resource2)).isFalse()
         }
-        verify(exactly = 2) { publisher.publishEvent(any<ResourceActuationResumed>()) }
+        verify(exactly = 2) { publisher.publishEvent(ofType<ResourceActuationResumed>()) }
       }
     }
 
@@ -86,7 +86,7 @@ class ResourcePauserTests : JUnit5Minutests {
           that(subject.isPaused(resource1)).isFalse()
           that(subject.isPaused(resource2)).isFalse()
         }
-        verify(exactly = 1) { publisher.publishEvent(any<ResourceActuationResumed>()) }
+        verify(exactly = 1) { publisher.publishEvent(ofType<ResourceActuationResumed>()) }
       }
     }
   }

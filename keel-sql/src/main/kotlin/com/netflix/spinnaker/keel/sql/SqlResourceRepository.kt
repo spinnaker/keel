@@ -7,8 +7,10 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -201,6 +203,26 @@ open class SqlResourceRepository(
       .execute()
   }
 
+  override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
+    require(limit > 0) { "limit must be a positive integer" }
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(EVENT.JSON)
+        .from(EVENT)
+        .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
+        .and(EVENT.UID.eq(application))
+        .orderBy(EVENT.TIMESTAMP.desc())
+        .limit(limit)
+        .fetch()
+        .map { (json) ->
+          objectMapper.readValue<ApplicationEvent>(json)
+        }
+        .ifEmpty {
+          throw NoSuchApplication(application)
+        }
+    }
+  }
+
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return sqlRetry.withRetry(READ) {
@@ -220,6 +242,32 @@ open class SqlResourceRepository(
           throw NoSuchResourceId(id)
         }
     }
+  }
+
+  override fun appendHistory(event: ApplicationEvent) {
+    if (event.ignoreRepeatedInHistory) {
+      val previousEvent = jooq
+        .select(EVENT.JSON)
+        .from(EVENT)
+        .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
+        .and(EVENT.UID.eq(event.application))
+        .orderBy(EVENT.TIMESTAMP.desc())
+        .limit(1)
+        .fetchOne()
+        ?.let { (json) ->
+          objectMapper.readValue<ApplicationEvent>(json)
+        }
+
+      if (event.javaClass == previousEvent?.javaClass) return
+    }
+
+    jooq
+      .insertInto(EVENT)
+      .set(EVENT.SCOPE, Scope.APPLICATION.name)
+      .set(EVENT.UID, event.application)
+      .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+      .set(EVENT.JSON, objectMapper.writeValueAsString(event))
+      .execute()
   }
 
   // todo: add sql retries once we've rethought repository structure: https://github.com/spinnaker/keel/issues/740

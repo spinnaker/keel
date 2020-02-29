@@ -1,9 +1,10 @@
 package com.netflix.spinnaker.keel.rest
 
-import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.application
+import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.pause.ResourcePauser
+import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/resources/events"])
 class EventController(
   private val repository: KeelRepository,
-  private val resourcePauser: ResourcePauser
+  private val actuationPauser: ActuationPauser
 ) {
   private val log by lazy { getLogger(javaClass) }
 
@@ -33,23 +34,33 @@ class EventController(
   ): List<ResourceEvent> {
     log.debug("Getting state history for: $id")
     val resource = repository.getResource(id)
-    val pauseScope = resourcePauser.getPauseScope(resource)
-    return repository
+    val events = repository
       .resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
-      .also {
-        if (pauseScope != null) {
-          // val justBefore = it.indexOfFirst { event -> event.timestamp }
-          // for user clarity we add a pause event to the resource history if the resource or parent app is paused.
-          val events = it.toMutableList()
-          events.add(
-            0,
-            pausedEvent(resource, "Resource actuation paused at the ${pauseScope.name.toLowerCase()} level")
-          )
-          return events
-        }
-      }
-  }
+      .toMutableList()
 
-  private fun pausedEvent(resource: Resource<*>, message: String) =
-    ResourceActuationPaused(resource, message)
+    // For user clarity we add a pause event to the resource history for every pause event from the parent app.
+    // We do this dynamically here so that it applies to all resources in the app, even those added _after_ the
+    // application was paused.
+    val appPausedEvents = repository
+      .applicationEventHistory(resource.application, limit ?: DEFAULT_MAX_EVENTS)
+      .filterIsInstance<ApplicationActuationPaused>()
+
+    appPausedEvents.forEach { appPaused ->
+      val lastBeforeAppPaused = events.indexOfFirst { event ->
+        event.timestamp.isBefore(appPaused.timestamp)
+      }
+
+      if (lastBeforeAppPaused == -1) {
+        log.warn("Unable to find a resource event just before application paused event at ${appPaused.timestamp}")
+      } else {
+        events.add(
+          lastBeforeAppPaused,
+          ResourceActuationPaused(resource, "Resource actuation paused at the application level",
+            appPaused.timestamp)
+        )
+      }
+    }
+
+    return events
+  }
 }

@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
@@ -122,6 +123,8 @@ interface KeelRepository {
   fun deleteResource(id: String)
 
   fun deleteResourcesByApplication(application: String): Int
+
+  fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent>
 
   fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent>
 

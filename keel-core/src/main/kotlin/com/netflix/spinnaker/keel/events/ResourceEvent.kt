@@ -65,10 +65,6 @@ sealed class ResourceEvent : PersistentEvent() {
    */
   @JsonIgnore
   open val ignoreRepeatedInHistory: Boolean = false
-
-  companion object {
-    val clock: Clock = Clock.systemDefaultZone()
-  }
 }
 
 /**
@@ -227,13 +223,22 @@ data class ResourceActuationPaused(
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, reason: String? = null) : this(
     resource.apiVersion,
     resource.kind,
     resource.id,
     resource.application,
     reason,
     clock.instant()
+  )
+
+  constructor(resource: Resource<*>, reason: String? = null, timestamp: Instant) : this(
+    resource.apiVersion,
+    resource.kind,
+    resource.id,
+    resource.application,
+    reason,
+    timestamp
   )
 }
 

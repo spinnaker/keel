@@ -20,6 +20,9 @@ package com.netflix.spinnaker.keel.pause
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
+import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
+import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
 import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
@@ -31,7 +34,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
-class ResourcePauser(
+class ActuationPauser(
   val resourceRepository: ResourceRepository,
   val pausedRepository: PausedRepository,
   val publisher: ApplicationEventPublisher
@@ -62,11 +65,13 @@ class ResourcePauser(
   fun pauseApplication(application: String) {
     log.info("Pausing application $application")
     pausedRepository.pauseApplication(application)
+    publisher.publishEvent(ApplicationActuationPaused(application))
   }
 
   fun resumeApplication(application: String) {
     log.info("Resuming application $application")
     pausedRepository.resumeApplication(application)
+    publisher.publishEvent(ApplicationActuationResumed(application))
     resourceRepository.getResourcesByApplication(application)
       .forEach {
         // helps a user not be confused by an out of date status from before a pause
@@ -77,6 +82,7 @@ class ResourcePauser(
   fun pauseResource(id: String) {
     log.info("Pausing resource $id")
     pausedRepository.pauseResource(id)
+    publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id)))
   }
 
   fun resumeResource(id: String) {

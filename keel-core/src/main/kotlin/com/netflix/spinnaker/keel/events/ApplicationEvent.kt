@@ -1,3 +1,60 @@
 package com.netflix.spinnaker.keel.events
 
-class ApplicationEvent
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import java.time.Instant
+
+@JsonTypeInfo(
+  use = JsonTypeInfo.Id.NAME,
+  property = "type",
+  include = JsonTypeInfo.As.PROPERTY
+)
+@JsonSubTypes(
+  JsonSubTypes.Type(value = ApplicationActuationPaused::class, name = "ApplicationActuationPaused"),
+  JsonSubTypes.Type(value = ApplicationActuationResumed::class, name = "ApplicationActuationResumed")
+)
+sealed class ApplicationEvent : PersistentEvent() {
+  override val scope = Scope.APPLICATION
+
+  @JsonIgnore
+  open val ignoreRepeatedInHistory: Boolean = false
+}
+
+/**
+ * Actuation at the application level has been paused.
+ *
+ * @property reason The reason why actuation was paused.
+ */
+data class ApplicationActuationPaused(
+  override val application: String,
+  val reason: String?,
+  override val timestamp: Instant
+) : ApplicationEvent() {
+  @JsonIgnore
+  override val ignoreRepeatedInHistory = true
+
+  constructor(application: String, reason: String? = null) : this(
+    application,
+    reason,
+    clock.instant()
+  )
+}
+
+/**
+ * Actuation at the application level has resumed.
+ */
+data class ApplicationActuationResumed(
+  override val application: String,
+  val reason: String?,
+  override val timestamp: Instant
+) : ApplicationEvent() {
+  @JsonIgnore
+  override val ignoreRepeatedInHistory = true
+
+  constructor(application: String, reason: String? = null) : this(
+    application,
+    reason,
+    clock.instant()
+  )
+}
