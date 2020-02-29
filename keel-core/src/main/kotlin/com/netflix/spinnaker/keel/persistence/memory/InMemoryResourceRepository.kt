@@ -21,7 +21,6 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -107,7 +106,7 @@ class InMemoryResourceRepository(
 
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
     require(limit > 0) { "limit must be a positive integer" }
-    return applicationEvents[application]?.take(limit) ?: throw NoSuchApplication(application)
+    return applicationEvents[application]?.take(limit) ?: emptyList()
   }
 
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
@@ -155,6 +154,7 @@ class InMemoryResourceRepository(
   fun dropAll() {
     resources.clear()
     resourceEvents.clear()
+    applicationEvents.clear()
     lastCheckTimes.clear()
   }
 

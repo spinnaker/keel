@@ -10,7 +10,6 @@ import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.persistence.NoSuchApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
@@ -216,9 +215,6 @@ open class SqlResourceRepository(
         .fetch()
         .map { (json) ->
           objectMapper.readValue<ApplicationEvent>(json)
-        }
-        .ifEmpty {
-          throw NoSuchApplication(application)
         }
     }
   }
