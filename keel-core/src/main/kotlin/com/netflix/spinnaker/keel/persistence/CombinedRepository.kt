@@ -167,13 +167,16 @@ class CombinedRepository(
   private fun validate(config: DeliveryConfig) {
 
     // helper function to get duplicates in a list
-    val duplicates: (List<String>) -> List<String> =
-      { ls -> ls.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.toList() }
+    fun duplicates(ids: List<String>): List<String> =
+      ids.groupingBy { it }
+        .eachCount()
+        .filter { it.value > 1 }
+        .keys
+        .toList()
 
     /**
      * check: resources have unique ids
      */
-
     val resources = config.environments.map { it.resources }.flatten().map { it.id }
     val duplicateResources = duplicates(resources)
 
@@ -200,7 +203,7 @@ class CombinedRepository(
     if (duplicateRefs.isNotEmpty()) {
       val duplicatesArtifactNameToRef: Map<String, String> = config.artifacts
         .filter { duplicateRefs.contains(it.reference) }
-        .map { art -> art.name to art.reference }.toMap()
+        .associate { art -> art.name to art.reference }
 
       log.error("Validation failed for ${config.name}, duplicate artifact references found: $duplicatesArtifactNameToRef")
       throw DuplicateArtifactReferenceException(duplicatesArtifactNameToRef)
