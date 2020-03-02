@@ -135,7 +135,7 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
         }
 
         verify(exactly = 1) { publisher.publishEvent(ofType<ResourceTaskFailed>()) }
-        resourceRepository.appendHistory(ResourceTaskFailed(resource, orcaExceptions().details.errors.joinToString(","), task, clock))
+        resourceRepository.appendHistory(ResourceTaskFailed(resource, orcaExceptions().details.errors.joinToString(","), listOf(task), clock))
 
         expectThat(resourceRepository.eventHistory(resource.id))
           .first()
@@ -164,7 +164,7 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
 
         verify(exactly = 1) { publisher.publishEvent(ofType<ResourceTaskFailed>()) }
         resourceRepository.appendHistory(ResourceTaskFailed(resource,
-          "The following security groups do not exist: 'keeldemo-main-elb' in 'test' vpc-46f5a223", task, clock))
+          "The following security groups do not exist: 'keeldemo-main-elb' in 'test' vpc-46f5a223", listOf(task), clock))
 
         expectThat(resourceRepository.eventHistory(resource.id))
           .first()

@@ -62,10 +62,10 @@ class OrcaTaskMonitorAgent(
               when (taskDetails.status.isSuccess()) {
                 true -> publisher.publishEvent(
                   ResourceTaskSucceeded(
-                    resourceRepository.get(id), Task(taskDetails.id, taskDetails.name), clock))
+                    resourceRepository.get(id), listOf(Task(taskDetails.id, taskDetails.name)), clock))
                 false -> publisher.publishEvent(
                   ResourceTaskFailed(
-                    resourceRepository.get(id), taskDetails.execution.stages.getFailureMessage() ?: "", Task(taskDetails.id, taskDetails.name), clock))
+                    resourceRepository.get(id), taskDetails.execution.stages.getFailureMessage() ?: "", listOf(Task(taskDetails.id, taskDetails.name)), clock))
               }
             } catch (e: NoSuchResourceId) {
               log.warn("No resource found for id $resourceId")

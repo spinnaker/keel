@@ -297,17 +297,17 @@ data class ResourceTaskFailed(
   override val id: String,
   override val application: String,
   val reason: String?,
-  val task: Task,
+  val tasks: List<Task>,
   override val timestamp: Instant
 ) : ResourceEvent() {
 
-  constructor(resource: Resource<*>, reason: String?, task: Task, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, reason: String?, tasks: List<Task>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
     resource.id,
     resource.application,
     reason,
-    task,
+    tasks,
     clock.instant()
   )
 }
@@ -320,16 +320,16 @@ data class ResourceTaskSucceeded(
   override val kind: String,
   override val id: String,
   override val application: String,
-  val task: Task,
+  val tasks: List<Task>,
   override val timestamp: Instant
 ) : ResourceEvent() {
 
-  constructor(resource: Resource<*>, task: Task, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, tasks: List<Task>, clock: Clock = Companion.clock) : this(
     resource.apiVersion,
     resource.kind,
     resource.id,
     resource.application,
-    task,
+    tasks,
     clock.instant()
   )
 }
