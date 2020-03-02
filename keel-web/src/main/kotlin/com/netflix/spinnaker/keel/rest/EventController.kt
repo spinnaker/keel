@@ -42,7 +42,7 @@ class EventController(
     // We do this dynamically here so that it applies to all resources in the app, even those added _after_ the
     // application was paused.
     val appPausedEvents = repository
-      .applicationEventHistory(resource.application, limit ?: DEFAULT_MAX_EVENTS)
+      .applicationEventHistory(resource.application, events.last().timestamp)
       .filterIsInstance<ApplicationActuationPaused>()
 
     appPausedEvents.forEach { appPaused ->

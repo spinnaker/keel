@@ -109,6 +109,10 @@ class InMemoryResourceRepository(
     return applicationEvents[application]?.take(limit) ?: emptyList()
   }
 
+  override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> {
+    return applicationEvents[application]?.takeWhile { !it.timestamp.isAfter(downTo) } ?: emptyList()
+  }
+
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return resourceEvents[id]?.take(limit) ?: throw NoSuchResourceId(id)

@@ -26,6 +26,7 @@ import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -296,6 +297,9 @@ class CombinedRepository(
 
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> =
     resourceRepository.applicationEventHistory(application, limit)
+
+  override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> =
+    resourceRepository.applicationEventHistory(application, downTo)
 
   override fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent> =
     resourceRepository.eventHistory(id, limit)

@@ -26,6 +26,8 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.Instant.EPOCH
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.select
 
@@ -212,6 +214,22 @@ open class SqlResourceRepository(
         .and(EVENT.UID.eq(application))
         .orderBy(EVENT.TIMESTAMP.desc())
         .limit(limit)
+        .fetch()
+        .map { (json) ->
+          objectMapper.readValue<ApplicationEvent>(json)
+        }
+    }
+  }
+
+  override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(EVENT.JSON)
+        .from(EVENT)
+        .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
+        .and(EVENT.UID.eq(application))
+        .and(EVENT.TIMESTAMP.lessOrEqual(LocalDateTime.ofInstant(downTo, ZoneOffset.UTC)))
+        .orderBy(EVENT.TIMESTAMP.desc())
         .fetch()
         .map { (json) ->
           objectMapper.readValue<ApplicationEvent>(json)
