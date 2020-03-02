@@ -15,7 +15,7 @@ import java.time.Instant
   JsonSubTypes.Type(value = ApplicationActuationResumed::class, name = "ApplicationActuationResumed")
 )
 sealed class ApplicationEvent : PersistentEvent() {
-  override val scope = Scope.APPLICATION
+  @JsonIgnore override val scope = Scope.APPLICATION
 
   @JsonIgnore
   open val ignoreRepeatedInHistory: Boolean = false
