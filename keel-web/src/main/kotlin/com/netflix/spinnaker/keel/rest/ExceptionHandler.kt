@@ -72,7 +72,7 @@ class ExceptionHandler(
 
   @ExceptionHandler(ValidationException::class)
   @ResponseStatus(BAD_REQUEST)
-  fun onDuplicateResourceIds(e: ValidationException): ApiError {
+  fun onInvalidDeliveryConfig(e: ValidationException): ApiError {
     log.error(e.message)
     return ApiError(e)
   }
