@@ -1,6 +1,5 @@
 ---
-apiVersion: ec2.spinnaker.netflix.com/v1
-kind: application-load-balancer
+kind: ec2/v1/application-load-balancer
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

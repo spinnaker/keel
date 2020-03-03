@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.actuation
 
-import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
@@ -85,9 +84,9 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
     before {
       every { plugin1.name } returns "plugin1"
-      every { plugin1.supportedKind } returns SupportedKind("plugin1.$SPINNAKER_API_V1", "foo", DummyArtifactVersionedResourceSpec::class.java)
+      every { plugin1.supportedKind } returns SupportedKind("plugin1/v1/foo", DummyArtifactVersionedResourceSpec::class.java)
       every { plugin2.name } returns "plugin2"
-      every { plugin2.supportedKind } returns SupportedKind("plugin2.$SPINNAKER_API_V1", "bar", DummyArtifactVersionedResourceSpec::class.java)
+      every { plugin2.supportedKind } returns SupportedKind("plugin2/v1/bar", DummyArtifactVersionedResourceSpec::class.java)
     }
 
     after {
@@ -96,8 +95,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
     context("a managed resource exists") {
       val resource = artifactVersionedResource(
-        apiVersion = "plugin1.$SPINNAKER_API_V1",
-        kind = "foo"
+        kind = "plugin1/v1/foo"
       )
 
       before {
@@ -127,7 +125,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           }
 
           test("a telemetry event is published") {
-            verify { publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, resource.id, "ActuationPaused")) }
+            verify { publisher.publishEvent(ResourceCheckSkipped(resource.kind, resource.id, "ActuationPaused")) }
           }
         }
 
@@ -152,7 +150,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           }
 
           test("a telemetry event is published") {
-            verify { publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, resource.id, "ActuationInProgress")) }
+            verify { publisher.publishEvent(ResourceCheckSkipped(resource.kind, resource.id, "ActuationInProgress")) }
           }
         }
 
@@ -374,7 +372,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("resource checking is skipped and resource is vetoed") {
-          verify { publisher.publishEvent(ResourceCheckSkipped(resource.apiVersion, resource.kind, resource.id, "aVeto")) }
+          verify { publisher.publishEvent(ResourceCheckSkipped(resource.kind, resource.id, "aVeto")) }
           verify { publisher.publishEvent(ofType<ResourceActuationVetoed>()) }
         }
       }

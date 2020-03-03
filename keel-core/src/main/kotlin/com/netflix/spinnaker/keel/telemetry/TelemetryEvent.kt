@@ -5,7 +5,6 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 sealed class TelemetryEvent
 
 data class ResourceCheckSkipped(
-  val apiVersion: String,
   val kind: String,
   val id: String,
   val skipper: String = "unknown"

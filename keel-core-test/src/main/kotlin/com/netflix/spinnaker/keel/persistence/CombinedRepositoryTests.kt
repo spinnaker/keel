@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.SPINNAKER_API_V1
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
@@ -73,7 +72,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
   val resourceTypeIdentifier: ResourceTypeIdentifier =
     object : ResourceTypeIdentifier {
-      override fun identify(apiVersion: String, kind: String): Class<out ResourceSpec> {
+      override fun identify(kind: String): Class<out ResourceSpec> {
         return when (kind) {
           "security-group" -> DummyResourceSpec::class.java
           "cluster" -> DummyResourceSpec::class.java
@@ -92,7 +91,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
     val resourceTypeIdentifier: ResourceTypeIdentifier =
       object : ResourceTypeIdentifier {
-        override fun identify(apiVersion: String, kind: String): Class<out ResourceSpec> {
+        override fun identify(kind: String): Class<out ResourceSpec> {
           return when (kind) {
             "security-group" -> DummyResourceSpec::class.java
             "cluster" -> DummyResourceSpec::class.java
@@ -222,7 +221,6 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
       context("resource lifecycle") {
         val resource = SubmittedResource(
           metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-          apiVersion = "test.$SPINNAKER_API_V1",
           kind = "whatever",
           spec = DummyResourceSpec(data = "o hai")
         ).normalize()
@@ -316,7 +314,6 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               name = "test",
               resources = setOf(
                 SubmittedResource(
-                  apiVersion = "test.$SPINNAKER_API_V1",
                   kind = "whatever",
                   spec = DummyResourceSpec("test", "im a twin", "keel")
                 )
@@ -327,7 +324,6 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               name = "prod",
               resources = setOf(
                 SubmittedResource(
-                  apiVersion = "test.$SPINNAKER_API_V1",
                   kind = "whatever",
                   spec = DummyResourceSpec("test", "im a twin", "keel")
                 )

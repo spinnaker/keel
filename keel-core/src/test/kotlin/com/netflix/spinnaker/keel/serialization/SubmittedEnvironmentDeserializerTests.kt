@@ -35,8 +35,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- apiVersion: test/v1
-          |  kind: test-subnet-aware-locatable
+          |- kind: test/v1/test-subnet-aware-locatable
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -76,8 +75,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- apiVersion: test/v1
-          |  kind: test-subnet-aware-locatable
+          |- kind: test/v1/test-subnet-aware-locatable
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -110,8 +108,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- apiVersion: test/v1
-          |  kind: test-simple-locatable
+          |- kind: test/v1/test-simple-locatable
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -144,8 +141,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |- name: test
           |  resources:
-          |  - apiVersion: test/v1
-          |    kind: test-subnet-aware-locatable
+          |  - kind: test/v1/test-subnet-aware-locatable
           |    metadata:
           |      serviceAccount: mickey@disney.com
           |    spec:
@@ -160,8 +156,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |    - name: us-west-2
           |- name: prod
           |  resources:
-          |  - apiVersion: test/v1
-          |    kind: test-subnet-aware-locatable
+          |  - kind: test/v1/test-subnet-aware-locatable
           |    metadata:
           |      serviceAccount: mickey@disney.com
           |    spec:
@@ -184,8 +179,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- apiVersion: test/v1
-          |  kind: test-locatable
+          |- kind: test/v1/test-locatable
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:

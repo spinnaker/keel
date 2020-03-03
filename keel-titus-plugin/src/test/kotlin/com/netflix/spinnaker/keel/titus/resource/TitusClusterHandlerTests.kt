@@ -29,7 +29,6 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
-import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterHandler
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroup
@@ -138,7 +137,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   val activeServerGroupResponseWest = serverGroupWest.toClouddriverResponse(listOf(sg1West, sg2West), awsAccount)
 
   val resource = resource(
-    apiVersion = SPINNAKER_TITUS_API_V1,
     kind = "cluster",
     spec = spec
   )

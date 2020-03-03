@@ -144,34 +144,24 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
 }
 
 data class SupportedKind<SPEC : ResourceSpec>(
-  val apiVersion: String,
   val kind: String,
   val specClass: Class<SPEC>
-) {
-  val typeId = "$apiVersion/$kind"
-}
+)
 
 /**
- * Searches a list of `ResourceHandler`s and returns the first that supports [apiVersion] and
- * [kind].
+ * Searches a list of `ResourceHandler`s and returns the first that supports [kind].
  *
  * @throws UnsupportedKind if no appropriate handlers are found in the list.
  */
 fun Collection<ResourceHandler<*, *>>.supporting(
-  apiVersion: String,
   kind: String
 ): ResourceHandler<*, *> =
-  find {
-    it.supportedKind.apiVersion == apiVersion && it.supportedKind.kind == kind
-  }
-    ?: throw UnsupportedKind(apiVersion, kind)
+  find { it.supportedKind.kind == kind } ?: throw UnsupportedKind(kind)
 
 fun <T : ResourceSpec> Collection<ResourceHandler<*, *>>.supporting(
   specClass: Class<T>
 ): ResourceHandler<*, *>? =
-  find {
-    it.supportedKind.specClass == specClass
-  }
+  find { it.supportedKind.specClass == specClass }
 
-class UnsupportedKind(apiVersion: String, kind: String) :
-  IllegalStateException("No resource handler supporting \"$kind\" in \"$apiVersion\" is available")
+class UnsupportedKind(kind: String) :
+  IllegalStateException("No resource handler supporting \"$kind\" is available")

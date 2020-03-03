@@ -89,8 +89,8 @@ class KeelApplication {
     handlers
       .map { it.supportedKind }
       .forEach { kind ->
-        log.info("Registering ResourceSpec sub-type {}: {}", kind.typeId, kind.specClass.simpleName)
-        val namedType = NamedType(kind.specClass, kind.typeId)
+        log.info("Registering ResourceSpec sub-type {}: {}", kind.kind, kind.specClass.simpleName)
+        val namedType = NamedType(kind.specClass, kind.kind)
         objectMappers.forEach { it.registerSubtypes(namedType) }
       }
   }

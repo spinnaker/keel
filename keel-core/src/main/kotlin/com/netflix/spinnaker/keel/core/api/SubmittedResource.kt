@@ -15,34 +15,33 @@
  */
 package com.netflix.spinnaker.keel.core.api
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeInfo.As
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.assignId
 import com.netflix.spinnaker.keel.api.docs.Description
-import com.netflix.spinnaker.keel.serialization.SubmittedResourceDeserializer
 
 /**
  * External representation of a resource that would be submitted to the API
  */
-@JsonDeserialize(using = SubmittedResourceDeserializer::class)
 @Description("A resource as submitted to the Managed Delivery API.")
 data class SubmittedResource<T : ResourceSpec>(
   @Description("Optional metadata about the resource.")
   val metadata: Map<String, Any?> = emptyMap(),
-  @Description("The API version of the resource kind.")
-  val apiVersion: String,
   @Description("The kind of resource `spec` represents.")
   val kind: String,
   @Description("The specification of the resource")
+  @JsonTypeInfo(use = Id.NAME, include = As.EXTERNAL_PROPERTY, property = "kind")
   val spec: T
 )
 
 val <T : ResourceSpec> SubmittedResource<T>.id: String
-  get() = "${apiVersion.substringBefore(".")}:$kind:${spec.id}"
+  get() = assignId(kind, spec)
 
 fun <T : ResourceSpec> SubmittedResource<T>.normalize(): Resource<T> =
   Resource(
-    apiVersion = apiVersion,
     kind = kind,
     metadata = metadata + mapOf(
       "id" to id,

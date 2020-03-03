@@ -29,8 +29,7 @@ class SampleDockerImageResolver(
   repository
 ) {
 
-  override val apiVersion: String = SAMPLE_API_VERSION
-  override val supportedKind: String = "sample"
+  override val supportedKind: String = "$SAMPLE_API_VERSION/sample"
 
   override fun getContainerFromSpec(resource: Resource<SampleSpecWithContainer>) =
     resource.spec.container

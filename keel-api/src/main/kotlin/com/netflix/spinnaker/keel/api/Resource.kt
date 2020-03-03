@@ -4,7 +4,6 @@ package com.netflix.spinnaker.keel.api
  * Internal representation of a resource.
  */
 data class Resource<T : ResourceSpec>(
-  val apiVersion: String,
   val kind: String,
   val metadata: Map<String, Any?>,
   val spec: T
@@ -23,7 +22,6 @@ data class Resource<T : ResourceSpec>(
 
     other as Resource<*>
 
-    if (apiVersion != other.apiVersion) return false
     if (kind != other.kind) return false
     if (spec != other.spec) return false
 
@@ -31,12 +29,17 @@ data class Resource<T : ResourceSpec>(
   }
 
   override fun hashCode(): Int {
-    var result = apiVersion.hashCode()
-    result = 31 * result + kind.hashCode()
+    var result = kind.hashCode()
     result = 31 * result + spec.hashCode()
     return result
   }
 }
+
+/**
+ * Creates a resource id in the correct format.
+ */
+fun assignId(kind: String, spec: ResourceSpec) =
+  "${kind.substringBefore("/")}:${kind.substringAfterLast("/")}:${spec.id}"
 
 val <T : ResourceSpec> Resource<T>.id: String
   get() = metadata.getValue("id").toString()

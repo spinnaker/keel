@@ -52,12 +52,10 @@ import java.time.Instant
 
 data class ResourceHeader(
   val id: String,
-  val apiVersion: String,
   val kind: String
 ) {
   constructor(resource: Resource<*>) : this(
     resource.id,
-    resource.apiVersion,
     resource.kind
   )
 }

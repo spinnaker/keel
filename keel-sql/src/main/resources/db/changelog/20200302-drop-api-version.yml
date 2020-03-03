@@ -1,0 +1,17 @@
+databaseChangeLog:
+- changeSet:
+    id: drop-api-version
+    author: fletch
+    changes:
+    - sql:
+        sql: >
+          update resource
+          set kind = concat_ws(
+            '/',
+            substring(api_version, 1, locate('.', api_version) - 1),
+            substring(api_version, locate('/', api_version) + 1),
+            kind
+          )
+    - dropColumn:
+        tableName: resource
+        columnName: api_version

@@ -1,6 +1,5 @@
 ---
-apiVersion: bakery.spinnaker.netflix.com/v1
-kind: image
+kind: bakery/v1/image
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

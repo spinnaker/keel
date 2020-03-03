@@ -95,8 +95,8 @@ class DefaultConfiguration {
         applicationContext.getBeansOfType<ResourceHandler<*, *>>().values
       }
 
-      override fun identify(apiVersion: String, kind: String): Class<out ResourceSpec> {
-        return handlers.supporting(apiVersion, kind).supportedKind.specClass
+      override fun identify(kind: String): Class<out ResourceSpec> {
+        return handlers.supporting(kind).supportedKind.specClass
       }
     }
 

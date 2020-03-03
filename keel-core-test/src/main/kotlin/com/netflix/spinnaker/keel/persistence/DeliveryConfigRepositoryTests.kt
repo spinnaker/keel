@@ -48,7 +48,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
   ) {
     private val resourceTypeIdentifier: ResourceTypeIdentifier =
       object : ResourceTypeIdentifier {
-        override fun identify(apiVersion: String, kind: String): Class<out ResourceSpec> {
+        override fun identify(kind: String): Class<out ResourceSpec> {
           return when (kind) {
             "security-group" -> DummyResourceSpec::class.java
             "cluster" -> DummyResourceSpec::class.java

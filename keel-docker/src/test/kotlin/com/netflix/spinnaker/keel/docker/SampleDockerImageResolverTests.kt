@@ -72,7 +72,6 @@ class SampleDockerImageResolverTests : JUnit5Minutests {
 
   private fun generateResource(spec: SampleSpecWithContainer) =
     Resource(
-      apiVersion = SAMPLE_API_VERSION,
       kind = "sample",
       spec = spec,
       metadata = mapOf(
