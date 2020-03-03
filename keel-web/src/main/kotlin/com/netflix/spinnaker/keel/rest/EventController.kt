@@ -34,8 +34,7 @@ class EventController(
   ): List<ResourceEvent> {
     log.debug("Getting state history for: $id")
     val resource = repository.getResource(id)
-    val events = repository
-      .resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
+    val events = repository.resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
       .toMutableList()
 
     // For user clarity we add a pause event to the resource history for every pause event from the parent app.
@@ -46,15 +45,15 @@ class EventController(
       .filterIsInstance<ApplicationActuationPaused>()
 
     appPausedEvents.forEach { appPaused ->
-      val lastBeforeAppPaused = events.indexOfFirst { event ->
+      val lastBeforeAppPaused = events.firstOrNull { event ->
         event.timestamp.isBefore(appPaused.timestamp)
       }
 
-      if (lastBeforeAppPaused == -1) {
+      if (lastBeforeAppPaused == null) {
         log.warn("Unable to find a resource event just before application paused event at ${appPaused.timestamp}")
       } else {
         events.add(
-          lastBeforeAppPaused,
+          events.indexOf(lastBeforeAppPaused),
           ResourceActuationPaused(resource, "Resource actuation paused at the application level",
             appPaused.timestamp)
         )

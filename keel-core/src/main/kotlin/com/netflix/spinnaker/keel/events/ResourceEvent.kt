@@ -60,11 +60,8 @@ sealed class ResourceEvent : PersistentEvent() {
   abstract val kind: String
   abstract val id: String
 
-  /**
-   * Should repeated events of the same type
-   */
-  @JsonIgnore
-  open val ignoreRepeatedInHistory: Boolean = false
+  override val uid: String
+    get() = id
 }
 
 /**

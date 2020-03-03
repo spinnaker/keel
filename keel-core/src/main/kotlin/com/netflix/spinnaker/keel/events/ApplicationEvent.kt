@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.events
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import java.time.Clock
 import java.time.Instant
 
 @JsonTypeInfo(
@@ -15,10 +16,11 @@ import java.time.Instant
   JsonSubTypes.Type(value = ApplicationActuationResumed::class, name = "ApplicationActuationResumed")
 )
 sealed class ApplicationEvent : PersistentEvent() {
-  @JsonIgnore override val scope = Scope.APPLICATION
-
   @JsonIgnore
-  open val ignoreRepeatedInHistory: Boolean = false
+  override val scope = Scope.APPLICATION
+
+  override val uid: String
+    get() = application
 }
 
 /**
@@ -34,7 +36,7 @@ data class ApplicationActuationPaused(
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(application: String, reason: String? = null) : this(
+  constructor(application: String, reason: String? = null, clock: Clock = Companion.clock) : this(
     application,
     reason,
     clock.instant()
@@ -49,10 +51,9 @@ data class ApplicationActuationResumed(
   val reason: String?,
   override val timestamp: Instant
 ) : ApplicationEvent() {
-  @JsonIgnore
-  override val ignoreRepeatedInHistory = true
+  @JsonIgnore override val ignoreRepeatedInHistory = true
 
-  constructor(application: String, reason: String? = null) : this(
+  constructor(application: String, reason: String? = null, clock: Clock = Companion.clock) : this(
     application,
     reason,
     clock.instant()

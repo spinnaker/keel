@@ -20,6 +20,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ApplicationEvent
+import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
@@ -106,36 +107,43 @@ class InMemoryResourceRepository(
 
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
     require(limit > 0) { "limit must be a positive integer" }
-    return applicationEvents[application]?.take(limit) ?: emptyList()
+    return applicationEvents[application]
+      ?.sortedByDescending { it.timestamp }
+      ?.take(limit)
+      ?: emptyList()
   }
 
   override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> {
-    return applicationEvents[application]?.takeWhile { !it.timestamp.isAfter(downTo) } ?: emptyList()
+    return applicationEvents[application]
+      ?.sortedByDescending { it.timestamp }
+      ?.takeWhile { !it.timestamp.isBefore(downTo) }
+      ?: emptyList()
   }
 
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
     require(limit > 0) { "limit must be a positive integer" }
-    return resourceEvents[id]?.take(limit) ?: throw NoSuchResourceId(id)
+    return resourceEvents[id]
+      ?.sortedByDescending { it.timestamp }
+      ?.take(limit)
+      ?: throw NoSuchResourceId(id)
   }
 
   override fun appendHistory(event: ResourceEvent) {
-    resourceEvents.computeIfAbsent(event.id) {
-      mutableListOf()
-    }
-      .let {
-        if (!event.ignoreRepeatedInHistory || event.javaClass != it.firstOrNull()?.javaClass) {
-          it.add(0, event)
-        }
-      }
+    appendHistory(resourceEvents, event)
   }
 
   override fun appendHistory(event: ApplicationEvent) {
-    applicationEvents.computeIfAbsent(event.application) {
+    appendHistory(applicationEvents, event)
+  }
+
+  private fun <T : PersistentEvent> appendHistory(eventList: MutableMap<String, MutableList<T>>, event: T) {
+    eventList.computeIfAbsent(event.uid) {
       mutableListOf()
     }
       .let {
-        if (!event.ignoreRepeatedInHistory || event.javaClass != it.firstOrNull()?.javaClass) {
-          it.add(0, event)
+        val lastEvent = it.sortByDescending { e -> e.timestamp }
+        if (!event.ignoreRepeatedInHistory || event.javaClass != lastEvent?.javaClass) {
+          it.add(event)
         }
       }
   }
