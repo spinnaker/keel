@@ -25,7 +25,7 @@ internal class TelemetryListenerTests : JUnit5Minutests {
   private val registry = spyk<Registry>(NoopRegistry())
   private val counter = mockk<Counter>(relaxUnitFun = true)
   private val event = ResourceValid(
-    kind = "cluster",
+    kind = "ec2/v1/cluster",
     id = "ec2:cluster:prod:keel-main",
     application = "fnord",
     timestamp = Instant.now()
