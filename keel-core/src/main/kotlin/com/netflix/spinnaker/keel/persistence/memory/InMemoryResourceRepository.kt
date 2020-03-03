@@ -108,14 +108,12 @@ class InMemoryResourceRepository(
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return applicationEvents[application]
-      ?.sortedByDescending { it.timestamp }
       ?.take(limit)
       ?: emptyList()
   }
 
   override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> {
     return applicationEvents[application]
-      ?.sortedByDescending { it.timestamp }
       ?.takeWhile { !it.timestamp.isBefore(downTo) }
       ?: emptyList()
   }
@@ -123,7 +121,6 @@ class InMemoryResourceRepository(
   override fun eventHistory(id: String, limit: Int): List<ResourceEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return resourceEvents[id]
-      ?.sortedByDescending { it.timestamp }
       ?.take(limit)
       ?: throw NoSuchResourceId(id)
   }
@@ -141,9 +138,9 @@ class InMemoryResourceRepository(
       mutableListOf()
     }
       .let {
-        val lastEvent = it.sortByDescending { e -> e.timestamp }
+        val lastEvent = it.firstOrNull()
         if (!event.ignoreRepeatedInHistory || event.javaClass != lastEvent?.javaClass) {
-          it.add(event)
+          it.add(0, event)
         }
       }
   }
