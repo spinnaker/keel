@@ -106,11 +106,6 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
   fun delete(id: String)
 
   /**
-   * Deletes the resource associated with [application].
-   */
-  fun deleteByApplication(application: String): Int
-
-  /**
    * Retrieves the history of persisted events for [application].
    *
    * @param application the name of the application.

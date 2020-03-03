@@ -270,34 +270,6 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         }
       }
 
-      context("deleting resource by application name") {
-        before {
-          subject.store(resource)
-          subject.deleteByApplication(resource.application)
-        }
-
-        test("the resource is no longer returned when listing all resources") {
-          subject.allResources(callback)
-          verify(exactly = 0) { callback(any()) }
-        }
-
-        test("the resource can no longer be retrieved by name") {
-          expectThrows<NoSuchResourceException> {
-            subject.get<DummyResourceSpec>(resource.id)
-          }
-        }
-
-        test("events for the resource are also deleted") {
-          expectThrows<NoSuchResourceException> {
-            subject.eventHistory(resource.id)
-          }
-        }
-
-        test("deleting a non-existent application throws an exception") {
-          expectThat(subject.deleteByApplication(resource.application)).isEqualTo(0)
-        }
-      }
-
       context("fetching event history for the resource") {
         before {
           repeat(3) {

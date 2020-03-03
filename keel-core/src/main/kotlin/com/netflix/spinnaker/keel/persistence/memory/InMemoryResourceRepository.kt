@@ -40,22 +40,6 @@ class InMemoryResourceRepository(
   private val applicationEvents = mutableMapOf<String, MutableList<ApplicationEvent>>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
 
-  override fun deleteByApplication(application: String): Int {
-    val size = resources.count { it.value.application == application }
-
-    resources
-      .values
-      .filter { it.application == application }
-      .map { it.id }
-      .singleOrNull()
-      ?.also {
-        resources.remove(it)
-        resourceEvents.remove(it)
-        lastCheckTimes.remove(it)
-      }
-    return size
-  }
-
   override fun allResources(callback: (ResourceHeader) -> Unit) {
     resources.values.forEach {
       callback(ResourceHeader(it))

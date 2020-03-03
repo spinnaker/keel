@@ -123,8 +123,6 @@ interface KeelRepository {
 
   fun deleteResource(id: String)
 
-  fun deleteResourcesByApplication(application: String): Int
-
   fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent>
 
   fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent>

@@ -39,38 +39,6 @@ open class SqlResourceRepository(
   private val sqlRetry: SqlRetry
 ) : ResourceRepository {
 
-  override fun deleteByApplication(application: String): Int {
-    val resourceIds = getResourceIdsByApplication(application)
-    val resourceUids = getUidByApplication(application)
-
-    resourceUids.sorted().chunked(10).forEach { chunk ->
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(RESOURCE)
-          .where(RESOURCE.UID.`in`(*chunk.toTypedArray()))
-          .execute()
-
-        jooq.deleteFrom(RESOURCE_LAST_CHECKED)
-          .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(*chunk.toTypedArray()))
-          .execute()
-
-        jooq.deleteFrom(EVENT)
-          .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
-          .and(EVENT.UID.`in`(*chunk.toTypedArray()))
-          .execute()
-      }
-    }
-
-    resourceIds.sorted().chunked(10).forEach { chunk ->
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(DIFF_FINGERPRINT)
-          .where(DIFF_FINGERPRINT.RESOURCE_ID.`in`(*chunk.toTypedArray()))
-          .execute()
-      }
-    }
-
-    return resourceUids.size
-  }
-
   override fun allResources(callback: (ResourceHeader) -> Unit) {
     sqlRetry.withRetry(READ) {
       jooq

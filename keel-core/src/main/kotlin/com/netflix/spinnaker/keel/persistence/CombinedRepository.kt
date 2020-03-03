@@ -292,9 +292,6 @@ class CombinedRepository(
   override fun deleteResource(id: String) =
     resourceRepository.delete(id)
 
-  override fun deleteResourcesByApplication(application: String): Int =
-    resourceRepository.deleteByApplication(application)
-
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> =
     resourceRepository.applicationEventHistory(application, limit)
 
