@@ -20,8 +20,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.assignId
 import com.netflix.spinnaker.keel.api.docs.Description
+import com.netflix.spinnaker.keel.api.generateId
 
 /**
  * External representation of a resource that would be submitted to the API
@@ -38,7 +38,7 @@ data class SubmittedResource<T : ResourceSpec>(
 )
 
 val <T : ResourceSpec> SubmittedResource<T>.id: String
-  get() = assignId(kind, spec)
+  get() = generateId(kind, spec)
 
 fun <T : ResourceSpec> SubmittedResource<T>.normalize(): Resource<T> =
   Resource(

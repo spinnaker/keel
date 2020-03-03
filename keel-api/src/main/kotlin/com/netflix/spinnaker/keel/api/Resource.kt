@@ -38,7 +38,7 @@ data class Resource<T : ResourceSpec>(
 /**
  * Creates a resource id in the correct format.
  */
-fun assignId(kind: String, spec: ResourceSpec) =
+fun generateId(kind: String, spec: ResourceSpec) =
   "${kind.substringBefore("/")}:${kind.substringAfterLast("/")}:${spec.id}"
 
 val <T : ResourceSpec> Resource<T>.id: String

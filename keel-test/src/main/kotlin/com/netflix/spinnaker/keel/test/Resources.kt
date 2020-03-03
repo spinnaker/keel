@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.VersionedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.assignId
+import com.netflix.spinnaker.keel.api.generateId
 import com.netflix.spinnaker.keel.api.plugins.SimpleResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
@@ -102,7 +102,7 @@ fun <T : ResourceSpec> resource(
     kind = kind,
     spec = spec,
     metadata = mapOf(
-      "id" to assignId(kind, spec),
+      "id" to generateId(kind, spec),
       "application" to application,
       "serviceAccount" to "keel@spinnaker"
     )
