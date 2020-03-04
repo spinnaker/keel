@@ -96,9 +96,9 @@ class InMemoryResourceRepository(
       ?: emptyList()
   }
 
-  override fun applicationEventHistory(application: String, downTo: Instant): List<KeelApplicationEvent> {
+  override fun applicationEventHistory(application: String, until: Instant): List<KeelApplicationEvent> {
     return applicationEvents[application]
-      ?.takeWhile { !it.timestamp.isBefore(downTo) }
+      ?.takeWhile { !it.timestamp.isBefore(until) }
       ?: emptyList()
   }
 

@@ -190,14 +190,14 @@ open class SqlResourceRepository(
     }
   }
 
-  override fun applicationEventHistory(application: String, downTo: Instant): List<KeelApplicationEvent> {
+  override fun applicationEventHistory(application: String, until: Instant): List<KeelApplicationEvent> {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(EVENT.JSON)
         .from(EVENT)
         .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
         .and(EVENT.UID.eq(application))
-        .and(EVENT.TIMESTAMP.lessOrEqual(LocalDateTime.ofInstant(downTo, ZoneOffset.UTC)))
+        .and(EVENT.TIMESTAMP.lessOrEqual(LocalDateTime.ofInstant(until, ZoneOffset.UTC)))
         .orderBy(EVENT.TIMESTAMP.desc())
         .fetch()
         .map { (json) ->

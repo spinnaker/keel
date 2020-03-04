@@ -117,9 +117,9 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * Retrieves the history of persisted events for [application].
    *
    * @param application the name of the application.
-   * @param downTo the time of the oldest event to return.
+   * @param until the time of the oldest event to return.
    */
-  fun applicationEventHistory(application: String, downTo: Instant): List<KeelApplicationEvent>
+  fun applicationEventHistory(application: String, until: Instant): List<KeelApplicationEvent>
 
   /**
    * Retrieves the history of state change events for the resource represented by [uid].
