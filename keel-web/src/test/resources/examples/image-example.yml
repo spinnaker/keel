@@ -1,5 +1,5 @@
 ---
-kind: bakery/v1/image
+kind: bakery/image@v1
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

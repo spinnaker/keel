@@ -18,6 +18,7 @@ import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
+import com.netflix.spinnaker.keel.test.TEST_API
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -87,14 +88,14 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
               SubmittedEnvironment(
                 name = "test",
                 resources = setOf(SubmittedResource(
-                  kind = "whatever",
+                  kind = TEST_API.qualify("whatever"),
                   spec = DummyResourceSpec(data = "resource in test")
                 ))
               ),
               SubmittedEnvironment(
                 name = "prod",
                 resources = setOf(SubmittedResource(
-                  kind = "whatever",
+                  kind = TEST_API.qualify("whatever"),
                   spec = DummyResourceSpec(data = "resource in prod")
                 )),
                 constraints = setOf(DependsOnConstraint("test"))
@@ -136,7 +137,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         |environments:
         |- name: test
         |  resources:
-        |  - kind: test/v1/whatever
+        |  - kind: test/whatever@v1
         |    spec:
         |      data: resource in test
         |      application: someapp
@@ -149,7 +150,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         |      - hours: 6-18
         |        days: mon-fri
         |  resources:
-        |  - kind: test/v1/whatever
+        |  - kind: test/whatever@v1
         |    spec:
         |      data: resource in prod
         |      application: someapp
@@ -172,7 +173,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         |      "name": "test",
         |      "resources": [
         |        {
-        |          "kind": "test/v1/whatever",
+        |          "kind": "test/whatever@v1",
         |          "spec": {
         |            "data": "resource in test",
         |            "application": "someapp"
@@ -203,7 +204,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         |      ],
         |      "resources": [
         |        {
-        |          "kind": "test/v1/whatever",
+        |          "kind": "test/whatever@v1",
         |          "spec": {
         |            "data": "resource in prod",
         |            "application": "someapp"

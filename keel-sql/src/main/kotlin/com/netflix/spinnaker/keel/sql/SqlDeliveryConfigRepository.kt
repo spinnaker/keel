@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
@@ -759,9 +760,9 @@ class SqlDeliveryConfigRepository(
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(uid))
         .fetch { (kind, metadata, spec) ->
           Resource(
-            kind,
+            parseKind(kind),
             mapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-            mapper.readValue(spec, resourceTypeIdentifier.identify(kind))
+            mapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind)))
           )
         }
     }

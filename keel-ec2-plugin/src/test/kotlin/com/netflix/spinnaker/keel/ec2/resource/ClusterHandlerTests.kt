@@ -165,7 +165,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val serverGroupWest = serverGroups.first { it.location.region == "us-west-2" }
 
   val resource = resource(
-    kind = "$SPINNAKER_EC2_API_V1/cluster",
+    kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
     spec = spec
   )
 
@@ -178,7 +178,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     user = "fzlem@netflix.com",
     moniker = spec.moniker,
     regions = spec.locations.regions.map { it.name }.toSet(),
-    kind = "$SPINNAKER_EC2_API_V1/cluster"
+    kind = SPINNAKER_EC2_API_V1.qualify("cluster")
   )
 
   fun tests() = rootContext<ClusterHandler> {

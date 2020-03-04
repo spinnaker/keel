@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.titus.SPINNAKER_TITUS_API_V1
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.api.titus.image.CurrentlyDeployedDockerImageApprover
@@ -41,7 +42,7 @@ internal class CurrentlyDeployedDockerImageApproverTests : JUnit5Minutests {
     )
 
     val referenceCluster = resource(
-      kind = "cluster",
+      kind = SPINNAKER_TITUS_API_V1.qualify("cluster"),
       spec = TitusClusterSpec(
         moniker = Moniker("waffles", "api"),
         locations = SimpleLocations(account = "test", regions = setOf(SimpleRegionSpec("us-east-1"))),
@@ -54,7 +55,7 @@ internal class CurrentlyDeployedDockerImageApproverTests : JUnit5Minutests {
     )
 
     val digestCluster = resource(
-      kind = "cluster",
+      kind = SPINNAKER_TITUS_API_V1.qualify("cluster"),
       spec = TitusClusterSpec(
         moniker = Moniker("waffles", "api"),
         locations = SimpleLocations(account = "test", regions = setOf(SimpleRegionSpec("us-east-1"))),

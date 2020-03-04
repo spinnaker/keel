@@ -850,7 +850,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
   val Fixture.resource: Resource<SecurityGroupSpec>
     get() = resource(
-      kind = "$SPINNAKER_EC2_API_V1/security-group",
+      kind = SPINNAKER_EC2_API_V1.qualify("security-group"),
       spec = securityGroupSpec
     )
 }

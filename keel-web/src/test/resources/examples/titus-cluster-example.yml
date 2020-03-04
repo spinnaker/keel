@@ -1,5 +1,5 @@
 ---
-kind: titus/v1/cluster
+kind: titus/cluster@v1
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

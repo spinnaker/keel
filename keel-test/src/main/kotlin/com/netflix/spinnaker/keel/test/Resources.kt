@@ -1,8 +1,10 @@
 package com.netflix.spinnaker.keel.test
 
+import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -18,10 +20,10 @@ import de.danielbechler.diff.introspection.ObjectDiffProperty
 import java.time.Duration
 import java.util.UUID
 
-const val TEST_API = "test/v1"
+val TEST_API = ApiVersion("test")
 
 fun resource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   id: String = randomString(),
   application: String = "fnord"
 ): Resource<DummyResourceSpec> =
@@ -36,7 +38,7 @@ fun resource(
     }
 
 fun artifactVersionedResource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   id: String = randomString(),
   application: String = "fnord"
 ): Resource<DummyArtifactVersionedResourceSpec> =
@@ -51,7 +53,7 @@ fun artifactVersionedResource(
     }
 
 fun submittedResource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   application: String = "fnord"
 ): SubmittedResource<DummyResourceSpec> =
   DummyResourceSpec(application = application)
@@ -63,7 +65,7 @@ fun submittedResource(
     }
 
 fun locatableResource(
-  kind: String = "$TEST_API/locatable",
+  kind: ResourceKind = TEST_API.qualify("locatable"),
   id: String = randomString(),
   application: String = "fnord",
   locations: SimpleLocations = SimpleLocations(
@@ -83,7 +85,7 @@ fun locatableResource(
     }
 
 fun <T : Monikered> resource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   spec: T
 ): Resource<T> = resource(
   kind = kind,
@@ -93,7 +95,7 @@ fun <T : Monikered> resource(
 )
 
 fun <T : ResourceSpec> resource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   spec: T,
   id: String = spec.id,
   application: String = "fnord"
@@ -109,7 +111,7 @@ fun <T : ResourceSpec> resource(
   )
 
 fun <T : ResourceSpec> submittedResource(
-  kind: String = "$TEST_API/whatever",
+  kind: ResourceKind = TEST_API.qualify("whatever"),
   spec: T
 ): SubmittedResource<T> =
   SubmittedResource(
@@ -176,7 +178,7 @@ fun randomString(length: Int = 8) =
 
 object DummyResourceHandler : SimpleResourceHandler<DummyResourceSpec>(emptyList()) {
   override val supportedKind =
-    SupportedKind("$TEST_API/whatever", DummyResourceSpec::class.java)
+    SupportedKind(TEST_API.qualify("whatever"), DummyResourceSpec::class.java)
 
   override suspend fun current(resource: Resource<DummyResourceSpec>): DummyResourceSpec? {
     TODO("not implemented")

@@ -1,5 +1,5 @@
 ---
-kind: ec2/v1/security-group
+kind: ec2/security-group@v1
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

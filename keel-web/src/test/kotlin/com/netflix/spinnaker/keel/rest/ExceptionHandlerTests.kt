@@ -21,7 +21,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
     val subject = ExceptionHandler(listOf(DummyResourceHandler))
     val mapper = configuredYamlMapper()
     val parseException = try {
-        mapper.registerSubtypes(NamedType(DummyResourceSpec::class.java, "$TEST_API/whatever"))
+        mapper.registerSubtypes(NamedType(DummyResourceSpec::class.java, TEST_API.qualify("whatever").toString()))
         mapper.readValue(brokenYaml, SubmittedDeliveryConfig::class.java)
         throw IllegalArgumentException("test is broken")
       } catch (e: JsonMappingException) {
@@ -46,7 +46,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec: {}
           """.trimIndent()
         )
@@ -79,7 +79,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec: {}
           """.trimIndent()
         )
@@ -111,7 +111,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
             - constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec: {}
           """.trimIndent()
         )
@@ -144,7 +144,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: true # wrong
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec: {}
           """.trimIndent()
         )
@@ -178,7 +178,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               notifications: []
               resources:
               - spec: {}
-                # kind: "$TEST_API/whatever"
+                # kind: "${TEST_API.qualify("whatever")}"
           """.trimIndent()
         )
       }
@@ -210,7 +210,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec:
                   intData: "wrong"
           """.trimIndent()
@@ -244,7 +244,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec:
                   timeData: "wrong"
           """.trimIndent()
@@ -278,7 +278,7 @@ class ExceptionHandlerTests : JUnit5Minutests {
               constraints: []
               notifications: []
               resources:
-              - kind: "$TEST_API/whatever"
+              - kind: "${TEST_API.qualify("whatever")}"
                 spec:
                   enumData: "wrong"
           """.trimIndent()

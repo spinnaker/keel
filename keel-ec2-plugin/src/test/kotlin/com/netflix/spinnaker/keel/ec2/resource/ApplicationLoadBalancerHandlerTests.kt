@@ -99,7 +99,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
 
   private val spec = yamlMapper.readValue(yaml, ApplicationLoadBalancerSpec::class.java)
   private val resource = resource(
-    kind = "$SPINNAKER_EC2_API_V1/application-load-balancer",
+    kind = SPINNAKER_EC2_API_V1.qualify("application-load-balancer"),
     spec = spec
   )
 

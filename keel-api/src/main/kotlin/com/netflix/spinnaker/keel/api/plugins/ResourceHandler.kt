@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.api.plugins
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
+import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.id
@@ -144,7 +145,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
 }
 
 data class SupportedKind<SPEC : ResourceSpec>(
-  val kind: String,
+  val kind: ResourceKind,
   val specClass: Class<SPEC>
 )
 
@@ -154,7 +155,7 @@ data class SupportedKind<SPEC : ResourceSpec>(
  * @throws UnsupportedKind if no appropriate handlers are found in the list.
  */
 fun Collection<ResourceHandler<*, *>>.supporting(
-  kind: String
+  kind: ResourceKind
 ): ResourceHandler<*, *> =
   find { it.supportedKind.kind == kind } ?: throw UnsupportedKind(kind)
 
@@ -163,5 +164,5 @@ fun <T : ResourceSpec> Collection<ResourceHandler<*, *>>.supporting(
 ): ResourceHandler<*, *>? =
   find { it.supportedKind.specClass == specClass }
 
-class UnsupportedKind(kind: String) :
+class UnsupportedKind(kind: ResourceKind) :
   IllegalStateException("No resource handler supporting \"$kind\" is available")

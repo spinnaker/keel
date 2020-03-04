@@ -19,6 +19,7 @@
 package com.netflix.spinnaker.keel.api.plugins
 
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 
 /**
@@ -26,7 +27,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
  * opinions, or resolving references.
  */
 interface Resolver<T : ResourceSpec> : (Resource<T>) -> Resource<T> {
-  val supportedKind: String
+  val supportedKind: ResourceKind
 }
 
 fun <T : ResourceSpec> Iterable<Resolver<*>>.supporting(

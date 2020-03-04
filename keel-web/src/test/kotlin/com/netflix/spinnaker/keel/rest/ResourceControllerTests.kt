@@ -65,7 +65,7 @@ internal class ResourceControllerTests {
       .header("X-SPINNAKER-USER", "fzlem@netflix.com")
       .content(
         """{
-          |  "kind": "test/v1/whatever",
+          |  "kind": "test/whatever@v1",
           |  "spec": {
           |    "data": "o hai"
           |  }

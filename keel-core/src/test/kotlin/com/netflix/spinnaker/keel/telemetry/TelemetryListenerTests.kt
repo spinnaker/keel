@@ -4,6 +4,7 @@ import com.netflix.spectator.api.Counter
 import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spectator.api.Registry
 import com.netflix.spectator.api.Tag
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.events.ResourceValid
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -25,7 +26,7 @@ internal class TelemetryListenerTests : JUnit5Minutests {
   private val registry = spyk<Registry>(NoopRegistry())
   private val counter = mockk<Counter>(relaxUnitFun = true)
   private val event = ResourceValid(
-    kind = "ec2/v1/cluster",
+    kind = parseKind("ec2/cluster@v1"),
     id = "ec2:cluster:prod:keel-main",
     application = "fnord",
     timestamp = Instant.now()
@@ -61,7 +62,7 @@ internal class TelemetryListenerTests : JUnit5Minutests {
         expectThat(tags.captured) {
           any {
             key().isEqualTo("resourceKind")
-            value().isEqualTo(event.kind)
+            value().isEqualTo(event.kind.toString())
           }
           any {
             key().isEqualTo("resourceId")

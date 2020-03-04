@@ -1,5 +1,5 @@
 ---
-kind: ec2/v1/cluster
+kind: ec2/cluster@v1
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

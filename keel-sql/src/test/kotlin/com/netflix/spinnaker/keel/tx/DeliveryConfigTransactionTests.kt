@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.tx
 
 import com.netflix.spinnaker.keel.KeelApplication
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.id
@@ -81,7 +82,7 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
         SubmittedEnvironment(
           name = "test",
           resources = setOf(SubmittedResource(
-            kind = "test/v1/whatever",
+            kind = parseKind("test/whatever@v1"),
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("test", "resource in test", "keel")
           ))
@@ -89,7 +90,7 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
         SubmittedEnvironment(
           name = "prod",
           resources = setOf(SubmittedResource(
-            kind = "test/v1/whatever",
+            kind = parseKind("test/whatever@v1"),
             metadata = mapOf("serviceAccount" to "keel@spinnaker"),
             spec = DummyResourceSpec("prod", "resource in prod", "keel")
           ))

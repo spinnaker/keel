@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.Locatable
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
@@ -23,8 +24,8 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
     val mapper = configuredYamlMapper()
       .apply {
         configure(DeserializationFeature.WRAP_EXCEPTIONS, true)
-        registerSubtypes(NamedType(TestSubnetAwareLocatableResource::class.java, "test/v1/test-subnet-aware-locatable"))
-        registerSubtypes(NamedType(TestSimpleLocatableResource::class.java, "test/v1/test-simple-locatable"))
+        registerSubtypes(NamedType(TestSubnetAwareLocatableResource::class.java, parseKind("test/test-subnet-aware-locatable@v1").toString()))
+        registerSubtypes(NamedType(TestSimpleLocatableResource::class.java, parseKind("test/test-simple-locatable@v1").toString()))
       }
   }
 
@@ -35,7 +36,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- kind: test/v1/test-subnet-aware-locatable
+          |- kind: test/test-subnet-aware-locatable@v1
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -75,7 +76,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- kind: test/v1/test-subnet-aware-locatable
+          |- kind: test/test-subnet-aware-locatable@v1
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -108,7 +109,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- kind: test/v1/test-simple-locatable
+          |- kind: test/test-simple-locatable@v1
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:
@@ -141,7 +142,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |- name: test
           |  resources:
-          |  - kind: test/v1/test-subnet-aware-locatable
+          |  - kind: test/test-subnet-aware-locatable@v1
           |    metadata:
           |      serviceAccount: mickey@disney.com
           |    spec:
@@ -156,7 +157,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |    - name: us-west-2
           |- name: prod
           |  resources:
-          |  - kind: test/v1/test-subnet-aware-locatable
+          |  - kind: test/test-subnet-aware-locatable@v1
           |    metadata:
           |      serviceAccount: mickey@disney.com
           |    spec:
@@ -179,7 +180,7 @@ class SubmittedEnvironmentDeserializerTests : JUnit5Minutests {
           |---
           |name: test
           |resources:
-          |- kind: test/v1/test-locatable
+          |- kind: test/test-locatable@v1
           |  metadata:
           |    serviceAccount: mickey@disney.com
           |  spec:

@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.actuation
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.id
@@ -84,9 +85,9 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
     before {
       every { plugin1.name } returns "plugin1"
-      every { plugin1.supportedKind } returns SupportedKind("plugin1/v1/foo", DummyArtifactVersionedResourceSpec::class.java)
+      every { plugin1.supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyArtifactVersionedResourceSpec::class.java)
       every { plugin2.name } returns "plugin2"
-      every { plugin2.supportedKind } returns SupportedKind("plugin2/v1/bar", DummyArtifactVersionedResourceSpec::class.java)
+      every { plugin2.supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyArtifactVersionedResourceSpec::class.java)
     }
 
     after {
@@ -95,7 +96,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
     context("a managed resource exists") {
       val resource = artifactVersionedResource(
-        kind = "plugin1/v1/foo"
+        kind = parseKind("plugin1/foo@v1")
       )
 
       before {

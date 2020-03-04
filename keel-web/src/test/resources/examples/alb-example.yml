@@ -1,5 +1,5 @@
 ---
-kind: ec2/v1/application-load-balancer
+kind: ec2/application-load-balancer@v1
 metadata:
   serviceAccount: my-email@spinnaker.io
 spec:

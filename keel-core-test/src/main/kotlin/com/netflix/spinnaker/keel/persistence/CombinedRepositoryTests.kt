@@ -3,6 +3,8 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceKind
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
@@ -19,6 +21,7 @@ import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
+import com.netflix.spinnaker.keel.test.TEST_API
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -72,10 +75,10 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
   val resourceTypeIdentifier: ResourceTypeIdentifier =
     object : ResourceTypeIdentifier {
-      override fun identify(kind: String): Class<out ResourceSpec> {
+      override fun identify(kind: ResourceKind): Class<out ResourceSpec> {
         return when (kind) {
-          "security-group" -> DummyResourceSpec::class.java
-          "cluster" -> DummyResourceSpec::class.java
+          parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
+          parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
           else -> error("unsupported kind $kind")
         }
       }
@@ -91,10 +94,10 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
     val resourceTypeIdentifier: ResourceTypeIdentifier =
       object : ResourceTypeIdentifier {
-        override fun identify(kind: String): Class<out ResourceSpec> {
+        override fun identify(kind: ResourceKind): Class<out ResourceSpec> {
           return when (kind) {
-            "security-group" -> DummyResourceSpec::class.java
-            "cluster" -> DummyResourceSpec::class.java
+            parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
+            parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
             else -> error("unsupported kind $kind")
           }
         }
@@ -221,7 +224,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
       context("resource lifecycle") {
         val resource = SubmittedResource(
           metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-          kind = "whatever",
+          kind = TEST_API.qualify("whatever"),
           spec = DummyResourceSpec(data = "o hai")
         ).normalize()
 
@@ -314,7 +317,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               name = "test",
               resources = setOf(
                 SubmittedResource(
-                  kind = "whatever",
+                  kind = TEST_API.qualify("whatever"),
                   spec = DummyResourceSpec("test", "im a twin", "keel")
                 )
               ),
@@ -324,7 +327,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               name = "prod",
               resources = setOf(
                 SubmittedResource(
-                  kind = "whatever",
+                  kind = TEST_API.qualify("whatever"),
                   spec = DummyResourceSpec("test", "im a twin", "keel")
                 )
               ),
@@ -360,8 +363,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               resources = setOf(
                 SubmittedResource(
                   metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                  apiVersion = "test.$SPINNAKER_API_V1",
-                  kind = "whatever",
+                  kind = TEST_API.qualify("whatever"),
                   spec = DummyResourceSpec(data = "o hai")
                 )
               ),

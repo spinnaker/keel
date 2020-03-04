@@ -17,6 +17,7 @@
  */
 package com.netflix.spinnaker.keel.diff
 
+import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
@@ -46,7 +47,7 @@ class AdHocDifferTests : JUnit5Minutests {
     val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResource>>(relaxUnitFun = true)
     val subject = AdHocDiffer(listOf(plugin1, plugin2))
     val subResource = submittedResource(
-      kind = "plugin1/v1/foo"
+      kind = parseKind("plugin1/foo@v1")
     )
     val resource = subResource.normalize()
     val deliveryConfig = SubmittedDeliveryConfig(
@@ -74,9 +75,9 @@ class AdHocDifferTests : JUnit5Minutests {
 
     before {
       every { plugin1.name } returns "plugin1"
-      every { plugin1.supportedKind } returns SupportedKind("plugin1/v1/foo", DummyResourceSpec::class.java)
+      every { plugin1.supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyResourceSpec::class.java)
       every { plugin2.name } returns "plugin2"
-      every { plugin2.supportedKind } returns SupportedKind("plugin2/v1/bar", DummyResourceSpec::class.java)
+      every { plugin2.supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyResourceSpec::class.java)
 
       coEvery {
         plugin1.desired(resource)

@@ -30,7 +30,7 @@ class TelemetryListener(
       RESOURCE_CHECKED_COUNTER_ID,
       listOf(
         BasicTag("resourceId", event.id),
-        BasicTag("resourceKind", event.kind),
+        BasicTag("resourceKind", event.kind.toString()),
         BasicTag("resourceState", event.state.name),
         BasicTag("resourceApplication", event.application)
       )
@@ -43,7 +43,7 @@ class TelemetryListener(
       RESOURCE_CHECK_SKIPPED_COUNTER_ID,
       listOf(
         BasicTag("resourceId", event.id),
-        BasicTag("resourceKind", event.kind),
+        BasicTag("resourceKind", event.kind.toString()),
         BasicTag("skipper", event.skipper)
       )
     ).safeIncrement()
@@ -79,7 +79,7 @@ class TelemetryListener(
       RESOURCE_ACTUATION_LAUNCHED_COUNTER_ID,
       listOf(
         BasicTag("resourceId", event.id),
-        BasicTag("resourceKind", event.kind),
+        BasicTag("resourceKind", event.kind.toString()),
         BasicTag("resourceApplication", event.application)
       )
     ).safeIncrement()
