@@ -122,8 +122,8 @@ class InMemoryResourceRepository(
       mutableListOf()
     }
       .let {
-        val lastEvent = it.firstOrNull()
-        if (!event.ignoreRepeatedInHistory || event.javaClass != lastEvent?.javaClass) {
+        val mostRecentEvent = it.firstOrNull() // we get the first because the list is in descending order
+        if (!event.ignoreRepeatedInHistory || event.javaClass != mostRecentEvent?.javaClass) {
           it.add(0, event)
         }
       }
