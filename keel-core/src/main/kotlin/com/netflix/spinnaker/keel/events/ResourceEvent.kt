@@ -220,16 +220,7 @@ data class ResourceActuationPaused(
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, reason: String? = null) : this(
-    resource.apiVersion,
-    resource.kind,
-    resource.id,
-    resource.application,
-    reason,
-    clock.instant()
-  )
-
-  constructor(resource: Resource<*>, reason: String? = null, timestamp: Instant) : this(
+  constructor(resource: Resource<*>, reason: String? = null, timestamp: Instant = clock.instant()) : this(
     resource.apiVersion,
     resource.kind,
     resource.id,
