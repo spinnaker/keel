@@ -29,6 +29,7 @@ import java.time.Instant.EPOCH
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.jooq.impl.DSL.select
 
 open class SqlResourceRepository(
@@ -227,57 +228,65 @@ open class SqlResourceRepository(
   }
 
   override fun appendHistory(event: KeelApplicationEvent) {
-    if (event.ignoreRepeatedInHistory) {
-      val previousEvent = jooq
-        .select(EVENT.JSON)
-        .from(EVENT)
-        .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
-        .and(EVENT.UID.eq(event.application))
-        .orderBy(EVENT.TIMESTAMP.desc())
-        .limit(1)
-        .fetchOne()
-        ?.let { (json) ->
-          objectMapper.readValue<KeelApplicationEvent>(json)
-        }
+    jooq.transaction { config ->
+      val txn = DSL.using(config)
 
-      if (event.javaClass == previousEvent?.javaClass) return
+      if (event.ignoreRepeatedInHistory) {
+        val previousEvent = txn
+          .select(EVENT.JSON)
+          .from(EVENT)
+          .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
+          .and(EVENT.UID.eq(event.application))
+          .orderBy(EVENT.TIMESTAMP.desc())
+          .limit(1)
+          .fetchOne()
+          ?.let { (json) ->
+            objectMapper.readValue<KeelApplicationEvent>(json)
+          }
+
+        if (event.javaClass == previousEvent?.javaClass) return@transaction
+      }
+
+      txn
+        .insertInto(EVENT)
+        .set(EVENT.SCOPE, Scope.APPLICATION.name)
+        .set(EVENT.UID, event.application)
+        .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+        .set(EVENT.JSON, objectMapper.writeValueAsString(event))
+        .execute()
     }
-
-    jooq
-      .insertInto(EVENT)
-      .set(EVENT.SCOPE, Scope.APPLICATION.name)
-      .set(EVENT.UID, event.application)
-      .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
-      .set(EVENT.JSON, objectMapper.writeValueAsString(event))
-      .execute()
   }
 
   // todo: add sql retries once we've rethought repository structure: https://github.com/spinnaker/keel/issues/740
   override fun appendHistory(event: ResourceEvent) {
-    if (event.ignoreRepeatedInHistory) {
-      val previousEvent = jooq
-        .select(EVENT.JSON)
-        .from(EVENT, RESOURCE)
-        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
-        .and(RESOURCE.ID.eq(event.id))
-        .and(RESOURCE.UID.eq(EVENT.UID))
-        .orderBy(EVENT.TIMESTAMP.desc())
-        .limit(1)
-        .fetchOne()
-        ?.let { (json) ->
-          objectMapper.readValue<ResourceEvent>(json)
-        }
+    jooq.transaction { config ->
+      val txn = DSL.using(config)
 
-      if (event.javaClass == previousEvent?.javaClass) return
+      if (event.ignoreRepeatedInHistory) {
+        val previousEvent = txn
+          .select(EVENT.JSON)
+          .from(EVENT, RESOURCE)
+          .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+          .and(RESOURCE.ID.eq(event.id))
+          .and(RESOURCE.UID.eq(EVENT.UID))
+          .orderBy(EVENT.TIMESTAMP.desc())
+          .limit(1)
+          .fetchOne()
+          ?.let { (json) ->
+            objectMapper.readValue<ResourceEvent>(json)
+          }
+
+        if (event.javaClass == previousEvent?.javaClass) return@transaction
+      }
+
+      txn
+        .insertInto(EVENT)
+        .set(EVENT.SCOPE, Scope.RESOURCE.name)
+        .set(EVENT.UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.id)))
+        .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+        .set(EVENT.JSON, objectMapper.writeValueAsString(event))
+        .execute()
     }
-
-    jooq
-      .insertInto(EVENT)
-      .set(EVENT.SCOPE, Scope.RESOURCE.name)
-      .set(EVENT.UID, select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.id)))
-      .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
-      .set(EVENT.JSON, objectMapper.writeValueAsString(event))
-      .execute()
   }
 
   override fun delete(id: String) {
