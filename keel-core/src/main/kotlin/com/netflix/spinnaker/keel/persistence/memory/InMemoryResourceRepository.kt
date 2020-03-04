@@ -19,7 +19,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.events.KeelApplicationEvent
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
@@ -37,7 +37,7 @@ class InMemoryResourceRepository(
 
   private val resources = mutableMapOf<String, Resource<*>>()
   private val resourceEvents = mutableMapOf<String, MutableList<ResourceEvent>>()
-  private val applicationEvents = mutableMapOf<String, MutableList<KeelApplicationEvent>>()
+  private val applicationEvents = mutableMapOf<String, MutableList<ApplicationEvent>>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
@@ -89,14 +89,14 @@ class InMemoryResourceRepository(
       ?: throw NoSuchResourceId(id)
   }
 
-  override fun applicationEventHistory(application: String, limit: Int): List<KeelApplicationEvent> {
+  override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return applicationEvents[application]
       ?.take(limit)
       ?: emptyList()
   }
 
-  override fun applicationEventHistory(application: String, until: Instant): List<KeelApplicationEvent> {
+  override fun applicationEventHistory(application: String, until: Instant): List<ApplicationEvent> {
     return applicationEvents[application]
       ?.takeWhile { !it.timestamp.isBefore(until) }
       ?: emptyList()
@@ -113,7 +113,7 @@ class InMemoryResourceRepository(
     appendHistory(resourceEvents, event)
   }
 
-  override fun appendHistory(event: KeelApplicationEvent) {
+  override fun appendHistory(event: ApplicationEvent) {
     appendHistory(applicationEvents, event)
   }
 
