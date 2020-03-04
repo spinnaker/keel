@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.events.ApplicationEvent
+import com.netflix.spinnaker.keel.events.KeelApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
@@ -111,7 +111,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * @param application the name of the application.
    * @param limit the maximum number of events to return.
    */
-  fun applicationEventHistory(application: String, limit: Int = DEFAULT_MAX_EVENTS): List<ApplicationEvent>
+  fun applicationEventHistory(application: String, limit: Int = DEFAULT_MAX_EVENTS): List<KeelApplicationEvent>
 
   /**
    * Retrieves the history of persisted events for [application].
@@ -119,7 +119,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * @param application the name of the application.
    * @param downTo the time of the oldest event to return.
    */
-  fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent>
+  fun applicationEventHistory(application: String, downTo: Instant): List<KeelApplicationEvent>
 
   /**
    * Retrieves the history of state change events for the resource represented by [uid].
@@ -146,7 +146,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * Records an event associated with an application.
    * TODO: adding this here as there's no ApplicationRepository or EventRepository, but might want to move it.
    */
-  fun appendHistory(event: ApplicationEvent)
+  fun appendHistory(event: KeelApplicationEvent)
 
   /**
    * Returns between zero and [limit] resources that have not been checked (i.e. returned by this

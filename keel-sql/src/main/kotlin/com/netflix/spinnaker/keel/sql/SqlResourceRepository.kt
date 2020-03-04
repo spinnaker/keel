@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.randomUID
-import com.netflix.spinnaker.keel.events.ApplicationEvent
+import com.netflix.spinnaker.keel.events.KeelApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
@@ -172,7 +172,7 @@ open class SqlResourceRepository(
       .execute()
   }
 
-  override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
+  override fun applicationEventHistory(application: String, limit: Int): List<KeelApplicationEvent> {
     require(limit > 0) { "limit must be a positive integer" }
     return sqlRetry.withRetry(READ) {
       jooq
@@ -184,12 +184,12 @@ open class SqlResourceRepository(
         .limit(limit)
         .fetch()
         .map { (json) ->
-          objectMapper.readValue<ApplicationEvent>(json)
+          objectMapper.readValue<KeelApplicationEvent>(json)
         }
     }
   }
 
-  override fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent> {
+  override fun applicationEventHistory(application: String, downTo: Instant): List<KeelApplicationEvent> {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(EVENT.JSON)
@@ -200,7 +200,7 @@ open class SqlResourceRepository(
         .orderBy(EVENT.TIMESTAMP.desc())
         .fetch()
         .map { (json) ->
-          objectMapper.readValue<ApplicationEvent>(json)
+          objectMapper.readValue<KeelApplicationEvent>(json)
         }
     }
   }
@@ -226,7 +226,7 @@ open class SqlResourceRepository(
     }
   }
 
-  override fun appendHistory(event: ApplicationEvent) {
+  override fun appendHistory(event: KeelApplicationEvent) {
     if (event.ignoreRepeatedInHistory) {
       val previousEvent = jooq
         .select(EVENT.JSON)
@@ -237,7 +237,7 @@ open class SqlResourceRepository(
         .limit(1)
         .fetchOne()
         ?.let { (json) ->
-          objectMapper.readValue<ApplicationEvent>(json)
+          objectMapper.readValue<KeelApplicationEvent>(json)
         }
 
       if (event.javaClass == previousEvent?.javaClass) return
