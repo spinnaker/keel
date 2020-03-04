@@ -1,12 +1,21 @@
 package com.netflix.spinnaker.keel.core.api
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.id
 
-data class EnvironmentArtifactsSummary(
-  val name: String,
-  val artifacts: Collection<ArtifactVersions>
-)
+data class EnvironmentSummary(
+  @JsonIgnore val environment: Environment,
+  val artifacts: Set<ArtifactVersions>
+) {
+  val name: String
+    get() = environment.name
+
+  val resources: Set<String>
+    get() = environment.resources.map { it.id }.toSet()
+}
 
 data class ArtifactVersions(
   val name: String,

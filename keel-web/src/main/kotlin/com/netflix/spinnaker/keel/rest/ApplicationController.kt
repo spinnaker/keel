@@ -54,6 +54,7 @@ class ApplicationController(
       entities.forEach { entity ->
         results[entity] = when (entity) {
           "resources" -> applicationService.getResourceSummariesFor(application)
+          "environments" -> applicationService.getEnvironmentSummariesFor(application)
           else -> throw InvalidRequestException("Unknown entity type: $entity")
         }
       }

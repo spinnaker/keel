@@ -5,11 +5,12 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
-import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactsSummary
+import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
@@ -340,7 +341,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     statuses[version] = DEPLOYING
   }
 
-  override fun versionsByEnvironment(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactsSummary> =
+  override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> =
     deliveryConfig
       .environments
       .map { environment ->
@@ -375,7 +376,8 @@ class InMemoryArtifactRepository : ArtifactRepository {
               )
             )
           }
-        EnvironmentArtifactsSummary(environment.name, artifactVersions)
+          .toSet()
+        EnvironmentSummary(environment, artifactVersions)
       }
 
   override fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin) {

@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
-import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactsSummary
+import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
@@ -578,7 +578,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun versionsByEnvironment(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactsSummary> {
+  override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> {
     return deliveryConfig.environments.map { environment ->
       val artifactVersions = deliveryConfig.artifacts.map { artifact ->
         val versionsInEnvironment = jooq
@@ -672,8 +672,8 @@ class SqlArtifactRepository(
             vetoed = versions[VETOED] ?: emptyList()
           )
         )
-      }
-      EnvironmentArtifactsSummary(environment.name, artifactVersions)
+      }.toSet()
+      EnvironmentSummary(environment, artifactVersions)
     }
   }
 
