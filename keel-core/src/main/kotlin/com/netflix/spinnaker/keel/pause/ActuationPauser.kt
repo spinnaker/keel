@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
 import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
+import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
 import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.APPLICATION
@@ -94,4 +95,30 @@ class ActuationPauser(
 
   fun pausedApplications(): List<String> =
     pausedRepository.getPausedApplications()
+
+  fun addSyntheticPausedEvents(originalEvents: List<ResourceEvent>, resource: Resource<*>) =
+    originalEvents.toMutableList().also { events ->
+      // For user clarity we add a pause event to the resource history for every pause event from the parent app.
+      // We do this dynamically here so that it applies to all resources in the app, even those added _after_ the
+      // application was paused.
+      val appPausedEvents = resourceRepository
+        .applicationEventHistory(resource.application, events.last().timestamp)
+        .filterIsInstance<ApplicationActuationPaused>()
+
+      appPausedEvents.forEach { appPaused ->
+        val lastBeforeAppPaused = events.firstOrNull { event ->
+          event.timestamp.isBefore(appPaused.timestamp)
+        }
+
+        if (lastBeforeAppPaused == null) {
+          log.warn("Unable to find a resource event just before application paused event at ${appPaused.timestamp}")
+        } else {
+          events.add(
+            events.indexOf(lastBeforeAppPaused),
+            ResourceActuationPaused(resource, "Resource actuation paused at the application level",
+              appPaused.timestamp)
+          )
+        }
+      }
+    }
 }
