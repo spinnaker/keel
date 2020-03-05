@@ -6,6 +6,9 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.id
 
+/**
+ * Summarized data about a specific environment, mostly for use by the UI.
+ */
 data class EnvironmentSummary(
   @JsonIgnore val environment: Environment,
   val artifacts: Set<ArtifactVersions>

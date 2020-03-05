@@ -51,11 +51,14 @@ class ApplicationController(
       "applicationPaused" to actuationPauser.applicationIsPaused(application),
       "hasManagedResources" to applicationService.hasManagedResources(application)
     ).also { results ->
-      entities.forEach { entity ->
-        results[entity] = when (entity) {
-          "resources" -> applicationService.getResourceSummariesFor(application)
-          "environments" -> applicationService.getEnvironmentSummariesFor(application)
-          else -> throw InvalidRequestException("Unknown entity type: $entity")
+      if (includeDetails) {
+        entities.forEach { entity ->
+          results[entity] = when (entity) {
+            "resources" -> applicationService.getResourceSummariesFor(application)
+            "environments" -> applicationService.getEnvironmentSummariesFor(application)
+            "artifacts" -> applicationService.getArtifactSummariesFor(application)
+            else -> throw InvalidRequestException("Unknown entity type: $entity")
+          }
         }
       }
     }

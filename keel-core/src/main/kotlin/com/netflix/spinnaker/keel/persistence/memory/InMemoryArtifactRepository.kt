@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -425,6 +426,10 @@ class InMemoryArtifactRepository : ArtifactRepository {
         v.type == type.name
     }
       .forEach { pinnedVersions.remove(it.key) }
+  }
+
+  override fun getCurrentVersionDeployedIn(environmentName: String, artifactName: String, artifactType: ArtifactType): ArtifactSummaryInEnvironment? {
+    TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
   }
 
   fun dropAll() {

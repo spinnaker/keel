@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
@@ -185,6 +186,12 @@ interface ArtifactRepository {
    * Removes a specific pin from [targetEnvironment], by [reference] and [type].
    */
   fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String, type: ArtifactType)
+
+  fun getCurrentVersionDeployedIn(
+    environmentName: String,
+    artifactName: String,
+    artifactType: ArtifactType
+  ): ArtifactSummaryInEnvironment?
 }
 
 class NoSuchArtifactException(name: String, type: ArtifactType) :

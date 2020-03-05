@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -39,6 +40,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import javax.xml.bind.DatatypeConverter
 import org.jooq.DSLContext
 import org.jooq.Record1
@@ -769,6 +771,39 @@ class SqlArtifactRepository(
           ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
         .fetch { (envUid, artUid) ->
           deletePin(envUid, artUid)
+        }
+    }
+  }
+
+  override fun getCurrentVersionDeployedIn(
+    environmentName: String,
+    artifactName: String,
+    artifactType: ArtifactType
+  ): ArtifactSummaryInEnvironment? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+        .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(
+          select(ENVIRONMENT.UID).from(ENVIRONMENT).where(ENVIRONMENT.NAME.eq(environmentName))
+        )
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(
+          select(DELIVERY_ARTIFACT.UID).from(DELIVERY_ARTIFACT)
+            .where(DELIVERY_ARTIFACT.NAME.eq(artifactName))
+            .and(DELIVERY_ARTIFACT.TYPE.eq(artifactType.name))
+          )
+        ))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.isNotNull)
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
+        .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
+        .limit(1)
+        .fetchOne { (version, deployedAt) ->
+          ArtifactSummaryInEnvironment(
+            environment = environmentName,
+            version = version,
+            state = "current",
+            deployedAt = deployedAt.toInstant(ZoneOffset.UTC)
+          )
         }
     }
   }
