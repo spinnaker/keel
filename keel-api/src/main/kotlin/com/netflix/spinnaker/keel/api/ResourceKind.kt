@@ -16,7 +16,7 @@ data class ResourceKind(
   }
 
   companion object {
-    private val resourceKindFormat = Regex("""([\w.-]+)/([\w.-]+)@v(.+)""")
+    private val resourceKindFormat = Regex("""([\w.-]+)/([\w.-]+)\@v(.+)""")
 
     @JvmStatic
     fun parseKind(value: String): ResourceKind =
