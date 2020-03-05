@@ -775,34 +775,62 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getCurrentVersionDeployedIn(
+  override fun getArtifactSummaryInEnvironment(
     environmentName: String,
     artifactName: String,
-    artifactType: ArtifactType
+    artifactType: ArtifactType,
+    version: String
   ): ArtifactSummaryInEnvironment? {
     return sqlRetry.withRetry(READ) {
       jooq
-        .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+        .select(
+          ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID,
+          ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID,
+          ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT,
+          ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS
+        )
         .from(ENVIRONMENT_ARTIFACT_VERSIONS)
         .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(
-          select(ENVIRONMENT.UID).from(ENVIRONMENT).where(ENVIRONMENT.NAME.eq(environmentName))
+          select(ENVIRONMENT.UID).from(ENVIRONMENT).where(ENVIRONMENT.NAME.eq(environmentName)))
         )
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(
-          select(DELIVERY_ARTIFACT.UID).from(DELIVERY_ARTIFACT)
+          select(DELIVERY_ARTIFACT.UID)
+            .from(DELIVERY_ARTIFACT)
             .where(DELIVERY_ARTIFACT.NAME.eq(artifactName))
-            .and(DELIVERY_ARTIFACT.TYPE.eq(artifactType.name))
-          )
-        ))
-        .and(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.isNotNull)
-        .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
+            .and(DELIVERY_ARTIFACT.TYPE.eq(artifactType.name)))
+        )
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
         .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
         .limit(1)
-        .fetchOne { (version, deployedAt) ->
+        .fetchOne { (environmentUid, artifactUid, version, deployedAt, promotionStatus) ->
+          val (replacedBy, replacedAt) = when (promotionStatus) {
+            CURRENT.name, PREVIOUS.name -> {
+              jooq
+                .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+                .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+                .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
+                .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifactUid))
+                .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.ne(version))
+                .and(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.isNotNull)
+                .and(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.greaterThan(deployedAt))
+                .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.ne(VETOED.name))
+                .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.asc())
+                .limit(1)
+                .fetchOne { (replacedBy, replacedAt) ->
+                  Pair(replacedBy, replacedAt.toInstant(ZoneOffset.UTC))
+                } ?: Pair(null, null)
+            }
+            else -> Pair(null, null)
+          }
+
           ArtifactSummaryInEnvironment(
             environment = environmentName,
             version = version,
-            state = "current",
-            deployedAt = deployedAt.toInstant(ZoneOffset.UTC)
+            state = promotionStatus,
+            deployedAt = deployedAt.toInstant(ZoneOffset.UTC),
+            replacedAt = replacedAt,
+            replacedBy = replacedBy
           )
         }
     }

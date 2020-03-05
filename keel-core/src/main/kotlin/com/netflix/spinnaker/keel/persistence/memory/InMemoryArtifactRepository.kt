@@ -428,7 +428,12 @@ class InMemoryArtifactRepository : ArtifactRepository {
       .forEach { pinnedVersions.remove(it.key) }
   }
 
-  override fun getCurrentVersionDeployedIn(environmentName: String, artifactName: String, artifactType: ArtifactType): ArtifactSummaryInEnvironment? {
+  override fun getArtifactSummaryInEnvironment(
+    environmentName: String,
+    artifactName: String,
+    artifactType: ArtifactType,
+    version: String
+  ): ArtifactSummaryInEnvironment? {
     TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
   }
 

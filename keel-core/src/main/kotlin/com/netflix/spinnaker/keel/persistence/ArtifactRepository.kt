@@ -187,10 +187,11 @@ interface ArtifactRepository {
    */
   fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String, type: ArtifactType)
 
-  fun getCurrentVersionDeployedIn(
+  fun getArtifactSummaryInEnvironment(
     environmentName: String,
     artifactName: String,
-    artifactType: ArtifactType
+    artifactType: ArtifactType,
+    version: String
   ): ArtifactSummaryInEnvironment?
 }
 

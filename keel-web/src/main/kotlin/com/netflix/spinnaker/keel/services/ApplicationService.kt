@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceSummary
-import java.lang.IllegalArgumentException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -88,72 +87,47 @@ class ApplicationService(
     // for each environment...
     val artifactSummaries = environmentSummaries.flatMap { environmentSummary ->
 
-      // for each artifact in the environment...
+      // ...and each artifact in the environment...
       environmentSummary.artifacts.map { artifact ->
         val versionsByState = mapOf(
-          "current" to artifact.versions.current,
-          "deploying" to artifact.versions.deploying,
+          "current" to artifact.versions.current?.let { listOf(it) }.orEmpty(),
+          "deploying" to artifact.versions.deploying?.let { listOf(it) }.orEmpty(),
           "pending" to artifact.versions.pending,
           "approved" to artifact.versions.approved,
           "previous" to artifact.versions.previous,
           "vetoed" to artifact.versions.vetoed
         )
 
-        // ...get the currently deployed version in the environment...
-        val currentVersion = artifactRepository.getCurrentVersionDeployedIn(
-          environmentSummary.name,
-          artifact.name,
-          artifact.type
-        )
-
-        // ...get the artifact versions by state...
+        // ...loop the artifact versions by state...
         versionsByState.entries.map {
           val state = it.key
           val versions = it.value
 
-          // ...generate a artifact summary as it pertains to the environment...
-          val summaryInEnvironment = ArtifactSummaryInEnvironment(
-            environment = artifactsToEnvironments[artifact.key]!!, // safe because we build the map off known versions
-            state = state,
-            version = versions.toString(),
-            deployedAt = if (state == "current") {
-              currentVersion?.deployedAt
-            } else {
-              null
-            },
-            replacedAt = null, // TODO
-            replacedBy = null // TODO
-          )
-
           // ...then record the artifact version summary for each version for that state...
           if (versions != null) {
             versionSummariesByArtifact[artifact.key]!!.addAll(
-              when (versions) {
-                is String -> setOf(
-                  ArtifactVersionSummary(
-                    version = versions,
-                    environments = artifactSummariesByEnvironmentAndState
-                      .get(environmentSummary.name)!! // safe because we create the maps with these keys above
-                      .get(state)!! // safe because we create the maps with these keys above
-                      .also { artifactSummariesInEnvironment ->
+              // ...for each version...
+              versions.map { version ->
+                // ...get an artifact summary for this version in this environment...
+                val summaryInEnvironment = artifactRepository.getArtifactSummaryInEnvironment(
+                  environmentSummary.name,
+                  artifact.name,
+                  artifact.type,
+                  version
+                )
+
+                // ...create the artifact version summary for this version and add to the list
+                ArtifactVersionSummary(
+                  version = version,
+                  environments = artifactSummariesByEnvironmentAndState
+                    .get(environmentSummary.name)!! // safe because we create the maps with these keys above
+                    .get(state)!! // safe because we create the maps with these keys above
+                    .also { artifactSummariesInEnvironment ->
+                      if (summaryInEnvironment != null) {
                         artifactSummariesInEnvironment.add(summaryInEnvironment)
                       }
-                  )
+                    }
                 )
-                is Iterable<*> -> {
-                  versions.map { version ->
-                    ArtifactVersionSummary(
-                      version = version.toString(),
-                      environments = artifactSummariesByEnvironmentAndState
-                        .get(environmentSummary.name)!! // safe because we create the maps with these keys above
-                        .get(state)!! // safe because we create the maps with these keys above
-                        .also { artifactSummariesInEnvironment ->
-                          artifactSummariesInEnvironment.add(summaryInEnvironment)
-                        }
-                    )
-                  }
-                }
-                else -> throw IllegalArgumentException("Invalid type of versions field: ${versions?.javaClass}")
               }
             )
           }
