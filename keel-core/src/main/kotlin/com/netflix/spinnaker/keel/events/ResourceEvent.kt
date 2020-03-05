@@ -55,8 +55,8 @@ import java.time.Instant
   Type(value = ResourceTaskFailed::class, name = "ResourceTaskFailed"),
   Type(value = ResourceTaskSucceeded::class, name = "ResourceTaskSucceeded")
 )
-sealed class ResourceEvent : PersistentEvent() {
-  @JsonIgnore override val scope = Scope.RESOURCE
+abstract class ResourceEvent : PersistentEvent() {
+  override val scope = Scope.RESOURCE
   abstract val kind: ResourceKind
   abstract val id: String
 

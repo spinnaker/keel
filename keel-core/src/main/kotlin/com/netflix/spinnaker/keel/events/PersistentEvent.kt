@@ -1,8 +1,20 @@
 package com.netflix.spinnaker.keel.events
 
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.time.Clock
 import java.time.Instant
 
+@JsonTypeInfo(
+  use = JsonTypeInfo.Id.NAME,
+  property = "type",
+  include = JsonTypeInfo.As.PROPERTY
+)
+@JsonSubTypes(
+  JsonSubTypes.Type(value = ApplicationEvent::class, name = "application"),
+  JsonSubTypes.Type(value = ResourceEvent::class, name = "resource")
+)
 abstract class PersistentEvent {
   abstract val scope: Scope
   abstract val application: String
@@ -15,7 +27,7 @@ abstract class PersistentEvent {
   }
 
   enum class Scope {
-    RESOURCE,
-    APPLICATION
+    @JsonProperty("resource") RESOURCE,
+    @JsonProperty("application") APPLICATION
   }
 }
