@@ -776,6 +776,7 @@ class SqlArtifactRepository(
   }
 
   override fun getArtifactSummaryInEnvironment(
+    deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifactName: String,
     artifactType: ArtifactType,
@@ -791,7 +792,10 @@ class SqlArtifactRepository(
           ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS
         )
         .from(ENVIRONMENT_ARTIFACT_VERSIONS)
-        .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(
+        .innerJoin(ENVIRONMENT)
+        .on(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
+        .where(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(
           select(ENVIRONMENT.UID).from(ENVIRONMENT).where(ENVIRONMENT.NAME.eq(environmentName)))
         )
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(

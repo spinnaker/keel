@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceSummary
+import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -26,6 +27,12 @@ class ApplicationService(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   fun hasManagedResources(application: String) = repository.hasManagedResources(application)
+
+  /**
+   * Returns a list of [ResourceSummary] for the specified application.
+   *
+   * This function assumes there's a single delivery config associated with the application.
+   */
 
   fun getResourceSummariesFor(application: String): List<ResourceSummary> {
     var resources = repository.getSummaryByApplication(application)
@@ -51,11 +58,15 @@ class ApplicationService(
       ?: emptyList()
 
   /**
-   * Returns a list of [ArtifactSummary] by traversing the list of [EnvironmentSummary] for the same application
-   * and reindexing the data so that it matches the right format. This is essentially a data transformation for
-   * the benefit of the UI.
+   * Returns a list of [ArtifactSummary] for the specified application by traversing the list of [EnvironmentSummary]
+   * for the application and reindexing the data so that it matches the right format.
+   *
+   * This function assumes there's a single delivery config associated with the application.
    */
   fun getArtifactSummariesFor(application: String): List<ArtifactSummary> {
+    val deliveryConfig = getFirstDeliveryConfigFor(application)
+      ?: throw InvalidRequestException("No delivery config found for application $application")
+
     val environmentSummaries = getEnvironmentSummariesFor(application)
 
     // map of artifacts to the environments where they appear
@@ -110,10 +121,11 @@ class ApplicationService(
               versions.map { version ->
                 // ...get an artifact summary for this version in this environment...
                 val summaryInEnvironment = artifactRepository.getArtifactSummaryInEnvironment(
-                  environmentSummary.name,
-                  artifact.name,
-                  artifact.type,
-                  version
+                  deliveryConfig = deliveryConfig,
+                  environmentName = environmentSummary.name,
+                  artifactName = artifact.name,
+                  artifactType = artifact.type,
+                  version = version
                 )
 
                 // ...create the artifact version summary for this version and add to the list

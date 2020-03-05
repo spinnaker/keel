@@ -429,12 +429,28 @@ class InMemoryArtifactRepository : ArtifactRepository {
   }
 
   override fun getArtifactSummaryInEnvironment(
+    deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifactName: String,
     artifactType: ArtifactType,
     version: String
   ): ArtifactSummaryInEnvironment? {
-    TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
+    val artifact = deliveryConfig.artifacts.find { it ->
+      it.deliveryConfigName == deliveryConfig.name && it.name == artifactName && it.type == artifactType
+    } ?: throw ArtifactNotFoundException(artifactName, artifactType, "", deliveryConfig.name)
+
+    val artifactId = getId(artifact) ?: throw NoSuchArtifactException(artifact)
+    val key = EnvironmentVersionsKey(artifactId, deliveryConfig, environmentName)
+    val statuses = statusByEnvironment.getOrDefault(key, emptyMap<String, String>())
+
+    return ArtifactSummaryInEnvironment(
+      environment = environmentName,
+      version = version,
+      state = statuses.filterKeys { it == version }.values.first().toString(),
+      deployedAt = null, // TODO
+      replacedAt = null, // TODO
+      replacedBy = null // TODO
+    )
   }
 
   fun dropAll() {

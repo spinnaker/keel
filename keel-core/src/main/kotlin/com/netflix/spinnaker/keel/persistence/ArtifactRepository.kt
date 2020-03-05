@@ -188,6 +188,7 @@ interface ArtifactRepository {
   fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String, type: ArtifactType)
 
   fun getArtifactSummaryInEnvironment(
+    deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifactName: String,
     artifactType: ArtifactType,
