@@ -8,8 +8,6 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.randomUID
-import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
-import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
@@ -19,6 +17,7 @@ import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.events.ResourceValid
+import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
@@ -62,10 +61,13 @@ internal class EventControllerTests : JUnit5Minutests {
   lateinit var mvc: MockMvc
 
   @Autowired
+  lateinit var clock: MutableClock
+
+  @Autowired
   lateinit var resourceRepository: InMemoryResourceRepository
 
   @Autowired
-  lateinit var clock: MutableClock
+  lateinit var actuationPauser: ActuationPauser
 
   object Fixture {
     val resource: Resource<*> = resource()
@@ -161,44 +163,98 @@ internal class EventControllerTests : JUnit5Minutests {
           .isArray()
           .hasSize(limit)
       }
+    }
 
-      context("with application paused at various times") {
-        before {
-          with(resourceRepository) {
-            dropAll()
-            store(resource)
-            appendHistory(ResourceCreated(resource, clock))
-            clock.incrementBy(TEN_MINUTES)
-            appendHistory(ResourceValid(resource, clock))
-            clock.incrementBy(TEN_MINUTES)
-            appendHistory(ApplicationActuationPaused(resource.application, "Application paused", clock))
-            clock.incrementBy(TEN_MINUTES)
-            appendHistory(ApplicationActuationResumed(resource.application, "Application resumed", clock))
-            // ActuationPauser.resumeApplication generates ResourceActuationResumed events for all child resources
-            appendHistory(ResourceActuationResumed(resource, clock))
-            clock.incrementBy(TEN_MINUTES)
-            appendHistory(ResourceValid(resource, clock))
-            clock.incrementBy(TEN_MINUTES)
-            appendHistory(ApplicationActuationPaused(resource.application, "Application paused", clock))
-          }
+    context("with application paused at various times") {
+      before {
+        with(resourceRepository) {
+          dropAll()
+          store(resource)
+          appendHistory(ResourceCreated(resource, clock))
+          clock.incrementBy(TEN_MINUTES)
+          appendHistory(ResourceValid(resource, clock))
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.pauseApplication(resource.application)
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.resumeApplication(resource.application)
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.pauseApplication(resource.application)
         }
+      }
 
-        test("has matching resource paused event injected in the right position") {
-          val request = get(eventsUri).accept(APPLICATION_YAML)
-          val result = mvc
-            .perform(request)
-            .andReturn()
-          expectThat(result.response.contentAs<List<ResourceEvent>>())
-            .map { it.javaClass }
-            .containsExactly(
-              ResourceActuationPaused::class.java,
-              ResourceValid::class.java,
-              ResourceActuationResumed::class.java,
-              ResourceActuationPaused::class.java,
-              ResourceValid::class.java,
-              ResourceCreated::class.java
-            )
+      test("has matching resource paused event injected in the right position") {
+        val request = get(eventsUri).accept(APPLICATION_YAML)
+        val result = mvc
+          .perform(request)
+          .andReturn()
+        expectThat(result.response.contentAs<List<ResourceEvent>>())
+          .map { it.javaClass }
+          .containsExactly(
+            ResourceActuationPaused::class.java,
+            ResourceActuationResumed::class.java,
+            ResourceActuationPaused::class.java,
+            ResourceValid::class.java,
+            ResourceCreated::class.java
+          )
+      }
+    }
+
+    context("with a new resource created AFTER the application is paused") {
+      before {
+        with(resourceRepository) {
+          dropAll()
+          actuationPauser.pauseApplication(resource.application)
+          clock.incrementBy(TEN_MINUTES)
+          store(resource)
+          appendHistory(ResourceCreated(resource, clock))
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.resumeApplication(resource.application)
         }
+      }
+
+      test("has matching resource paused events injected in the right positions") {
+        val request = get(eventsUri).accept(APPLICATION_YAML)
+        val result = mvc
+          .perform(request)
+          .andReturn()
+        expectThat(result.response.contentAs<List<ResourceEvent>>())
+          .map { it.javaClass }
+          .containsExactly(
+            ResourceActuationResumed::class.java,
+            ResourceActuationPaused::class.java,
+            ResourceCreated::class.java
+          )
+      }
+    }
+
+    context("with multiples application pauses AFTER a new resource is created") {
+      before {
+        with(resourceRepository) {
+          dropAll()
+          actuationPauser.pauseApplication(resource.application)
+          clock.incrementBy(TEN_MINUTES)
+          store(resource)
+          appendHistory(ResourceCreated(resource, clock))
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.resumeApplication(resource.application)
+          clock.incrementBy(TEN_MINUTES)
+          actuationPauser.pauseApplication(resource.application)
+        }
+      }
+
+      test("has matching resource paused events injected in the right positions") {
+        val request = get(eventsUri).accept(APPLICATION_YAML)
+        val result = mvc
+          .perform(request)
+          .andReturn()
+        expectThat(result.response.contentAs<List<ResourceEvent>>())
+          .map { it.javaClass }
+          .containsExactly(
+            ResourceActuationPaused::class.java,
+            ResourceActuationResumed::class.java,
+            ResourceActuationPaused::class.java,
+            ResourceCreated::class.java
+          )
       }
     }
   }

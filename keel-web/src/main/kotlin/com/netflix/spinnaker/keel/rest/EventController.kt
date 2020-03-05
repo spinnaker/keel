@@ -32,7 +32,6 @@ class EventController(
     log.debug("Getting state history for: $id")
     val resource = repository.getResource(id)
     val events = repository.resourceEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
-
     return actuationPauser.addSyntheticPausedEvents(events, resource)
   }
 }

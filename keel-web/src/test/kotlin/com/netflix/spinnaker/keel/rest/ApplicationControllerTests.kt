@@ -71,8 +71,7 @@ internal class ApplicationControllerTests {
         """
           |{
           |"hasManagedResources":true,
-          |"resources":[{"id":"${res.id}","kind":"${res.kind}","status":"CREATED"}],
-          |"currentEnvironmentConstraints":[]
+          |"resources":[{"id":"${res.id}","kind":"${res.kind}","status":"CREATED"}]
           |}
         """.trimMargin()
       ))

@@ -31,6 +31,7 @@ import dev.minutest.rootContext
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Clock
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expect
 import strikt.assertions.isFalse
@@ -49,7 +50,7 @@ class ActuationPauserTests : JUnit5Minutests {
     }
     val pausedRepository = InMemoryPausedRepository()
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    val subject = ActuationPauser(resourceRepository, pausedRepository, publisher)
+    val subject = ActuationPauser(resourceRepository, pausedRepository, publisher, Clock.systemDefaultZone())
   }
 
   fun tests() = rootContext<Fixture> {
