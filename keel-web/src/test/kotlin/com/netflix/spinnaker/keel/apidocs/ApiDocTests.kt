@@ -302,11 +302,21 @@ class ApiDocTests : JUnit5Minutests {
           .isTextual()
       }
 
-      test("property required-ness can be overridden with the @Optional annotation") {
-        at("/components/schemas/ClusterSpec/required")
-          .isArray()
-          .doesNotContain("locations")
-      }
+      listOf(
+        ApplicationLoadBalancerSpec::class,
+        ClassicLoadBalancerSpec::class,
+        ClusterSpec::class,
+        SecurityGroupSpec::class,
+        TitusClusterSpec::class
+      )
+        .map(KClass<*>::simpleName)
+        .forEach { locatableType ->
+          test("locations property of $locatableType is optional") {
+            at("/components/schemas/$locatableType/required")
+              .isArray()
+              .doesNotContain("locations")
+          }
+        }
 
       test("property with type Map<String, Any?> does not restrict the value type to object") {
         at("/components/schemas/SubmittedResource/properties/metadata")
