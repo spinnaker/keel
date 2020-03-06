@@ -110,7 +110,6 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       deliveryConfigRepository.dropAll()
       resourceRepository.dropAll()
       artifactRepository.dropAll()
-      actuationPauser.resumeApplication(application)
       clearAllMocks()
     }
 
@@ -145,6 +144,10 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       context("with paused application") {
         before {
           actuationPauser.pauseApplication(application)
+        }
+
+        after {
+          actuationPauser.resumeApplication(application)
         }
 
         test("reflects application paused status in basic summary") {

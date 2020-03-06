@@ -457,6 +457,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     artifacts.clear()
     approvedVersions.clear()
     deployedVersions.clear()
+    versions.clear()
   }
 
   private data class ArtifactVersionAndStatus(
