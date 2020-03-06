@@ -121,8 +121,10 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         artifactRepository.register(artifact)
         artifactRepository.store(artifact, "1.0.0", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "1.0.1", ArtifactStatus.RELEASE)
+        artifactRepository.store(artifact, "1.0.2", ArtifactStatus.RELEASE)
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.0", "test")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "1.0.1", "test")
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.1", "test")
+        artifactRepository.approveVersionFor(deliveryConfig, artifact, "1.0.2", "test")
       }
 
       test("can get basic summary by application") {
@@ -203,12 +205,14 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                       "type":"deb",
                       "statuses":[],
                       "versions":{
-                        "current":"1.0.0",
+                        "current":"1.0.1",
                         "pending":[],
                         "approved":[
-                          "1.0.1"
+                          "1.0.2"
                         ],
-                        "previous":[],
+                        "previous":[
+                          "1.0.0"
+                        ],
                         "vetoed":[]
                       }
                     }
@@ -246,12 +250,21 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                       "environments":[
                         {
                           "name":"test",
-                          "state":"current"
+                          "state":"previous"
                         }
                       ]
                     },
                     {
                       "version":"1.0.1",
+                      "environments":[
+                        {
+                          "name":"test",
+                          "state":"current"
+                        }
+                      ]
+                    },
+                    {
+                      "version":"1.0.2",
                       "environments":[
                         {
                           "name":"test",
@@ -273,6 +286,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         val result = mvc
           .perform(request)
           .andExpect(status().isOk)
+          .andDo { print(it.response.contentAsString) }
           .andReturn()
         val response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
         expectThat(response.keys)
