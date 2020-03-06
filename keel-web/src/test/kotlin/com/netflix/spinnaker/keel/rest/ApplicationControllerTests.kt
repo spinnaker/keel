@@ -243,7 +243,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                       "environments":[
                         {
                           "name":"test",
-                          "state":"CURRENT"
+                          "state":"current"
                         }
                       ]
                     },
@@ -252,7 +252,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                       "environments":[
                         {
                           "name":"test",
-                          "state":"APPROVED"
+                          "state":"approved"
                         }
                       ]
                     }

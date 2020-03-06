@@ -831,7 +831,7 @@ class SqlArtifactRepository(
           ArtifactSummaryInEnvironment(
             environment = environmentName,
             version = version,
-            state = promotionStatus,
+            state = promotionStatus.toLowerCase(),
             deployedAt = deployedAt.toInstant(ZoneOffset.UTC),
             replacedAt = replacedAt,
             replacedBy = replacedBy

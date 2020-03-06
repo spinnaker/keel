@@ -446,7 +446,7 @@ class InMemoryArtifactRepository : ArtifactRepository {
     return ArtifactSummaryInEnvironment(
       environment = environmentName,
       version = version,
-      state = statuses.filterKeys { it == version }.values.first().toString(),
+      state = statuses.filterKeys { it == version }.values.first().toString().toLowerCase(),
       deployedAt = null, // TODO
       replacedAt = null, // TODO
       replacedBy = null // TODO
