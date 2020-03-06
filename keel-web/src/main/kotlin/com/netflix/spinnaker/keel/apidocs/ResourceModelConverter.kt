@@ -43,8 +43,12 @@ class ResourceModelConverter(
             .addProperties("metadata", MapSchema())
             .addProperties("spec", ref(specClass))
             .addRequiredItem("kind")
-            .addRequiredItem("metadata")
             .addRequiredItem("spec")
+            .apply {
+              if (baseType == Resource::class.java) {
+                addRequiredItem("metadata")
+              }
+            }
         )
       }
       // define a model for the base Resource type

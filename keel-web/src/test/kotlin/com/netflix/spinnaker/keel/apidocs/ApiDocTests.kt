@@ -128,19 +128,26 @@ class ApiDocTests : JUnit5Minutests {
                     path("spec").isObject().path("\$ref").textValue().isEqualTo(constructRef(specSubType))
                   }
               }
-
-              test("all properties of the parameterized version of schema for $type with a spec of $specSubType are required") {
-                at("/components/schemas/${specSubType}$type/required")
-                  .isArray()
-                  .textValues()
-                  .containsExactlyInAnyOrder("kind", "metadata", "spec")
-              }
             }
         }
 
       resourceSpecTypes
         .map(KClass<*>::simpleName)
         .forEach { type ->
+          test("all properties of the parameterized version of the schema for Resource with a spec of $type are required") {
+            at("/components/schemas/${type}Resource/required")
+              .isArray()
+              .textValues()
+              .containsExactlyInAnyOrder("kind", "metadata", "spec")
+          }
+
+          test("the metadata property of the parameterized version of the schema for SubmittedResource with a spec of $type are required") {
+            at("/components/schemas/${type}SubmittedResource/required")
+              .isArray()
+              .textValues()
+              .containsExactlyInAnyOrder("kind", "spec")
+          }
+
           test("ResourceSpec sub-type $type has its own schema") {
             at("/components/schemas/$type")
               .isObject()
