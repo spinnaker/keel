@@ -32,6 +32,9 @@ abstract class BaseModelConverter : ModelConverter {
   protected fun ref(type: Class<*>): Schema<*> =
     Schema<Any>().`$ref`(constructRef(type.simpleName))
 
+  protected fun ref(simpleRef: String): Schema<*> =
+    Schema<Any>().`$ref`(constructRef(simpleRef))
+
   /**
    * Defines the schema for [type] as `oneOf` the schemas for [subTypes].
    */

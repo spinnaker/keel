@@ -18,8 +18,7 @@ environments:
     regions:
     - name: us-west-2
   resources:
-  - apiVersion: bakery.spinnaker.netflix.com/v1
-    kind: image
+  - kind: bakery/image@v1
     spec:
       artifactName: fnord
       baseLabel: RELEASE
@@ -29,8 +28,7 @@ environments:
       - us-west-2
       storeType: EBS
       application: fnord
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: cluster
+  - kind: ec2/cluster@v1
     spec:
       imageProvider:
         reference: fnord
@@ -54,8 +52,7 @@ environments:
         - fnord-test-vpc0
         securityGroupNames:
         - fnord
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
@@ -70,15 +67,13 @@ environments:
         portRange:
           startPort: 6565
           endPort: 6565
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
         stack: elb
       description: Application ELB Security Group for fnord
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
@@ -90,8 +85,7 @@ environments:
         portRange:
           startPort: 3306
           endPort: 3306
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: classic-load-balancer
+  - kind: ec2/classic-load-balancer@v1
     spec:
       moniker:
         app: fnord
@@ -125,8 +119,7 @@ environments:
     regions:
     - name: us-west-2
   resources:
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: cluster
+  - kind: ec2/cluster@v1
     spec:
       imageProvider:
         reference: fnord
@@ -151,8 +144,7 @@ environments:
         - fnord-staging-vpc0
         securityGroupNames:
         - fnord
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
@@ -167,15 +159,13 @@ environments:
         portRange:
           startPort: 6379
           endPort: 6379
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
         stack: elb
       description: Application ELB Security Group for fnord
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: security-group
+  - kind: ec2/security-group@v1
     spec:
       moniker:
         app: fnord
@@ -187,8 +177,7 @@ environments:
         portRange:
           startPort: 3306
           endPort: 3306
-  - apiVersion: ec2.spinnaker.netflix.com/v1
-    kind: classic-load-balancer
+  - kind: ec2/classic-load-balancer@v1
     spec:
       moniker:
         app: fnord
@@ -225,8 +214,7 @@ environments:
     regions:
     - name: us-west-2
   resources:
-  - apiVersion: "ec2.spinnaker.netflix.com/v1"
-    kind: "cluster"
+  - kind: "ec2/cluster@v1"
     spec:
       moniker:
         app: "fnord"
