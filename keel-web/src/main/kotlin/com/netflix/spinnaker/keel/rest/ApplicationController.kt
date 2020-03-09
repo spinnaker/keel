@@ -44,21 +44,18 @@ class ApplicationController(
   )
   fun get(
     @PathVariable("application") application: String,
-    @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean,
-    @RequestParam("entities", required = false, defaultValue = "resources") entities: List<String>
+    @RequestParam("entities", required = false, defaultValue = "") entities: List<String>
   ): Map<String, Any> {
     return mutableMapOf<String, Any>(
       "applicationPaused" to actuationPauser.applicationIsPaused(application),
       "hasManagedResources" to applicationService.hasManagedResources(application)
     ).also { results ->
-      if (includeDetails) {
-        entities.forEach { entity ->
-          results[entity] = when (entity) {
-            "resources" -> applicationService.getResourceSummariesFor(application)
-            "environments" -> applicationService.getEnvironmentSummariesFor(application)
-            "artifacts" -> applicationService.getArtifactSummariesFor(application)
-            else -> throw InvalidRequestException("Unknown entity type: $entity")
-          }
+      entities.forEach { entity ->
+        results[entity] = when (entity) {
+          "resources" -> applicationService.getResourceSummariesFor(application)
+          "environments" -> applicationService.getEnvironmentSummariesFor(application)
+          "artifacts" -> applicationService.getArtifactSummariesFor(application)
+          else -> throw InvalidRequestException("Unknown entity type: $entity")
         }
       }
     }

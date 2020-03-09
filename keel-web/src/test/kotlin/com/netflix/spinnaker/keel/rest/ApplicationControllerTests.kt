@@ -170,7 +170,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("can get resource summaries by application") {
-        val request = get("/application/$application?includeDetails=true")
+        val request = get("/application/$application?entities=resources")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc
           .perform(request)
@@ -186,7 +186,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("can get environment summaries by application") {
-        val request = get("/application/$application?includeDetails=true&entities=environments")
+        val request = get("/application/$application?entities=environments")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc
           .perform(request)
@@ -229,7 +229,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("can get artifact summaries by application") {
-        val request = get("/application/$application?includeDetails=true&entities=artifacts")
+        val request = get("/application/$application?entities=artifacts")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc
           .perform(request)
@@ -281,7 +281,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("can get multiple types of summaries by application") {
-        val request = get("/application/$application?includeDetails=true&entities=resources&entities=environments&entities=artifacts")
+        val request = get("/application/$application?entities=resources&entities=environments&entities=artifacts")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         val result = mvc
           .perform(request)
@@ -300,7 +300,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("can get multiple types of summaries by application with comma-separate list of entities") {
-        val request = get("/application/$application?includeDetails=true&entities=resources,environments,artifacts")
+        val request = get("/application/$application?entities=resources,environments,artifacts")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         val result = mvc
           .perform(request)
@@ -319,7 +319,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
 
       test("returns bad request for unknown entities") {
-        val request = get("/application/$application?includeDetails=true&entities=bananas")
+        val request = get("/application/$application?entities=bananas")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc.perform(request)
           .andExpect(status().isBadRequest)
