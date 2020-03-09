@@ -11,7 +11,7 @@ import java.time.Instant
 data class ArtifactSummary(
   val name: String,
   val type: ArtifactType,
-  val versions: Set<ArtifactVersionSummary>?
+  val versions: Set<ArtifactVersionSummary> = emptySet()
 )
 
 data class ArtifactVersionSummary(

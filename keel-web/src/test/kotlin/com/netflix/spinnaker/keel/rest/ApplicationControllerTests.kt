@@ -298,6 +298,32 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             "artifacts"
           )
       }
+
+      test("can get multiple types of summaries by application with comma-separate list of entities") {
+        val request = get("/application/$application?includeDetails=true&entities=resources,environments,artifacts")
+          .accept(MediaType.APPLICATION_JSON_VALUE)
+        val result = mvc
+          .perform(request)
+          .andExpect(status().isOk)
+          .andDo { print(it.response.contentAsString) }
+          .andReturn()
+        val response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
+        expectThat(response.keys)
+          .containsExactly(
+            "applicationPaused",
+            "hasManagedResources",
+            "resources",
+            "environments",
+            "artifacts"
+          )
+      }
+
+      test("returns bad request for unknown entities") {
+        val request = get("/application/$application?includeDetails=true&entities=bananas")
+          .accept(MediaType.APPLICATION_JSON_VALUE)
+        mvc.perform(request)
+          .andExpect(status().isBadRequest)
+      }
     }
   }
 }

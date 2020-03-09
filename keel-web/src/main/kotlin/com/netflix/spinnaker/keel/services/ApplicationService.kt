@@ -33,9 +33,9 @@ class ApplicationService(
    *
    * This function assumes there's a single delivery config associated with the application.
    */
-
   fun getResourceSummariesFor(application: String): List<ResourceSummary> {
     var resources = repository.getSummaryByApplication(application)
+
     resources = resources.map { summary ->
       if (pauser.resourceIsPaused(summary.id)) {
         // we only update the status if the individual resource is paused,
@@ -45,11 +45,15 @@ class ApplicationService(
         summary
       }
     }
-    // val constraintStates = repository.constraintStateFor(application)
 
     return resources
   }
 
+  /**
+   * Returns a list of [EnvironmentSummary] for the specific application.
+   *
+   * This function assumes there's a single delivery config associated with the application.
+   */
   fun getEnvironmentSummariesFor(application: String): List<EnvironmentSummary> =
     getFirstDeliveryConfigFor(application)
       ?.let { deliveryConfig ->
@@ -62,6 +66,19 @@ class ApplicationService(
    * for the application and reindexing the data so that it matches the right format.
    *
    * This function assumes there's a single delivery config associated with the application.
+   *
+   * The algorithm is as follows:
+   *
+   * For each environment in the delivery config:
+   * |    For each artifact in the environment:
+   * |    |    Build a map of artifact versions by state (e.g. pending, current, previous, etc.).
+   * |    |    For each pair of (state, versions):
+   * |    |    |    Record the artifact version summary.
+   * |    |    |    For each version in this state:
+   * |    |    |    |    Get and cache an artifact summary for this version in this environment.
+   * |    |    |    |     Create the artifact version summary for this version and cache it.
+   * |    |    Finally, create the artifact summary by looking up the version summaries that were built above.
+   * Return a flat list of all the artifact summaries for all environments in the delivery config.
    */
   fun getArtifactSummariesFor(application: String): List<ArtifactSummary> {
     val deliveryConfig = getFirstDeliveryConfigFor(application)
@@ -88,17 +105,14 @@ class ApplicationService(
       )
     }
 
-    // map of version summaries by artifact
     val versionSummariesByArtifact = environmentSummaries.flatMap { environmentSummary ->
       environmentSummary.artifacts.map { artifact ->
         artifact.key to mutableSetOf<ArtifactVersionSummary>()
       }
     }.toMap()
 
-    // for each environment...
     val artifactSummaries = environmentSummaries.flatMap { environmentSummary ->
 
-      // ...and each artifact in the environment...
       environmentSummary.artifacts.map { artifact ->
         val versionsByState = mapOf(
           "current" to artifact.versions.current?.let { listOf(it) }.orEmpty(),
@@ -109,17 +123,13 @@ class ApplicationService(
           "vetoed" to artifact.versions.vetoed
         )
 
-        // ...loop the artifact versions by state...
         versionsByState.entries.map {
           val state = it.key
           val versions = it.value
 
-          // ...then record the artifact version summary for each version for that state...
           if (versions != null) {
             versionSummariesByArtifact[artifact.key]!!.addAll(
-              // ...for each version...
               versions.map { version ->
-                // ...get an artifact summary for this version in this environment...
                 val summaryInEnvironment = artifactRepository.getArtifactSummaryInEnvironment(
                   deliveryConfig = deliveryConfig,
                   environmentName = environmentSummary.name,
@@ -128,7 +138,6 @@ class ApplicationService(
                   version = version
                 )
 
-                // ...create the artifact version summary for this version and add to the list
                 ArtifactVersionSummary(
                   version = version,
                   environments = artifactSummariesByEnvironmentAndState
@@ -148,7 +157,7 @@ class ApplicationService(
         ArtifactSummary(
           name = artifact.name,
           type = artifact.type,
-          versions = versionSummariesByArtifact[artifact.key]
+          versions = versionSummariesByArtifact[artifact.key]!!.toSet()
         )
       }
     }
