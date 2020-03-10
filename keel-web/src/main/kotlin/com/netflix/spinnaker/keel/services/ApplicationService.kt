@@ -73,11 +73,10 @@ class ApplicationService(
    * |    For each artifact in the environment:
    * |    |    Build a map of artifact versions by state (e.g. pending, current, previous, etc.).
    * |    |    For each pair of (state, versions):
-   * |    |    |    Record the artifact version summary.
    * |    |    |    For each version in this state:
-   * |    |    |    |    Get and cache an artifact summary for this version in this environment.
-   * |    |    |    |     Create the artifact version summary for this version and cache it.
-   * |    |    Finally, create the artifact summary by looking up the version summaries that were built above.
+   * |    |    |    |    Get and cache an [ArtifactSummaryInEnvironment] for this version in this environment.
+   * |    |    |    |    Create and cache the [ArtifactVersionSummary] for this version.
+   * |    |    Finally, create the [ArtifactSummary] by looking up the "inner" summaries that were built above.
    * Return a flat list of all the artifact summaries for all environments in the delivery config.
    */
   fun getArtifactSummariesFor(application: String): List<ArtifactSummary> {
