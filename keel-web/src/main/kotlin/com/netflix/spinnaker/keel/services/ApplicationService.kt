@@ -28,6 +28,8 @@ class ApplicationService(
 
   fun hasManagedResources(application: String) = repository.hasManagedResources(application)
 
+  fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
+
   /**
    * Returns a list of [ResourceSummary] for the specified application.
    *
