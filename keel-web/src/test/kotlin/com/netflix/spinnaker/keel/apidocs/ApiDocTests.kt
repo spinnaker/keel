@@ -20,6 +20,8 @@ import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import dev.minutest.RootContextBuilder
+import dev.minutest.experimental.SKIP
+import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.swagger.v3.core.util.RefUtils.constructRef
@@ -293,11 +295,21 @@ class ApiDocTests : JUnit5Minutests {
       }
 
       test("a class annotated with @Description can have a description") {
+        at("/components/schemas/SubmittedDeliveryConfig/description")
+          .isTextual()
+      }
+
+      SKIP - test("annotated class description is inherited") {
         at("/components/schemas/ClusterSpecSubmittedResource/description")
           .isTextual()
       }
 
       test("a property annotated with @Description can have a description") {
+        at("/components/schemas/SubmittedDeliveryConfig/properties/serviceAccount/description")
+          .isTextual()
+      }
+
+      SKIP - test("annotated property description is inherited") {
         at("/components/schemas/ClusterSpecSubmittedResource/properties/spec/description")
           .isTextual()
       }
