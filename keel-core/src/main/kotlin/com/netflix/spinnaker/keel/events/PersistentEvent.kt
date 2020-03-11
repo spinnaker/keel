@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.events
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -20,6 +21,7 @@ abstract class PersistentEvent {
   abstract val application: String
   abstract val uid: String // The unique ID of the thing associated with the scope. Defined in sub-classes.
   abstract val timestamp: Instant
+  @JsonIgnore
   open val ignoreRepeatedInHistory: Boolean = false
 
   companion object {

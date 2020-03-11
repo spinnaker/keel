@@ -35,9 +35,9 @@ data class ApplicationActuationPaused(
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(application: String, reason: String? = null, clock: Clock = Companion.clock) : this(
+  constructor(application: String, clock: Clock = Companion.clock) : this(
     application,
-    reason,
+    "Application $application paused",
     clock.instant()
   )
 }
@@ -52,9 +52,9 @@ data class ApplicationActuationResumed(
 ) : ApplicationEvent() {
   @JsonIgnore override val ignoreRepeatedInHistory = true
 
-  constructor(application: String, reason: String? = null, clock: Clock = Companion.clock) : this(
+  constructor(application: String, clock: Clock = Companion.clock) : this(
     application,
-    reason,
+    "Application $application resumed",
     clock.instant()
   )
 }

@@ -69,19 +69,19 @@ class ActuationPauser(
   fun pauseApplication(application: String) {
     log.info("Pausing application $application")
     pausedRepository.pauseApplication(application)
-    publisher.publishEvent(ApplicationActuationPaused(application, "Application $application paused", clock))
+    publisher.publishEvent(ApplicationActuationPaused(application, clock))
   }
 
   fun resumeApplication(application: String) {
     log.info("Resuming application $application")
     pausedRepository.resumeApplication(application)
-    publisher.publishEvent(ApplicationActuationResumed(application, "Application $application resumed", clock))
+    publisher.publishEvent(ApplicationActuationResumed(application, clock))
   }
 
   fun pauseResource(id: String) {
     log.info("Pausing resource $id")
     pausedRepository.pauseResource(id)
-    publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), null, clock.instant()))
+    publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), clock))
   }
 
   fun resumeResource(id: String) {
@@ -100,24 +100,12 @@ class ActuationPauser(
    */
   fun addApplicationActuationEvents(originalEvents: List<ResourceEvent>, resource: Resource<*>) =
     mutableListOf<PersistentEvent>()
-      .also { events ->
+      .let { events ->
         events.addAll(originalEvents)
-        val oldestResourceEvent = events.last()
         val relevantAppEvents = resourceRepository
-          .applicationEventHistory(resource.application, oldestResourceEvent.timestamp)
+          .applicationEventHistory(resource.application, events.last().timestamp)
           .filter { it is ApplicationActuationPaused || it is ApplicationActuationResumed }
-
-        relevantAppEvents.forEach { appEvent ->
-          val lastBeforeAppEvent = events.firstOrNull { event ->
-            event.timestamp.isBefore(appEvent.timestamp)
-          }
-
-          if (lastBeforeAppEvent == null) {
-            log.warn("Unable to find a resource event just before application event at ${appEvent.timestamp}")
-          } else {
-            events.add(events.indexOf(lastBeforeAppEvent), appEvent)
-          }
-        }
-        events
+        events.addAll(relevantAppEvents)
+        events.sortedByDescending { it.timestamp }
       }
 }
