@@ -16,12 +16,11 @@ data class ResourceKind(
   }
 
   companion object {
-    const val DEFAULT_API_VERSION = "v1"
-    val RESOURCE_KIND_FORMAT = Regex("""([\w.-]+)/([\w.-]+)@v(.+)""")
+    private val resourceKindFormat = Regex("""([\w.-]+)/([\w.-]+)@v(.+)""")
 
     @JvmStatic
     fun parseKind(value: String): ResourceKind =
-      RESOURCE_KIND_FORMAT
+      resourceKindFormat
         .matchEntire(value)
         ?.destructured
         ?.let { (group, kind, version) -> ResourceKind(group, kind, version) }

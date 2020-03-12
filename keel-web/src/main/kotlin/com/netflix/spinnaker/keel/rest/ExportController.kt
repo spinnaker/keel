@@ -69,27 +69,10 @@ class ExportController(
     @PathVariable("name") name: String,
     @RequestHeader("X-SPINNAKER-USER") user: String
   ): SubmittedResource<*> {
-    val group = cloudProviderOverrides[cloudProvider] ?: cloudProvider
-
-    val kind = type.toLowerCase().let { t ->
-      // Detect whether the type provided is fully-qualified
-      if (ResourceKind.RESOURCE_KIND_FORMAT.matches(t)) {
-        t
-      } else {
-        // If not, look up the latest supported version based on the group and kind, or use the default if none found
-        val normalizedType = typeToKind.getOrDefault(t, t)
-        val latestVersion = handlers
-          .supporting(group, normalizedType)
-          .map { h -> h.supportedKind.kind.version }
-          .sortedWith(versionComparator)
-          .last()
-        "$group/$normalizedType@v$latestVersion"
-      }
-    }.let(::parseKind)
-
+    val kind = parseKind(cloudProvider, type)
     val handler = handlers.supporting(kind)
     val exportable = Exportable(
-      cloudProvider = group,
+      cloudProvider = kind.group,
       account = account,
       user = user,
       moniker = parseMoniker(name),
@@ -114,7 +97,34 @@ class ExportController(
     }
   }
 
+  fun parseKind(cloudProvider: String, type: String) =
+    type.toLowerCase().let { t1 ->
+      val group = cloudProviderOverrides[cloudProvider] ?: cloudProvider
+      var version: String? = null
+      val normalizedType = if (versionSuffix.containsMatchIn(t1)) {
+        version = versionSuffix.find(t1)!!.groups[1]?.value
+        t1.replace(versionSuffix, "")
+      } else {
+        t1
+      }.let { t2 ->
+        typeToKind.getOrDefault(t2, t2)
+      }
+
+      if (version == null) {
+        version = handlers
+          .supporting(group, normalizedType)
+          .map { h -> h.supportedKind.kind.version }
+          .sortedWith(versionComparator)
+          .last()
+      }
+
+      (version != null) || error("Unable to find version for group $group, $normalizedType")
+
+      "$group/$normalizedType@v$version"
+    }.let(ResourceKind.Companion::parseKind)
+
   companion object {
+    val versionSuffix = """@v(\d+)$""".toRegex()
     private val versionPrefix = """^v""".toRegex()
     val versionComparator: Comparator<String> = NullSafeComparator<String>(
       Comparator<String> { s1, s2 ->
