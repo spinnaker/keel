@@ -3,21 +3,13 @@ package com.netflix.spinnaker.keel.apidocs
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
+import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
-import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
-import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
-import com.netflix.spinnaker.keel.api.ec2.SecurityGroupSpec
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
-import com.netflix.spinnaker.keel.bakery.api.ImageSpec
-import com.netflix.spinnaker.keel.core.api.CanaryConstraint
-import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
-import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
-import com.netflix.spinnaker.keel.core.api.PipelineConstraint
+import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
+import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
-import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import dev.minutest.RootContextBuilder
 import dev.minutest.experimental.SKIP
@@ -26,6 +18,7 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.swagger.v3.core.util.RefUtils.constructRef
 import kotlin.reflect.KClass
+import kotlin.reflect.full.isSubclassOf
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -44,7 +37,6 @@ import strikt.assertions.doesNotContain
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
-import strikt.assertions.map
 import strikt.jackson.at
 import strikt.jackson.booleanValue
 import strikt.jackson.findValuesAsText
@@ -72,6 +64,18 @@ class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var mvc: MockMvc
 
+  @Autowired
+  lateinit var resourceHandlers: List<ResourceHandler<*, *>>
+
+  val resourceSpecTypes
+    get() = resourceHandlers.map { it.supportedKind.specClass.kotlin }
+
+  @Autowired
+  lateinit var constraintEvaluators: List<ConstraintEvaluator<*>>
+
+  val constraintTypes
+    get() = constraintEvaluators.map { it.supportedType.type.kotlin }
+
   val api: JsonNode by lazy {
     mvc
       .perform(get("/v3/api-docs").accept(APPLICATION_JSON_VALUE))
@@ -82,15 +86,6 @@ class ApiDocTests : JUnit5Minutests {
       .also(::println)
       .let { jacksonObjectMapper().readTree(it) }
   }
-
-  val resourceSpecTypes = listOf(
-    ApplicationLoadBalancerSpec::class,
-    ClassicLoadBalancerSpec::class,
-    ClusterSpec::class,
-    ImageSpec::class,
-    SecurityGroupSpec::class,
-    TitusClusterSpec::class
-  )
 
   fun tests(): RootContextBuilder {
     return rootContext<Assertion.Builder<JsonNode>> {
@@ -171,13 +166,7 @@ class ApiDocTests : JUnit5Minutests {
           )
       }
 
-      sequenceOf(
-        CanaryConstraint::class,
-        DependsOnConstraint::class,
-        ManualJudgementConstraint::class,
-        PipelineConstraint::class,
-        TimeWindowConstraint::class
-      )
+      constraintTypes
         .map(KClass<*>::simpleName)
         .forEach { type ->
           test("Constraint sub-type $type has its own schema") {
@@ -314,13 +303,8 @@ class ApiDocTests : JUnit5Minutests {
           .isTextual()
       }
 
-      listOf(
-        ApplicationLoadBalancerSpec::class,
-        ClassicLoadBalancerSpec::class,
-        ClusterSpec::class,
-        SecurityGroupSpec::class,
-        TitusClusterSpec::class
-      )
+      resourceSpecTypes
+        .filter { it.isSubclassOf(Locatable::class) }
         .map(KClass<*>::simpleName)
         .forEach { locatableType ->
           test("locations property of $locatableType is optional") {
