@@ -13,6 +13,6 @@ class KindController(
   val plugins: List<ResourceHandler<*, *>>
 ) {
   @GetMapping(produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE])
-  fun get(): List<String> =
-    plugins.map { it.supportedKind.kind.toString() }
+  fun get(): Set<String> =
+    plugins.map { it.supportedKind.kind.toString() }.toSet()
 }
