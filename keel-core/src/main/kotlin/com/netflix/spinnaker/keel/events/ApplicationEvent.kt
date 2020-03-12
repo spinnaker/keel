@@ -29,7 +29,6 @@ abstract class ApplicationEvent : PersistentEvent() {
  */
 data class ApplicationActuationPaused(
   override val application: String,
-  val reason: String?,
   override val timestamp: Instant
 ) : ApplicationEvent() {
   @JsonIgnore
@@ -37,7 +36,6 @@ data class ApplicationActuationPaused(
 
   constructor(application: String, clock: Clock = Companion.clock) : this(
     application,
-    "Application $application paused",
     clock.instant()
   )
 }
@@ -47,14 +45,12 @@ data class ApplicationActuationPaused(
  */
 data class ApplicationActuationResumed(
   override val application: String,
-  val reason: String?,
   override val timestamp: Instant
 ) : ApplicationEvent() {
   @JsonIgnore override val ignoreRepeatedInHistory = true
 
   constructor(application: String, clock: Clock = Companion.clock) : this(
     application,
-    "Application $application resumed",
     clock.instant()
   )
 }
