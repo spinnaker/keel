@@ -150,7 +150,7 @@ data class SupportedKind<SPEC : ResourceSpec>(
 )
 
 /**
- * Searches a list of []ResourceHandler]s and returns the first that supports [kind].
+ * Searches a list of [ResourceHandler]s and returns the first that supports [kind].
  *
  * @throws UnsupportedKind if no appropriate handlers are found in the list.
  */
