@@ -15,10 +15,10 @@
         | DATABASECHANGELOGLOCK
       </excludes>
       <forcedTypes>
+        <!-- Automatically convert JSON columns to String -->
         <forcedType>
+          <name>LONGVARCHAR</name>
           <includeTypes>JSON</includeTypes>
-          <userType>java.lang.String</userType>
-          <converter>com.netflix.spinnaker.keel.sql.JooqJsonToStringConverter</converter>
         </forcedType>
       </forcedTypes>
     </database>
