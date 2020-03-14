@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.PromotionStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceSummary
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
@@ -80,14 +81,22 @@ class ApplicationService(
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         environmentSummaries.forEach { environmentSummary ->
-          if (environmentSummary.hasArtifactVersion(artifact, version)) {
-            artifactRepository.getArtifactSummaryInEnvironment(
-              deliveryConfig = deliveryConfig,
-              environmentName = environmentSummary.name,
-              artifactName = artifact.name,
-              artifactType = artifact.type,
-              version = version
-            )?.also { artifactSummaryInEnvironment ->
+          environmentSummary.getArtifactPromotionStatus(artifact, version)?.let { status ->
+            if (status == PromotionStatus.PENDING) {
+              ArtifactSummaryInEnvironment(
+                environment = environmentSummary.name,
+                version = version,
+                state = status.name.toLowerCase()
+              )
+            } else {
+              artifactRepository.getArtifactSummaryInEnvironment(
+                deliveryConfig = deliveryConfig,
+                environmentName = environmentSummary.name,
+                artifactName = artifact.name,
+                artifactType = artifact.type,
+                version = version
+              )
+            }?.also { artifactSummaryInEnvironment ->
               artifactSummariesInEnvironments.add(artifactSummaryInEnvironment)
             }
           }

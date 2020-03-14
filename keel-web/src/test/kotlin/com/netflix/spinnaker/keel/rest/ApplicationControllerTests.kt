@@ -62,7 +62,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   object Fixture {
     const val application = "fnord"
 
-    val artifact = DebianArtifact(name = application, deliveryConfigName = "manifest")
+    val artifact = DebianArtifact(name = application, deliveryConfigName = "manifest", statuses = setOf(ArtifactStatus.RELEASE))
 
     val environments = listOf("test", "staging", "production").associateWith { name ->
       Environment(name = name, resources = setOf(
@@ -238,7 +238,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                     {
                       "name": "fnord",
                       "type": "deb",
-                      "statuses": [],
+                      "statuses": [
+                        "RELEASE"
+                      ],
                       "versions": {
                         "current": "1.0.2",
                         "pending": [],
@@ -263,10 +265,15 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                     {
                       "name": "fnord",
                       "type": "deb",
-                      "statuses": [],
+                      "statuses": [
+                        "RELEASE"
+                      ],
                       "versions": {
                         "current": "1.0.1",
-                        "pending": [],
+                        "pending": [
+                          "1.0.2",
+                          "1.0.3"
+                        ],
                         "approved": [],
                         "previous": [
                           "1.0.0"
@@ -285,10 +292,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                     {
                       "name": "fnord",
                       "type": "deb",
-                      "statuses": [],
+                      "statuses": [
+                        "RELEASE"
+                      ],
                       "versions": {
                         "current": "1.0.0",
-                        "pending": [],
+                        "pending": [
+                          "1.0.1",
+                          "1.0.2",
+                          "1.0.3"
+                        ],
                         "approved": [],
                         "previous": [],
                         "vetoed": []
@@ -350,6 +363,10 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                         {
                           "name": "staging",
                           "state": "current"
+                        },
+                        {
+                          "name": "production",
+                          "state": "pending"
                         }
                       ]
                     },
@@ -359,6 +376,14 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                         {
                           "name": "test",
                           "state": "current"
+                        },
+                        {
+                          "name": "staging",
+                          "state": "pending"
+                        },
+                        {
+                          "name": "production",
+                          "state": "pending"
                         }
                       ]
                     },
@@ -368,6 +393,14 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                         {
                           "name": "test",
                           "state": "approved"
+                        },
+                        {
+                          "name": "staging",
+                          "state": "pending"
+                        },
+                        {
+                          "name": "production",
+                          "state": "pending"
                         }
                       ]
                     }
