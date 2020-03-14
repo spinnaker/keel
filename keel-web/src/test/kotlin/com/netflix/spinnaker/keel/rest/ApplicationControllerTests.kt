@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
-import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.pause.ActuationPauser
@@ -65,42 +64,46 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     val artifact = DebianArtifact(name = application, deliveryConfigName = "manifest")
 
-    val cluster = resource(
-      kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
-      spec = ClusterSpec(
-        moniker = Moniker(application, "api"),
-        imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
-        locations = SubnetAwareLocations(
-          account = "test",
-          vpc = "vpc0",
-          subnet = "internal (vpc0)",
-          regions = setOf(
-            SubnetAwareRegionSpec(
-              name = "us-west-2",
-              availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c")
+    val environments = listOf("test", "staging", "production").associateWith { name ->
+      Environment(name = name, resources = setOf(
+        resource(
+          kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
+          spec = ClusterSpec(
+            moniker = Moniker(application, name),
+            imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
+            locations = SubnetAwareLocations(
+              account = "test",
+              vpc = "vpc0",
+              subnet = "internal (vpc0)",
+              regions = setOf(
+                SubnetAwareRegionSpec(
+                  name = "us-west-2",
+                  availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c")
+                )
+              )
+            ),
+            _defaults = ClusterSpec.ServerGroupSpec(
+              launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
+                instanceType = "m4.2xlarge",
+                ebsOptimized = true,
+                iamRole = "fnordInstanceProfile",
+                keyPair = "fnordKeyPair"
+              )
             )
           )
-        ),
-        _defaults = ClusterSpec.ServerGroupSpec(
-          launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
-            instanceType = "m4.2xlarge",
-            ebsOptimized = true,
-            iamRole = "fnordInstanceProfile",
-            keyPair = "fnordKeyPair"
-          )
         )
-      )
-    )
-
-    private val testEnv = Environment(name = "test", resources = setOf(cluster))
+      ))
+    }
 
     val deliveryConfig = DeliveryConfig(
       name = "manifest",
       application = application,
       serviceAccount = "keel@spinnaker",
       artifacts = setOf(artifact),
-      environments = setOf(testEnv)
+      environments = environments.values.toSet()
     )
+
+    val jsonMapper = configuredObjectMapper()
   }
 
   fun tests() = rootContext<Fixture> {
@@ -116,15 +119,24 @@ internal class ApplicationControllerTests : JUnit5Minutests {
     context("application with delivery config exists") {
       before {
         deliveryConfigRepository.store(deliveryConfig)
-        resourceRepository.store(cluster)
-        resourceRepository.appendHistory(ResourceCreated(cluster))
+        environments.values.forEach { env ->
+          env.resources.forEach { res ->
+            resourceRepository.store(res)
+            resourceRepository.appendHistory(ResourceCreated(res))
+          }
+        }
         artifactRepository.register(artifact)
         artifactRepository.store(artifact, "1.0.0", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "1.0.1", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "1.0.2", ArtifactStatus.RELEASE)
+        artifactRepository.store(artifact, "1.0.3", ArtifactStatus.RELEASE)
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.0", "test")
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.0", "staging")
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.0", "production")
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.1", "test")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "1.0.2", "test")
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.1", "staging")
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "1.0.2", "test")
+        artifactRepository.approveVersionFor(deliveryConfig, artifact, "1.0.3", "test")
       }
 
       test("can get basic summary by application") {
@@ -177,13 +189,32 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         mvc
           .perform(request)
           .andExpect(status().isOk)
+          .andDo { println(it.response.contentAsString) }
           .andExpect(content().json(
             """
-              |{
-              |"hasManagedResources":true,
-              |"resources":[{"id":"${cluster.id}","kind":"${cluster.kind}","status":"CREATED"}]
-              |}
-            """.trimMargin()
+            {
+              "applicationPaused": false,
+              "hasManagedResources": true,
+              "currentEnvironmentConstraints": [],
+              "resources": [
+                {
+                  "id": "ec2:cluster:test:fnord-test",
+                  "kind": "ec2/cluster@v1",
+                  "status": "CREATED"
+                },
+                {
+                  "id": "ec2:cluster:test:fnord-staging",
+                  "kind": "ec2/cluster@v1",
+                  "status": "CREATED"
+                },
+                {
+                  "id": "ec2:cluster:test:fnord-production",
+                  "kind": "ec2/cluster@v1",
+                  "status": "CREATED"
+                }
+              ]
+            }
+            """.trimIndent()
           ))
       }
 
@@ -193,35 +224,79 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         mvc
           .perform(request)
           .andExpect(status().isOk)
-          .andDo { print(it.response.contentAsString) }
+          .andDo { println(it.response.contentAsString) }
           .andExpect(content().json(
             """
             {
-              "applicationPaused":false,
-              "hasManagedResources":true,
-              "environments":[
+              "applicationPaused": false,
+              "hasManagedResources": true,
+              "currentEnvironmentConstraints": [],
+              "environments": [
                 {
-                  "artifacts":[
+                  "name": "test",
+                  "artifacts": [
                     {
-                      "name":"fnord",
-                      "type":"deb",
-                      "statuses":[],
-                      "versions":{
-                        "current":"1.0.1",
-                        "pending":[],
-                        "approved":[
-                          "1.0.2"
+                      "name": "fnord",
+                      "type": "deb",
+                      "statuses": [],
+                      "versions": {
+                        "current": "1.0.2",
+                        "pending": [],
+                        "approved": [
+                          "1.0.3"
                         ],
-                        "previous":[
-                          "1.0.0"
+                        "previous": [
+                          "1.0.0",
+                          "1.0.1"
                         ],
-                        "vetoed":[]
+                        "vetoed": []
                       }
                     }
                   ],
-                  "name":"test",
-                  "resources":[
-                    "ec2:cluster:test:fnord-api"
+                  "resources": [
+                    "ec2:cluster:test:fnord-test"
+                  ]
+                },
+                {
+                  "name": "staging",
+                  "artifacts": [
+                    {
+                      "name": "fnord",
+                      "type": "deb",
+                      "statuses": [],
+                      "versions": {
+                        "current": "1.0.1",
+                        "pending": [],
+                        "approved": [],
+                        "previous": [
+                          "1.0.0"
+                        ],
+                        "vetoed": []
+                      }
+                    }
+                  ],
+                  "resources": [
+                    "ec2:cluster:test:fnord-staging"
+                  ]
+                },
+                {
+                  "name": "production",
+                  "artifacts": [
+                    {
+                      "name": "fnord",
+                      "type": "deb",
+                      "statuses": [],
+                      "versions": {
+                        "current": "1.0.0",
+                        "pending": [],
+                        "approved": [],
+                        "previous": [],
+                        "vetoed": []
+                      }
+                    }
+                  ],
+                  "resources": [
+                    "ec2:cluster:test:fnord-production"
                   ]
                 }
               ]
@@ -236,41 +311,63 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         mvc
           .perform(request)
           .andExpect(status().isOk)
-          .andDo { print(it.response.contentAsString) }
+          .andDo { println(it.response.contentAsString) }
           .andExpect(content().json(
             """
             {
-              "applicationPaused":false,
-              "hasManagedResources":true,
-              "artifacts":[
+              "applicationPaused": false,
+              "hasManagedResources": true,
+              "currentEnvironmentConstraints": [],
+              "artifacts": [
                 {
-                  "name":"fnord",
-                  "type":"deb",
-                  "versions":[
+                  "name": "fnord",
+                  "type": "deb",
+                  "versions": [
                     {
-                      "version":"1.0.0",
-                      "environments":[
+                      "version": "1.0.0",
+                      "environments": [
                         {
-                          "name":"test",
-                          "state":"previous"
+                          "name": "test",
+                          "state": "previous"
+                        },
+                        {
+                          "name": "staging",
+                          "state": "previous"
+                        },
+                        {
+                          "name": "production",
+                          "state": "current"
                         }
                       ]
                     },
                     {
-                      "version":"1.0.1",
-                      "environments":[
+                      "version": "1.0.1",
+                      "environments": [
                         {
-                          "name":"test",
-                          "state":"current"
+                          "name": "test",
+                          "state": "previous"
+                        },
+                        {
+                          "name": "staging",
+                          "state": "current"
                         }
                       ]
                     },
                     {
-                      "version":"1.0.2",
-                      "environments":[
+                      "version": "1.0.2",
+                      "environments": [
                         {
-                          "name":"test",
-                          "state":"approved"
+                          "name": "test",
+                          "state": "current"
+                        }
+                      ]
+                    },
+                    {
+                      "version": "1.0.3",
+                      "environments": [
+                        {
+                          "name": "test",
+                          "state": "approved"
                         }
                       ]
                     }
@@ -288,9 +385,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         val result = mvc
           .perform(request)
           .andExpect(status().isOk)
-          .andDo { print(it.response.contentAsString) }
+          .andDo { println(it.response.contentAsString) }
           .andReturn()
-        val response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
+        val response = jsonMapper.readValue<Map<String, Any>>(result.response.contentAsString)
         expectThat(response.keys)
           .containsExactly(
             "applicationPaused",
@@ -308,9 +405,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         val result = mvc
           .perform(request)
           .andExpect(status().isOk)
-          .andDo { print(it.response.contentAsString) }
+          .andDo { println(it.response.contentAsString) }
           .andReturn()
-        val response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
+        val response = jsonMapper.readValue<Map<String, Any>>(result.response.contentAsString)
         expectThat(response.keys)
           .containsExactly(
             "applicationPaused",
@@ -337,7 +434,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
           .andExpect(status().isOk)
           .andDo { print(it.response.contentAsString) }
           .andReturn()
-        var response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
+        var response = jsonMapper.readValue<Map<String, Any>>(result.response.contentAsString)
         expectThat(response.keys)
           .containsExactly(
             "applicationPaused",
@@ -352,7 +449,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
           .andExpect(status().isOk)
           .andDo { print(it.response.contentAsString) }
           .andReturn()
-        response = configuredObjectMapper().readValue<Map<String, Any>>(result.response.contentAsString)
+        response = jsonMapper.readValue<Map<String, Any>>(result.response.contentAsString)
         expectThat(response.keys)
           .containsExactly(
             "applicationPaused",

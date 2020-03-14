@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
 
 /**
@@ -18,6 +19,18 @@ data class EnvironmentSummary(
 
   val resources: Set<String>
     get() = environment.resources.map { it.id }.toSet()
+
+  fun hasArtifactVersion(artifact: DeliveryArtifact, version: String) =
+    artifacts.any {
+      (it.name == artifact.name && it.type == artifact.type) && (
+        version == it.versions.current ||
+          version == it.versions.deploying ||
+          it.versions.previous.contains(version) ||
+          it.versions.approved.contains(version) ||
+          it.versions.pending.contains(version) ||
+          it.versions.vetoed.contains(version)
+        )
+    }
 }
 
 data class ArtifactVersions(
