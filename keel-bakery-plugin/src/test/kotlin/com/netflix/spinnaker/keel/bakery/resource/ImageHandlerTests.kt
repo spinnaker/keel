@@ -3,12 +3,13 @@ package com.netflix.spinnaker.keel.bakery.resource
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
+import com.netflix.spinnaker.keel.api.artifacts.BaseLabel.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.StoreType.EBS
+import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.UnknownBaseImage
-import com.netflix.spinnaker.keel.bakery.api.BaseLabel.RELEASE
 import com.netflix.spinnaker.keel.bakery.api.ImageSpec
-import com.netflix.spinnaker.keel.bakery.api.StoreType.EBS
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
@@ -78,7 +79,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
       regions = resource.spec.regions
     )
 
-    val artifact = DebianArtifact(name = "keel", deliveryConfigName = "delivery-config")
+    val artifact = DebianArtifact(
+      name = "keel",
+      deliveryConfigName = "delivery-config",
+      vmOptions = resource.spec.run {
+        VirtualMachineOptions(baseLabel, baseOs, regions, storeType)
+      }
+    )
   }
 
   fun tests() = rootContext<Fixture> {

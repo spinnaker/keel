@@ -6,6 +6,11 @@ artifacts:
 - name: fnord
   type: deb
   reference: fnord
+  vmOptions:
+    baseOs: bionic
+    regions:
+    - us-east-1
+    - us-west-2
 environments:
 - name: test
   constraints: []

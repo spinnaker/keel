@@ -102,7 +102,10 @@ class SqlArtifactRepository(
 
   private fun DebianArtifact.detailsAsJson() =
     objectMapper.writeValueAsString(
-      mapOf("statuses" to statuses)
+      mapOf(
+        "vmOptions" to vmOptions,
+        "statuses" to statuses
+      )
     )
 
   override fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> {

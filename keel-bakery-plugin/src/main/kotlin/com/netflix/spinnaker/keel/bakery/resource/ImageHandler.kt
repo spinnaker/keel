@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
@@ -47,7 +48,11 @@ class ImageHandler(
 
   override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
     with(resource) {
-      val artifact = DebianArtifact(name = spec.artifactName, statuses = spec.artifactStatuses)
+      val artifact = DebianArtifact(
+        name = spec.artifactName,
+        vmOptions = VirtualMachineOptions(spec.baseLabel, spec.baseOs, spec.regions, spec.storeType),
+        statuses = spec.artifactStatuses
+      )
       val latestVersion = artifact.findLatestVersion()
       val baseImage = baseImageCache.getBaseImage(spec.baseOs, spec.baseLabel)
       val baseAmi = findBaseAmi(baseImage, resource.serviceAccount)
