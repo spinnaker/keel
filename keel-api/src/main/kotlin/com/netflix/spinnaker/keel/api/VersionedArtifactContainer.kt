@@ -9,3 +9,5 @@ interface VersionedArtifactContainer {
   val deliveryArtifact: DeliveryArtifact?
   val artifactVersion: String?
 }
+
+interface ComputeResourceSpec : ResourceSpec, VersionedArtifactContainer

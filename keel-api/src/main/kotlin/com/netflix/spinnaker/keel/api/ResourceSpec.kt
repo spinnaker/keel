@@ -24,5 +24,3 @@ interface ResourceSpec {
    */
   val application: String
 }
-
-interface ComputeResourceSpec : ResourceSpec

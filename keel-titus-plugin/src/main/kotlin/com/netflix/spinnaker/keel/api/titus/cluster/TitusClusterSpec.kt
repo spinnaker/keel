@@ -27,7 +27,6 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.VersionedArtifactContainer
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.titus.exceptions.ErrorResolvingContainerException
 import com.netflix.spinnaker.keel.clouddriver.model.Constraints
@@ -61,7 +60,7 @@ data class TitusClusterSpec(
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = Duration.ZERO
-) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, VersionedArtifactContainer, UnhappyControl {
+) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
 
   @JsonIgnore
   override val id = "${locations.account}:$moniker"

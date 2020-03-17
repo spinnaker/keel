@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.VersionedArtifactContainer
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.plugins.supportingComputeResources
@@ -54,17 +53,12 @@ class ApplicationService(
               log.debug("Applying ${resolver.javaClass.simpleName} to ${computeResource.id}")
               resolver(computeResource)
             }.let { computeResource ->
-              if (computeResource.spec is VersionedArtifactContainer) {
-                val versionedArtifact = (computeResource.spec as VersionedArtifactContainer)
-                if (versionedArtifact.deliveryArtifact != null && versionedArtifact.artifactVersion != null) {
-                  summary.copy(artifact = ResourceArtifactSummary(
-                    name = versionedArtifact.deliveryArtifact!!.name,
-                    type = versionedArtifact.deliveryArtifact!!.type,
-                    desiredVersion = versionedArtifact.artifactVersion!!
-                  ))
-                } else {
-                  summary
-                }
+              if (computeResource.spec.deliveryArtifact != null && computeResource.spec.artifactVersion != null) {
+                summary.copy(artifact = ResourceArtifactSummary(
+                  name = computeResource.spec.deliveryArtifact!!.name,
+                  type = computeResource.spec.deliveryArtifact!!.type,
+                  desiredVersion = computeResource.spec.artifactVersion!!
+                ))
               } else {
                 summary
               }
