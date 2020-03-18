@@ -44,7 +44,6 @@ class UnhappyVeto(
   private val diffFingerprintRepository: DiffFingerprintRepository,
   private val unhappyVetoRepository: UnhappyVetoRepository,
   private val dynamicConfigService: DynamicConfigService,
-
   @Value("\${veto.unhappy.waiting-time:PT10M}")
   private val configuredWaitingTime: String
 ) : Veto {
