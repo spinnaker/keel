@@ -164,7 +164,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
             before {
               coEvery {
                 plugin1.desired(resource)
-              } returns DummyArtifactVersionedResourceSpec(data = "fnord")
+              } returns Pair(DummyArtifactVersionedResourceSpec(data = "fnord"), resource)
               coEvery {
                 plugin1.current(resource)
               } returns DummyArtifactVersionedResourceSpec(data = "fnord")
@@ -221,7 +221,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
           context("the current state is missing") {
             before {
-              coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec()
+              coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(), resource)
               coEvery { plugin1.current(resource) } returns null
               coEvery { plugin1.create(resource, any()) } returns listOf(Task(id = randomUID().toString(), name = "a task"))
 
@@ -244,7 +244,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
           context("the current state is wrong") {
             before {
-              coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec(data = "fnord")
+              coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(data = "fnord"), resource)
               coEvery { plugin1.current(resource) } returns DummyArtifactVersionedResourceSpec()
               coEvery { plugin1.update(resource, any()) } returns listOf(Task(id = randomUID().toString(), name = "a task"))
 
@@ -267,7 +267,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
           context("plugin throws an exception in current state resolution") {
             before {
-              coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec()
+              coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(), resource)
               coEvery { plugin1.current(resource) } throws RuntimeException("o noes")
 
               runBlocking {
@@ -339,7 +339,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
           context("plugin throws an exception on resource update") {
             before {
-              coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec()
+              coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(), resource)
               coEvery { plugin1.current(resource) } returns DummyArtifactVersionedResourceSpec(artifactVersion = "fnord-41.0")
               coEvery { plugin1.update(resource, any()) } throws RuntimeException("o noes")
 
@@ -363,7 +363,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       context("the resource check is vetoed") {
         before {
           every { veto.check(resource) } returns VetoResponse(false, "aVeto")
-          coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec()
+          coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(), resource)
           coEvery { plugin1.current(resource) } returns DummyArtifactVersionedResourceSpec()
           coEvery { plugin1.actuationInProgress(resource) } returns false
 
@@ -381,7 +381,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       context("the artifact versioned resource is vetoed and the veto response has vetoArtifact set") {
         before {
           every { veto.check(resource) } returns VetoResponse(allowed = false, vetoName = "aVeto", vetoArtifact = true)
-          coEvery { plugin1.desired(resource) } returns DummyArtifactVersionedResourceSpec()
+          coEvery { plugin1.desired(resource) } returns Pair(DummyArtifactVersionedResourceSpec(), resource)
           coEvery { plugin1.current(resource) } returns DummyArtifactVersionedResourceSpec()
           coEvery { plugin1.actuationInProgress(resource) } returns false
           every { deliveryConfigRepository.deliveryConfigFor(any()) } returns DeliveryConfig(

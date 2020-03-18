@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
@@ -14,7 +15,6 @@ import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceSummary
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
@@ -108,16 +108,6 @@ open class SqlResourceRepository(
         .from(RESOURCE)
         .where(RESOURCE.APPLICATION.eq(application))
         .fetch(RESOURCE.ID)
-    }
-  }
-
-  fun getUidByApplication(application: String): List<String> {
-    return sqlRetry.withRetry(READ) {
-      jooq
-        .select(RESOURCE.UID)
-        .from(RESOURCE)
-        .where(RESOURCE.APPLICATION.eq(application))
-        .fetch(RESOURCE.UID)
     }
   }
 
@@ -284,6 +274,23 @@ open class SqlResourceRepository(
         .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
         .set(EVENT.JSON, objectMapper.writeValueAsString(event))
         .execute()
+    }
+  }
+
+  override fun <T : ResourceEvent> lastEventByType(id: String, eventType: Class<T>): T? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(EVENT.JSON)
+        .from(EVENT, RESOURCE)
+        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+        .and(RESOURCE.ID.eq(id))
+        .and(RESOURCE.UID.eq(EVENT.UID))
+        .and("event.json->'\$.type' = '${eventType.simpleName}'")
+        .orderBy(EVENT.TIMESTAMP.desc())
+        .limit(1)
+        .fetchOne { (json) ->
+          objectMapper.readValue<ResourceEvent>(json) as T?
+        }
     }
   }
 

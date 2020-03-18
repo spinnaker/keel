@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
@@ -21,6 +22,7 @@ import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.ec2.resolvers.ImageResolver
 import com.netflix.spinnaker.keel.events.ResourceCreated
+import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
@@ -162,6 +164,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       artifacts = setOf(artifact),
       environments = environments.values.toSet()
     )
+
+    val maxDeployedVersionByEnvironment = mapOf(
+      "test" to 2,
+      "staging" to 1,
+      "production" to 0
+    )
   }
 
   fun tests() = rootContext<Fixture> {
@@ -197,30 +205,36 @@ internal class ApplicationControllerTests : JUnit5Minutests {
     context("application with delivery config exists") {
       before {
         deliveryConfigRepository.store(deliveryConfig)
-        environments.values.forEach { env ->
-          env.resources.forEach { res ->
-            resourceRepository.store(res)
-            resourceRepository.appendHistory(ResourceCreated(res))
-          }
-        }
         artifactRepository.register(artifact)
         artifactRepository.store(artifact, "fnord-1.0.0-h001", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "fnord-1.0.1-h001", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "fnord-1.0.2-h001", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "fnord-1.0.3-h001", ArtifactStatus.RELEASE)
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.0-h001", "test")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.0-h001", "staging")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.0-h001", "production")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.1-h001", "test")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.1-h001", "staging")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.2-h001", "test")
+
+        environments.values.forEach { env ->
+          (0..maxDeployedVersionByEnvironment[env.name]!!).forEach { v ->
+            artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.$v-h001", env.name)
+            artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.$v-h001", env.name)
+          }
+          env.resources.forEach { res ->
+            resourceRepository.store(res)
+            resourceRepository.appendHistory(ResourceCreated(res))
+          }
+        }
+        // store one more version for the test env so we can test that artifact.desiredVersion works as expected
         artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.3-h001", "test")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h001", "test")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h001", "staging")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h001", "production")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h001", "test")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h001", "staging")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.2-h001", "test")
+
+        environments.values.forEach { env ->
+          env.resources.forEach { res ->
+            val cluster = res as Resource<ClusterSpec>
+            resourceRepository.appendHistory(ResourceValid(cluster.copy(
+              spec = cluster.spec.copy(
+                deliveryArtifact = artifact,
+                artifactVersion = artifactRepository.latestVersionApprovedIn(deliveryConfig, artifact, env.name)
+              ))
+            ))
+          }
+        }
       }
 
       test("can get basic summary by application") {
@@ -282,7 +296,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             resources:
             - id: "ec2:cluster:test:fnord-test"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               artifact:
                 name: "fnord"
                 type: "deb"
@@ -297,7 +311,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 - name: "us-west-2"
             - id: "ec2:cluster:test:fnord-staging"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               artifact:
                 name: "fnord"
                 type: "deb"
@@ -312,7 +326,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 - name: "us-west-2"
             - id: "ec2:cluster:test:fnord-production"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               artifact:
                 name: "fnord"
                 type: "deb"

@@ -81,7 +81,7 @@ class AdHocDifferTests : JUnit5Minutests {
 
       coEvery {
         plugin1.desired(resource)
-      } returns DummyResource(resource.spec)
+      } returns Pair(DummyResource(resource.spec), resource)
     }
 
     context("current state and desired state match") {

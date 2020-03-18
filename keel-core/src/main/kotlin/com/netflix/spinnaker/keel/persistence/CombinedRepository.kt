@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.normalize
@@ -318,6 +319,9 @@ class CombinedRepository(
 
   override fun resourceLastEvent(id: String): ResourceEvent? =
     resourceRepository.lastEvent(id)
+
+  override fun <T : ResourceEvent> resourceLastEventByType(id: String, eventType: Class<T>): T? =
+    resourceRepository.lastEventByType(id, eventType)
 
   override fun resourceAppendHistory(event: ResourceEvent) =
     resourceRepository.appendHistory(event)

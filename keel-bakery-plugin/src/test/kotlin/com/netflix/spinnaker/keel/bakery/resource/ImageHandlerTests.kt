@@ -151,7 +151,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
           val desired = runBlocking {
             handler.desired(resource)
           }
-          expectThat(desired).isEqualTo(image)
+          expectThat(desired.first).isEqualTo(image)
         }
       }
 

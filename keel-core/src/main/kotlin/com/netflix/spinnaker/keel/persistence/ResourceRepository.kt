@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
@@ -132,7 +133,9 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    */
   fun lastEvent(id: String): ResourceEvent? = eventHistory(id, 1).firstOrNull()
 
-  /**
+  fun <T : ResourceEvent> lastEventByType(id: String, eventType: Class<T>): T?
+
+    /**
    * Records an event associated with a resource.
    */
   fun appendHistory(event: ResourceEvent)

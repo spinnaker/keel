@@ -44,7 +44,7 @@ class ImageHandler(
   override val supportedKind =
     SupportedKind(BAKERY_API_V1.qualify("image"), ImageSpec::class.java)
 
-  override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
+  override suspend fun toConcreteType(resource: Resource<ImageSpec>): Image =
     with(resource) {
       val artifact = DebianArtifact(name = spec.artifactName, statuses = spec.artifactStatuses)
       val latestVersion = artifact.findLatestVersion()

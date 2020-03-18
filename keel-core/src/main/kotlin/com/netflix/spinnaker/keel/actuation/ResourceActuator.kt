@@ -16,9 +16,11 @@ import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationVetoed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
+import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
+import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.pause.ActuationPauser
@@ -70,35 +72,33 @@ class ResourceActuator(
       }
 
       try {
-        val (desired, current) = plugin.resolve(resource)
+        val (resolvedResource, desired, current) = plugin.resolve(resource)
         val diff = DefaultResourceDiff(desired, current)
         if (diff.hasChanges()) {
           diffFingerprintRepository.store(id, diff)
         }
 
+        /**
+         * [VersionedArtifactContainer] is a special [ResourceSpec] sub-type. When the resource under evaluation
+         * has a spec of this type, it means it carries information about a delivery artifact and version (typically
+         * compute resources).
+         */
+        val versionedArtifact = if (resolvedResource.spec is VersionedArtifactContainer) {
+          resolvedResource.spec as VersionedArtifactContainer
+        } else {
+          null
+        }
+
         val response = vetoEnforcer.canCheck(resource)
         if (!response.allowed) {
           /**
-           * [VersionedArtifactContainer] is a special [resource] sub-type. When a veto response sets
-           * [VetoResponse.vetoArtifact] and the resource under evaluation is of type
-           * [VersionedArtifactContainer], blacklist the desired artifact version from the environment
-           * containing [resource]. This ensures that the environment will be fully restored to
-           * a prior good-state.
+           * When a veto response sets [VetoResponse.vetoArtifact] and the resource has artifact information, blacklist
+           * the desired artifact version from the environment containing [resource]. This ensures that the environment
+           * will be fully restored to a prior good-state.
            */
-          if (response.vetoArtifact && resource.spec is VersionedArtifactContainer) {
+          if (response.vetoArtifact && versionedArtifact != null) {
             try {
-              val (version, artifact) = when (desired) {
-                is Map<*, *> -> {
-                  if (desired.size > 0) {
-                    val versioned = (desired as Map<String, VersionedArtifactContainer>).values.first()
-                    Pair(versioned.artifactVersion, versioned.deliveryArtifact)
-                  } else {
-                    Pair(null, null)
-                  }
-                }
-                is VersionedArtifactContainer -> Pair(desired.artifactVersion, desired.deliveryArtifact)
-                else -> Pair(null, null)
-              }
+              val (version, artifact) = versionedArtifact.artifactVersion to versionedArtifact.deliveryArtifact
               if (version != null && artifact != null) {
                 val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
                 val environment = deliveryConfig.environmentFor(resource)?.name
@@ -128,21 +128,23 @@ class ResourceActuator(
         when {
           current == null -> {
             log.warn("Resource {} is missing", id)
-            publisher.publishEvent(ResourceMissing(resource, clock))
+            publisher.publishEvent(ResourceMissing(resolvedResource, clock))
 
-            plugin.create(resource, diff)
+            plugin.create(resolvedResource, diff)
               .also { tasks ->
-                publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                publisher.publishEvent(ResourceCreated(resolvedResource, clock))
+                publisher.publishEvent(ResourceActuationLaunched(resolvedResource, plugin.name, tasks, clock))
               }
           }
           diff.hasChanges() -> {
             log.warn("Resource {} is invalid", id)
             log.info("Resource {} delta: {}", id, diff.toDebug())
-            publisher.publishEvent(ResourceDeltaDetected(resource, diff.toDeltaJson(), clock))
+            publisher.publishEvent(ResourceDeltaDetected(resolvedResource, diff.toDeltaJson(), clock))
 
-            plugin.update(resource, diff)
+            plugin.update(resolvedResource, diff)
               .also { tasks ->
-                publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                publisher.publishEvent(ResourceUpdated(resolvedResource, diff.toDeltaJson(), clock))
+                publisher.publishEvent(ResourceActuationLaunched(resolvedResource, plugin.name, tasks, clock))
               }
           }
           else -> {
@@ -150,9 +152,9 @@ class ResourceActuator(
             // TODO: not sure this logic belongs here
             val lastEvent = resourceRepository.lastEvent(id)
             if (lastEvent is ResourceDeltaDetected || lastEvent is ResourceActuationLaunched) {
-              publisher.publishEvent(ResourceDeltaResolved(resource, clock))
+              publisher.publishEvent(ResourceDeltaResolved(resolvedResource, clock))
             } else {
-              publisher.publishEvent(ResourceValid(resource, clock))
+              publisher.publishEvent(ResourceValid(resolvedResource, clock))
             }
           }
         }
@@ -166,9 +168,10 @@ class ResourceActuator(
     }
   }
 
-  private suspend fun <T : Any> ResourceHandler<*, T>.resolve(resource: Resource<out ResourceSpec>): Pair<T, T?> =
+  private suspend fun <T : Any> ResourceHandler<*, T>.resolve(resource: Resource<out ResourceSpec>):
+    Triple<Resource<*>, T, T?> =
     supervisorScope {
-      val desired = async {
+      val desiredAsync = async {
         try {
           desired(resource)
         } catch (e: ResourceCurrentlyUnresolvable) {
@@ -177,14 +180,16 @@ class ResourceActuator(
           throw CannotResolveDesiredState(resource.id, e)
         }
       }
-      val current = async {
+      val currentAsync = async {
         try {
           current(resource)
         } catch (e: Throwable) {
           throw CannotResolveCurrentState(resource.id, e)
         }
       }
-      desired.await() to current.await()
+      val (desired, resolved) = desiredAsync.await()
+      val current = currentAsync.await()
+      Triple(resolved, desired, current)
     }
 
   /**
@@ -211,30 +216,30 @@ class ResourceActuator(
   // These extensions get round the fact tht we don't know the spec type of the resource from
   // the repository. I don't want the `ResourceHandler` interface to be untyped though.
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.desired(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.desired(
     resource: Resource<*>
-  ): R =
+  ): Pair<C, Resource<S>> =
     desired(resource as Resource<S>)
 
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.current(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.current(
     resource: Resource<*>
-  ): R? =
+  ): C? =
     current(resource as Resource<S>)
 
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.create(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.create(
     resource: Resource<*>,
     resourceDiff: ResourceDiff<*>
   ): List<Task> =
-    create(resource as Resource<S>, resourceDiff as ResourceDiff<R>)
+    create(resource as Resource<S>, resourceDiff as ResourceDiff<C>)
 
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.update(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.update(
     resource: Resource<*>,
     resourceDiff: ResourceDiff<*>
   ): List<Task> =
-    update(resource as Resource<S>, resourceDiff as ResourceDiff<R>)
+    update(resource as Resource<S>, resourceDiff as ResourceDiff<C>)
 
   @Suppress("UNCHECKED_CAST")
   private suspend fun <S : ResourceSpec> ResourceHandler<S, *>.actuationInProgress(

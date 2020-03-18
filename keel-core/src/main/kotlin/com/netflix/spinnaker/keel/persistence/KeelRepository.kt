@@ -13,13 +13,12 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ApplicationEvent
-import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.events.ResourceUpdated
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -53,12 +52,10 @@ interface KeelRepository {
       if (diff.hasChanges()) {
         log.debug("Updating ${resource.id}")
         storeResource(resource)
-        publisher.publishEvent(ResourceUpdated(resource, diff.toDeltaJson(), clock))
       }
     } else {
       log.debug("Creating $resource")
       storeResource(resource)
-      publisher.publishEvent(ResourceCreated(resource, clock))
     }
   }
 
@@ -140,6 +137,8 @@ interface KeelRepository {
   fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent>
 
   fun resourceLastEvent(id: String): ResourceEvent?
+
+  fun <T : ResourceEvent> resourceLastEventByType(id: String, eventType: Class<T>): T?
 
   fun resourceAppendHistory(event: ResourceEvent)
 

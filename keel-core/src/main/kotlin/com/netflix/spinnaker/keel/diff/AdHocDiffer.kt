@@ -105,15 +105,15 @@ class AdHocDiffer(
   // These extensions get round the fact tht we don't know the spec type of the resource from
   // the repository. I don't want the `ResourceHandler` interface to be untyped though.
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.desired(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.desired(
     resource: Resource<*>
-  ): R =
+  ): Pair<C, Resource<S>> =
     desired(resource as Resource<S>)
 
   @Suppress("UNCHECKED_CAST")
-  private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.current(
+  private suspend fun <S : ResourceSpec, C : Any> ResourceHandler<S, C>.current(
     resource: Resource<*>
-  ): R? =
+  ): C? =
     current(resource as Resource<S>)
   // end type coercing extensions
 }

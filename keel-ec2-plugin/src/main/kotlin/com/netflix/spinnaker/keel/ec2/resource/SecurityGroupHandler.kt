@@ -63,7 +63,7 @@ class SecurityGroupHandler(
   override val supportedKind =
     SupportedKind(SPINNAKER_EC2_API_V1.qualify("security-group"), SecurityGroupSpec::class.java)
 
-  override suspend fun toResolvedType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
+  override suspend fun toConcreteType(resource: Resource<SecurityGroupSpec>): Map<String, SecurityGroup> =
     with(resource.spec) {
       locations.regions.map { region ->
         region.name to SecurityGroup(

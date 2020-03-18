@@ -19,13 +19,13 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceSummary
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -134,6 +134,12 @@ class InMemoryResourceRepository(
           it.add(0, event)
         }
       }
+  }
+
+  override fun <T : ResourceEvent> lastEventByType(id: String, eventType: Class<T>): T? {
+    val events = resourceEvents[id]
+      ?: throw NoSuchResourceId(id)
+    return events.firstOrNull { it::class.java == eventType } as T?
   }
 
   override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>> {

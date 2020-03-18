@@ -202,7 +202,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
       test("the CLB is created with a default security group as none are specified in spec") {
         runBlocking {
           val current = current(resource)
-          val desired = desired(resource)
+          val desired = desired(resource).first
           upsert(resource, DefaultResourceDiff(desired = desired, current = current))
         }
 
@@ -226,7 +226,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
         runBlocking {
           val current = current(modResource)
-          val desired = desired(modResource)
+          val desired = desired(modResource).first
           upsert(modResource, DefaultResourceDiff(desired = desired, current = current))
         }
 
@@ -254,7 +254,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
 
         val diff = runBlocking {
           val current = current(newResource)
-          val desired = desired(newResource)
+          val desired = desired(newResource).first
           DefaultResourceDiff(desired = desired, current = current)
         }
 

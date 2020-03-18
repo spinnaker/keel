@@ -16,17 +16,20 @@
 package com.netflix.spinnaker.keel.events
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
+import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.events.ResourceState.Diff
 import com.netflix.spinnaker.keel.events.ResourceState.Error
 import com.netflix.spinnaker.keel.events.ResourceState.Missing
@@ -59,6 +62,7 @@ abstract class ResourceEvent : PersistentEvent() {
   override val scope = Scope.RESOURCE
   abstract val kind: ResourceKind
   abstract val id: String
+  open val artifact: ResourceArtifactSummary? = null
 
   override val uid: String
     get() = id
@@ -71,14 +75,16 @@ data class ResourceCreated(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val artifact: ResourceArtifactSummary?
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.kind,
     resource.id,
     resource.application,
-    clock.instant()
+    clock.instant(),
+    artifact = resource.toArtifactSummary()
   )
 }
 
@@ -306,6 +312,7 @@ data class ResourceTaskSucceeded(
  * The desired and actual states of a managed resource now match where previously there was a delta
  * (or the resource did not exist).
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResourceDeltaResolved(
   override val kind: ResourceKind,
   override val id: String,
@@ -327,7 +334,8 @@ data class ResourceValid(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val artifact: ResourceArtifactSummary? = null
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Ok
@@ -340,7 +348,8 @@ data class ResourceValid(
       resource.kind,
       resource.id,
       resource.application,
-      clock.instant()
+      clock.instant(),
+      artifact = resource.toArtifactSummary()
     )
 }
 
@@ -386,4 +395,18 @@ data class ResourceCheckError(
     exception.javaClass,
     exception.message
   )
+}
+
+internal fun Resource<*>.toArtifactSummary(): ResourceArtifactSummary? {
+  return if (spec is ComputeResourceSpec) {
+    with(spec as ComputeResourceSpec) {
+      if (deliveryArtifact != null && artifactVersion != null) {
+        ResourceArtifactSummary(deliveryArtifact!!.name, deliveryArtifact!!.type, artifactVersion!!)
+      } else {
+        null
+      }
+    }
+  } else {
+    null
+  }
 }

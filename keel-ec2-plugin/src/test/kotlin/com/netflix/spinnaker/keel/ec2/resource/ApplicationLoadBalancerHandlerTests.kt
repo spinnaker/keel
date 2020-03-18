@@ -200,7 +200,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         runBlocking {
           val current = current(resource)
           val desired = desired(resource)
-          upsert(resource, DefaultResourceDiff(desired = desired, current = current))
+          upsert(resource, DefaultResourceDiff(desired = desired.first, current = current))
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -273,7 +273,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
 
         runBlocking {
           val current = current(newResource)
-          val desired = desired(newResource)
+          val desired = desired(newResource).first
           val diff = DefaultResourceDiff(desired = desired, current = current)
 
           expectThat(diff.diff) {

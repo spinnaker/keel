@@ -15,7 +15,7 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.persistence
+package com.netflix.spinnaker.keel.core.api
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.persistence.ResourceStatus
 
 /**
  * A summary version of a resource that contains identifying information, location information, and status.
@@ -61,7 +62,6 @@ data class ResourceSummary(
   }
 }
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResourceArtifactSummary(
   val name: String,
   val type: ArtifactType,

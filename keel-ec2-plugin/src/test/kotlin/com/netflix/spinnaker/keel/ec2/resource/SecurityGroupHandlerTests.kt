@@ -400,7 +400,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
               handlerMethod.invoke(
                 handler,
                 resource,
-                DefaultResourceDiff(handler.desired(resource), null))
+                DefaultResourceDiff(handler.desired(resource).first, null))
             }
           }
 
@@ -469,7 +469,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
               handlerMethod.invoke(
                 handler,
                 resource,
-                DefaultResourceDiff(handler.desired(resource), null))
+                DefaultResourceDiff(handler.desired(resource).first, null))
             }
           }
 
@@ -533,7 +533,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
               handlerMethod.invoke(
                 handler,
                 resource,
-                DefaultResourceDiff(handler.desired(resource), null))
+                DefaultResourceDiff(handler.desired(resource).first, null))
             }
           }
 
@@ -593,7 +593,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
         }
 
         runBlocking {
-          handler.create(resource, DefaultResourceDiff(handler.desired(resource), null))
+          handler.create(resource, DefaultResourceDiff(handler.desired(resource).first, null))
         }
       }
 
@@ -648,7 +648,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
                 inboundRules = emptySet()))
 
           handler.update(resource,
-            DefaultResourceDiff(handler.desired(resource), handler.desired(withoutIngress)))
+            DefaultResourceDiff(handler.desired(resource).first, handler.desired(withoutIngress).first))
         }
       }
 
@@ -713,7 +713,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
           handler.update(
             resource,
-            DefaultResourceDiff(handler.desired(resource), handler.desired(onlyInEast)))
+            DefaultResourceDiff(handler.desired(resource).first, handler.desired(onlyInEast).first))
         }
       }
 
@@ -776,7 +776,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
           handler.upsert(
             resource,
-            DefaultResourceDiff(handler.desired(resource), handler.desired(withoutOverride)))
+            DefaultResourceDiff(handler.desired(resource).first, handler.desired(withoutOverride).first))
         }
       }
 

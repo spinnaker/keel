@@ -89,7 +89,7 @@ class TitusClusterHandler(
   override val supportedKind =
     SupportedKind(SPINNAKER_TITUS_API_V1.qualify("cluster"), TitusClusterSpec::class.java)
 
-  override suspend fun toResolvedType(resource: Resource<TitusClusterSpec>): Map<String, TitusServerGroup> =
+  override suspend fun toConcreteType(resource: Resource<TitusClusterSpec>): Map<String, TitusServerGroup> =
     with(resource.spec) {
       resolve().byRegion()
     }

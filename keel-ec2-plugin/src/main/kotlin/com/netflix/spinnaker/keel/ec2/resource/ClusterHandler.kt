@@ -89,7 +89,7 @@ class ClusterHandler(
   override val supportedKind =
     SupportedKind(SPINNAKER_EC2_API_V1.qualify("cluster"), ClusterSpec::class.java)
 
-  override suspend fun toResolvedType(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =
+  override suspend fun toConcreteType(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =
     with(resource.spec) {
       resolve().byRegion()
     }

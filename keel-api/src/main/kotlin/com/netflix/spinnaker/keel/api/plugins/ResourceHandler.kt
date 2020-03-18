@@ -12,11 +12,11 @@ import org.slf4j.LoggerFactory
 
 /**
  * @param S the spec type.
- * @param R the resolved model type.
+ * @param C the concrete model type.
  *
  * If those two are the same, use [SimpleResourceHandler] instead.
  */
-abstract class ResourceHandler<S : ResourceSpec, R : Any>(
+abstract class ResourceHandler<S : ResourceSpec, C : Any>(
   private val resolvers: List<Resolver<*>>
 ) {
   val name: String
@@ -47,12 +47,16 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    * Resolve and convert the resource spec into the type that represents the diff-able desired
    * state.
    *
-   * The value returned by this method is used as the basis of the diff (with the result of
-   * [current] in order to decide whether to call [create]/[update]/[upsert].
+   * Returns a pair of values, the first of which is the concrete representation of the resource spec which is used as
+   * the basis of the diff (with the result of [current]) in order to decide whether to call [create]/[update]/[upsert],
+   * the second the resolved resource type, which can be useful to understand what defaults and opinions were applied.
    *
    * @param resource the resource as persisted in the Keel database.
    */
-  suspend fun desired(resource: Resource<S>): R = toResolvedType(applyResolvers(resource))
+  suspend fun desired(resource: Resource<S>): Pair<C, Resource<S>> {
+    val resolved = applyResolvers(resource)
+    return Pair(toConcreteType(resolved), resolved)
+  }
 
   /**
    * Convert the resource spec into the type that represents the diff-able desired state. This may
@@ -64,7 +68,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    * @param resource a fully-resolved version of the persisted resource spec. You can assume that
    * [applyResolvers] has already been called on this object.
    */
-  protected abstract suspend fun toResolvedType(resource: Resource<S>): R
+  protected abstract suspend fun toConcreteType(resource: Resource<S>): C
 
   /**
    * Return the current _actual_ representation of what [resource] looks like in the cloud.
@@ -76,7 +80,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    *
    * Implementations of this method should not actuate any changes.
    */
-  abstract suspend fun current(resource: Resource<S>): R?
+  abstract suspend fun current(resource: Resource<S>): C?
 
   /**
    * Create a resource so that it matches the desired state represented by [resource].
@@ -90,7 +94,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    */
   open suspend fun create(
     resource: Resource<S>,
-    resourceDiff: ResourceDiff<R>
+    resourceDiff: ResourceDiff<C>
   ): List<Task> =
     upsert(resource, resourceDiff)
 
@@ -106,7 +110,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    */
   open suspend fun update(
     resource: Resource<S>,
-    resourceDiff: ResourceDiff<R>
+    resourceDiff: ResourceDiff<C>
   ): List<Task> =
     upsert(resource, resourceDiff)
 
@@ -120,7 +124,7 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    */
   open suspend fun upsert(
     resource: Resource<S>,
-    resourceDiff: ResourceDiff<R>
+    resourceDiff: ResourceDiff<C>
   ): List<Task> {
     TODO("Not implemented")
   }

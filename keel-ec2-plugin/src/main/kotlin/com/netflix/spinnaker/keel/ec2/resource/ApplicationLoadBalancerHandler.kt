@@ -44,7 +44,7 @@ class ApplicationLoadBalancerHandler(
   override val supportedKind =
     SupportedKind(SPINNAKER_EC2_API_V1.qualify("application-load-balancer"), ApplicationLoadBalancerSpec::class.java)
 
-  override suspend fun toResolvedType(resource: Resource<ApplicationLoadBalancerSpec>):
+  override suspend fun toConcreteType(resource: Resource<ApplicationLoadBalancerSpec>):
     Map<String, ApplicationLoadBalancer> =
     with(resource.spec) {
       locations.regions.map { region ->
