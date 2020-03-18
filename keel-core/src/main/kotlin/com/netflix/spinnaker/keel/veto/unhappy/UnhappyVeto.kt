@@ -45,8 +45,8 @@ class UnhappyVeto(
   private val unhappyVetoRepository: UnhappyVetoRepository,
   private val dynamicConfigService: DynamicConfigService,
 
-  @Value("\${veto.unhappy.waiting-time:PT10M}") // tests fail if default not specified here
-  private val configuredWaitingTime: String = "PT10M"
+  @Value("\${veto.unhappy.waiting-time:PT10M}")
+  private val configuredWaitingTime: String
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
