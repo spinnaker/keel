@@ -15,14 +15,13 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Monikered
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.SimpleLocations
-import com.netflix.spinnaker.keel.api.SimpleRegionSpec
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
@@ -157,6 +156,16 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    */
   override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>>
 
+  /**
+   * Associates the given [DeliveryArtifact] with the given [Resource]
+   */
+  fun <S : ComputeResourceSpec> associate(resource: Resource<S>, artifact: DeliveryArtifact)
+
+  /**
+   * Fetches the [DeliveryArtifact] associated with the specified [Resource], if any.
+   */
+  fun <S : ComputeResourceSpec> getArtifactForResource(resource: Resource<S>): DeliveryArtifact?
+
   fun getStatus(id: String): ResourceStatus {
     val history = eventHistory(id, 10)
     return when {
@@ -222,23 +231,8 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
 
   fun Resource<*>.toResourceSummary() =
     ResourceSummary(
-      id = id,
-      kind = kind,
-      status = getStatus(id), // todo eb: this will become expensive
-      moniker = if (spec is Monikered) {
-        (spec as Monikered).moniker
-      } else {
-        null
-      },
-      locations = if (spec is Locatable<*>) {
-        SimpleLocations(
-          account = (spec as Locatable<*>).locations.account,
-          vpc = (spec as Locatable<*>).locations.vpc,
-          regions = (spec as Locatable<*>).locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
-        )
-      } else {
-        null
-      }
+      resource = this,
+      status = getStatus(id) // todo eb: this will become expensive
     )
 
   companion object {

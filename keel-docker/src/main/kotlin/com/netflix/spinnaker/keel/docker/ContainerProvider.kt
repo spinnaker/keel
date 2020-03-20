@@ -19,26 +19,44 @@ package com.netflix.spinnaker.keel.docker
 
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.netflix.spinnaker.keel.api.ArtifactProvider
+import com.netflix.spinnaker.keel.api.ArtifactReferenceProvider
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 
 @JsonDeserialize(using = ContainerProviderDeserializer::class)
-sealed class ContainerProvider
+sealed class ContainerProvider : ArtifactProvider {
+  override val artifactName: String? = null
+  override val artifactType: ArtifactType = ArtifactType.docker
+}
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
 data class ReferenceProvider(
   val reference: String
-) : ContainerProvider()
+) : ContainerProvider(), ArtifactReferenceProvider {
+  override val artifactReference: String
+    get() = reference
+}
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
+@Deprecated("Non-reference-based artifact providers are no longer supported.",
+  replaceWith = ReplaceWith("ReferenceProvider")
+)
 data class DigestProvider(
   val organization: String, // todo eb: should this be name = org/image instead, for consistency?
   val image: String,
   val digest: String
 ) : ContainerProvider() {
   fun repository() = "$organization/$image"
+
+  override val artifactName: String
+    get() = "${repository()}:$digest"
 }
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
+@Deprecated("Non-reference-based artifact providers are no longer supported.",
+  replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
+)
 data class VersionedTagProvider(
   val organization: String,
   val image: String,
@@ -46,4 +64,7 @@ data class VersionedTagProvider(
   val captureGroupRegex: String? = null
 ) : ContainerProvider() {
   fun repository() = "$organization/$image"
+
+  override val artifactName: String
+    get() = "${repository()}:<${tagVersionStrategy.friendlyName}>"
 }

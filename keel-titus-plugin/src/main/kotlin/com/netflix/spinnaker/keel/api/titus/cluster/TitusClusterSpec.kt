@@ -20,14 +20,16 @@ package com.netflix.spinnaker.keel.api.titus.cluster
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonProperty.Access
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.VersionedArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.titus.exceptions.ErrorResolvingContainerException
 import com.netflix.spinnaker.keel.clouddriver.model.Constraints
 import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
@@ -38,6 +40,7 @@ import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
+import com.netflix.spinnaker.keel.docker.ReferenceProvider
 import java.time.Duration
 
 /**
@@ -52,15 +55,19 @@ data class TitusClusterSpec(
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
   @JsonIgnore
-  override val deliveryArtifact: DeliveryArtifact? = null,
-  @JsonIgnore
+  val containerProvider: ContainerProvider,
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactName: String? = null,
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactType: ArtifactType? = ArtifactType.docker,
+  @JsonProperty(access = Access.WRITE_ONLY)
   override val artifactVersion: String? = null,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = Duration.ZERO
-) : Monikered, Locatable<SimpleLocations>, VersionedArtifact, UnhappyControl {
+) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
 
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
@@ -68,12 +75,20 @@ data class TitusClusterSpec(
   val defaults: TitusServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
+  override val artifactReference: String?
+  @JsonIgnore get() = if (containerProvider != null && containerProvider is ReferenceProvider) {
+      containerProvider.reference
+    } else {
+      null
+    }
+
   @JsonCreator
   constructor(
     moniker: Moniker,
     deployWith: ClusterDeployStrategy = RedBlack(),
     locations: SimpleLocations,
     container: ContainerProvider,
+    artifactName: String?,
     capacity: Capacity?,
     constraints: Constraints?,
     env: Map<String, String>?,
@@ -104,7 +119,9 @@ data class TitusClusterSpec(
       resources = resources,
       tags = tags
     ),
-    overrides
+    overrides,
+    containerProvider = container,
+    artifactName = artifactName
   )
 }
 
@@ -213,7 +230,7 @@ fun TitusClusterSpec.resolve(): Set<TitusServerGroup> =
       migrationPolicy = resolveMigrationPolicy(it.name),
       resources = resolveResources(it.name),
       tags = defaults.tags + overrides[it.name]?.tags,
-      deliveryArtifact = deliveryArtifact,
+      artifactName = artifactName,
       artifactVersion = artifactVersion
     )
   }

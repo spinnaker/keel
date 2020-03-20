@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
@@ -15,10 +16,10 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.normalize
-import com.netflix.spinnaker.keel.core.api.resources
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
@@ -91,9 +92,29 @@ class CombinedRepository(
     deliveryConfig.resources.forEach { resource ->
       upsert(resource)
     }
+
     deliveryConfig.artifacts.forEach { artifact ->
       register(artifact)
     }
+
+    deliveryConfig.resources.forEach { resource ->
+      upsert(resource)
+      if (resource.spec is ComputeResourceSpec) {
+        val computeResource = resource as Resource<ComputeResourceSpec>
+        val artifactReference = computeResource.spec.completeArtifactReferenceOrNull()
+        if (artifactReference != null) {
+          val artifact = deliveryConfig.matchingArtifactByReference(
+            artifactReference.artifactReference,
+            artifactReference.artifactType
+          )
+          if (artifact != null) {
+            log.debug("Associating resource ${computeResource.id} with artifact $artifact")
+            resourceRepository.associate(computeResource, artifact)
+          }
+        }
+      }
+    }
+
     storeDeliveryConfig(deliveryConfig)
 
     if (old != null) {

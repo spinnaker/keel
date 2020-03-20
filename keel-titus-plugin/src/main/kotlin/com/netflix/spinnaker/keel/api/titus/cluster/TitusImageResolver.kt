@@ -58,7 +58,7 @@ class TitusImageResolver(
   ) =
     resource.copy(spec = resource.spec.copy(
       _defaults = resource.spec.defaults.copy(container = container),
-      deliveryArtifact = artifact,
+      artifactName = artifact.name,
       artifactVersion = tag))
 
   override fun getTags(account: String, organization: String, image: String) =

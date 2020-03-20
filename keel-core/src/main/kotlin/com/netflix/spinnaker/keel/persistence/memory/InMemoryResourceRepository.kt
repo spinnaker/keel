@@ -15,17 +15,19 @@
  */
 package com.netflix.spinnaker.keel.persistence.memory
 
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.ResourceSummary
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -39,6 +41,7 @@ class InMemoryResourceRepository(
   private val resourceEvents = mutableMapOf<String, MutableList<ResourceEvent>>()
   private val applicationEvents = mutableMapOf<String, MutableList<ApplicationEvent>>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
+  private val resourceArtifacts = mutableMapOf<Resource<*>, DeliveryArtifact>()
 
   fun dropAll() {
     resources.clear()
@@ -123,6 +126,13 @@ class InMemoryResourceRepository(
   override fun appendHistory(event: ApplicationEvent) {
     appendHistory(applicationEvents, event)
   }
+
+  override fun <S : ComputeResourceSpec> associate(resource: Resource<S>, artifact: DeliveryArtifact) {
+    resourceArtifacts[resource] = artifact
+  }
+
+  override fun <S : ComputeResourceSpec> getArtifactForResource(resource: Resource<S>): DeliveryArtifact? =
+    resourceArtifacts[resource]
 
   private fun <T : PersistentEvent> appendHistory(eventList: MutableMap<String, MutableList<T>>, event: T) {
     eventList.computeIfAbsent(event.uid) {

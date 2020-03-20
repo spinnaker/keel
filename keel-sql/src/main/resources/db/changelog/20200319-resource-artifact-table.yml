@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-resource-artifact-table
+      author: lpollo
+      changes:
+        - createTable:
+            tableName: resource_artifact
+            columns:
+              - column:
+                  name: resource_uid
+                  type: char(26)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: artifact_uid
+                  type: char(26)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: resource_artifact
+            constraintName: res_art_pk
+            columnNames: resource_uid, artifact_uid
+      rollback:
+        - dropTable:
+            tableName: resource_artifact

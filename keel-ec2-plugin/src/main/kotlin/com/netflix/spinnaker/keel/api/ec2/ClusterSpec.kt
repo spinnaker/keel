@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonProperty.Access
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Moniker
@@ -12,8 +15,7 @@ import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.VersionedArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
@@ -40,7 +42,7 @@ fun ClusterSpec.resolve(): Set<ServerGroup> =
       health = resolveHealth(it.name),
       scaling = resolveScaling(it.name),
       tags = defaults.tags + overrides[it.name]?.tags,
-      deliveryArtifact = deliveryArtifact,
+      artifactName = artifactName,
       artifactVersion = artifactVersion,
       maxDiffCount = maxDiffCount,
       unhappyWaitTime = unhappyWaitTime
@@ -117,16 +119,18 @@ data class ClusterSpec(
   private val _defaults: ServerGroupSpec,
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, ServerGroupSpec> = emptyMap(),
-  @JsonIgnore
-  override val deliveryArtifact: DeliveryArtifact? = null,
-  @JsonIgnore
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactName: String? = null,
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactType: ArtifactType? = ArtifactType.deb,
+  @JsonProperty(access = Access.WRITE_ONLY)
   override val artifactVersion: String? = null,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = Duration.ZERO
-) : Monikered, Locatable<SubnetAwareLocations>, VersionedArtifact, UnhappyControl {
+) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, UnhappyControl {
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
 
@@ -139,6 +143,13 @@ data class ClusterSpec(
    */
   val defaults: ServerGroupSpec
     @JsonUnwrapped get() = _defaults
+
+  override val artifactReference: String?
+    @JsonIgnore get() = if (imageProvider != null && imageProvider is ReferenceArtifactImageProvider) {
+      imageProvider.reference
+    } else {
+      null
+    }
 
   @JsonCreator
   constructor(
@@ -154,7 +165,8 @@ data class ClusterSpec(
     scaling: Scaling?,
     tags: Map<String, String>?,
     @JsonInclude(NON_EMPTY)
-    overrides: Map<String, ServerGroupSpec> = emptyMap()
+    overrides: Map<String, ServerGroupSpec> = emptyMap(),
+    artifactName: String?
   ) : this(
     moniker,
     imageProvider,
@@ -168,7 +180,8 @@ data class ClusterSpec(
       scaling,
       tags
     ),
-    overrides
+    overrides,
+    artifactName
   )
 
   data class ServerGroupSpec(
