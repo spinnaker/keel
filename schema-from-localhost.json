@@ -1,0 +1,6425 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "https://localhost:8087",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/admin/applications/{application}": {
+      "delete": {
+        "tags": [
+          "admin-controller"
+        ],
+        "operationId": "deleteApplicationData",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/admin/applications/paused": {
+      "get": {
+        "tags": [
+          "admin-controller"
+        ],
+        "operationId": "getPausedApplications",
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application/{application}": {
+      "get": {
+        "tags": [
+          "application-controller"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDetails",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "entities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/application/{application}/pause": {
+      "post": {
+        "tags": [
+          "application-controller"
+        ],
+        "operationId": "pause",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "application-controller"
+        ],
+        "operationId": "resume",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/register": {
+      "post": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryArtifact"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/sync": {
+      "post": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "sync",
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/veto": {
+      "post": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "veto",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentArtifactVeto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/events": {
+      "post": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "submitArtifact",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EchoArtifactEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/{name}/{type}": {
+      "get": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "listVersions",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "deb",
+                "docker"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artifacts/pin": {
+      "post": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "pin",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentArtifactPin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "deletePin_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentArtifactPin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/veto/{deliveryConfigName}/{targetEnvironment}/{type}/{reference}/{version}": {
+      "delete": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "deleteVeto",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deliveryConfigName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetEnvironment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/artifacts/pin/{deliveryConfig}/{targetEnvironment}": {
+      "delete": {
+        "tags": [
+          "artifact-controller"
+        ],
+        "operationId": "deletePin",
+        "parameters": [
+          {
+            "name": "deliveryConfig",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetEnvironment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/delivery-configs/{name}": {
+      "get": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "get_1",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-configs/diff": {
+      "post": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "diff",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvironmentDiff"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnvironmentDiff"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-configs": {
+      "post": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "description": "Registers or updates a delivery config manifest.",
+        "operationId": "upsert",
+        "requestBody": {
+          "description": "The delivery config. If its `name` matches an existing delivery config the operation is an update, otherwise a new delivery config is created.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-configs/{name}/environment/{environment}/constraint": {
+      "post": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "updateConstraintStatus",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatedConstraintStatus"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatedConstraintStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/delivery-configs/validate": {
+      "post": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "validate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedDeliveryConfig"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery-configs/{name}/environment/{environment}/constraints": {
+      "get": {
+        "tags": [
+          "delivery-config-controller"
+        ],
+        "operationId": "getConstraintState",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConstraintState"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConstraintState"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/environments/{application}": {
+      "get": {
+        "tags": [
+          "environment-controller"
+        ],
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/events/{id}": {
+      "get": {
+        "tags": [
+          "event-controller"
+        ],
+        "operationId": "eventHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersistentEvent"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersistentEvent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/{cloudProvider}/{account}/{type}/{name}": {
+      "get": {
+        "tags": [
+          "export-controller"
+        ],
+        "operationId": "get_2",
+        "parameters": [
+          {
+            "name": "cloudProvider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmittedResource"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmittedResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/callback": {
+      "post": {
+        "tags": [
+          "interactive-notification-callback-controller"
+        ],
+        "operationId": "handleInteractionCallback",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveActionCallback"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveActionCallback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/kinds": {
+      "get": {
+        "tags": [
+          "kind-controller"
+        ],
+        "operationId": "get_3",
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "uniqueItems": true,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "uniqueItems": true,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{id}": {
+      "get": {
+        "tags": [
+          "resource-controller"
+        ],
+        "operationId": "get_4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/diff": {
+      "post": {
+        "tags": [
+          "resource-controller"
+        ],
+        "operationId": "diff_1",
+        "parameters": [
+          {
+            "name": "X-SPINNAKER-USER",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedResource"
+              }
+            },
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmittedResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiffResult"
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiffResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{id}/pause": {
+      "post": {
+        "tags": [
+          "resource-controller"
+        ],
+        "operationId": "pauseResource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "resource-controller"
+        ],
+        "operationId": "resumeResource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/resources/{id}/status": {
+      "get": {
+        "tags": [
+          "resource-controller"
+        ],
+        "operationId": "getStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HAPPY",
+                    "ACTUATING",
+                    "UNHAPPY",
+                    "CREATED",
+                    "DIFF",
+                    "ERROR",
+                    "PAUSED",
+                    "VETOED",
+                    "RESUMED",
+                    "UNKNOWN"
+                  ]
+                }
+              },
+              "application/x-yaml": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "HAPPY",
+                    "ACTUATING",
+                    "UNHAPPY",
+                    "CREATED",
+                    "DIFF",
+                    "ERROR",
+                    "PAUSED",
+                    "VETOED",
+                    "RESUMED",
+                    "UNKNOWN"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vetos": {
+      "get": {
+        "tags": [
+          "veto-controller"
+        ],
+        "operationId": "getActiveVetos",
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vetos/{name}/message-format": {
+      "get": {
+        "tags": [
+          "veto-controller"
+        ],
+        "operationId": "getVetoMessageFormat",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vetos/{name}/rejections": {
+      "get": {
+        "tags": [
+          "veto-controller"
+        ],
+        "operationId": "getVetoRejections",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vetos/application/{application}/rejections": {
+      "get": {
+        "tags": [
+          "veto-controller"
+        ],
+        "operationId": "getVetoRejectionsByApp",
+        "parameters": [
+          {
+            "name": "application",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vetos/{name}": {
+      "post": {
+        "tags": [
+          "veto-controller"
+        ],
+        "operationId": "passMessage",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response"
+          }
+        }
+      }
+    },
+    "/error": {
+      "get": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_1",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_4",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_2",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_6",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_3",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "generic-error-controller"
+        ],
+        "operationId": "error_5",
+        "parameters": [
+          {
+            "name": "trace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "default response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "details": {
+            "$ref": "#/components/schemas/ApiErrorDetails"
+          }
+        }
+      },
+      "ApiErrorDetails": {
+        "type": "object"
+      },
+      "DebianArtifact": {
+        "required": [
+          "name",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "deliveryConfigName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "statuses": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "enum": [
+                "FINAL",
+                "CANDIDATE",
+                "SNAPSHOT",
+                "RELEASE",
+                "UNKNOWN"
+              ]
+            }
+          },
+          "versioningStrategy": {
+            "$ref": "#/components/schemas/VersioningStrategy"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "DebianSemVerVersioningStrategy": {
+        "type": "object"
+      },
+      "DeliveryArtifact": {
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "deb": "#/components/schemas/DebianArtifact",
+            "docker": "#/components/schemas/DockerArtifact"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/DebianArtifact"
+          },
+          {
+            "$ref": "#/components/schemas/DockerArtifact"
+          }
+        ]
+      },
+      "DockerArtifact": {
+        "required": [
+          "name",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "deliveryConfigName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "tagVersionStrategy": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "increasing-tag",
+              "semver-tag",
+              "branch-job-commit-by-job",
+              "semver-job-commit-by-job",
+              "semver-job-commit-by-semver"
+            ]
+          },
+          "captureGroupRegex": {
+            "type": "string",
+            "nullable": true
+          },
+          "versioningStrategy": {
+            "$ref": "#/components/schemas/VersioningStrategy"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "DockerVersioningStrategy": {
+        "required": [
+          "strategy"
+        ],
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "increasing-tag",
+              "semver-tag",
+              "branch-job-commit-by-job",
+              "semver-job-commit-by-job",
+              "semver-job-commit-by-semver"
+            ]
+          },
+          "captureGroupRegex": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "VersioningStrategy": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/DebianSemVerVersioningStrategy"
+          },
+          {
+            "$ref": "#/components/schemas/DockerVersioningStrategy"
+          }
+        ]
+      },
+      "EnvironmentArtifactVeto": {
+        "required": [
+          "deliveryConfigName",
+          "reference",
+          "targetEnvironment",
+          "type",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "deliveryConfigName": {
+            "type": "string",
+            "nullable": false
+          },
+          "targetEnvironment": {
+            "type": "string",
+            "nullable": false
+          },
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "version": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "Artifact": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "customKind": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "artifactAccount": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "ArtifactEvent": {
+        "required": [
+          "artifacts"
+        ],
+        "type": "object",
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "EchoArtifactEvent": {
+        "required": [
+          "eventName",
+          "payload"
+        ],
+        "type": "object",
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/ArtifactEvent"
+          },
+          "eventName": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "EnvironmentArtifactPin": {
+        "required": [
+          "deliveryConfigName",
+          "reference",
+          "targetEnvironment",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "deliveryConfigName": {
+            "type": "string",
+            "nullable": false
+          },
+          "targetEnvironment": {
+            "type": "string",
+            "nullable": false
+          },
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          },
+          "pinnedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Action": {
+        "required": [
+          "order",
+          "targetGroupName",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "targetGroupName": {
+            "type": "string",
+            "nullable": false
+          },
+          "redirectConfig": {
+            "$ref": "#/components/schemas/RedirectConfig"
+          }
+        }
+      },
+      "ApplicationLoadBalancerOverride": {
+        "type": "object",
+        "properties": {
+          "dependencies": {
+            "$ref": "#/components/schemas/LoadBalancerDependencies"
+          },
+          "listeners": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/Listener"
+            }
+          },
+          "targetGroups": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/TargetGroup"
+            }
+          }
+        }
+      },
+      "ApplicationLoadBalancerSpec": {
+        "required": [
+          "listeners",
+          "moniker",
+          "targetGroups"
+        ],
+        "type": "object",
+        "properties": {
+          "moniker": {
+            "$ref": "#/components/schemas/Moniker"
+          },
+          "locations": {
+            "$ref": "#/components/schemas/SubnetAwareLocations"
+          },
+          "internal": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/LoadBalancerDependencies"
+          },
+          "idleTimeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "listeners": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Listener"
+            }
+          },
+          "targetGroups": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/TargetGroup"
+            }
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ApplicationLoadBalancerOverride"
+            },
+            "nullable": false
+          },
+          "application": {
+            "type": "string"
+          }
+        }
+      },
+      "ApplicationLoadBalancerSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/application-load-balancer@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ApplicationLoadBalancerSpec"
+          }
+        }
+      },
+      "ArtifactImageProvider": {
+        "required": [
+          "artifactName",
+          "deliveryArtifact"
+        ],
+        "type": "object",
+        "properties": {
+          "deliveryArtifact": {
+            "$ref": "#/components/schemas/DeliveryArtifact"
+          },
+          "artifactStatuses": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "enum": [
+                "FINAL",
+                "CANDIDATE",
+                "SNAPSHOT",
+                "RELEASE",
+                "UNKNOWN"
+              ]
+            }
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "CanaryConstraint": {
+        "required": [
+          "canaryConfigId",
+          "capacity",
+          "lifetime",
+          "marginalScore",
+          "passScore",
+          "regions",
+          "source",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "canaryConfigId": {
+            "type": "string",
+            "nullable": false
+          },
+          "beginAnalysisAfter": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "canaryAnalysisInterval": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "cleanupDelay": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "lifetime": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "metricsAccount": {
+            "type": "string",
+            "nullable": true
+          },
+          "storageAccount": {
+            "type": "string",
+            "nullable": true
+          },
+          "marginalScore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "passScore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "source": {
+            "$ref": "#/components/schemas/CanarySource"
+          },
+          "regions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "failureCancelsRunningRegions": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "minSuccessfulRegions": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "CanarySource": {
+        "required": [
+          "account",
+          "cloudProvider",
+          "cluster"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "nullable": false
+          },
+          "cloudProvider": {
+            "type": "string",
+            "nullable": false
+          },
+          "cluster": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "Capacity": {
+        "required": [
+          "max",
+          "min"
+        ],
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "max": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "desired": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "CidrRule": {
+        "required": [
+          "blockRange",
+          "portRange",
+          "protocol"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "TCP",
+              "UDP",
+              "ICMP"
+            ]
+          },
+          "portRange": {
+            "$ref": "#/components/schemas/PortRange"
+          },
+          "blockRange": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "ClassicLoadBalancerHealthCheck": {
+        "required": [
+          "target"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "nullable": false
+          },
+          "interval": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "healthyThreshold": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "unhealthyThreshold": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "timeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          }
+        }
+      },
+      "ClassicLoadBalancerListener": {
+        "required": [
+          "externalPort",
+          "externalProtocol",
+          "internalPort",
+          "internalProtocol"
+        ],
+        "type": "object",
+        "properties": {
+          "internalProtocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "internalPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "externalProtocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "externalPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "sslCertificateId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ClassicLoadBalancerOverride": {
+        "type": "object",
+        "properties": {
+          "dependencies": {
+            "$ref": "#/components/schemas/LoadBalancerDependencies"
+          },
+          "listeners": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/ClassicLoadBalancerListener"
+            }
+          },
+          "healthCheck": {
+            "$ref": "#/components/schemas/ClassicLoadBalancerHealthCheck"
+          }
+        }
+      },
+      "ClassicLoadBalancerSpec": {
+        "required": [
+          "healthCheck",
+          "moniker"
+        ],
+        "type": "object",
+        "properties": {
+          "moniker": {
+            "$ref": "#/components/schemas/Moniker"
+          },
+          "locations": {
+            "$ref": "#/components/schemas/SubnetAwareLocations"
+          },
+          "internal": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/LoadBalancerDependencies"
+          },
+          "idleTimeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "listeners": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/ClassicLoadBalancerListener"
+            }
+          },
+          "healthCheck": {
+            "$ref": "#/components/schemas/ClassicLoadBalancerHealthCheck"
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ClassicLoadBalancerOverride"
+            },
+            "nullable": false
+          },
+          "application": {
+            "type": "string"
+          }
+        }
+      },
+      "ClassicLoadBalancerSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/classic-load-balancer@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ClassicLoadBalancerSpec"
+          }
+        }
+      },
+      "ClusterDependencies": {
+        "type": "object",
+        "properties": {
+          "loadBalancerNames": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          },
+          "securityGroupNames": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetGroups": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ClusterDeployStrategy": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RedBlack"
+          },
+          {
+            "$ref": "#/components/schemas/Highlander"
+          }
+        ]
+      },
+      "ClusterSpec": {
+        "required": [
+          "imageProvider",
+          "moniker"
+        ],
+        "type": "object",
+        "properties": {
+          "moniker": {
+            "$ref": "#/components/schemas/Moniker"
+          },
+          "imageProvider": {
+            "$ref": "#/components/schemas/ImageProvider"
+          },
+          "deployWith": {
+            "$ref": "#/components/schemas/ClusterDeployStrategy"
+          },
+          "locations": {
+            "$ref": "#/components/schemas/SubnetAwareLocations"
+          },
+          "launchConfiguration": {
+            "$ref": "#/components/schemas/LaunchConfigurationSpec"
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/Capacity"
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/ClusterDependencies"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthSpec"
+          },
+          "scaling": {
+            "$ref": "#/components/schemas/Scaling"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ServerGroupSpec"
+            },
+            "nullable": false
+          },
+          "artifactName": {
+            "type": "string",
+            "nullable": true
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          },
+          "artifactVersion": {
+            "type": "string"
+          },
+          "application": {
+            "type": "string"
+          }
+        }
+      },
+      "ClusterSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/cluster@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ClusterSpec"
+          }
+        }
+      },
+      "Condition": {
+        "required": [
+          "field",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "nullable": false
+          },
+          "values": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Constraint": {
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "canary": "#/components/schemas/CanaryConstraint",
+            "pipeline": "#/components/schemas/PipelineConstraint",
+            "allowed-times": "#/components/schemas/TimeWindowConstraint",
+            "depends-on": "#/components/schemas/DependsOnConstraint",
+            "manual-judgement": "#/components/schemas/ManualJudgementConstraint"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CanaryConstraint"
+          },
+          {
+            "$ref": "#/components/schemas/PipelineConstraint"
+          },
+          {
+            "$ref": "#/components/schemas/TimeWindowConstraint"
+          },
+          {
+            "$ref": "#/components/schemas/DependsOnConstraint"
+          },
+          {
+            "$ref": "#/components/schemas/ManualJudgementConstraint"
+          }
+        ]
+      },
+      "Constraints": {
+        "type": "object",
+        "properties": {
+          "hard": {
+            "type": "object",
+            "nullable": false
+          },
+          "soft": {
+            "type": "object",
+            "nullable": false
+          }
+        }
+      },
+      "ContainerProvider": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReferenceProvider"
+          },
+          {
+            "$ref": "#/components/schemas/DigestProvider"
+          },
+          {
+            "$ref": "#/components/schemas/VersionedTagProvider"
+          }
+        ]
+      },
+      "CrossAccountReferenceRule": {
+        "required": [
+          "account",
+          "name",
+          "portRange",
+          "protocol",
+          "vpc"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "TCP",
+              "UDP",
+              "ICMP"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "account": {
+            "type": "string",
+            "nullable": false
+          },
+          "vpc": {
+            "type": "string",
+            "nullable": false
+          },
+          "portRange": {
+            "$ref": "#/components/schemas/PortRange"
+          }
+        }
+      },
+      "CustomizedMetricSpecification": {
+        "required": [
+          "name",
+          "namespace",
+          "statistic"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "namespace": {
+            "type": "string",
+            "nullable": false
+          },
+          "statistic": {
+            "type": "string",
+            "nullable": false
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "dimensions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/MetricDimension"
+            }
+          }
+        }
+      },
+      "DeliveryConfig": {
+        "required": [
+          "application",
+          "name",
+          "resources",
+          "serviceAccount"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "application": {
+            "type": "string",
+            "nullable": false
+          },
+          "serviceAccount": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifacts": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/DeliveryArtifact"
+            }
+          },
+          "environments": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Environment"
+            }
+          },
+          "apiVersion": {
+            "type": "string",
+            "nullable": false
+          },
+          "resources": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          }
+        }
+      },
+      "DependsOnConstraint": {
+        "required": [
+          "environment",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "string",
+            "nullable": false
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "DigestProvider": {
+        "required": [
+          "artifactName",
+          "artifactType",
+          "digest",
+          "image",
+          "organization"
+        ],
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "nullable": false
+          },
+          "image": {
+            "type": "string",
+            "nullable": false
+          },
+          "digest": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "Environment": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "resources": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          },
+          "constraints": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Constraint"
+            }
+          },
+          "notifications": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/NotificationConfig"
+            }
+          }
+        }
+      },
+      "HealthSpec": {
+        "type": "object",
+        "properties": {
+          "cooldown": {
+            "type": "string",
+            "format": "duration",
+            "nullable": true
+          },
+          "warmup": {
+            "type": "string",
+            "format": "duration",
+            "nullable": true
+          },
+          "healthCheckType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "EC2",
+              "ELB"
+            ]
+          },
+          "enabledMetrics": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "GroupMinSize",
+                "GroupMaxSize",
+                "GroupDesiredCapacity",
+                "GroupInServiceInstances",
+                "GroupPendingInstances",
+                "GroupStandbyInstances",
+                "GroupTerminatingInstances",
+                "GroupTotalInstances"
+              ]
+            }
+          },
+          "terminationPolicies": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "Default",
+                "OldestInstance",
+                "NewestInstance",
+                "OldestLaunchConfiguration",
+                "ClosestToNextInstanceHour"
+              ]
+            }
+          }
+        }
+      },
+      "Highlander": {
+        "required": [
+          "stagger"
+        ],
+        "type": "object",
+        "properties": {
+          "stagger": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaggeredRegion"
+            }
+          }
+        }
+      },
+      "ImageProvider": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArtifactImageProvider"
+          },
+          {
+            "$ref": "#/components/schemas/ReferenceArtifactImageProvider"
+          },
+          {
+            "$ref": "#/components/schemas/JenkinsImageProvider"
+          }
+        ]
+      },
+      "ImageSpec": {
+        "required": [
+          "application",
+          "artifactName",
+          "baseLabel",
+          "baseOs",
+          "regions",
+          "storeType"
+        ],
+        "type": "object",
+        "properties": {
+          "artifactName": {
+            "type": "string",
+            "nullable": false
+          },
+          "baseLabel": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "RELEASE",
+              "CANDIDATE",
+              "PREVIOUS",
+              "UNSTABLE"
+            ]
+          },
+          "baseOs": {
+            "type": "string",
+            "nullable": false
+          },
+          "regions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          },
+          "storeType": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "EBS",
+              "S3",
+              "DOCKER"
+            ]
+          },
+          "artifactStatuses": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "enum": [
+                "FINAL",
+                "CANDIDATE",
+                "SNAPSHOT",
+                "RELEASE",
+                "UNKNOWN"
+              ]
+            }
+          },
+          "application": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "ImageSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bakery/image@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ImageSpec"
+          }
+        }
+      },
+      "JenkinsImageProvider": {
+        "required": [
+          "buildHost",
+          "buildName",
+          "buildNumber",
+          "packageName"
+        ],
+        "type": "object",
+        "properties": {
+          "packageName": {
+            "type": "string",
+            "nullable": false
+          },
+          "buildHost": {
+            "type": "string",
+            "nullable": false
+          },
+          "buildName": {
+            "type": "string",
+            "nullable": false
+          },
+          "buildNumber": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "LaunchConfigurationSpec": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/VirtualMachineImage"
+          },
+          "instanceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "ebsOptimized": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "iamRole": {
+            "type": "string",
+            "nullable": true
+          },
+          "keyPair": {
+            "type": "string",
+            "nullable": true
+          },
+          "instanceMonitoring": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "ramdiskId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Listener": {
+        "required": [
+          "port",
+          "protocol"
+        ],
+        "type": "object",
+        "properties": {
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "protocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "certificateArn": {
+            "type": "string",
+            "nullable": true
+          },
+          "rules": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Rule"
+            }
+          },
+          "defaultActions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        }
+      },
+      "LoadBalancerDependencies": {
+        "type": "object",
+        "properties": {
+          "securityGroupNames": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ManualJudgementConstraint": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "MetricDimension": {
+        "required": [
+          "name",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "value": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "MigrationPolicy": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "Moniker": {
+        "required": [
+          "app"
+        ],
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "nullable": false
+          },
+          "stack": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "NotificationConfig": {
+        "required": [
+          "address",
+          "frequency",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "slack",
+              "email"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "nullable": false
+          },
+          "frequency": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "verbose",
+              "normal",
+              "quiet"
+            ]
+          }
+        }
+      },
+      "PipelineConstraint": {
+        "required": [
+          "pipelineId",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "pipelineId": {
+            "type": "string",
+            "nullable": false
+          },
+          "retries": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "parameters": {
+            "type": "object",
+            "nullable": false
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "PortRange": {
+        "required": [
+          "endPort",
+          "startPort"
+        ],
+        "type": "object",
+        "properties": {
+          "startPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "endPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          }
+        }
+      },
+      "PredefinedMetricSpecification": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RedBlack": {
+        "type": "object",
+        "properties": {
+          "rollbackOnFailure": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "resizePreviousToZero": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "maxServerGroups": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "delayBeforeDisable": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "delayBeforeScaleDown": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "stagger": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/StaggeredRegion"
+            }
+          }
+        }
+      },
+      "RedirectConfig": {
+        "required": [
+          "host",
+          "path",
+          "protocol",
+          "statusCode"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "port": {
+            "type": "string",
+            "nullable": true
+          },
+          "host": {
+            "type": "string",
+            "nullable": false
+          },
+          "path": {
+            "type": "string",
+            "nullable": false
+          },
+          "query": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusCode": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "ReferenceArtifactImageProvider": {
+        "required": [
+          "artifactReference",
+          "reference"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          },
+          "artifactReference": {
+            "type": "string"
+          }
+        }
+      },
+      "ReferenceProvider": {
+        "required": [
+          "artifactReference",
+          "artifactType",
+          "reference"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          },
+          "artifactReference": {
+            "type": "string"
+          }
+        }
+      },
+      "ReferenceRule": {
+        "required": [
+          "portRange",
+          "protocol"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "TCP",
+              "UDP",
+              "ICMP"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "portRange": {
+            "$ref": "#/components/schemas/PortRange"
+          }
+        }
+      },
+      "Resource": {
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "ec2/cluster@v1": "#/components/schemas/ClusterSpecResource",
+            "ec2/security-group@v1": "#/components/schemas/SecurityGroupSpecResource",
+            "ec2/classic-load-balancer@v1": "#/components/schemas/ClassicLoadBalancerSpecResource",
+            "ec2/application-load-balancer@v1": "#/components/schemas/ApplicationLoadBalancerSpecResource",
+            "bakery/image@v1": "#/components/schemas/ImageSpecResource",
+            "titus/cluster@v1": "#/components/schemas/TitusClusterSpecResource"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ClusterSpecResource"
+          },
+          {
+            "$ref": "#/components/schemas/SecurityGroupSpecResource"
+          },
+          {
+            "$ref": "#/components/schemas/ClassicLoadBalancerSpecResource"
+          },
+          {
+            "$ref": "#/components/schemas/ApplicationLoadBalancerSpecResource"
+          },
+          {
+            "$ref": "#/components/schemas/ImageSpecResource"
+          },
+          {
+            "$ref": "#/components/schemas/TitusClusterSpecResource"
+          }
+        ]
+      },
+      "ResourcesSpec": {
+        "type": "object",
+        "properties": {
+          "cpu": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "disk": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "gpu": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "memory": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "networkMbps": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "Rule": {
+        "required": [
+          "actions",
+          "default",
+          "priority"
+        ],
+        "type": "object",
+        "properties": {
+          "priority": {
+            "type": "string",
+            "nullable": false
+          },
+          "conditions": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          },
+          "default": {
+            "type": "boolean",
+            "nullable": false
+          }
+        }
+      },
+      "Scaling": {
+        "type": "object",
+        "properties": {
+          "suspendedProcesses": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "enum": [
+                "Launch",
+                "Terminate",
+                "AddToLoadBalancer",
+                "AlarmNotification",
+                "AZRebalance",
+                "HealthCheck",
+                "ReplaceUnhealthy",
+                "ScheduledActions"
+              ]
+            }
+          },
+          "targetTrackingPolicies": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/TargetTrackingPolicy"
+            }
+          },
+          "stepScalingPolicies": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/StepScalingPolicy"
+            }
+          }
+        }
+      },
+      "SecurityGroupOverride": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "inboundRules": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/SecurityGroupRule"
+            }
+          },
+          "vpc": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SecurityGroupRule": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReferenceRule"
+          },
+          {
+            "$ref": "#/components/schemas/CrossAccountReferenceRule"
+          },
+          {
+            "$ref": "#/components/schemas/CidrRule"
+          }
+        ]
+      },
+      "SecurityGroupSpec": {
+        "required": [
+          "moniker"
+        ],
+        "type": "object",
+        "properties": {
+          "moniker": {
+            "$ref": "#/components/schemas/Moniker"
+          },
+          "locations": {
+            "$ref": "#/components/schemas/SimpleLocations"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "inboundRules": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/SecurityGroupRule"
+            }
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SecurityGroupOverride"
+            },
+            "nullable": false
+          },
+          "application": {
+            "type": "string"
+          }
+        }
+      },
+      "SecurityGroupSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/security-group@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/SecurityGroupSpec"
+          }
+        }
+      },
+      "ServerGroupSpec": {
+        "type": "object",
+        "properties": {
+          "launchConfiguration": {
+            "$ref": "#/components/schemas/LaunchConfigurationSpec"
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/Capacity"
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/ClusterDependencies"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthSpec"
+          },
+          "scaling": {
+            "$ref": "#/components/schemas/Scaling"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "SimpleLocations": {
+        "required": [
+          "account",
+          "regions"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "nullable": false
+          },
+          "vpc": {
+            "type": "string",
+            "nullable": true
+          },
+          "regions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/SimpleRegionSpec"
+            }
+          }
+        }
+      },
+      "SimpleRegionSpec": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "StaggeredRegion": {
+        "required": [
+          "region"
+        ],
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string",
+            "nullable": false
+          },
+          "hours": {
+            "type": "string",
+            "nullable": true
+          },
+          "pauseTime": {
+            "type": "string",
+            "format": "duration",
+            "nullable": true
+          }
+        }
+      },
+      "StepAdjustment": {
+        "required": [
+          "scalingAdjustment"
+        ],
+        "type": "object",
+        "properties": {
+          "lowerBound": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "upperBound": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "scalingAdjustment": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          }
+        }
+      },
+      "StepScalingPolicy": {
+        "required": [
+          "actionsEnabled",
+          "adjustmentType",
+          "comparisonOperator",
+          "evaluationPeriods",
+          "metricName",
+          "namespace",
+          "period",
+          "statistic",
+          "stepAdjustments",
+          "threshold"
+        ],
+        "type": "object",
+        "properties": {
+          "adjustmentType": {
+            "type": "string",
+            "nullable": false
+          },
+          "actionsEnabled": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "comparisonOperator": {
+            "type": "string",
+            "nullable": false
+          },
+          "dimensions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/MetricDimension"
+            }
+          },
+          "evaluationPeriods": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "period": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "threshold": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "metricName": {
+            "type": "string",
+            "nullable": false
+          },
+          "namespace": {
+            "type": "string",
+            "nullable": false
+          },
+          "statistic": {
+            "type": "string",
+            "nullable": false
+          },
+          "warmup": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "metricAggregationType": {
+            "type": "string",
+            "nullable": false
+          },
+          "stepAdjustments": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/StepAdjustment"
+            }
+          }
+        }
+      },
+      "SubnetAwareLocations": {
+        "required": [
+          "account",
+          "regions"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "nullable": false
+          },
+          "subnet": {
+            "type": "string",
+            "nullable": true
+          },
+          "vpc": {
+            "type": "string",
+            "nullable": true
+          },
+          "regions": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/SubnetAwareRegionSpec"
+            }
+          }
+        }
+      },
+      "SubnetAwareRegionSpec": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "availabilityZones": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TargetGroup": {
+        "required": [
+          "name",
+          "port"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "targetType": {
+            "type": "string",
+            "nullable": false
+          },
+          "protocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "healthCheckEnabled": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "healthCheckTimeoutSeconds": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "healthCheckPort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "healthCheckProtocol": {
+            "type": "string",
+            "nullable": false
+          },
+          "healthCheckHttpCode": {
+            "type": "string",
+            "nullable": false
+          },
+          "healthCheckPath": {
+            "type": "string",
+            "nullable": false
+          },
+          "healthCheckIntervalSeconds": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "healthyThresholdCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "unhealthyThresholdCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/TargetGroupAttributes"
+          }
+        }
+      },
+      "TargetGroupAttributes": {
+        "type": "object",
+        "properties": {
+          "stickinessEnabled": {
+            "type": "boolean",
+            "nullable": false
+          },
+          "deregistrationDelay": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "stickinessType": {
+            "type": "string",
+            "nullable": false
+          },
+          "stickinessDuration": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "slowStartDurationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": false
+          },
+          "properties": {
+            "type": "object",
+            "nullable": false,
+            "writeOnly": true
+          }
+        }
+      },
+      "TargetTrackingPolicy": {
+        "required": [
+          "targetValue"
+        ],
+        "type": "object",
+        "properties": {
+          "warmup": {
+            "type": "string",
+            "format": "duration",
+            "nullable": false
+          },
+          "targetValue": {
+            "type": "number",
+            "format": "double",
+            "nullable": false
+          },
+          "disableScaleIn": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "predefinedMetricSpec": {
+            "$ref": "#/components/schemas/PredefinedMetricSpecification"
+          },
+          "customMetricSpec": {
+            "$ref": "#/components/schemas/CustomizedMetricSpecification"
+          }
+        }
+      },
+      "TimeWindow": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "string",
+            "nullable": true
+          },
+          "hours": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TimeWindowConstraint": {
+        "required": [
+          "type",
+          "windows"
+        ],
+        "type": "object",
+        "properties": {
+          "windows": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/TimeWindow"
+            }
+          },
+          "tz": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "TitusClusterSpec": {
+        "required": [
+          "container",
+          "moniker"
+        ],
+        "type": "object",
+        "properties": {
+          "moniker": {
+            "$ref": "#/components/schemas/Moniker"
+          },
+          "deployWith": {
+            "$ref": "#/components/schemas/ClusterDeployStrategy"
+          },
+          "locations": {
+            "$ref": "#/components/schemas/SimpleLocations"
+          },
+          "container": {
+            "$ref": "#/components/schemas/ContainerProvider"
+          },
+          "artifactName": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/Capacity"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/Constraints"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "containerAttributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "resources": {
+            "$ref": "#/components/schemas/ResourcesSpec"
+          },
+          "iamProfile": {
+            "type": "string",
+            "nullable": true
+          },
+          "entryPoint": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacityGroup": {
+            "type": "string",
+            "nullable": true
+          },
+          "migrationPolicy": {
+            "$ref": "#/components/schemas/MigrationPolicy"
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/ClusterDependencies"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TitusServerGroupSpec"
+            },
+            "nullable": false
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          },
+          "artifactVersion": {
+            "type": "string"
+          },
+          "application": {
+            "type": "string"
+          }
+        }
+      },
+      "TitusClusterSpecResource": {
+        "required": [
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "titus/cluster@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/TitusClusterSpec"
+          }
+        }
+      },
+      "TitusServerGroupSpec": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "$ref": "#/components/schemas/ContainerProvider"
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/Capacity"
+          },
+          "capacityGroup": {
+            "type": "string",
+            "nullable": true
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/Constraints"
+          },
+          "dependencies": {
+            "$ref": "#/components/schemas/ClusterDependencies"
+          },
+          "entryPoint": {
+            "type": "string",
+            "nullable": true
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "containerAttributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "iamProfile": {
+            "type": "string",
+            "nullable": true
+          },
+          "migrationPolicy": {
+            "$ref": "#/components/schemas/MigrationPolicy"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/ResourcesSpec"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "VersionedTagProvider": {
+        "required": [
+          "artifactName",
+          "artifactType",
+          "image",
+          "organization",
+          "tagVersionStrategy"
+        ],
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "nullable": false
+          },
+          "image": {
+            "type": "string",
+            "nullable": false
+          },
+          "tagVersionStrategy": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "increasing-tag",
+              "semver-tag",
+              "branch-job-commit-by-job",
+              "semver-job-commit-by-job",
+              "semver-job-commit-by-semver"
+            ]
+          },
+          "captureGroupRegex": {
+            "type": "string",
+            "nullable": true
+          },
+          "artifactName": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string",
+            "enum": [
+              "deb",
+              "docker"
+            ]
+          }
+        }
+      },
+      "VirtualMachineImage": {
+        "required": [
+          "appVersion",
+          "baseImageVersion",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": false
+          },
+          "appVersion": {
+            "type": "string",
+            "nullable": false
+          },
+          "baseImageVersion": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "ApplicationLoadBalancerSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/application-load-balancer@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ApplicationLoadBalancerSpec"
+          }
+        }
+      },
+      "ClassicLoadBalancerSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/classic-load-balancer@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ClassicLoadBalancerSpec"
+          }
+        }
+      },
+      "ClusterSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/cluster@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ClusterSpec"
+          }
+        }
+      },
+      "ImageSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bakery/image@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/ImageSpec"
+          }
+        }
+      },
+      "SecurityGroupSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ec2/security-group@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/SecurityGroupSpec"
+          }
+        }
+      },
+      "SubmittedDeliveryConfig": {
+        "required": [
+          "application",
+          "name",
+          "serviceAccount"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "application": {
+            "type": "string",
+            "nullable": false
+          },
+          "serviceAccount": {
+            "type": "string",
+            "description": "The service account Spinnaker will authenticate with when making changes.",
+            "nullable": false
+          },
+          "artifacts": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/DeliveryArtifact"
+            }
+          },
+          "environments": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/SubmittedEnvironment"
+            }
+          }
+        },
+        "description": "A manifest specifying the environments and resources that comprise an application."
+      },
+      "SubmittedEnvironment": {
+        "required": [
+          "name",
+          "resources"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "resources": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/SubmittedResource"
+            }
+          },
+          "constraints": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/Constraint"
+            }
+          },
+          "notifications": {
+            "uniqueItems": true,
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/NotificationConfig"
+            }
+          },
+          "locations": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubnetAwareLocations"
+              },
+              {
+                "description": "Optional locations that are propagated to any [resources] where they are not specified."
+              }
+            ]
+          }
+        }
+      },
+      "SubmittedResource": {
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "ec2/cluster@v1": "#/components/schemas/ClusterSpecSubmittedResource",
+            "ec2/security-group@v1": "#/components/schemas/SecurityGroupSpecSubmittedResource",
+            "ec2/classic-load-balancer@v1": "#/components/schemas/ClassicLoadBalancerSpecSubmittedResource",
+            "ec2/application-load-balancer@v1": "#/components/schemas/ApplicationLoadBalancerSpecSubmittedResource",
+            "bakery/image@v1": "#/components/schemas/ImageSpecSubmittedResource",
+            "titus/cluster@v1": "#/components/schemas/TitusClusterSpecSubmittedResource"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ClusterSpecSubmittedResource"
+          },
+          {
+            "$ref": "#/components/schemas/SecurityGroupSpecSubmittedResource"
+          },
+          {
+            "$ref": "#/components/schemas/ClassicLoadBalancerSpecSubmittedResource"
+          },
+          {
+            "$ref": "#/components/schemas/ApplicationLoadBalancerSpecSubmittedResource"
+          },
+          {
+            "$ref": "#/components/schemas/ImageSpecSubmittedResource"
+          },
+          {
+            "$ref": "#/components/schemas/TitusClusterSpecSubmittedResource"
+          }
+        ]
+      },
+      "TitusClusterSpecSubmittedResource": {
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "titus/cluster@v1"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/TitusClusterSpec"
+          }
+        }
+      },
+      "DiffResult": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "MISSING",
+              "DIFF",
+              "NO_DIFF",
+              "ERROR"
+            ]
+          },
+          "resourceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "resource": {
+            "$ref": "#/components/schemas/Resource"
+          },
+          "diff": {
+            "type": "object",
+            "nullable": true
+          },
+          "errorMsg": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "EnvironmentDiff": {
+        "required": [
+          "manifestName",
+          "name",
+          "resourceDiffs"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "manifestName": {
+            "type": "string",
+            "nullable": false
+          },
+          "resourceDiffs": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/DiffResult"
+            }
+          }
+        }
+      },
+      "UpdatedConstraintStatus": {
+        "required": [
+          "artifactVersion",
+          "status",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactVersion": {
+            "type": "string",
+            "nullable": false
+          },
+          "status": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "PENDING",
+              "PASS",
+              "FAIL",
+              "OVERRIDE_PASS",
+              "OVERRIDE_FAIL"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ConstraintState": {
+        "required": [
+          "artifactVersion",
+          "deliveryConfigName",
+          "environmentName",
+          "status",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "deliveryConfigName": {
+            "type": "string",
+            "nullable": false
+          },
+          "environmentName": {
+            "type": "string",
+            "nullable": false
+          },
+          "artifactVersion": {
+            "type": "string",
+            "nullable": false
+          },
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "status": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "PENDING",
+              "PASS",
+              "FAIL",
+              "OVERRIDE_PASS",
+              "OVERRIDE_FAIL"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": false
+          },
+          "judgedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "judgedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/ConstraintStateAttributes"
+          }
+        }
+      },
+      "ConstraintStateAttributes": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "PersistentEvent": {
+        "required": [
+          "application",
+          "scope",
+          "timestamp",
+          "type",
+          "uid"
+        ],
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uid": {
+            "type": "string"
+          },
+          "application": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "RESOURCE",
+              "APPLICATION"
+            ]
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "InteractiveAction": {
+        "required": [
+          "name",
+          "type",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false
+          },
+          "name": {
+            "type": "string",
+            "nullable": false
+          },
+          "value": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "discriminator": {
+          "propertyName": "type"
+        }
+      },
+      "InteractiveActionCallback": {
+        "required": [
+          "actionPerformed",
+          "messageId",
+          "serviceId",
+          "user"
+        ],
+        "type": "object",
+        "properties": {
+          "actionPerformed": {
+            "$ref": "#/components/schemas/InteractiveAction"
+          },
+          "serviceId": {
+            "type": "string",
+            "nullable": false
+          },
+          "messageId": {
+            "type": "string",
+            "nullable": false
+          },
+          "user": {
+            "type": "string",
+            "nullable": false
+          }
+        }
+      }
+    }
+  }
+}

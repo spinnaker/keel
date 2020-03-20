@@ -17,6 +17,7 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.fasterxml.jackson.databind.JsonDeserializer
@@ -33,7 +34,9 @@ import com.netflix.spinnaker.keel.ec2.jackson.ImageProviderDeserializer
  */
 @JsonDeserialize(using = ImageProviderDeserializer::class)
 sealed class ImageProvider : ArtifactProvider {
+  @JsonIgnore
   override val artifactName: String? = null
+  @JsonIgnore
   override val artifactType: ArtifactType? = ArtifactType.deb
 }
 
@@ -50,7 +53,7 @@ data class ArtifactImageProvider(
   val artifactStatuses: List<ArtifactStatus> = emptyList() // treated as "all statuses" by ImageResolver
 ) : ImageProvider() {
   override val artifactName: String
-    get() = deliveryArtifact.name
+    @JsonIgnore get() = deliveryArtifact.name
 }
 
 /**
@@ -61,7 +64,7 @@ data class ReferenceArtifactImageProvider(
   val reference: String
 ) : ImageProvider(), ArtifactReferenceProvider {
   override val artifactReference: String
-    get() = reference
+    @JsonIgnore get() = reference
 }
 
 /**
