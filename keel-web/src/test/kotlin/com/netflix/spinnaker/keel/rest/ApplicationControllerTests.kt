@@ -9,12 +9,14 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
+import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
-import com.netflix.spinnaker.keel.events.ResourceCreated
+import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
+import com.netflix.spinnaker.keel.persistence.CombinedRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
@@ -26,7 +28,9 @@ import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
+import io.mockk.mockk
 import java.nio.charset.StandardCharsets
+import java.time.Clock
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -70,10 +74,15 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
   private val yamlMapper = configuredYamlMapper()
 
-  object Fixture {
-    const val application = "fnord"
+  class Fixture(combinedRepositoryMaker: () -> KeelRepository) {
+    val application = "fnord"
 
-    val artifact = DebianArtifact(name = application, deliveryConfigName = "manifest", statuses = setOf(ArtifactStatus.RELEASE))
+    val artifact = DebianArtifact(
+      name = application,
+      deliveryConfigName = "manifest",
+      reference = "fnord",
+      statuses = setOf(ArtifactStatus.RELEASE)
+    )
 
     val environments = listOf("test", "staging", "production").associateWith { name ->
       Environment(name = name, resources = setOf(
@@ -81,7 +90,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
           kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
           spec = ClusterSpec(
             moniker = Moniker(application, name),
-            imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
+            imageProvider = ReferenceArtifactImageProvider(reference = "fnord"),
             locations = SubnetAwareLocations(
               account = "test",
               vpc = "vpc0",
@@ -113,10 +122,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       artifacts = setOf(artifact),
       environments = environments.values.toSet()
     )
+
+    val combinedRepository = combinedRepositoryMaker()
   }
 
+  fun makeCombinedRepository() = CombinedRepository(
+    deliveryConfigRepository, artifactRepository, resourceRepository, Clock.systemDefaultZone(), mockk(relaxed = true)
+  )
+
   fun tests() = rootContext<Fixture> {
-    fixture { Fixture }
+    fixture { Fixture(this@ApplicationControllerTests::makeCombinedRepository) }
 
     after {
       deliveryConfigRepository.dropAll()
@@ -127,14 +142,11 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("application with delivery config exists") {
       before {
-        deliveryConfigRepository.store(deliveryConfig)
-        environments.values.forEach { env ->
-          env.resources.forEach { res ->
-            resourceRepository.store(res)
-            resourceRepository.appendHistory(ResourceCreated(res))
-          }
+        combinedRepository.upsertDeliveryConfig(deliveryConfig)
+        // these events are required because Resource.toResourceSummary() relies on events to determine resource status
+        deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
+          resourceRepository.appendHistory(ResourceValid(resource))
         }
-        artifactRepository.register(artifact)
         artifactRepository.store(artifact, "1.0.0", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "1.0.1", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "1.0.2", ArtifactStatus.RELEASE)
@@ -207,7 +219,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             resources:
             - id: "ec2:cluster:test:fnord-test"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               moniker:
                 app: "fnord"
                 stack: "test"
@@ -216,9 +228,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 vpc: "vpc0"
                 regions:
                 - name: "us-west-2"
+              artifact:
+                name: "fnord"
+                type: "deb"
             - id: "ec2:cluster:test:fnord-staging"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               moniker:
                 app: "fnord"
                 stack: "staging"
@@ -227,9 +242,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 vpc: "vpc0"
                 regions:
                 - name: "us-west-2"
+              artifact:
+                name: "fnord"
+                type: "deb"
             - id: "ec2:cluster:test:fnord-production"
               kind: "ec2/cluster@v1"
-              status: "CREATED"
+              status: "HAPPY"
               moniker:
                 app: "fnord"
                 stack: "production"
@@ -238,6 +256,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 vpc: "vpc0"
                 regions:
                 - name: "us-west-2"
+              artifact:
+                name: "fnord"
+                type: "deb"
             """.trimIndent()
           ))
       }

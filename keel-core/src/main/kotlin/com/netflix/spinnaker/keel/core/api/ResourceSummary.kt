@@ -20,15 +20,10 @@ package com.netflix.spinnaker.keel.core.api
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
-import com.netflix.spinnaker.keel.api.ArtifactProvider
-import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Moniker
-import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
-import com.netflix.spinnaker.keel.api.SimpleLocations
-import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
@@ -42,33 +37,13 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus
 data class ResourceSummary(
   @JsonIgnore
   val resource: Resource<*>,
-  val status: ResourceStatus
+  val status: ResourceStatus,
+  val moniker: Moniker?,
+  val locations: Locations<*>?,
+  val artifact: ResourceArtifactSummary?
 ) {
   val id: String = resource.id
   val kind: ResourceKind = resource.kind
-  val moniker: Moniker? = if (resource.spec is Monikered) {
-    (resource.spec as Monikered).moniker
-  } else {
-    null
-  }
-  val locations: Locations<*>? = if (resource.spec is Locatable<*>) {
-    SimpleLocations(
-      account = (resource.spec as Locatable<*>).locations.account,
-      vpc = (resource.spec as Locatable<*>).locations.vpc,
-      regions = (resource.spec as Locatable<*>).locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
-    )
-  } else {
-    null
-  }
-  val artifact: ResourceArtifactSummary? = if (resource.spec is ArtifactProvider) {
-    val artifactProvider = resource.spec as ArtifactProvider
-    ResourceArtifactSummary(
-      name = artifactProvider.artifactName,
-      type = artifactProvider.artifactType
-    )
-  } else {
-    null
-  }
 }
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

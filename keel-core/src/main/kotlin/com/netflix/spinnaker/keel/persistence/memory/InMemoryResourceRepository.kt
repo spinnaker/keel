@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
@@ -48,6 +49,7 @@ class InMemoryResourceRepository(
     resourceEvents.clear()
     applicationEvents.clear()
     lastCheckTimes.clear()
+    resourceArtifacts.clear()
   }
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
@@ -78,7 +80,16 @@ class InMemoryResourceRepository(
     resources
       .filterValues { it.application == application }
       .map { (_, resource) ->
-        resource.toResourceSummary()
+        resource.toResourceSummary().let { summary ->
+          if (resourceArtifacts.containsKey(resource)) {
+            summary.copy(artifact = ResourceArtifactSummary(
+              resourceArtifacts[resource]!!.name,
+              resourceArtifacts[resource]!!.type
+            ))
+          } else {
+            summary
+          }
+        }
       }
 
   override fun store(resource: Resource<*>) {

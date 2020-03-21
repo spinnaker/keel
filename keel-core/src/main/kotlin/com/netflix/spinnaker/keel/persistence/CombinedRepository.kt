@@ -98,7 +98,6 @@ class CombinedRepository(
     }
 
     deliveryConfig.resources.forEach { resource ->
-      upsert(resource)
       if (resource.spec is ComputeResourceSpec) {
         val computeResource = resource as Resource<ComputeResourceSpec>
         val artifactReference = computeResource.spec.completeArtifactReferenceOrNull()
