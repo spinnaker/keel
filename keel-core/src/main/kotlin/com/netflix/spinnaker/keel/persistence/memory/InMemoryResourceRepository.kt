@@ -42,7 +42,7 @@ class InMemoryResourceRepository(
   private val resourceEvents = mutableMapOf<String, MutableList<ResourceEvent>>()
   private val applicationEvents = mutableMapOf<String, MutableList<ApplicationEvent>>()
   private val lastCheckTimes = mutableMapOf<String, Instant>()
-  private val resourceArtifacts = mutableMapOf<Resource<*>, DeliveryArtifact>()
+  private val resourceArtifacts = mutableMapOf<String, DeliveryArtifact>()
 
   fun dropAll() {
     resources.clear()
@@ -81,10 +81,10 @@ class InMemoryResourceRepository(
       .filterValues { it.application == application }
       .map { (_, resource) ->
         resource.toResourceSummary().let { summary ->
-          if (resourceArtifacts.containsKey(resource)) {
+          if (resourceArtifacts.containsKey(resource.id)) {
             summary.copy(artifact = ResourceArtifactSummary(
-              resourceArtifacts[resource]!!.name,
-              resourceArtifacts[resource]!!.type
+              resourceArtifacts[resource.id]!!.name,
+              resourceArtifacts[resource.id]!!.type
             ))
           } else {
             summary
@@ -106,6 +106,7 @@ class InMemoryResourceRepository(
       ?.also {
         resources.remove(it)
         resourceEvents.remove(it)
+        resourceArtifacts.remove(it)
       }
       ?: throw NoSuchResourceId(id)
   }
@@ -139,11 +140,11 @@ class InMemoryResourceRepository(
   }
 
   override fun <S : ComputeResourceSpec> associate(resource: Resource<S>, artifact: DeliveryArtifact) {
-    resourceArtifacts[resource] = artifact
+    resourceArtifacts[resource.id] = artifact
   }
 
   override fun <S : ComputeResourceSpec> getArtifactForResource(resource: Resource<S>): DeliveryArtifact? =
-    resourceArtifacts[resource]
+    resourceArtifacts[resource.id]
 
   private fun <T : PersistentEvent> appendHistory(eventList: MutableMap<String, MutableList<T>>, event: T) {
     eventList.computeIfAbsent(event.uid) {

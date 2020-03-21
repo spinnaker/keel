@@ -98,20 +98,7 @@ class CombinedRepository(
     }
 
     deliveryConfig.resources.forEach { resource ->
-      if (resource.spec is ComputeResourceSpec) {
-        val computeResource = resource as Resource<ComputeResourceSpec>
-        val artifactReference = computeResource.spec.completeArtifactReferenceOrNull()
-        if (artifactReference != null) {
-          val artifact = deliveryConfig.matchingArtifactByReference(
-            artifactReference.artifactReference,
-            artifactReference.artifactType
-          )
-          if (artifact != null) {
-            log.debug("Associating resource ${computeResource.id} with artifact $artifact")
-            resourceRepository.associate(computeResource, artifact)
-          }
-        }
-      }
+      associateResourceWithArtifact(resource, deliveryConfig)
     }
 
     storeDeliveryConfig(deliveryConfig)
@@ -120,6 +107,23 @@ class CombinedRepository(
       removeResources(old, deliveryConfig)
     }
     return deliveryConfig
+  }
+
+  private fun associateResourceWithArtifact(resource: Resource<*>, deliveryConfig: DeliveryConfig) {
+    if (resource.spec is ComputeResourceSpec) {
+      val computeResource = resource as Resource<ComputeResourceSpec>
+      val artifactReference = computeResource.spec.completeArtifactReferenceOrNull()
+      if (artifactReference != null) {
+        val artifact = deliveryConfig.matchingArtifactByReference(
+          artifactReference.artifactReference,
+          artifactReference.artifactType
+        )
+        if (artifact != null) {
+          log.debug("Associating resource ${computeResource.id} with artifact $artifact")
+          resourceRepository.associate(computeResource, artifact)
+        }
+      }
+    }
   }
 
   /**

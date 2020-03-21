@@ -293,29 +293,38 @@ open class SqlResourceRepository(
   }
 
   override fun delete(id: String) {
-    val uid = sqlRetry.withRetry(READ) {
-      jooq.select(RESOURCE.UID)
-        .from(RESOURCE)
-        .where(RESOURCE.ID.eq(id))
-        .fetchOne(RESOURCE.UID)
-        ?.let(ULID::parseULID)
-        ?: throw NoSuchResourceId(id)
-    }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(RESOURCE)
-        .where(RESOURCE.UID.eq(uid.toString()))
-        .execute()
-    }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(EVENT)
-        .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
-        .and(EVENT.UID.eq(uid.toString()))
-        .execute()
-    }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(DIFF_FINGERPRINT)
-        .where(DIFF_FINGERPRINT.RESOURCE_ID.eq(id))
-        .execute()
+    jooq.transaction { config ->
+      val txn = DSL.using(config)
+
+      val uid = sqlRetry.withRetry(READ) {
+        txn.select(RESOURCE.UID)
+          .from(RESOURCE)
+          .where(RESOURCE.ID.eq(id))
+          .fetchOne(RESOURCE.UID)
+          ?.let(ULID::parseULID)
+          ?: throw NoSuchResourceId(id)
+      }
+      sqlRetry.withRetry(WRITE) {
+        txn.deleteFrom(RESOURCE)
+          .where(RESOURCE.UID.eq(uid.toString()))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        txn.deleteFrom(EVENT)
+          .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+          .and(EVENT.UID.eq(uid.toString()))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        txn.deleteFrom(DIFF_FINGERPRINT)
+          .where(DIFF_FINGERPRINT.RESOURCE_ID.eq(id))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        txn.deleteFrom(RESOURCE_ARTIFACT)
+          .where(RESOURCE_ARTIFACT.RESOURCE_UID.eq(uid.toString()))
+          .execute()
+      }
     }
   }
 
