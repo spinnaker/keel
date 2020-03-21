@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
@@ -117,7 +118,7 @@ open class SqlResourceRepository(
   }
 
   override fun getSummaryByApplication(application: String): List<ResourceSummary> {
-    val resources: List<Resource<*>> = sqlRetry.withRetry(READ) {
+    val resourceSummaries: List<ResourceSummary> = sqlRetry.withRetry(READ) {
       jooq
         .select(RESOURCE.KIND, RESOURCE.METADATA, RESOURCE.SPEC, DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.TYPE)
         .from(RESOURCE)
@@ -128,20 +129,20 @@ open class SqlResourceRepository(
         .where(RESOURCE.APPLICATION.eq(application))
         .fetch()
         .map { (kind, metadata, spec, artifactName, artifactType) ->
-          val specMap = objectMapper.readValue<MutableMap<String, Any?>>(spec)
-          // if the resource is associated with an artifact, add the artifact info to the spec
-          if (artifactName != null && artifactType != null) {
-            specMap["artifactName"] = artifactName
-            specMap["artifactType"] = ArtifactType.valueOf(artifactType)
+          // if the resource is associated with an artifact, add the artifact info to the summary
+          val artifact = if (artifactName != null && artifactType != null) {
+            ResourceArtifactSummary(artifactName, ArtifactType.valueOf(artifactType))
+          } else {
+            null
           }
           Resource(
             kind = parseKind(kind),
             metadata = objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-            spec = objectMapper.convertValue(specMap, resourceTypeIdentifier.identify(parseKind(kind)))
-          )
+            spec = objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind)))
+          ).toResourceSummary(artifact)
         }
     }
-    return resources.map { it.toResourceSummary() }
+    return resourceSummaries
   }
 
   // todo: this is not retryable due to overall repository structure: https://github.com/spinnaker/keel/issues/740

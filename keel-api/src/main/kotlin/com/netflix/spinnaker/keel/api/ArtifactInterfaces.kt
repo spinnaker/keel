@@ -12,6 +12,13 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 interface ArtifactProvider {
   val artifactName: String?
   val artifactType: ArtifactType?
+
+  fun completeArtifactOrNull() =
+    if (artifactName != null && artifactType != null) {
+      CompleteArtifact(artifactName!!, artifactType!!)
+    } else {
+      null
+    }
 }
 
 /**
@@ -23,7 +30,7 @@ interface VersionedArtifactProvider : ArtifactProvider {
 
   fun completeVersionedArtifactOrNull() =
     if (artifactName != null && artifactType != null && artifactVersion != null) {
-      VersionedArtifact(artifactName!!, artifactType!!, artifactVersion!!)
+      CompleteVersionedArtifact(artifactName!!, artifactType!!, artifactVersion!!)
     } else {
       null
     }
@@ -39,7 +46,7 @@ interface ArtifactReferenceProvider {
 
   fun completeArtifactReferenceOrNull() =
     if (artifactReference != null && artifactType != null) {
-      ArtifactReference(artifactReference!!, artifactType!!)
+      CompleteArtifactReference(artifactReference!!, artifactType!!)
     } else {
       null
     }
@@ -48,20 +55,28 @@ interface ArtifactReferenceProvider {
 interface ComputeResourceSpec : ResourceSpec, VersionedArtifactProvider, ArtifactReferenceProvider
 
 /**
- * Simple container of the information defined by [VersionedArtifactProvider] which ensures non-nullability of the
+ * Simple container of the information defined in [ArtifactProvider] that ensures non-nullability of the fields.
+ */
+data class CompleteArtifact(
+  override val artifactName: String,
+  override val artifactType: ArtifactType
+) : ArtifactProvider
+
+/**
+ * Simple container of the information defined by [VersionedArtifactProvider] that ensures non-nullability of the
  * fields.
  */
-data class VersionedArtifact(
+data class CompleteVersionedArtifact(
   override val artifactName: String,
   override val artifactType: ArtifactType,
   override val artifactVersion: String
 ) : VersionedArtifactProvider
 
 /**
- * Simple container of the information defined by [ArtifactReferenceProvider] which ensures non-nullability of the
+ * Simple container of the information defined by [ArtifactReferenceProvider] that ensures non-nullability of the
  * fields.
  */
-data class ArtifactReference(
+data class CompleteArtifactReference(
   override val artifactReference: String,
   override val artifactType: ArtifactType
 ) : ArtifactReferenceProvider

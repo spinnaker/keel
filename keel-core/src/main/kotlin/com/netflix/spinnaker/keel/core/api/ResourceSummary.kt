@@ -40,7 +40,7 @@ data class ResourceSummary(
   val status: ResourceStatus,
   val moniker: Moniker?,
   val locations: Locations<*>?,
-  val artifact: ResourceArtifactSummary?
+  val artifact: ResourceArtifactSummary? = null
 ) {
   val id: String = resource.id
   val kind: ResourceKind = resource.kind

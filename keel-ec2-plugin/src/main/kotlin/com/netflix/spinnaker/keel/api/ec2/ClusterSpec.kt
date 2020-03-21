@@ -119,17 +119,14 @@ data class ClusterSpec(
   private val _defaults: ServerGroupSpec,
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, ServerGroupSpec> = emptyMap(),
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactName: String? = null,
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactType: ArtifactType? = ArtifactType.deb,
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactVersion: String? = null,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = Duration.ZERO
+  override val unhappyWaitTime: Duration? = Duration.ZERO,
+  // The following property is write-only as it's filled by resolvers, but not output in JSON
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactVersion: String? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, UnhappyControl {
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
@@ -144,11 +141,21 @@ data class ClusterSpec(
   val defaults: ServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
+  @JsonIgnore
+  override val artifactType: ArtifactType? = ArtifactType.deb
+
+  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  override val artifactName: String?
+    @JsonIgnore get() = when (imageProvider) {
+      is ArtifactImageProvider -> imageProvider.deliveryArtifact.name
+      else -> null
+    }
+
+  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
   override val artifactReference: String?
-    @JsonIgnore get() = if (imageProvider != null && imageProvider is ReferenceArtifactImageProvider) {
-      imageProvider.reference
-    } else {
-      null
+    @JsonIgnore get() = when (imageProvider) {
+      is ReferenceArtifactImageProvider -> imageProvider.reference
+      else -> null
     }
 
   @JsonCreator
@@ -165,8 +172,7 @@ data class ClusterSpec(
     scaling: Scaling?,
     tags: Map<String, String>?,
     @JsonInclude(NON_EMPTY)
-    overrides: Map<String, ServerGroupSpec> = emptyMap(),
-    artifactName: String?
+    overrides: Map<String, ServerGroupSpec> = emptyMap()
   ) : this(
     moniker,
     imageProvider,
@@ -180,8 +186,7 @@ data class ClusterSpec(
       scaling,
       tags
     ),
-    overrides,
-    artifactName
+    overrides
   )
 
   data class ServerGroupSpec(

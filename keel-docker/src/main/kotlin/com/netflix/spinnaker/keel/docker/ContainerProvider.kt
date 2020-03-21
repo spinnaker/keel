@@ -17,29 +17,17 @@
  */
 package com.netflix.spinnaker.keel.docker
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.netflix.spinnaker.keel.api.ArtifactProvider
-import com.netflix.spinnaker.keel.api.ArtifactReferenceProvider
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 
 @JsonDeserialize(using = ContainerProviderDeserializer::class)
-sealed class ContainerProvider : ArtifactProvider {
-  @JsonIgnore
-  override val artifactName: String? = null
-  @JsonIgnore
-  override val artifactType: ArtifactType = ArtifactType.docker
-}
+sealed class ContainerProvider
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
 data class ReferenceProvider(
   val reference: String
-) : ContainerProvider(), ArtifactReferenceProvider {
-  override val artifactReference: String
-    @JsonIgnore get() = reference
-}
+) : ContainerProvider()
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
 @Deprecated("Non-reference-based artifact providers are no longer supported.",
@@ -51,9 +39,6 @@ data class DigestProvider(
   val digest: String
 ) : ContainerProvider() {
   fun repository() = "$organization/$image"
-
-  override val artifactName: String
-    @JsonIgnore get() = "${repository()}:$digest"
 }
 
 @JsonDeserialize(using = JsonDeserializer.None::class)
@@ -67,7 +52,4 @@ data class VersionedTagProvider(
   val captureGroupRegex: String? = null
 ) : ContainerProvider() {
   fun repository() = "$organization/$image"
-
-  override val artifactName: String
-    @JsonIgnore get() = "${repository()}:<${tagVersionStrategy.friendlyName}>"
 }

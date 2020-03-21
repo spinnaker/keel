@@ -109,19 +109,29 @@ class CombinedRepository(
     return deliveryConfig
   }
 
+  /**
+   * If the resource is a compute resource (i.e. [Resource] with a [ComputeResourceSpec]), attempt to look up an
+   * artifact association based on the spec itself, and store the association in the database if found.
+   */
   private fun associateResourceWithArtifact(resource: Resource<*>, deliveryConfig: DeliveryConfig) {
     if (resource.spec is ComputeResourceSpec) {
       val computeResource = resource as Resource<ComputeResourceSpec>
-      val artifactReference = computeResource.spec.completeArtifactReferenceOrNull()
-      if (artifactReference != null) {
-        val artifact = deliveryConfig.matchingArtifactByReference(
-          artifactReference.artifactReference,
-          artifactReference.artifactType
-        )
-        if (artifact != null) {
-          log.debug("Associating resource ${computeResource.id} with artifact $artifact")
-          resourceRepository.associate(computeResource, artifact)
-        }
+      val artifact = computeResource.spec.let {
+        // prefer reference-based artifact info
+        it.completeArtifactReferenceOrNull()
+          ?.let { ref ->
+            deliveryConfig.matchingArtifactByReference(ref.artifactReference, ref.artifactType)
+          }
+          // if not found, then try old-style image provider info
+          ?: it.completeArtifactOrNull()
+            ?.let { art ->
+              deliveryConfig.matchingArtifactByName(art.artifactName, art.artifactType)
+            }
+      }
+
+      if (artifact != null) {
+        log.debug("Associating resource ${computeResource.id} with artifact $artifact")
+        resourceRepository.associate(computeResource, artifact)
       }
     }
   }

@@ -41,6 +41,7 @@ import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
+import com.netflix.spinnaker.keel.docker.VersionedTagProvider
 import java.time.Duration
 
 /**
@@ -56,17 +57,14 @@ data class TitusClusterSpec(
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
   @JsonIgnore
   val containerProvider: ContainerProvider,
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactName: String? = null,
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactType: ArtifactType? = ArtifactType.docker,
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactVersion: String? = null,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = Duration.ZERO
+  override val unhappyWaitTime: Duration? = Duration.ZERO,
+  // The following property is write-only as it's filled by resolvers, but not output in JSON
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactVersion: String? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
 
   @JsonIgnore
@@ -75,12 +73,23 @@ data class TitusClusterSpec(
   val defaults: TitusServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
-  override val artifactReference: String?
-  @JsonIgnore get() = if (containerProvider != null && containerProvider is ReferenceProvider) {
-      containerProvider.reference
-    } else {
-      null
+  @JsonIgnore
+  override val artifactType: ArtifactType? = ArtifactType.docker
+
+  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  override val artifactName: String?
+    @JsonIgnore get() = when (containerProvider) {
+      is DigestProvider -> containerProvider.repository()
+      is VersionedTagProvider -> containerProvider.repository()
+      else -> null
     }
+
+  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  override val artifactReference: String?
+  @JsonIgnore get() = when (containerProvider) {
+    is ReferenceProvider -> containerProvider.reference
+    else -> null
+  }
 
   @JsonCreator
   constructor(
@@ -88,7 +97,6 @@ data class TitusClusterSpec(
     deployWith: ClusterDeployStrategy = RedBlack(),
     locations: SimpleLocations,
     container: ContainerProvider,
-    artifactName: String?,
     capacity: Capacity?,
     constraints: Constraints?,
     env: Map<String, String>?,
@@ -120,8 +128,7 @@ data class TitusClusterSpec(
       tags = tags
     ),
     overrides,
-    containerProvider = container,
-    artifactName = artifactName
+    containerProvider = container
   )
 }
 

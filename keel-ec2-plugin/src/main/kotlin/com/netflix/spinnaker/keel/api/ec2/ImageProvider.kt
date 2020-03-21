@@ -17,15 +17,11 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.netflix.spinnaker.keel.api.ArtifactProvider
-import com.netflix.spinnaker.keel.api.ArtifactReferenceProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.ec2.jackson.ImageProviderDeserializer
 
@@ -33,12 +29,7 @@ import com.netflix.spinnaker.keel.ec2.jackson.ImageProviderDeserializer
  * Base interface for providing an image
  */
 @JsonDeserialize(using = ImageProviderDeserializer::class)
-sealed class ImageProvider : ArtifactProvider {
-  @JsonIgnore
-  override val artifactName: String? = null
-  @JsonIgnore
-  override val artifactType: ArtifactType? = ArtifactType.deb
-}
+sealed class ImageProvider
 
 /**
  * Provides image id by reference to a package
@@ -51,10 +42,7 @@ data class ArtifactImageProvider(
   val deliveryArtifact: DeliveryArtifact,
   @JsonInclude(NON_EMPTY)
   val artifactStatuses: List<ArtifactStatus> = emptyList() // treated as "all statuses" by ImageResolver
-) : ImageProvider() {
-  override val artifactName: String
-    @JsonIgnore get() = deliveryArtifact.name
-}
+) : ImageProvider()
 
 /**
  * Provides image id by referencing an artifact defined in the delivery config
@@ -62,10 +50,7 @@ data class ArtifactImageProvider(
 @JsonDeserialize(using = JsonDeserializer.None::class)
 data class ReferenceArtifactImageProvider(
   val reference: String
-) : ImageProvider(), ArtifactReferenceProvider {
-  override val artifactReference: String
-    @JsonIgnore get() = reference
-}
+) : ImageProvider()
 
 /**
  * Provides an image by reference to a jenkins master, job, and job number

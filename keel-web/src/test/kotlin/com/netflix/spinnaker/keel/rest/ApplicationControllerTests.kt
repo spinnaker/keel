@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
@@ -84,12 +85,22 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       statuses = setOf(ArtifactStatus.RELEASE)
     )
 
+    val clusterDefaults = ClusterSpec.ServerGroupSpec(
+      launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
+        instanceType = "m4.2xlarge",
+        ebsOptimized = true,
+        iamRole = "fnordInstanceProfile",
+        keyPair = "fnordKeyPair"
+      )
+    )
+
     val environments = listOf("test", "staging", "production").associateWith { name ->
       Environment(name = name, resources = setOf(
+        // cluster with new-style artifact reference
         resource(
           kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
           spec = ClusterSpec(
-            moniker = Moniker(application, name),
+            moniker = Moniker(application, "$name-west"),
             imageProvider = ReferenceArtifactImageProvider(reference = "fnord"),
             locations = SubnetAwareLocations(
               account = "test",
@@ -102,14 +113,27 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 )
               )
             ),
-            _defaults = ClusterSpec.ServerGroupSpec(
-              launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
-                instanceType = "m4.2xlarge",
-                ebsOptimized = true,
-                iamRole = "fnordInstanceProfile",
-                keyPair = "fnordKeyPair"
+            _defaults = clusterDefaults
+          )
+        ),
+        // cluster with old-style image provider
+        resource(
+          kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
+          spec = ClusterSpec(
+            moniker = Moniker(application, "$name-east"),
+            imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
+            locations = SubnetAwareLocations(
+              account = "test",
+              vpc = "vpc0",
+              subnet = "internal (vpc0)",
+              regions = setOf(
+                SubnetAwareRegionSpec(
+                  name = "us-east-1",
+                  availabilityZones = setOf("us-east-1a", "us-east-1b", "us-east-1c")
+                )
               )
-            )
+            ),
+            _defaults = clusterDefaults
           )
         )
       ))
@@ -217,12 +241,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             hasManagedResources: true
             currentEnvironmentConstraints: []
             resources:
-            - id: "ec2:cluster:test:fnord-test"
+            - id: "ec2:cluster:test:fnord-test-west"
               kind: "ec2/cluster@v1"
               status: "HAPPY"
               moniker:
                 app: "fnord"
-                stack: "test"
+                stack: "test-west"
               locations:
                 account: "test"
                 vpc: "vpc0"
@@ -231,12 +255,26 @@ internal class ApplicationControllerTests : JUnit5Minutests {
               artifact:
                 name: "fnord"
                 type: "deb"
-            - id: "ec2:cluster:test:fnord-staging"
+            - id: "ec2:cluster:test:fnord-test-east"
               kind: "ec2/cluster@v1"
               status: "HAPPY"
               moniker:
                 app: "fnord"
-                stack: "staging"
+                stack: "test-east"
+              locations:
+                account: "test"
+                vpc: "vpc0"
+                regions:
+                - name: "us-east-1"
+              artifact:
+                name: "fnord"
+                type: "deb"
+            - id: "ec2:cluster:test:fnord-staging-west"
+              kind: "ec2/cluster@v1"
+              status: "HAPPY"
+              moniker:
+                app: "fnord"
+                stack: "staging-west"
               locations:
                 account: "test"
                 vpc: "vpc0"
@@ -245,17 +283,45 @@ internal class ApplicationControllerTests : JUnit5Minutests {
               artifact:
                 name: "fnord"
                 type: "deb"
-            - id: "ec2:cluster:test:fnord-production"
+            - id: "ec2:cluster:test:fnord-staging-east"
               kind: "ec2/cluster@v1"
               status: "HAPPY"
               moniker:
                 app: "fnord"
-                stack: "production"
+                stack: "staging-east"
+              locations:
+                account: "test"
+                vpc: "vpc0"
+                regions:
+                - name: "us-east-1"
+              artifact:
+                name: "fnord"
+                type: "deb"
+            - id: "ec2:cluster:test:fnord-production-west"
+              kind: "ec2/cluster@v1"
+              status: "HAPPY"
+              moniker:
+                app: "fnord"
+                stack: "production-west"
               locations:
                 account: "test"
                 vpc: "vpc0"
                 regions:
                 - name: "us-west-2"
+              artifact:
+                name: "fnord"
+                type: "deb"
+            - id: "ec2:cluster:test:fnord-production-east"
+              kind: "ec2/cluster@v1"
+              status: "HAPPY"
+              moniker:
+                app: "fnord"
+                stack: "production-east"
+              locations:
+                account: "test"
+                vpc: "vpc0"
+                regions:
+                - name: "us-east-1"
               artifact:
                 name: "fnord"
                 type: "deb"
@@ -292,7 +358,8 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   vetoed: []
               name: "test"
               resources:
-              - "ec2:cluster:test:fnord-test"
+              - "ec2:cluster:test:fnord-test-west"
+              - "ec2:cluster:test:fnord-test-east"
             - artifacts:
               - name: "fnord"
                 type: "deb"
@@ -309,7 +376,8 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   vetoed: []
               name: "staging"
               resources:
-              - "ec2:cluster:test:fnord-staging"
+              - "ec2:cluster:test:fnord-staging-west"
+              - "ec2:cluster:test:fnord-staging-east"
             - artifacts:
               - name: "fnord"
                 type: "deb"
@@ -326,7 +394,8 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   vetoed: []
               name: "production"
               resources:
-              - "ec2:cluster:test:fnord-production"
+              - "ec2:cluster:test:fnord-production-west"
+              - "ec2:cluster:test:fnord-production-east"
             """.trimIndent()
           ))
       }

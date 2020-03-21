@@ -25,7 +25,6 @@ import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
-import java.lang.IllegalArgumentException
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -54,8 +53,7 @@ class ImageResolver(
         is ReferenceArtifactImageProvider -> resolveFromReference(resource, imageProvider)
         // todo eb: artifact provider is here for backwards compatibility. Remove?
         is ArtifactImageProvider -> resolveFromArtifact(resource, imageProvider.deliveryArtifact as DebianArtifact)
-        is JenkinsImageProvider -> resolveFromJenkinsJob(resource, imageProvider)
-        else -> throw IllegalArgumentException("Unrecognized artifact provider type: ${imageProvider.javaClass.simpleName}")
+        is JenkinsImageProvider -> resolveFromJenkinsJob(imageProvider)
       }
     }
     return resource.withVirtualMachineImages(image)
@@ -99,7 +97,6 @@ class ImageResolver(
   }
 
   private suspend fun resolveFromJenkinsJob(
-    resource: Resource<ClusterSpec>,
     imageProvider: JenkinsImageProvider
   ): VersionedNamedImage {
     val image = imageService.getNamedImageFromJenkinsInfo(
@@ -141,7 +138,6 @@ class ImageResolver(
 
     return copy(spec = spec.copy(
       overrides = overrides,
-      artifactName = image.artifact?.name ?: error("Missing artifact name in image ${image.namedImage}"),
       artifactVersion = image.version)
     )
   }

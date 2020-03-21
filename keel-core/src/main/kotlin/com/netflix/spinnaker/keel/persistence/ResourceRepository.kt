@@ -15,7 +15,6 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.ArtifactProvider
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
@@ -235,7 +234,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
     return true
   }
 
-  fun Resource<*>.toResourceSummary() =
+  fun Resource<*>.toResourceSummary(artifact: ResourceArtifactSummary? = null) =
     ResourceSummary(
       resource = this,
       status = getStatus(id), // todo eb: this will become expensive
@@ -253,15 +252,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
       } else {
         null
       },
-      artifact = if (spec is ArtifactProvider) {
-        val artifactProvider = spec as ArtifactProvider
-        ResourceArtifactSummary(
-          name = artifactProvider.artifactName,
-          type = artifactProvider.artifactType
-        )
-      } else {
-        null
-      }
+      artifact = artifact
     )
 
   companion object {
