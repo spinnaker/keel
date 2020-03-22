@@ -119,14 +119,18 @@ data class ClusterSpec(
   private val _defaults: ServerGroupSpec,
   @JsonInclude(NON_EMPTY)
   val overrides: Map<String, ServerGroupSpec> = emptyMap(),
+  // The following 3 properties are write-only as they're filled by resolvers, but not output in JSON
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactType: ArtifactType? = ArtifactType.deb,
+  @JsonProperty(access = Access.WRITE_ONLY)
+  private val _artifactName: String? = null, // Custom backing field for artifactName, used by resolvers
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactVersion: String? = null,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = Duration.ZERO,
-  // The following property is write-only as it's filled by resolvers, but not output in JSON
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactVersion: String? = null
+  override val unhappyWaitTime: Duration? = Duration.ZERO
 ) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, UnhappyControl {
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
@@ -141,17 +145,16 @@ data class ClusterSpec(
   val defaults: ServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
-  @JsonIgnore
-  override val artifactType: ArtifactType? = ArtifactType.deb
-
-  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  // Returns the artifact name set by resolvers, or attempts to find the artifact name from the image provider.
   override val artifactName: String?
-    @JsonIgnore get() = when (imageProvider) {
-      is ArtifactImageProvider -> imageProvider.deliveryArtifact.name
-      else -> null
-    }
+    @JsonIgnore get() = _artifactName
+      ?: when (imageProvider) {
+        is ArtifactImageProvider -> imageProvider.deliveryArtifact.name
+        else -> null
+      }
 
-  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
+  // image provider.
   override val artifactReference: String?
     @JsonIgnore get() = when (imageProvider) {
       is ReferenceArtifactImageProvider -> imageProvider.reference

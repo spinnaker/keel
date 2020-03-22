@@ -138,6 +138,8 @@ class ImageResolver(
 
     return copy(spec = spec.copy(
       overrides = overrides,
+      _artifactName = image.artifact?.name
+        ?: error("Artifact not found in image ${image.namedImage.imageName}"),
       artifactVersion = image.version)
     )
   }

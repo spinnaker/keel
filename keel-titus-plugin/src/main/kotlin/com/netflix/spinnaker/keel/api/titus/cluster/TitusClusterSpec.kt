@@ -55,16 +55,20 @@ data class TitusClusterSpec(
   private val _defaults: TitusServerGroupSpec,
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
+  // The following 3 properties are write-only as they're filled by resolvers, but not output in JSON
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactType: ArtifactType? = ArtifactType.docker,
+  @JsonProperty(access = Access.WRITE_ONLY)
+  private val _artifactName: String? = null, // Custom backing field for artifactName, used by resolvers
+  @JsonProperty(access = Access.WRITE_ONLY)
+  override val artifactVersion: String? = null,
   @JsonIgnore
   val containerProvider: ContainerProvider,
   @JsonIgnore
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = Duration.ZERO,
-  // The following property is write-only as it's filled by resolvers, but not output in JSON
-  @JsonProperty(access = Access.WRITE_ONLY)
-  override val artifactVersion: String? = null
+  override val unhappyWaitTime: Duration? = Duration.ZERO
 ) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
 
   @JsonIgnore
@@ -73,23 +77,22 @@ data class TitusClusterSpec(
   val defaults: TitusServerGroupSpec
     @JsonUnwrapped get() = _defaults
 
-  @JsonIgnore
-  override val artifactType: ArtifactType? = ArtifactType.docker
-
-  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
+  // Returns the artifact name set by resolvers, or attempts to find the artifact name from the container provider.
   override val artifactName: String?
+    @JsonIgnore get() = _artifactName
+      ?: when (containerProvider) {
+        is DigestProvider -> containerProvider.repository()
+        is VersionedTagProvider -> containerProvider.repository()
+        else -> null
+      }
+
+  // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
+  // image provider.
+  override val artifactReference: String?
     @JsonIgnore get() = when (containerProvider) {
-      is DigestProvider -> containerProvider.repository()
-      is VersionedTagProvider -> containerProvider.repository()
+      is ReferenceProvider -> containerProvider.reference
       else -> null
     }
-
-  // Provides a hint as to cluster -> artifact linkage even _before_ resolution has had a chance to run.
-  override val artifactReference: String?
-  @JsonIgnore get() = when (containerProvider) {
-    is ReferenceProvider -> containerProvider.reference
-    else -> null
-  }
 
   @JsonCreator
   constructor(
