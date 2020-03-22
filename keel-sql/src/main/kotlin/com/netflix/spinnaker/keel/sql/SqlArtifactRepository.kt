@@ -396,13 +396,7 @@ class SqlArtifactRepository(
 
   override fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes> {
     val artifactsById = deliveryConfig.artifacts
-      .mapNotNull { artifact ->
-        when (val uid = artifact.uidString) {
-          null -> null
-          else -> uid to artifact
-        }
-      }
-      .toMap()
+      .associateBy { it.uidString }
 
     val vetoes: MutableMap<String, EnvironmentArtifactVetoes> = mutableMapOf()
 
@@ -478,7 +472,7 @@ class SqlArtifactRepository(
         ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid),
         ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artUid),
         ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
-      .fetchOne { (status, reference) ->
+      .fetchOne { (_, reference) ->
         if (reference != null && !force) {
           log.warn(
             "Not vetoing artifact version as it appears to have already been an automated rollback target: " +

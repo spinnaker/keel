@@ -2,15 +2,12 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.ComputeResourceSpec
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
@@ -19,11 +16,9 @@ import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -117,29 +112,19 @@ open class SqlResourceRepository(
     }
   }
 
-  override fun getSummaryByApplication(application: String): List<ResourceSummary> {
+  override fun getResourceSummaries(deliveryConfig: DeliveryConfig): List<ResourceSummary> {
     val resourceSummaries: List<ResourceSummary> = sqlRetry.withRetry(READ) {
       jooq
-        .select(RESOURCE.KIND, RESOURCE.METADATA, RESOURCE.SPEC, DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.TYPE)
+        .select(RESOURCE.KIND, RESOURCE.METADATA, RESOURCE.SPEC)
         .from(RESOURCE)
-        .leftOuterJoin(RESOURCE_ARTIFACT)
-        .on(RESOURCE_ARTIFACT.RESOURCE_UID.eq(RESOURCE.UID))
-        .leftOuterJoin(DELIVERY_ARTIFACT)
-        .on(DELIVERY_ARTIFACT.UID.eq(RESOURCE_ARTIFACT.ARTIFACT_UID))
-        .where(RESOURCE.APPLICATION.eq(application))
+        .where(RESOURCE.APPLICATION.eq(deliveryConfig.application))
         .fetch()
-        .map { (kind, metadata, spec, artifactName, artifactType) ->
-          // if the resource is associated with an artifact, add the artifact info to the summary
-          val artifact = if (artifactName != null && artifactType != null) {
-            ResourceArtifactSummary(artifactName, ArtifactType.valueOf(artifactType))
-          } else {
-            null
-          }
+        .map { (kind, metadata, spec) ->
           Resource(
             kind = parseKind(kind),
             metadata = objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
             spec = objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind)))
-          ).toResourceSummary(artifact)
+          ).toResourceSummary(deliveryConfig)
         }
     }
     return resourceSummaries
@@ -321,11 +306,6 @@ open class SqlResourceRepository(
           .where(DIFF_FINGERPRINT.RESOURCE_ID.eq(id))
           .execute()
       }
-      sqlRetry.withRetry(WRITE) {
-        txn.deleteFrom(RESOURCE_ARTIFACT)
-          .where(RESOURCE_ARTIFACT.RESOURCE_UID.eq(uid.toString()))
-          .execute()
-      }
     }
   }
 
@@ -359,52 +339,5 @@ open class SqlResourceRepository(
     }
   }
 
-  override fun <S : ComputeResourceSpec> associate(resource: Resource<S>, artifact: DeliveryArtifact) {
-    sqlRetry.withRetry(WRITE) {
-      jooq.insertInto(RESOURCE_ARTIFACT)
-        .set(RESOURCE_ARTIFACT.RESOURCE_UID, resource.uid)
-        .set(RESOURCE_ARTIFACT.ARTIFACT_UID, artifact.uid)
-        .execute()
-    }
-  }
-
-  override fun <S : ComputeResourceSpec> getArtifactForResource(resource: Resource<S>): DeliveryArtifact? {
-    return sqlRetry.withRetry(READ) {
-      jooq
-        .select(
-          DELIVERY_ARTIFACT.NAME,
-          DELIVERY_ARTIFACT.TYPE,
-          DELIVERY_ARTIFACT.DETAILS,
-          DELIVERY_ARTIFACT.REFERENCE,
-          DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME
-        )
-        .from(RESOURCE, DELIVERY_ARTIFACT, RESOURCE_ARTIFACT)
-        .where(RESOURCE.ID.eq(resource.id))
-        .and(RESOURCE_ARTIFACT.RESOURCE_UID.eq(RESOURCE.UID))
-        .and(RESOURCE_ARTIFACT.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
-        .and(DELIVERY_ARTIFACT.UID.eq(RESOURCE_ARTIFACT.ARTIFACT_UID))
-        .limit(1)
-        .fetchOne { (name, type, details, reference, deliveryConfigName) ->
-          mapToArtifact(name, ArtifactType.valueOf(type), details, reference, deliveryConfigName)
-        }
-    }
-  }
-
   private fun Instant.toLocal() = atZone(clock.zone).toLocalDateTime()
-
-  private val Resource<*>.uid: String
-    get() = jooq.select(RESOURCE.UID)
-      .from(RESOURCE)
-      .where(RESOURCE.ID.eq(id))
-      .limit(1)
-      .fetchOne(RESOURCE.UID)
-
-  private val DeliveryArtifact.uid: String
-    get() = jooq.select(DELIVERY_ARTIFACT.UID)
-      .from(DELIVERY_ARTIFACT)
-      .where(DELIVERY_ARTIFACT.NAME.eq(name))
-      .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
-      .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference))
-      .limit(1)
-      .fetchOne(DELIVERY_ARTIFACT.UID)
 }

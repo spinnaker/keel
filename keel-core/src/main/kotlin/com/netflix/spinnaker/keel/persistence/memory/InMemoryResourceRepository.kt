@@ -15,13 +15,12 @@
  */
 package com.netflix.spinnaker.keel.persistence.memory
 
-import com.netflix.spinnaker.keel.api.ComputeResourceSpec
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
@@ -76,20 +75,11 @@ class InMemoryResourceRepository(
       .map { it.value }
       .toList()
 
-  override fun getSummaryByApplication(application: String): List<ResourceSummary> =
+  override fun getResourceSummaries(deliveryConfig: DeliveryConfig): List<ResourceSummary> =
     resources
-      .filterValues { it.application == application }
+      .filterValues { it.application == deliveryConfig.application }
       .map { (_, resource) ->
-        resource.toResourceSummary().let { summary ->
-          if (resourceArtifacts.containsKey(resource.id)) {
-            summary.copy(artifact = ResourceArtifactSummary(
-              resourceArtifacts[resource.id]!!.name,
-              resourceArtifacts[resource.id]!!.type
-            ))
-          } else {
-            summary
-          }
-        }
+        resource.toResourceSummary(deliveryConfig)
       }
 
   override fun store(resource: Resource<*>) {
@@ -138,13 +128,6 @@ class InMemoryResourceRepository(
   override fun appendHistory(event: ApplicationEvent) {
     appendHistory(applicationEvents, event)
   }
-
-  override fun <S : ComputeResourceSpec> associate(resource: Resource<S>, artifact: DeliveryArtifact) {
-    resourceArtifacts[resource.id] = artifact
-  }
-
-  override fun <S : ComputeResourceSpec> getArtifactForResource(resource: Resource<S>): DeliveryArtifact? =
-    resourceArtifacts[resource.id]
 
   private fun <T : PersistentEvent> appendHistory(eventList: MutableMap<String, MutableList<T>>, event: T) {
     eventList.computeIfAbsent(event.uid) {

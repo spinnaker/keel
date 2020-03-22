@@ -113,6 +113,3 @@ databaseChangeLog:
   - include:
       file: changelog/20200313-json-columns.yml
       relativeToChangelogFile: true
-  - include:
-      file: changelog/20200319-resource-artifact-table.yml
-      relativeToChangelogFile: true

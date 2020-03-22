@@ -15,6 +15,7 @@
  */
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
@@ -65,6 +66,7 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
   open fun flush() {}
 
   data class Fixture<T : ResourceRepository>(
+    val deliveryConfig: DeliveryConfig = DeliveryConfig("manifest", "toast", "keel@spinnaker"),
     val subject: T,
     val callback: (ResourceHeader) -> Unit = mockk(relaxed = true) // has to be relaxed due to https://github.com/mockk/mockk/issues/272
   )
@@ -156,9 +158,9 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         }
 
         test("resource summary is formatted correctly") {
-          val summary = subject.getSummaryByApplication("toast")
+          val summaries = subject.getResourceSummaries(deliveryConfig)
 
-          expectThat(summary) {
+          expectThat(summaries) {
             hasSize(1)
             with(first()) {
               get(ResourceSummary::id).isEqualTo(lr.id)

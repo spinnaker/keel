@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
@@ -97,43 +96,12 @@ class CombinedRepository(
       register(artifact)
     }
 
-    deliveryConfig.resources.forEach { resource ->
-      associateResourceWithArtifact(resource, deliveryConfig)
-    }
-
     storeDeliveryConfig(deliveryConfig)
 
     if (old != null) {
       removeResources(old, deliveryConfig)
     }
     return deliveryConfig
-  }
-
-  /**
-   * If the resource is a compute resource (i.e. [Resource] with a [ComputeResourceSpec]), attempt to look up an
-   * artifact association based on the spec itself, and store the association in the database if found.
-   */
-  private fun associateResourceWithArtifact(resource: Resource<*>, deliveryConfig: DeliveryConfig) {
-    if (resource.spec is ComputeResourceSpec) {
-      val computeResource = resource as Resource<ComputeResourceSpec>
-      val artifact = computeResource.spec.let {
-        // prefer reference-based artifact info
-        it.completeArtifactReferenceOrNull()
-          ?.let { ref ->
-            deliveryConfig.matchingArtifactByReference(ref.artifactReference, ref.artifactType)
-          }
-          // if not found, then try old-style image provider info
-          ?: it.completeArtifactOrNull()
-            ?.let { art ->
-              deliveryConfig.matchingArtifactByName(art.artifactName, art.artifactType)
-            }
-      }
-
-      if (artifact != null) {
-        log.debug("Associating resource ${computeResource.id} with artifact $artifact")
-        resourceRepository.associate(computeResource, artifact)
-      }
-    }
   }
 
   /**
@@ -332,8 +300,8 @@ class CombinedRepository(
   override fun getResourcesByApplication(application: String): List<Resource<*>> =
     resourceRepository.getResourcesByApplication(application)
 
-  override fun getSummaryByApplication(application: String): List<ResourceSummary> =
-    resourceRepository.getSummaryByApplication(application)
+  override fun getResourceSummaries(deliveryConfig: DeliveryConfig): List<ResourceSummary> =
+    resourceRepository.getResourceSummaries(deliveryConfig)
 
   override fun storeResource(resource: Resource<*>) =
     resourceRepository.store(resource)

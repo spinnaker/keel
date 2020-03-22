@@ -33,9 +33,12 @@ class ApplicationService(
    *
    * This function assumes there's a single delivery config associated with the application.
    */
-  fun getResourceSummariesFor(application: String): List<ResourceSummary> {
-    return repository.getSummaryByApplication(application)
-  }
+  fun getResourceSummariesFor(application: String): List<ResourceSummary> =
+    getFirstDeliveryConfigFor(application)
+      ?.let { deliveryConfig ->
+        repository.getResourceSummaries(deliveryConfig)
+      }
+      ?: emptyList()
 
   /**
    * Returns a list of [EnvironmentSummary] for the specific application.

@@ -128,7 +128,7 @@ interface KeelRepository {
 
   fun getResourcesByApplication(application: String): List<Resource<*>>
 
-  fun getSummaryByApplication(application: String): List<ResourceSummary>
+  fun getResourceSummaries(deliveryConfig: DeliveryConfig): List<ResourceSummary>
 
   fun storeResource(resource: Resource<*>)
 
