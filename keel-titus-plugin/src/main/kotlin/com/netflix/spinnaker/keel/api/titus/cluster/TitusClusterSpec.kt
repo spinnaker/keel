@@ -20,8 +20,6 @@ package com.netflix.spinnaker.keel.api.titus.cluster
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonProperty.Access
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
@@ -55,12 +53,11 @@ data class TitusClusterSpec(
   private val _defaults: TitusServerGroupSpec,
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
-  // The following 3 properties are write-only as they're filled by resolvers, but not output in JSON
-  @JsonProperty(access = Access.WRITE_ONLY)
+  @JsonIgnore
   override val artifactType: ArtifactType? = ArtifactType.docker,
-  @JsonProperty(access = Access.WRITE_ONLY)
+  @JsonIgnore
   private val _artifactName: String? = null, // Custom backing field for artifactName, used by resolvers
-  @JsonProperty(access = Access.WRITE_ONLY)
+  @JsonIgnore
   override val artifactVersion: String? = null,
   @JsonIgnore
   val containerProvider: ContainerProvider,
