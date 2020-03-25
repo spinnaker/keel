@@ -29,7 +29,7 @@ import java.util.UUID
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class InMemoryArtifactRepository(val clock: Clock = Clock.systemDefaultZone()) : ArtifactRepository {
+class InMemoryArtifactRepository(val clock: Clock = Clock.systemUTC()) : ArtifactRepository {
   // we want to store versions by name and type, not each artifact, so that we only store them once
   private val versions = mutableMapOf<VersionsKey, MutableList<ArtifactVersionAndStatus>>()
 
