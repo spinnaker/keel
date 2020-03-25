@@ -119,6 +119,16 @@ class CheckScheduler(
     }
   }
 
+  @Scheduled(fixedDelayString = "\${keel.artifact-check.frequency:PT1S}")
+  fun checkArtifacts() {
+    if (enabled.get()) {
+      log.debug("Starting scheduled artifact validation…")
+      publisher.publishEvent(ScheduledArtifactCheckStarting)
+    } else {
+      log.debug("Scheduled artifact validation disabled")
+    }
+  }
+
   @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1M}")
   fun invokeAgent() {
     if (enabled.get()) {
