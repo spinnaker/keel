@@ -181,7 +181,7 @@ class ApiDocTests : JUnit5Minutests {
             constructRef("ManualJudgementConstraint"),
             constructRef("PipelineConstraint"),
             constructRef("TimeWindowConstraint"),
-            constructRef("ArtifactTypeConstraint")
+            constructRef("ArtifactUsedConstraint")
           )
       }
 

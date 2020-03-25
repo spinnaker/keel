@@ -3,13 +3,13 @@ package com.netflix.spinnaker.keel.actuation
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.constraints.ArtifactTypeConstraintEvaluator
+import com.netflix.spinnaker.keel.constraints.ArtifactUsedConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.SupportedConstraintType
-import com.netflix.spinnaker.keel.core.api.ArtifactTypeConstraint
+import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
@@ -45,8 +45,8 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
       every { supportedType } returns SupportedConstraintType<ManualJudgementConstraint>("manual-judgment")
       every { isImplicit() } returns false
     }
-    val implicitStatelessEvaluator = mockk<ArtifactTypeConstraintEvaluator>() {
-      every { supportedType } returns SupportedConstraintType<ArtifactTypeConstraint>("artifact-type")
+    val implicitStatelessEvaluator = mockk<ArtifactUsedConstraintEvaluator>() {
+      every { supportedType } returns SupportedConstraintType<ArtifactUsedConstraint>("artifact-type")
       every { isImplicit() } returns true
       every { canPromote(any(), any(), any(), any()) } returns true
     }

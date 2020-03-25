@@ -2,32 +2,31 @@ package com.netflix.spinnaker.keel.constraints
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.core.api.ArtifactTypeConstraint
+import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
-class ArtifactTypeConstraintEvaluator(
+class ArtifactUsedConstraintEvaluator(
   override val eventPublisher: ApplicationEventPublisher
-) : ConstraintEvaluator<ArtifactTypeConstraint> {
-  override val supportedType = SupportedConstraintType<ArtifactTypeConstraint>("artifact-type")
+) : ConstraintEvaluator<ArtifactUsedConstraint> {
+  override val supportedType = SupportedConstraintType<ArtifactUsedConstraint>("artifact-used")
   override fun isImplicit() = true
 
   override fun canPromote(artifact: DeliveryArtifact, version: String, deliveryConfig: DeliveryConfig, targetEnvironment: Environment): Boolean {
-    val allowedTypes = mutableSetOf<ArtifactType>()
+    val allowedArtifacts = mutableSetOf<DeliveryArtifact>()
     deliveryConfig
       .environments
       .firstOrNull { it.name == targetEnvironment.name }
       ?.resources
       ?.forEach { resource ->
-        val usedArtifact = resource.findAssociatedArtifact(deliveryConfig)
-        if (usedArtifact != null) {
-          allowedTypes.add(usedArtifact.type)
-        }
+        resource.findAssociatedArtifact(deliveryConfig)
+          ?.let { usedArtifact ->
+            allowedArtifacts.add(usedArtifact)
+          }
       }
 
-    return artifact.type in allowedTypes
+    return artifact in allowedArtifacts
   }
 }
