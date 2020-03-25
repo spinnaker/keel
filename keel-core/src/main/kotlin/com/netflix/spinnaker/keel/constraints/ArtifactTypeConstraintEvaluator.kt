@@ -13,6 +13,7 @@ class ArtifactTypeConstraintEvaluator(
   override val eventPublisher: ApplicationEventPublisher
 ) : ConstraintEvaluator<ArtifactTypeConstraint> {
   override val supportedType = SupportedConstraintType<ArtifactTypeConstraint>("artifact-type")
+  override fun isImplicit() = true
 
   override fun canPromote(artifact: DeliveryArtifact, version: String, deliveryConfig: DeliveryConfig, targetEnvironment: Environment): Boolean {
     val allowedTypes = mutableSetOf<ArtifactType>()
