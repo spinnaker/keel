@@ -17,9 +17,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -29,15 +27,13 @@ import org.springframework.stereotype.Component
  */
 @Component
 class ApplicationService(
-  private val resourceRepository: ResourceRepository,
-  private val artifactRepository: ArtifactRepository,
-  private val deliveryConfigRepository: DeliveryConfigRepository
+  private val repository: KeelRepository
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  fun hasManagedResources(application: String) = resourceRepository.hasManagedResources(application)
+  fun hasManagedResources(application: String) = repository.hasManagedResources(application)
 
-  fun getConstraintStatesFor(application: String) = deliveryConfigRepository.constraintStateFor(application)
+  fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
 
   /**
    * Returns a list of [ResourceSummary] for the specified application.
@@ -47,7 +43,7 @@ class ApplicationService(
   fun getResourceSummariesFor(application: String): List<ResourceSummary> =
     getFirstDeliveryConfigFor(application)
       ?.let { deliveryConfig ->
-        resourceRepository.getResourceSummaries(deliveryConfig)
+        repository.getResourceSummaries(deliveryConfig)
       }
       ?: emptyList()
 
@@ -59,7 +55,7 @@ class ApplicationService(
   fun getEnvironmentSummariesFor(application: String): List<EnvironmentSummary> =
     getFirstDeliveryConfigFor(application)
       ?.let { deliveryConfig ->
-        artifactRepository.getEnvironmentSummaries(deliveryConfig)
+        repository.getEnvironmentSummaries(deliveryConfig)
       }
       ?: emptyList()
 
@@ -76,7 +72,7 @@ class ApplicationService(
     val environmentSummaries = getEnvironmentSummariesFor(application)
 
     return deliveryConfig.artifacts.map { artifact ->
-      artifactRepository.versions(artifact).map { version ->
+      repository.artifactVersions(artifact).map { version ->
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         environmentSummaries.forEach { environmentSummary ->
@@ -88,7 +84,7 @@ class ApplicationService(
                 state = status.name.toLowerCase()
               )
             } else {
-              artifactRepository.getArtifactSummaryInEnvironment(
+              repository.getArtifactSummaryInEnvironment(
                 deliveryConfig = deliveryConfig,
                 environmentName = environmentSummary.name,
                 artifactName = artifact.name,
@@ -97,7 +93,7 @@ class ApplicationService(
               )
             }?.let { artifactSummaryInEnvironment ->
               artifactSummaryInEnvironment.copy(
-                constraints = deliveryConfigRepository
+                constraints = repository
                   .constraintStateFor(deliveryConfig.name, environmentSummary.name, version)
                   .map { it.toConstraintSummary() }
               )
@@ -166,7 +162,7 @@ class ApplicationService(
     }
 
   fun getFirstDeliveryConfigFor(application: String): DeliveryConfig? =
-    deliveryConfigRepository.getByApplication(application).also {
+    repository.getDeliveryConfigsByApplication(application).also {
       if (it.size > 1) {
         log.warn("Application $application has ${it.size} delivery configs. " +
           "Returning the first one: ${it.first().name}.")
