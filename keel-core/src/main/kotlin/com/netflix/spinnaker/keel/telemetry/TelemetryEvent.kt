@@ -35,3 +35,8 @@ data class EnvironmentsCheckTimedOut(
   val application: String,
   val deliveryConfigName: String
 ) : TelemetryEvent()
+
+data class ArtifactCheckTimedOut(
+  val name: String,
+  val deliveryConfigName: String?
+) : TelemetryEvent()
