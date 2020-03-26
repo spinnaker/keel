@@ -24,7 +24,7 @@ class ErrorSimulationController {
     path = ["/error"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  fun throwAnException(): String {
+  fun throwAnException(): Map<String, Any> {
     throw SystemException("GET request was made against test endpoint that is configured to always throw an exception")
   }
 }
