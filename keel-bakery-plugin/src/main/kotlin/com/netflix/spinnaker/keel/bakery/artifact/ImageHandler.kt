@@ -1,48 +1,52 @@
-package com.netflix.spinnaker.keel.bakery.resource
+package com.netflix.spinnaker.keel.bakery.artifact
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
-import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceDiff
+import com.netflix.spinnaker.keel.actuation.ArtifactHandler
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
-import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.plugins.Resolver
-import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
-import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.api.serviceAccount
-import com.netflix.spinnaker.keel.bakery.BAKERY_API_V1
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
-import com.netflix.spinnaker.keel.bakery.api.ImageSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
-import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
+import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
-import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 
 class ImageHandler(
   private val artifactRepository: ArtifactRepository,
   private val baseImageCache: BaseImageCache,
   private val cloudDriver: CloudDriverService,
-  private val orcaService: OrcaService,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
   private val publisher: ApplicationEventPublisher,
-  private val taskLauncher: TaskLauncher,
-  resolvers: List<Resolver<*>>
-) : ResourceHandler<ImageSpec, Image>(resolvers) {
+  private val taskLauncher: TaskLauncher
+) : ArtifactHandler {
 
+  override suspend fun handle(artifact: DeliveryArtifact) {
+    if (artifact is DebianArtifact) {
+      if (taskLauncher.correlatedTasksRunning(artifact.correlationId)) {
+        publisher.publishEvent(
+          ArtifactCheckSkipped(artifact.type, artifact.name, "ActuationInProgress")
+        )
+      } else {
+        val latestVersion = artifact.findLatestVersion()
+        val image = imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+        if (image?.appVersion != latestVersion) {
+          launchBake(artifact, latestVersion)
+        }
+      }
+    }
+  }
+
+  /*
   override val supportedKind =
     SupportedKind(BAKERY_API_V1.qualify("image"), ImageSpec::class.java)
 
@@ -69,11 +73,12 @@ class ImageHandler(
         it.copy(regions = it.regions.intersect(resource.spec.regions))
       }
     }
+*/
 
   /**
    * First checks our repo, and if a version isn't found checks igor.
    */
-  private fun DeliveryArtifact.findLatestVersion(): String {
+  private suspend fun DebianArtifact.findLatestVersion(): String {
     try {
       val knownVersion = artifactRepository
         .versions(this)
@@ -90,35 +95,32 @@ class ImageHandler(
         publisher.publishEvent(ArtifactRegisteredEvent(this))
       }
     }
-    val deb = this as DebianArtifact
 
     // even though the artifact isn't registered we should grab the latest version to use
-    return runBlocking {
-      val versions = igorService
-        .getVersions(name, deb.statuses.map { it.toString() })
-      log.debug("Finding latest version of $name: versions igor knows about = $versions")
-      versions
-        .firstOrNull()
-        ?.let {
-          val version = "$name-$it"
-          log.debug("Finding latest version of $name, choosing = $version")
-          version
-        }
-    } ?: throw NoKnownArtifactVersions(this)
+    val versions = igorService
+      .getVersions(name, statuses.map { it.toString() })
+    log.debug("Finding latest version of $name: versions igor knows about = $versions")
+    return versions
+      .firstOrNull()
+      ?.let {
+        val version = "$name-$it"
+        log.debug("Finding latest version of $name, choosing = $version")
+        version
+      } ?: throw NoKnownArtifactVersions(this)
   }
 
-  override suspend fun upsert(
-    resource: Resource<ImageSpec>,
-    resourceDiff: ResourceDiff<Image>
+  suspend fun launchBake(
+    artifact: DebianArtifact,
+    desiredVersion: String
   ): List<Task> {
-    val appVersion = AppVersion.parseName(resourceDiff.desired.appVersion)
+    val appVersion = AppVersion.parseName(desiredVersion)
     val packageName = appVersion.packageName
-    val version = resourceDiff.desired.appVersion.substringAfter("$packageName-")
+    val version = desiredVersion.substringAfter("$packageName-")
     val artifactRef = "/${packageName}_${version}_all.deb"
-    val artifact = mapOf(
+    val artifactPayload = mapOf(
       "type" to "DEB",
       "customKind" to false,
-      "name" to resource.spec.artifactName,
+      "name" to artifact.name,
       "version" to version,
       "location" to "rocket",
       "reference" to artifactRef,
@@ -126,42 +128,43 @@ class ImageHandler(
       "provenance" to "n/a"
     )
 
-    log.info("baking new image for {}", resource.spec.artifactName)
-    val description = "Bake ${resourceDiff.desired.appVersion}"
+    log.info("baking new image for {}", artifact.name)
+    val description = "Bake $desiredVersion"
 
     try {
       val taskRef = taskLauncher.submitJob(
-        user = resource.serviceAccount,
-        application = resource.application,
+        user = "// TODO: FIGURE THIS OUT",
+        application = "// TODO: FIGURE THIS OUT",
         notifications = emptySet(),
         subject = description,
         description = description,
-        correlationId = resource.id,
+        correlationId = artifact.correlationId,
         stages = listOf(
           Job(
             "bake",
             mapOf(
               "amiSuffix" to "",
-              "baseOs" to resource.spec.baseOs,
-              "baseLabel" to resource.spec.baseLabel.name.toLowerCase(),
+              "baseOs" to artifact.vmOptions.baseOs,
+              "baseLabel" to artifact.vmOptions.baseLabel.name.toLowerCase(),
               "cloudProviderType" to "aws",
               "package" to artifactRef.substringAfterLast("/"),
-              "regions" to resource.spec.regions,
-              "storeType" to resource.spec.storeType.name.toLowerCase(),
+              "regions" to artifact.vmOptions.regions,
+              "storeType" to artifact.vmOptions.storeType.name.toLowerCase(),
               "user" to "keel",
               "vmType" to "hvm"
             )
           )
         ),
-        artifacts = listOf(artifact)
+        artifacts = listOf(artifactPayload)
       )
       return listOf(Task(id = taskRef.id, name = description))
     } catch (e: Exception) {
-      log.error("Error launching orca bake for: ${description.toLowerCase()}")
+      log.error("Error launching bake for: ${description.toLowerCase()}")
       return emptyList()
     }
   }
 
+/*
   override suspend fun actuationInProgress(resource: Resource<ImageSpec>): Boolean =
     orcaService
       .getCorrelatedExecutions(resource.id)
@@ -185,6 +188,13 @@ class ImageHandler(
 
   private fun ResourceDiff<Image>.isRegionOnly(): Boolean =
     current != null && (current as Image).regions.size != desired.regions.size
+
+   */
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
+
+internal val DebianArtifact.correlationId: String
+  get() = "bake:$name"
 
 class BaseAmiNotFound(baseImage: String) : IntegrationException("Could not find a base AMI for base image $baseImage")

@@ -2,14 +2,12 @@ package com.netflix.spinnaker.config
 
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
-import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.BaseImageCacheProperties
 import com.netflix.spinnaker.keel.bakery.DefaultBaseImageCache
-import com.netflix.spinnaker.keel.bakery.resource.ImageHandler
+import com.netflix.spinnaker.keel.bakery.artifact.ImageHandler
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -27,22 +25,18 @@ class BakeryConfiguration {
     artifactRepository: ArtifactRepository,
     baseImageCache: BaseImageCache,
     clouddriverService: CloudDriverService,
-    orcaService: OrcaService,
     igorService: ArtifactService,
     imageService: ImageService,
     publisher: ApplicationEventPublisher,
-    taskLauncher: TaskLauncher,
-    normalizers: List<Resolver<*>>
+    taskLauncher: TaskLauncher
   ) = ImageHandler(
     artifactRepository,
     baseImageCache,
     clouddriverService,
-    orcaService,
     igorService,
     imageService,
     publisher,
-    taskLauncher,
-    normalizers
+    taskLauncher
   )
 
   @Bean

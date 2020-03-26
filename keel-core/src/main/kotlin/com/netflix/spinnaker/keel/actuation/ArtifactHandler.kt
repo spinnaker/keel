@@ -6,5 +6,5 @@ interface ArtifactHandler {
   val name: String
     get() = javaClass.simpleName
 
-  fun handle(artifact: DeliveryArtifact)
+  suspend fun handle(artifact: DeliveryArtifact)
 }

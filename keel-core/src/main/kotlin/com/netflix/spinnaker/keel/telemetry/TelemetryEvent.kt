@@ -36,6 +36,12 @@ data class EnvironmentsCheckTimedOut(
   val deliveryConfigName: String
 ) : TelemetryEvent()
 
+data class ArtifactCheckSkipped(
+  val type: ArtifactType,
+  val name: String,
+  val reason: String = "unknown"
+)
+
 data class ArtifactCheckTimedOut(
   val name: String,
   val deliveryConfigName: String?
