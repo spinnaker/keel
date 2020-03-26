@@ -60,13 +60,13 @@ import strikt.assertions.containsExactly
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
-  classes = [KeelApplication::class, MockEurekaConfiguration::class, ApplicationControllerTests.ClockConfiguration::class],
+  classes = [KeelApplication::class, MockEurekaConfiguration::class, ApplicationControllerTests.TestConfiguration::class],
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class ApplicationControllerTests : JUnit5Minutests {
   @Configuration
-  class ClockConfiguration {
+  class TestConfiguration {
     @Bean
     fun clock(): Clock = MutableClock(
       Instant.parse("2020-03-25T00:00:00.00Z"),
