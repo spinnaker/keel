@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class],
+  properties = ["tests.error-simulation=true"],
   webEnvironment = SpringBootTest.WebEnvironment.MOCK
 )
 
