@@ -8,7 +8,8 @@ import java.time.temporal.TemporalAmount
 
 class MutableClock(
   private var instant: Instant = Instant.now(),
-  private val zone: ZoneId = ZoneId.of("UTC")
+  private val zone: ZoneId = ZoneId.of("UTC"),
+  private val start: Instant = instant
 ) : Clock() {
 
   override fun withZone(zone: ZoneId): MutableClock {
@@ -35,5 +36,9 @@ class MutableClock(
 
   fun instant(newInstant: Instant) {
     instant = newInstant
+  }
+
+  fun reset() {
+    instant = start
   }
 }

@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.DeliveryConfig
@@ -21,22 +23,25 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
+import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
 import io.mockk.mockk
 import java.nio.charset.StandardCharsets
 import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
@@ -51,13 +56,25 @@ import strikt.assertions.containsExactly
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
-  classes = [KeelApplication::class, MockEurekaConfiguration::class],
+  classes = [KeelApplication::class, MockEurekaConfiguration::class, ApplicationControllerTests.ClockConfiguration::class],
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class ApplicationControllerTests : JUnit5Minutests {
+  @Configuration
+  class ClockConfiguration {
+    @Bean
+    fun clock(): Clock = MutableClock(
+      Instant.parse("2020-03-25T00:00:00.00Z"),
+      ZoneId.of("UTC")
+    )
+  }
+
   @Autowired
   lateinit var mvc: MockMvc
+
+  @Autowired
+  lateinit var clock: MutableClock
 
   @Autowired
   lateinit var deliveryConfigRepository: InMemoryDeliveryConfigRepository
@@ -71,9 +88,11 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var actuationPauser: ActuationPauser
 
-  private val jsonMapper = configuredObjectMapper()
+  @Autowired
+  lateinit var jsonMapper: ObjectMapper
 
-  private val yamlMapper = configuredYamlMapper()
+  @Autowired
+  lateinit var yamlMapper: YAMLMapper
 
   class Fixture(combinedRepositoryMaker: () -> KeelRepository) {
     val application = "fnord"
@@ -151,11 +170,15 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   }
 
   fun makeCombinedRepository() = CombinedRepository(
-    deliveryConfigRepository, artifactRepository, resourceRepository, Clock.systemDefaultZone(), mockk(relaxed = true)
+    deliveryConfigRepository, artifactRepository, resourceRepository, Clock.systemUTC(), mockk(relaxed = true)
   )
 
   fun tests() = rootContext<Fixture> {
     fixture { Fixture(this@ApplicationControllerTests::makeCombinedRepository) }
+
+    before {
+      clock.reset()
+    }
 
     after {
       deliveryConfigRepository.dropAll()
@@ -171,17 +194,22 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
           resourceRepository.appendHistory(ResourceValid(resource))
         }
-        artifactRepository.store(artifact, "fnord-1.0.0-h0.2add2c9", ArtifactStatus.RELEASE)
-        artifactRepository.store(artifact, "fnord-1.0.1-h1.2add2c9", ArtifactStatus.RELEASE)
-        artifactRepository.store(artifact, "fnord-1.0.2-h2.2add2c9", ArtifactStatus.RELEASE)
-        artifactRepository.store(artifact, "fnord-1.0.3-h3.2add2c9", ArtifactStatus.RELEASE)
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.2add2c9", "test")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.2add2c9", "staging")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.2add2c9", "production")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.2add2c9", "test")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.2add2c9", "staging")
-        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.2-h2.2add2c9", "test")
-        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.3-h3.2add2c9", "test")
+        artifactRepository.store(artifact, "fnord-1.0.0-h0.a0a0a0a", ArtifactStatus.RELEASE)
+        artifactRepository.store(artifact, "fnord-1.0.1-h1.b1b1b1b", ArtifactStatus.RELEASE)
+        artifactRepository.store(artifact, "fnord-1.0.2-h2.c2c2c2c", ArtifactStatus.RELEASE)
+        artifactRepository.store(artifact, "fnord-1.0.3-h3.d3d3d3d", ArtifactStatus.RELEASE)
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "test")
+        clock.tickHours(1) // 2020-03-25T01:00:00.00Z
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "staging")
+        clock.tickHours(1) // 2020-03-25T02:00:00.00Z
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "production")
+        clock.tickHours(1) // 2020-03-25T03:00:00.00Z
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.b1b1b1b", "test")
+        clock.tickHours(1) // 2020-03-25T04:00:00.00Z
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.b1b1b1b", "staging")
+        clock.tickHours(1) // 2020-03-25T05:00:00.00Z
+        artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.2-h2.c2c2c2c", "test")
+        artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.3-h3.d3d3d3d", "test")
       }
 
       test("can get basic summary by application") {
@@ -342,57 +370,57 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             hasManagedResources: true
             currentEnvironmentConstraints: []
             environments:
-            - artifacts:
+            - name: "test"
+              artifacts:
               - name: "fnord"
                 type: "deb"
                 statuses:
                 - "RELEASE"
                 versions:
-                  current: "fnord-1.0.2-h2.2add2c9"
+                  current: "fnord-1.0.2-h2.c2c2c2c"
                   pending: []
                   approved:
-                  - "fnord-1.0.3-h3.2add2c9"
+                  - "fnord-1.0.3-h3.d3d3d3d"
                   previous:
-                  - "fnord-1.0.0-h0.2add2c9"
-                  - "fnord-1.0.1-h1.2add2c9"
+                  - "fnord-1.0.0-h0.a0a0a0a"
+                  - "fnord-1.0.1-h1.b1b1b1b"
                   vetoed: []
-              name: "test"
               resources:
               - "ec2:cluster:test:fnord-test-west"
               - "ec2:cluster:test:fnord-test-east"
-            - artifacts:
+            - name: "staging"
+              artifacts:
               - name: "fnord"
                 type: "deb"
                 statuses:
                 - "RELEASE"
                 versions:
-                  current: "fnord-1.0.1-h1.2add2c9"
+                  current: "fnord-1.0.1-h1.b1b1b1b"
                   pending:
-                  - "fnord-1.0.2-h2.2add2c9"
-                  - "fnord-1.0.3-h3.2add2c9"
+                  - "fnord-1.0.2-h2.c2c2c2c"
+                  - "fnord-1.0.3-h3.d3d3d3d"
                   approved: []
                   previous:
-                  - "fnord-1.0.0-h0.2add2c9"
+                  - "fnord-1.0.0-h0.a0a0a0a"
                   vetoed: []
-              name: "staging"
               resources:
               - "ec2:cluster:test:fnord-staging-west"
               - "ec2:cluster:test:fnord-staging-east"
-            - artifacts:
+            - name: "production"
+              artifacts:
               - name: "fnord"
                 type: "deb"
                 statuses:
                 - "RELEASE"
                 versions:
-                  current: "fnord-1.0.0-h0.2add2c9"
+                  current: "fnord-1.0.0-h0.a0a0a0a"
                   pending:
-                  - "fnord-1.0.1-h1.2add2c9"
-                  - "fnord-1.0.2-h2.2add2c9"
-                  - "fnord-1.0.3-h3.2add2c9"
+                  - "fnord-1.0.1-h1.b1b1b1b"
+                  - "fnord-1.0.2-h2.c2c2c2c"
+                  - "fnord-1.0.3-h3.d3d3d3d"
                   approved: []
                   previous: []
                   vetoed: []
-              name: "production"
               resources:
               - "ec2:cluster:test:fnord-production-west"
               - "ec2:cluster:test:fnord-production-east"
@@ -416,7 +444,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             - name: "fnord"
               type: "deb"
               versions:
-              - version: "fnord-1.0.3-h3.2add2c9"
+              - version: "fnord-1.0.3-h3.d3d3d3d"
                 displayName: "1.0.3"
                 environments:
                 - name: "test"
@@ -428,12 +456,13 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 build:
                   id: 3
                 git:
-                  commit: "2add2c9"
-              - version: "fnord-1.0.2-h2.2add2c9"
+                  commit: "d3d3d3d"
+              - version: "fnord-1.0.2-h2.c2c2c2c"
                 displayName: "1.0.2"
                 environments:
                 - name: "test"
                   state: "current"
+                  deployedAt: "2020-03-25T05:00:00Z"
                 - name: "staging"
                   state: "pending"
                 - name: "production"
@@ -441,33 +470,44 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 build:
                   id: 2
                 git:
-                  commit: "2add2c9"
-              - version: "fnord-1.0.1-h1.2add2c9"
+                  commit: "c2c2c2c"
+              - version: "fnord-1.0.1-h1.b1b1b1b"
                 displayName: "1.0.1"
                 environments:
                 - name: "test"
                   state: "previous"
+                  deployedAt: "2020-03-25T03:00:00Z"
+                  replacedAt: "2020-03-25T05:00:00Z"
+                  replacedBy: "fnord-1.0.2-h2.c2c2c2c"
                 - name: "staging"
                   state: "current"
+                  deployedAt: "2020-03-25T04:00:00Z"
                 - name: "production"
                   state: "pending"
                 build:
                   id: 1
                 git:
-                  commit: "2add2c9"
-              - version: "fnord-1.0.0-h0.2add2c9"
+                  commit: "b1b1b1b"
+              - version: "fnord-1.0.0-h0.a0a0a0a"
                 displayName: "1.0.0"
                 environments:
                 - name: "test"
                   state: "previous"
+                  deployedAt: "2020-03-25T00:00:00Z"
+                  replacedAt: "2020-03-25T03:00:00Z"
+                  replacedBy: "fnord-1.0.1-h1.b1b1b1b"
                 - name: "staging"
                   state: "previous"
+                  deployedAt: "2020-03-25T01:00:00Z"
+                  replacedAt: "2020-03-25T04:00:00Z"
+                  replacedBy: "fnord-1.0.1-h1.b1b1b1b"
                 - name: "production"
                   state: "current"
+                  deployedAt: "2020-03-25T02:00:00Z"
                 build:
                   id: 0
                 git:
-                  commit: "2add2c9"
+                  commit: "a0a0a0a"
             """.trimIndent()
           ))
       }
