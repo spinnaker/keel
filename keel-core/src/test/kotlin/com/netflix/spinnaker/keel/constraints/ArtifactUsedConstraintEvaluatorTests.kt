@@ -18,8 +18,8 @@ import strikt.assertions.isTrue
 internal class ArtifactUsedConstraintEvaluatorTests : JUnit5Minutests {
   object Fixture {
     val manifestName = "my-manifest"
-    val debian = DebianArtifact("fnord", deliveryConfigName = manifestName)
-    val docker = DockerArtifact("fnord", deliveryConfigName = manifestName)
+    val debian = DebianArtifact("fnord", reference = "dockerFnord", deliveryConfigName = manifestName)
+    val docker = DockerArtifact("fnord", reference = "debfnord", deliveryConfigName = manifestName)
     val anotherDebian = DebianArtifact("fnord", reference = "fnord2.0", statuses = setOf(SNAPSHOT), deliveryConfigName = manifestName)
 
     val emptyEnv = Environment(

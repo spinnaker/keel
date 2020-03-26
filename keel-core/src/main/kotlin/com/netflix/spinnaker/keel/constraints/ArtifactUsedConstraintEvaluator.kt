@@ -15,7 +15,7 @@ class ArtifactUsedConstraintEvaluator(
   override fun isImplicit() = true
 
   override fun canPromote(artifact: DeliveryArtifact, version: String, deliveryConfig: DeliveryConfig, targetEnvironment: Environment): Boolean {
-    val allowedArtifacts = mutableSetOf<DeliveryArtifact>()
+    val allowedReferences = mutableSetOf<String>()
     deliveryConfig
       .environments
       .firstOrNull { it.name == targetEnvironment.name }
@@ -23,10 +23,10 @@ class ArtifactUsedConstraintEvaluator(
       ?.forEach { resource ->
         resource.findAssociatedArtifact(deliveryConfig)
           ?.let { usedArtifact ->
-            allowedArtifacts.add(usedArtifact)
+            allowedReferences.add(usedArtifact.reference)
           }
       }
 
-    return artifact in allowedArtifacts
+    return artifact.reference in allowedReferences
   }
 }
