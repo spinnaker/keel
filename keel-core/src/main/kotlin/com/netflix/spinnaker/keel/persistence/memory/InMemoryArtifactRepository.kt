@@ -456,10 +456,10 @@ class InMemoryArtifactRepository(val clock: Clock = Clock.systemUTC()) : Artifac
     val key = EnvironmentVersionsKey(artifactId, deliveryConfig, environmentName)
     val statuses = statusByEnvironment.getOrDefault(key, emptyMap<String, String>())
     val artifactDeployedVersions = deployedVersions[key]
-      ?.sortedBy { (_, deployedAt) -> deployedAt }
+      ?.sortedBy { (_, deployedAt) -> deployedAt } // ascending because we want to get the replacement deployment using `firstOrNull` below
     val deployedAt = artifactDeployedVersions?.find { (ver, _) -> ver == version }?.second
     val (replacedBy, replacedAt) = artifactDeployedVersions?.firstOrNull { (ver, at) ->
-      ver != version && deployedAt != null && at.isBefore(deployedAt) }
+      ver != version && deployedAt != null && at.isAfter(deployedAt) }
       ?: Pair(null, null)
 
     return ArtifactSummaryInEnvironment(

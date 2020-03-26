@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import java.time.Instant
 
 /**
  * Summarized data about a specific artifact, mostly for use by the UI.
  */
+@JsonPropertyOrder(value = ["name", "type", "versions"])
 data class ArtifactSummary(
   val name: String,
   val type: ArtifactType,
@@ -17,6 +19,7 @@ data class ArtifactSummary(
 )
 
 @JsonInclude(Include.NON_NULL)
+@JsonPropertyOrder(value = ["name", "version", "state"])
 data class ArtifactVersionSummary(
   val version: String,
   val displayName: String,
