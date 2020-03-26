@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 )
 
 @AutoConfigureMockMvc
-internal class TestControllerTests {
+internal class ErrorSimulationControllerTests {
   @Autowired
   lateinit var mvc: MockMvc
 
