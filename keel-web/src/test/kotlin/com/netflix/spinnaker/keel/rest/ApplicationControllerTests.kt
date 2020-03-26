@@ -14,11 +14,12 @@ import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
-import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
@@ -33,6 +34,7 @@ import io.mockk.clearAllMocks
 import io.mockk.mockk
 import java.nio.charset.StandardCharsets
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import org.junit.jupiter.api.extension.ExtendWith
@@ -40,8 +42,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
@@ -68,6 +72,10 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       Instant.parse("2020-03-25T00:00:00.00Z"),
       ZoneId.of("UTC")
     )
+
+    @Bean
+    @Primary
+    fun publisher(): ApplicationEventPublisher = mockk(relaxed = true)
   }
 
   @Autowired
@@ -86,6 +94,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   lateinit var artifactRepository: InMemoryArtifactRepository
 
   @Autowired
+  lateinit var combinedRepository: KeelRepository
+
+  @Autowired
   lateinit var actuationPauser: ActuationPauser
 
   @Autowired
@@ -94,7 +105,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var yamlMapper: YAMLMapper
 
-  class Fixture(combinedRepositoryMaker: () -> KeelRepository) {
+  class Fixture {
     val application = "fnord"
 
     val artifact = DebianArtifact(
@@ -165,16 +176,10 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       artifacts = setOf(artifact),
       environments = environments.values.toSet()
     )
-
-    val combinedRepository = combinedRepositoryMaker()
   }
 
-  fun makeCombinedRepository() = CombinedRepository(
-    deliveryConfigRepository, artifactRepository, resourceRepository, Clock.systemUTC(), mockk(relaxed = true)
-  )
-
   fun tests() = rootContext<Fixture> {
-    fixture { Fixture(this@ApplicationControllerTests::makeCombinedRepository) }
+    fixture { Fixture() }
 
     before {
       clock.reset()
@@ -198,10 +203,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         artifactRepository.store(artifact, "fnord-1.0.1-h1.b1b1b1b", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "fnord-1.0.2-h2.c2c2c2c", ArtifactStatus.RELEASE)
         artifactRepository.store(artifact, "fnord-1.0.3-h3.d3d3d3d", ArtifactStatus.RELEASE)
+
+        // with our fake clock moving forward, simulate artifact approvals and deployments
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "test")
         clock.tickHours(1) // 2020-03-25T01:00:00.00Z
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "staging")
-        clock.tickHours(1) // 2020-03-25T02:00:00.00Z
+        val productionDeployed = clock.tickHours(1) // 2020-03-25T02:00:00.00Z
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "production")
         clock.tickHours(1) // 2020-03-25T03:00:00.00Z
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.b1b1b1b", "test")
@@ -210,6 +217,20 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         clock.tickHours(1) // 2020-03-25T05:00:00.00Z
         artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.2-h2.c2c2c2c", "test")
         artifactRepository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.3-h3.d3d3d3d", "test")
+
+        deliveryConfigRepository.storeConstraintState(
+          ConstraintState(
+            deliveryConfigName = deliveryConfig.name,
+            environmentName = "production",
+            artifactVersion = "fnord-1.0.0-h0.a0a0a0a",
+            type = "manual-judgement",
+            status = ConstraintStatus.OVERRIDE_PASS,
+            createdAt = clock.start,
+            judgedAt = productionDeployed.minus(Duration.ofMinutes(30)),
+            judgedBy = "lpollo@acme.com",
+            comment = "Aye!"
+          )
+        )
       }
 
       test("can get basic summary by application") {
@@ -222,8 +243,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             """
               {
                 "applicationPaused":false,
-                "hasManagedResources":true,
-                "currentEnvironmentConstraints":[]
+                "hasManagedResources":true
               }
             """.trimIndent()
           ))
@@ -248,8 +268,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
               """
               {
                 "applicationPaused":true,
-                "hasManagedResources":true,
-                "currentEnvironmentConstraints":[]
+                "hasManagedResources":true
               }
             """.trimIndent()
             ))
@@ -267,7 +286,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             """
             applicationPaused: false
             hasManagedResources: true
-            currentEnvironmentConstraints: []
+            currentEnvironmentConstraints:
+            - deliveryConfigName: "manifest"
+              environmentName: "production"
+              artifactVersion: "fnord-1.0.0-h0.a0a0a0a"
+              type: "manual-judgement"
+              status: "OVERRIDE_PASS"
+              createdAt: "2020-03-25T00:00:00Z"
+              judgedBy: "lpollo@acme.com"
+              judgedAt: "2020-03-25T01:30:00Z"
+              comment: "Aye!"
             resources:
             - id: "ec2:cluster:test:fnord-test-west"
               kind: "ec2/cluster@v1"
@@ -368,7 +396,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             """
             applicationPaused: false
             hasManagedResources: true
-            currentEnvironmentConstraints: []
+            currentEnvironmentConstraints:
+            - deliveryConfigName: "manifest"
+              environmentName: "production"
+              artifactVersion: "fnord-1.0.0-h0.a0a0a0a"
+              type: "manual-judgement"
+              status: "OVERRIDE_PASS"
+              createdAt: "2020-03-25T00:00:00Z"
+              judgedBy: "lpollo@acme.com"
+              judgedAt: "2020-03-25T01:30:00Z"
+              comment: "Aye!"
             environments:
             - name: "test"
               artifacts:
@@ -439,7 +476,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             """
             applicationPaused: false
             hasManagedResources: true
-            currentEnvironmentConstraints: []
+            currentEnvironmentConstraints:
+            - deliveryConfigName: "manifest"
+              environmentName: "production"
+              artifactVersion: "fnord-1.0.0-h0.a0a0a0a"
+              type: "manual-judgement"
+              status: "OVERRIDE_PASS"
+              createdAt: "2020-03-25T00:00:00Z"
+              judgedBy: "lpollo@acme.com"
+              judgedAt: "2020-03-25T01:30:00Z"
+              comment: "Aye!"
             artifacts:
             - name: "fnord"
               type: "deb"
@@ -504,6 +550,13 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                 - name: "production"
                   state: "current"
                   deployedAt: "2020-03-25T02:00:00Z"
+                  constraints:
+                  - type: "manual-judgement"
+                    status: "OVERRIDE_PASS"
+                    createdAt: "2020-03-25T00:00:00Z"
+                    judgedBy: "lpollo@acme.com"
+                    judgedAt: "2020-03-25T01:30:00Z"
+                    comment: "Aye!"
                 build:
                   id: 0
                 git:

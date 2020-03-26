@@ -6,17 +6,20 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.BuildMetadata
+import com.netflix.spinnaker.keel.core.api.EnvironmentConstraintSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -26,14 +29,15 @@ import org.springframework.stereotype.Component
  */
 @Component
 class ApplicationService(
-  private val repository: KeelRepository,
-  private val artifactRepository: ArtifactRepository
+  private val resourceRepository: ResourceRepository,
+  private val artifactRepository: ArtifactRepository,
+  private val deliveryConfigRepository: DeliveryConfigRepository
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  fun hasManagedResources(application: String) = repository.hasManagedResources(application)
+  fun hasManagedResources(application: String) = resourceRepository.hasManagedResources(application)
 
-  fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
+  fun getConstraintStatesFor(application: String) = deliveryConfigRepository.constraintStateFor(application)
 
   /**
    * Returns a list of [ResourceSummary] for the specified application.
@@ -43,7 +47,7 @@ class ApplicationService(
   fun getResourceSummariesFor(application: String): List<ResourceSummary> =
     getFirstDeliveryConfigFor(application)
       ?.let { deliveryConfig ->
-        repository.getResourceSummaries(deliveryConfig)
+        resourceRepository.getResourceSummaries(deliveryConfig)
       }
       ?: emptyList()
 
@@ -90,6 +94,12 @@ class ApplicationService(
                 artifactName = artifact.name,
                 artifactType = artifact.type,
                 version = version
+              )
+            }?.let { artifactSummaryInEnvironment ->
+              artifactSummaryInEnvironment.copy(
+                constraints = deliveryConfigRepository
+                  .constraintStateFor(deliveryConfig.name, environmentSummary.name, version)
+                  .map { it.toConstraintSummary() }
               )
             }?.also { artifactSummaryInEnvironment ->
               artifactSummariesInEnvironments.add(artifactSummaryInEnvironment)
@@ -156,7 +166,7 @@ class ApplicationService(
     }
 
   fun getFirstDeliveryConfigFor(application: String): DeliveryConfig? =
-    repository.getDeliveryConfigsByApplication(application).also {
+    deliveryConfigRepository.getByApplication(application).also {
       if (it.size > 1) {
         log.warn("Application $application has ${it.size} delivery configs. " +
           "Returning the first one: ${it.first().name}.")
@@ -165,4 +175,7 @@ class ApplicationService(
 
   private val ArtifactVersions.key: String
     get() = "${type.name}:$name"
+
+  private fun ConstraintState.toConstraintSummary() =
+    EnvironmentConstraintSummary(type, status, createdAt, judgedBy, judgedAt, comment, attributes)
 }

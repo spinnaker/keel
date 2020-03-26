@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.constraints.ConstraintStateAttributes
+import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import java.time.Instant
 
 /**
@@ -44,6 +46,7 @@ data class GitMetadata(
   val commit: String
 )
 
+@JsonInclude(Include.NON_EMPTY)
 data class ArtifactSummaryInEnvironment(
   @JsonProperty("name")
   val environment: String,
@@ -52,5 +55,17 @@ data class ArtifactSummaryInEnvironment(
   val state: String,
   val deployedAt: Instant? = null,
   val replacedAt: Instant? = null,
-  val replacedBy: String? = null
+  val replacedBy: String? = null,
+  val constraints: List<EnvironmentConstraintSummary> = emptyList()
+)
+
+@JsonInclude(Include.NON_NULL)
+data class EnvironmentConstraintSummary(
+  val type: String,
+  val status: ConstraintStatus,
+  val createdAt: Instant,
+  val judgedBy: String? = null,
+  val judgedAt: Instant? = null,
+  val comment: String? = null,
+  val attributes: ConstraintStateAttributes? = null
 )

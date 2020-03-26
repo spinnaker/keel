@@ -9,7 +9,7 @@ import java.time.temporal.TemporalAmount
 class MutableClock(
   private var instant: Instant = Instant.now(),
   private val zone: ZoneId = ZoneId.of("UTC"),
-  private val start: Instant = instant
+  val start: Instant = instant
 ) : Clock() {
 
   override fun withZone(zone: ZoneId): MutableClock {
@@ -28,11 +28,11 @@ class MutableClock(
     instant = instant.plus(amount)
   }
 
-  fun tickSeconds(seconds: Long) = incrementBy(Duration.ofSeconds(seconds))
+  fun tickSeconds(seconds: Long) = incrementBy(Duration.ofSeconds(seconds)).let { instant }
 
-  fun tickMinutes(minutes: Long) = incrementBy(Duration.ofMinutes(minutes))
+  fun tickMinutes(minutes: Long) = incrementBy(Duration.ofMinutes(minutes)).let { instant }
 
-  fun tickHours(hours: Long) = incrementBy(Duration.ofHours(hours))
+  fun tickHours(hours: Long) = incrementBy(Duration.ofHours(hours)).let { instant }
 
   fun instant(newInstant: Instant) {
     instant = newInstant
