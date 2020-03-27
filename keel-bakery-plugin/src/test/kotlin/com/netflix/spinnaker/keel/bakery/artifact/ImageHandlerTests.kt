@@ -34,8 +34,11 @@ import strikt.api.Try
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.failed
+import strikt.assertions.first
+import strikt.assertions.get
 import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 
 internal class ImageHandlerTests : JUnit5Minutests {
@@ -76,7 +79,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
     )
 
     lateinit var handlerResult: Assertion.Builder<Try<Unit>>
-    val bakeTask: CapturingSlot<List<Map<String, Any?>>> = slot<List<Map<String, Any?>>>()
+    val bakeTask: CapturingSlot<List<Map<String, Any?>>> = slot()
+    val bakeTaskArtifact: CapturingSlot<List<Map<String, Any?>>> = slot()
 
     fun runHandler(artifact: DeliveryArtifact) {
       if (artifact is DebianArtifact) {
@@ -89,7 +93,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             any(),
             artifact.correlationId,
             capture(bakeTask),
-            any<List<Map<String, Any?>>>()
+            capture(bakeTaskArtifact)
           )
         }
       }
@@ -246,6 +250,28 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 .isCaptured()
                 .captured
                 .hasSize(1)
+                .first()
+                .and {
+                  get("type").isEqualTo("bake")
+                  get("package").isEqualTo("${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                  get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
+                  get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
+                  get("storeType").isEqualTo(artifact.vmOptions.storeType.toString().toLowerCase())
+                  get("regions").isEqualTo(artifact.vmOptions.regions)
+                }
+            }
+
+            test("the artifact details are attached") {
+              expectThat(bakeTaskArtifact)
+                .isCaptured()
+                .captured
+                .hasSize(1)
+                .first()
+                .and {
+                  get("name").isEqualTo(artifact.name)
+                  get("version").isEqualTo(image.appVersion.removePrefix("${artifact.name}-"))
+                  get("reference").isEqualTo("/${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                }
             }
           }
         }
