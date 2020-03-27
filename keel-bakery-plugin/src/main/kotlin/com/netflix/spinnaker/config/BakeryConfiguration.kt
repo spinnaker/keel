@@ -5,10 +5,13 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.bakery.BaseImageCacheProperties
 import com.netflix.spinnaker.keel.bakery.DefaultBaseImageCache
+import com.netflix.spinnaker.keel.bakery.artifact.BakeCredentials
 import com.netflix.spinnaker.keel.bakery.artifact.ImageHandler
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -23,20 +26,24 @@ class BakeryConfiguration {
   @Bean
   fun imageHandler(
     artifactRepository: ArtifactRepository,
+    deliveryConfigRepository: DeliveryConfigRepository,
     baseImageCache: BaseImageCache,
     clouddriverService: CloudDriverService,
     igorService: ArtifactService,
     imageService: ImageService,
     publisher: ApplicationEventPublisher,
-    taskLauncher: TaskLauncher
+    taskLauncher: TaskLauncher,
+    @Value("\${bakery.defaults.serviceAccount:keel@spinnaker.io}") defaultServiceAccount: String,
+    @Value("\${bakery.defaults.application:keel}") defaultApplication: String
   ) = ImageHandler(
     artifactRepository,
+    deliveryConfigRepository,
     baseImageCache,
-    clouddriverService,
     igorService,
     imageService,
     publisher,
-    taskLauncher
+    taskLauncher,
+    BakeCredentials(defaultServiceAccount, defaultApplication)
   )
 
   @Bean

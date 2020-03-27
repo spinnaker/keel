@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.bakery.artifact
 
 import com.netflix.spinnaker.igor.ArtifactService
+import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
@@ -11,14 +12,14 @@ import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.StoreType.EBS
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
-import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
+import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Called
@@ -28,12 +29,10 @@ import io.mockk.coVerify as verify
 import io.mockk.mockk
 import io.mockk.slot
 import java.util.UUID.randomUUID
-import kotlin.text.removePrefix
-import kotlin.text.replaceFirst
-import kotlin.text.toLowerCase
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.Assertion
 import strikt.api.Try
+import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.failed
@@ -48,7 +47,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
   internal class Fixture {
     val artifactRepository = InMemoryArtifactRepository()
-    val theCloudDriver = mockk<CloudDriverService>()
+    val deliveryConfigRepository = InMemoryDeliveryConfigRepository()
     val igorService = mockk<ArtifactService>()
     val baseImageCache = mockk<BaseImageCache>()
     val imageService = mockk<ImageService>()
@@ -56,12 +55,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
     val taskLauncher = mockk<TaskLauncher>()
     val handler = ImageHandler(
       artifactRepository,
+      deliveryConfigRepository,
       baseImageCache,
-      theCloudDriver,
       igorService,
       imageService,
       publisher,
-      taskLauncher
+      taskLauncher,
+      BakeCredentials("keel@spinnaker.io", "keel")
     )
 
     val artifact = DebianArtifact(
@@ -81,16 +81,23 @@ internal class ImageHandlerTests : JUnit5Minutests {
       regions = artifact.vmOptions.regions
     )
 
+    val deliveryConfig = deliveryConfig(
+      configName = artifact.deliveryConfigName!!,
+      artifact = artifact
+    )
+
     lateinit var handlerResult: Assertion.Builder<Try<Unit>>
-    val bakeTask: CapturingSlot<List<Map<String, Any?>>> = slot()
-    val bakeTaskArtifact: CapturingSlot<List<Map<String, Any?>>> = slot()
+    val bakeTask = slot<List<Map<String, Any?>>>()
+    val bakeTaskUser = slot<String>()
+    val bakeTaskApplication = slot<String>()
+    val bakeTaskArtifact = slot<List<Map<String, Any?>>>()
 
     fun runHandler(artifact: DeliveryArtifact) {
       if (artifact is DebianArtifact) {
         every {
           taskLauncher.submitJob(
-            any(),
-            any(),
+            capture(bakeTaskUser),
+            capture(bakeTaskApplication),
             any(),
             any(),
             any(),
@@ -98,6 +105,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
             capture(bakeTask),
             capture(bakeTaskArtifact)
           )
+        } answers {
+          Task(randomUUID().toString(), "baking new image for ${artifact.name}")
         }
       }
 
@@ -107,19 +116,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
     }
   }
 
-  // TODO: keep getting the same diff even after baking (bake failed?)
-  // TODO: already an image in more regions (still no diff)
-  // TODO: latest image has older app version - launch bake
-  // TODO: latest image has older base image - launch bake
-  // TODO: already an image but not in all regions (rebake?)
-  // TODO: can't find artifact version
-  // TODO: can't find artifact version with right status
-  // TODO: no cached base image
-  // TODO: can't find base image
   fun tests() = rootContext<Fixture> {
     fixture { Fixture() }
 
-    after { artifactRepository.dropAll() }
+    after {
+      deliveryConfigRepository.dropAll()
+      artifactRepository.dropAll()
+    }
 
     context("the artifact is not a Debian") {
       before {
@@ -128,7 +131,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
       test("nothing happens") {
         verify { imageService wasNot Called }
-        verify { theCloudDriver wasNot Called }
         verify { igorService wasNot Called }
         verify { baseImageCache wasNot Called }
         verify { taskLauncher wasNot Called }
@@ -155,7 +157,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
       test("nothing else happens") {
         verify { imageService wasNot Called }
-        verify { theCloudDriver wasNot Called }
         verify { igorService wasNot Called }
         verify { baseImageCache wasNot Called }
       }
@@ -191,6 +192,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       context("the artifact is registered") {
         before {
           artifactRepository.register(artifact)
+          deliveryConfigRepository.store(deliveryConfig)
         }
 
         context("there are no known versions for the artifact in the repository or in Igor") {
@@ -277,6 +279,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   }
               }
 
+              test("authentication details are derived from the artifact's delivery config") {
+                expect {
+                  that(bakeTaskUser).isCaptured().captured.isEqualTo(deliveryConfig.serviceAccount)
+                  that(bakeTaskApplication).isCaptured().captured.isEqualTo(deliveryConfig.application)
+                }
+              }
+
               test("the artifact details are attached") {
                 expectThat(bakeTaskArtifact)
                   .isCaptured()
@@ -324,6 +333,4 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
   val <T : Any> Assertion.Builder<CapturingSlot<T>>.captured: Assertion.Builder<T>
     get() = get { captured }
-
-  private fun randomTaskRef() = TaskRefResponse(randomUUID().toString())
 }

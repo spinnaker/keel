@@ -8,26 +8,26 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
-import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
-import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 
 class ImageHandler(
   private val artifactRepository: ArtifactRepository,
+  private val deliveryConfigRepository: DeliveryConfigRepository,
   private val baseImageCache: BaseImageCache,
-  private val cloudDriver: CloudDriverService,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
   private val publisher: ApplicationEventPublisher,
-  private val taskLauncher: TaskLauncher
+  private val taskLauncher: TaskLauncher,
+  private val defaultCredentials: BakeCredentials
 ) : ArtifactHandler {
 
   override suspend fun handle(artifact: DeliveryArtifact) {
@@ -49,35 +49,6 @@ class ImageHandler(
 
   private fun DebianArtifact.getLatestBaseImageVersion() =
     baseImageCache.getBaseImage(vmOptions.baseOs, vmOptions.baseLabel)
-
-  /*
-  override val supportedKind =
-    SupportedKind(BAKERY_API_V1.qualify("image"), ImageSpec::class.java)
-
-  override suspend fun toResolvedType(resource: Resource<ImageSpec>): Image =
-    with(resource) {
-      val artifact = DebianArtifact(
-        name = spec.artifactName,
-        vmOptions = VirtualMachineOptions(spec.baseLabel, spec.baseOs, spec.regions, spec.storeType),
-        statuses = spec.artifactStatuses
-      )
-      val latestVersion = artifact.findLatestVersion()
-      val baseImage = baseImageCache.getBaseImage(spec.baseOs, spec.baseLabel)
-      val baseAmi = findBaseAmi(baseImage, resource.serviceAccount)
-      Image(
-        baseAmiVersion = baseAmi,
-        appVersion = latestVersion,
-        regions = spec.regions
-      )
-    }
-
-  override suspend fun current(resource: Resource<ImageSpec>): Image? =
-    with(resource) {
-      imageService.getLatestImageWithAllRegions(spec.artifactName, "test", resource.spec.regions.toList())?.let {
-        it.copy(regions = it.regions.intersect(resource.spec.regions))
-      }
-    }
-*/
 
   /**
    * First checks our repo, and if a version isn't found checks igor.
@@ -135,10 +106,12 @@ class ImageHandler(
     log.info("baking new image for {}", artifact.name)
     val description = "Bake $desiredVersion"
 
+    val (serviceAccount, application) = artifact.taskAuthenticationDetails
+
     try {
       val taskRef = taskLauncher.submitJob(
-        user = "// TODO: FIGURE THIS OUT",
-        application = "// TODO: FIGURE THIS OUT",
+        user = serviceAccount,
+        application = application,
         notifications = emptySet(),
         subject = description,
         description = description,
@@ -168,32 +141,12 @@ class ImageHandler(
     }
   }
 
-/*
-  override suspend fun actuationInProgress(resource: Resource<ImageSpec>): Boolean =
-    orcaService
-      .getCorrelatedExecutions(resource.id)
-      .isNotEmpty()
-
-  private suspend fun findBaseAmi(baseImage: String, serviceAccount: String): String {
-    return cloudDriver.namedImages(serviceAccount, baseImage, "test")
-      .lastOrNull()
-      ?.let { namedImage ->
-        val tags = namedImage
-          .tagsByImageId
-          .values
-          .first { it?.containsKey("base_ami_version") ?: false }
-        if (tags != null) {
-          tags.getValue("base_ami_version")!!
-        } else {
-          null
-        }
-      } ?: throw BaseAmiNotFound(baseImage)
-  }
-
-  private fun ResourceDiff<Image>.isRegionOnly(): Boolean =
-    current != null && (current as Image).regions.size != desired.regions.size
-
-   */
+  private val DebianArtifact.taskAuthenticationDetails: BakeCredentials
+    get() = deliveryConfigName?.let {
+      deliveryConfigRepository.get(it).run {
+        BakeCredentials(serviceAccount, application)
+      }
+    } ?: defaultCredentials
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
@@ -201,4 +154,7 @@ class ImageHandler(
 internal val DebianArtifact.correlationId: String
   get() = "bake:$name"
 
-class BaseAmiNotFound(baseImage: String) : IntegrationException("Could not find a base AMI for base image $baseImage")
+data class BakeCredentials(
+  val serviceAccount: String,
+  val application: String
+)
