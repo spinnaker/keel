@@ -28,6 +28,9 @@ import io.mockk.coVerify as verify
 import io.mockk.mockk
 import io.mockk.slot
 import java.util.UUID.randomUUID
+import kotlin.text.removePrefix
+import kotlin.text.replaceFirst
+import kotlin.text.toLowerCase
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.Assertion
 import strikt.api.Try
@@ -213,248 +216,107 @@ internal class ImageHandlerTests : JUnit5Minutests {
           }
         }
 
-        context("the desired version is known") {
+        context("there is no cached base image") {
+        }
+
+        context("we cannot get a base image from CloudDriver") {
+        }
+
+        context("the base image is cached") {
           before {
-            artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
+            every {
+              baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
+            } returns image.baseAmiVersion
           }
 
-          context("an AMI for the desired version and base image already exists") {
+          context("the desired version is known") {
             before {
-              every {
-                imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
-              } returns image
-
-              runHandler(artifact)
+              artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
             }
 
-            test("no bake is launched") {
-              verify(exactly = 0) {
-                taskLauncher.submitJob(any(), any(), any(), any(), any(), any(), any(), any<List<Map<String, Any?>>>())
+            context("an AMI for the desired version and base image already exists") {
+              before {
+                every {
+                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                } returns image
+
+                runHandler(artifact)
+              }
+
+              test("no bake is launched") {
+                verify(exactly = 0) {
+                  taskLauncher.submitJob(any(), any(), any(), any(), any(), any(), any(), any<List<Map<String, Any?>>>())
+                }
               }
             }
-          }
 
-          context("an AMI for the desired version does not exist") {
-            before {
-              every {
-                imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
-              } returns image.copy(
-                appVersion = "${artifact.name}-0.160.0-h62.24d0843"
-              )
+            context("an AMI for the desired version does not exist") {
+              before {
+                every {
+                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                } returns image.copy(
+                  appVersion = "${artifact.name}-0.160.0-h62.24d0843"
+                )
 
-              runHandler(artifact)
+                runHandler(artifact)
+              }
+
+              test("a bake is launched") {
+                expectThat(bakeTask)
+                  .isCaptured()
+                  .captured
+                  .hasSize(1)
+                  .first()
+                  .and {
+                    get("type").isEqualTo("bake")
+                    get("package").isEqualTo("${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                    get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
+                    get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
+                    get("storeType").isEqualTo(artifact.vmOptions.storeType.toString().toLowerCase())
+                    get("regions").isEqualTo(artifact.vmOptions.regions)
+                  }
+              }
+
+              test("the artifact details are attached") {
+                expectThat(bakeTaskArtifact)
+                  .isCaptured()
+                  .captured
+                  .hasSize(1)
+                  .first()
+                  .and {
+                    get("name").isEqualTo(artifact.name)
+                    get("version").isEqualTo(image.appVersion.removePrefix("${artifact.name}-"))
+                    get("reference").isEqualTo("/${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                  }
+              }
             }
 
-            test("a bake is launched") {
-              expectThat(bakeTask)
-                .isCaptured()
-                .captured
-                .hasSize(1)
-                .first()
-                .and {
-                  get("type").isEqualTo("bake")
-                  get("package").isEqualTo("${image.appVersion.replaceFirst('-', '_')}_all.deb")
-                  get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
-                  get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
-                  get("storeType").isEqualTo(artifact.vmOptions.storeType.toString().toLowerCase())
-                  get("regions").isEqualTo(artifact.vmOptions.regions)
-                }
-            }
+            context("an AMI exists, but it has an older base AMI") {
+              before {
+                every {
+                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                } returns image.copy(
+                  baseAmiVersion = "nflx-base-5.377.0-h1229.3c8e02c"
+                )
 
-            test("the artifact details are attached") {
-              expectThat(bakeTaskArtifact)
-                .isCaptured()
-                .captured
-                .hasSize(1)
-                .first()
-                .and {
-                  get("name").isEqualTo(artifact.name)
-                  get("version").isEqualTo(image.appVersion.removePrefix("${artifact.name}-"))
-                  get("reference").isEqualTo("/${image.appVersion.replaceFirst('-', '_')}_all.deb")
-                }
+                runHandler(artifact)
+              }
+
+              test("a bake is launched") {
+                expectThat(bakeTask)
+                  .isCaptured()
+                  .captured
+                  .hasSize(1)
+                  .first()
+                  .and {
+                    get("type").isEqualTo("bake")
+                  }
+              }
             }
           }
         }
       }
     }
-
-    /**
-    context("resolving desired and current state") {
-    context("CloudDriver has an image for the base AMI") {
-    before {
-    artifactRepository.register(artifact)
-    artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
-
-    every {
-    baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    } returns "xenialbase-x86_64-201904291721-ebs"
-
-    every { theCloudDriver.namedImages("keel@spinnaker", "xenialbase-x86_64-201904291721-ebs", "test") } returns
-    listOf(
-    NamedImage(
-    imageName = "xenialbase-x86_64-201904291721-ebs",
-    attributes = mapOf(
-    "virtualizationType" to "paravirtual",
-    "creationDate" to "2019-04-29T18:11:45.000Z"
-    ),
-    tagsByImageId = mapOf(
-    "ami-0c3f1dc20535ef3b7" to mapOf(
-    "base_ami_version" to "nflx-base-5.378.0-h1230.8808866",
-    "creation_time" to "2019-04-29 17:53:18 UTC",
-    "creator" to "builds",
-    "base_ami_flavor" to "xenial",
-    "build_host" to "https://opseng.builds.test.netflix.net/"
-    ),
-    "ami-0c86c73e07f5df756" to mapOf(
-    "creation_time" to "2019-04-29 17:53:18 UTC",
-    "build_host" to "https://opseng.builds.test.netflix.net/",
-    "base_ami_flavor" to "xenial",
-    "base_ami_version" to "nflx-base-5.378.0-h1230.8808866",
-    "creator" to "builds"
-    ),
-    "ami-05f25743c025c5a11" to mapOf(
-    "base_ami_version" to "nflx-base-5.378.0-h1230.8808866",
-    "build_host" to "https://opseng.builds.test.netflix.net/",
-    "creation_time" to "2019-04-29 17:53:18 UTC",
-    "creator" to "builds",
-    "base_ami_flavor" to "xenial"
-    ),
-    "ami-04772f06ffdb0bc68" to mapOf(
-    "base_ami_flavor" to "xenial",
-    "creator" to "builds",
-    "creation_time" to "2019-04-29 17:53:18 UTC",
-    "build_host" to "https://opseng.builds.test.netflix.net/",
-    "base_ami_version" to "nflx-base-5.378.0-h1230.8808866"
-    )
-    ),
-    accounts = setOf("test"),
-    amis = mapOf(
-    "eu-west-1" to listOf("ami-04772f06ffdb0bc68"),
-    "us-east-1" to listOf("ami-0c3f1dc20535ef3b7"),
-    "us-west-1" to listOf("ami-0c86c73e07f5df756"),
-    "us-west-2" to listOf("ami-05f25743c025c5a11")
-    )
-    )
-    )
-
-    every { imageService.getLatestImage("keel", "test") } returns image
-    }
-
-    test("desired state composes application and base image versions") {
-    val desired = runBlocking {
-    handler.desired(resource)
-    }
-    expectThat(desired).isEqualTo(image)
-    }
-    }
-
-    context("there are no known versions of the artifact") {
-    before {
-    artifactRepository.register(artifact)
-    every {
-    baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    } returns "xenialbase-x86_64-201904291721-ebs"
-    every {
-    igorService.getVersions(artifact.name, any())
-    } returns emptyList()
-    }
-
-    test("an exception is thrown") {
-    expectThrows<NoKnownArtifactVersions> { handler.desired(resource) }
-    }
-    }
-
-    context("there is only a version with the wrong status") {
-    before {
-    artifactRepository.register(artifact)
-    artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
-    every {
-    baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    } returns "xenialbase-x86_64-201904291721-ebs"
-    every {
-    igorService.getVersions("keel", any())
-    } returns listOf()
-    }
-
-    test("an exception is thrown") {
-    expectThrows<NoKnownArtifactVersions> { handler.desired(resourceOnlySnapshot) }
-    }
-    }
-
-    context("there is no cached base image") {
-    before {
-    artifactRepository.register(artifact)
-    artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
-
-    every {
-    baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    } throws UnknownBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    }
-
-    test("the exception is propagated") {
-    expectThrows<UnknownBaseImage> { handler.desired(resource) }
-    }
-    }
-
-    context("clouddriver can't find the base AMI") {
-    before {
-    artifactRepository.register(artifact)
-    artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
-
-    every {
-    baseImageCache.getBaseImage(artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel)
-    } returns "xenialbase-x86_64-201904291721-ebs"
-
-    every {
-    theCloudDriver.namedImages("keel@spinnaker", "xenialbase-x86_64-201904291721-ebs", "test")
-    } returns emptyList()
-    }
-
-    test("an exception is thrown") {
-    expectThrows<BaseAmiNotFound> { handler.desired(resource) }
-    }
-    }
-
-    context("the image already exists in more regions than desired") {
-    before {
-    every {
-    imageService.getLatestImageWithAllRegions("keel", "test", image.regions.toList())
-    } returns image.copy(regions = image.regions + "eu-west-1")
-    }
-    test("current should filter the undesireable regions out of the image") {
-    runBlocking {
-    expectThat(handler.current(resource)!!.regions).isEqualTo(artifact.vmOptions.regions)
-    }
-    }
-    }
-    }
-
-    context("baking a new AMI") {
-    test("artifact is attached to the trigger") {
-    val request = slot<OrchestrationRequest>()
-    every { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
-
-    runBlocking {
-    handler.upsert(resource, DefaultResourceDiff(image, null))
-    }
-
-    expectThat(request.captured.trigger.artifacts)
-    .hasSize(1)
-    }
-
-    test("the full debian name is specified based on naming convention when we create a bake task") {
-    val request = slot<OrchestrationRequest>()
-    every { orcaService.orchestrate("keel@spinnaker", capture(request)) } returns randomTaskRef()
-
-    runBlocking {
-    handler.upsert(resource, DefaultResourceDiff(image, null))
-    }
-
-    expectThat(request.captured.job.first())
-    .hasEntry("package", "keel_0.161.0-h63.24d0843_all.deb")
-    }
-    }
-     **/
   }
 
   fun <T : Any> Assertion.Builder<CapturingSlot<T>>.isCaptured(): Assertion.Builder<CapturingSlot<T>> =

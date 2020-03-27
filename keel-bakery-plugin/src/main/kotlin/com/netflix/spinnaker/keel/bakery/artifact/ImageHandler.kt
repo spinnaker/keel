@@ -38,13 +38,17 @@ class ImageHandler(
         )
       } else {
         val latestVersion = artifact.findLatestVersion()
+        val latestBaseImageVersion = artifact.getLatestBaseImageVersion()
         val image = imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
-        if (image?.appVersion != latestVersion) {
+        if (image == null || image.appVersion != latestVersion || image.baseAmiVersion != latestBaseImageVersion) {
           launchBake(artifact, latestVersion)
         }
       }
     }
   }
+
+  private fun DebianArtifact.getLatestBaseImageVersion() =
+    baseImageCache.getBaseImage(vmOptions.baseOs, vmOptions.baseLabel)
 
   /*
   override val supportedKind =
@@ -109,7 +113,7 @@ class ImageHandler(
       } ?: throw NoKnownArtifactVersions(this)
   }
 
-  suspend fun launchBake(
+  private suspend fun launchBake(
     artifact: DebianArtifact,
     desiredVersion: String
   ): List<Task> {
