@@ -26,6 +26,7 @@ databaseChangeLog:
     rollback:
     - dropTable:
         tableName: artifact_last_checked
+
 - changeSet:
     id: create-artifact-last-checked-indicies
     author: fletch
@@ -36,3 +37,34 @@ databaseChangeLog:
         columns:
         - column:
             name: at
+    rollback:
+    - dropIndex:
+        indexName: artifact_last_checked_at_idx
+        tableName: artifact_last_checked
+- changeSet:
+    id: migrate-vm-options-from-image-resources-to-artifacts
+    author: fletch
+    changes:
+    - sql:
+        sql: >
+          update delivery_artifact
+          set details = (
+            select json_insert(
+              delivery_artifact.details,
+              '$.vmOptions',
+              json_object('baseOs', resource.spec->'$.baseOs', 'baseLabel', resource.spec->'$.baseLabel', 'regions', resource.spec->'$.regions', 'storeType', resource.spec->'$.storeType')
+            )
+            from resource, delivery_config, environment, environment_resource
+            where resource.kind = 'bakery/image@v1'
+            and environment_resource.resource_uid = resource.uid
+            and environment.uid = environment_resource.environment_uid
+            and environment.delivery_config_uid = delivery_config.uid
+            and delivery_artifact.delivery_config_name = delivery_config.name
+            and delivery_artifact.`name` = resource.spec->'$.artifactName'
+          )
+          where delivery_artifact.type = 'deb'
+    rollback:
+    - sql:
+        sql: >
+          update delivery_artifact
+          set details = json_remove(details, '$.vmOptions')
