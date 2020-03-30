@@ -17,16 +17,24 @@
  */
 package com.netflix.spinnaker.keel.rest
 
+import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
+import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.pause.ActuationPauser
+import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
 import com.netflix.spinnaker.keel.services.ApplicationService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -35,7 +43,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/application"])
 class ApplicationController(
   private val actuationPauser: ActuationPauser,
-  private val applicationService: ApplicationService
+  private val applicationService: ApplicationService,
+  private val repository: KeelRepository
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -67,6 +76,36 @@ class ApplicationController(
         }
       }
     }
+  }
+
+  @PostMapping(
+    path = ["/{application}/environment/{environment}/constraint"],
+    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  @PreAuthorize("@authorizationSupport.userCanModifyApplication(#application)")
+  fun updateConstraintStatus(
+    @RequestHeader("X-SPINNAKER-USER") user: String,
+    @PathVariable("application") application: String,
+    @PathVariable("environment") environment: String,
+    @RequestBody status: UpdatedConstraintStatus
+  ) {
+    // we assume there's one manifest per application
+    val manifest = repository.getDeliveryConfigsByApplication(application).firstOrNull()
+      ?: throw NoDeliveryConfigForApplication(application)
+    val currentState = repository.getConstraintState(
+      manifest.name,
+      environment,
+      status.artifactVersion,
+      status.type) ?: throw InvalidConstraintException(
+      "${manifest.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
+
+    repository.storeConstraintState(
+      currentState.copy(
+        status = status.status,
+        comment = status.comment ?: currentState.comment,
+        judgedAt = Instant.now(),
+        judgedBy = user))
   }
 
   @PostMapping(

@@ -95,13 +95,15 @@ class DeliveryConfigController(
   ): List<ConstraintState> =
     repository.constraintStateFor(name, environment, limit ?: DEFAULT_MAX_EVENTS)
 
+  @Deprecated(
+    "Deprecated in favor of referring to the manifest by application for ease of ui interaction",
+    replaceWith = ReplaceWith("/applications/{application}/environment/{environment}/constraint")
+  )
   @PostMapping(
     path = ["/{name}/environment/{environment}/constraint"],
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  // TODO: This should be validated against write access to a service account. Service accounts should
-  //  become a top-level property of either delivery configs or environments.
   fun updateConstraintStatus(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("name") name: String,
