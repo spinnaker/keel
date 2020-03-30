@@ -402,7 +402,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
         )
 
         val submittedConfig2 = submittedConfig1.copy(name = "double-trouble")
-        test("an error is thrown and config is deleted") {
+        test("an error is thrown and config is not persisted") {
           subject.upsertDeliveryConfig(submittedConfig1)
           expectCatching {
             subject.upsertDeliveryConfig(submittedConfig2)
