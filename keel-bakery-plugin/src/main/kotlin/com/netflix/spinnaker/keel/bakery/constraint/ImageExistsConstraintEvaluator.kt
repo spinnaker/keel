@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.bakery.api.BakeConstraint
+import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
@@ -16,12 +16,15 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 
-class BakeConstraintEvaluator(
+class ImageExistsConstraintEvaluator(
   private val imageService: ImageService,
   private val dynamicConfigService: DynamicConfigService,
   override val eventPublisher: ApplicationEventPublisher
-) : ConstraintEvaluator<BakeConstraint> {
-  override val supportedType = SupportedConstraintType<BakeConstraint>("bake")
+) : ConstraintEvaluator<ImageExistsConstraint> {
+
+  override fun isImplicit(): Boolean = true
+
+  override val supportedType = SupportedConstraintType<ImageExistsConstraint>("bake")
 
   override fun canPromote(
     artifact: DeliveryArtifact,

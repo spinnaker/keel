@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.bakery.api.BakeConstraint
+import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.test.deliveryConfig
@@ -27,14 +27,14 @@ import strikt.api.expectThat
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-internal class BakeConstraintEvaluatorTests : JUnit5Minutests {
+internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
   data class Fixture(
     val account: String = "prod",
     val regions: List<String> = listOf("us-west-2", "us-east-1"),
     val artifact: DeliveryArtifact = DebianArtifact(
       name = "fnord",
-      deliveryConfigName = "bake-constraint-evaluator-tests",
+      deliveryConfigName = "image-exists-constraint-evaluator-tests",
       vmOptions = VirtualMachineOptions(
         baseOs = "bionique-classique",
         regions = regions.toSet()
@@ -52,13 +52,13 @@ internal class BakeConstraintEvaluatorTests : JUnit5Minutests {
       env = Environment(
         name = "test",
         resources = setOf(resource),
-        constraints = setOf(BakeConstraint())
+        constraints = setOf(ImageExistsConstraint())
       )
     )
   ) {
     val eventPublisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
     val imageService = mockk<ImageService>(relaxUnitFun = true)
-    val evaluator = BakeConstraintEvaluator(
+    val evaluator = ImageExistsConstraintEvaluator(
       imageService,
       NoopDynamicConfig(),
       eventPublisher
