@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 abstract class ArtifactRepositoryPeriodicallyCheckedTests<S : ArtifactRepository> :
   PeriodicallyCheckedRepositoryTests<DeliveryArtifact, S>() {
 
-  override val descriptor = "delivery config"
+  override val descriptor = "artifact"
 
   override val createAndStore: Fixture<DeliveryArtifact, S>.(count: Int) -> Collection<DeliveryArtifact> = { count ->
     (1..count)
