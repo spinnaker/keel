@@ -16,6 +16,12 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 
+/**
+ * This is an implicit constraint that is used to prevent promotion of a Debian artifact version to
+ * an environment before an AMI has been baked. If we allow the version to promote before that, any
+ * clusters in the environment will error on their resource checks because they will be unable to
+ * find the AMI.
+ */
 class ImageExistsConstraintEvaluator(
   private val imageService: ImageService,
   private val dynamicConfigService: DynamicConfigService,
