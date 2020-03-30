@@ -12,16 +12,14 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 
 class ImageHandler(
-  private val artifactRepository: ArtifactRepository,
-  private val deliveryConfigRepository: DeliveryConfigRepository,
+  private val repository: KeelRepository,
   private val baseImageCache: BaseImageCache,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
@@ -55,8 +53,8 @@ class ImageHandler(
    */
   private suspend fun DebianArtifact.findLatestVersion(): String {
     try {
-      val knownVersion = artifactRepository
-        .versions(this)
+      val knownVersion = repository
+        .artifactVersions(this)
         .firstOrNull()
       if (knownVersion != null) {
         log.debug("Latest known version of $name = $knownVersion")
@@ -64,9 +62,9 @@ class ImageHandler(
       }
     } catch (e: NoSuchArtifactException) {
       log.debug("Latest known version of $name = null")
-      if (!artifactRepository.isRegistered(name, type)) {
+      if (!repository.isRegistered(name, type)) {
         // we clearly care about this artifact, let's register it.
-        artifactRepository.register(this)
+        repository.register(this)
         publisher.publishEvent(ArtifactRegisteredEvent(this))
       }
     }
@@ -143,7 +141,7 @@ class ImageHandler(
 
   private val DebianArtifact.taskAuthenticationDetails: BakeCredentials
     get() = deliveryConfigName?.let {
-      deliveryConfigRepository.get(it).run {
+      repository.getDeliveryConfig(it).run {
         BakeCredentials(serviceAccount, application)
       }
     } ?: defaultCredentials

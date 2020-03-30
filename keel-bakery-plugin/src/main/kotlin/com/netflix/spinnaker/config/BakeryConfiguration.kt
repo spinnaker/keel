@@ -9,8 +9,7 @@ import com.netflix.spinnaker.keel.bakery.artifact.BakeCredentials
 import com.netflix.spinnaker.keel.bakery.artifact.ImageHandler
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -25,8 +24,7 @@ import org.springframework.context.annotation.Configuration
 class BakeryConfiguration {
   @Bean
   fun imageHandler(
-    artifactRepository: ArtifactRepository,
-    deliveryConfigRepository: DeliveryConfigRepository,
+    keelRepository: KeelRepository,
     baseImageCache: BaseImageCache,
     clouddriverService: CloudDriverService,
     igorService: ArtifactService,
@@ -36,8 +34,7 @@ class BakeryConfiguration {
     @Value("\${bakery.defaults.serviceAccount:keel@spinnaker.io}") defaultServiceAccount: String,
     @Value("\${bakery.defaults.application:keel}") defaultApplication: String
   ) = ImageHandler(
-    artifactRepository,
-    deliveryConfigRepository,
+    keelRepository,
     baseImageCache,
     igorService,
     imageService,

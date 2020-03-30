@@ -16,9 +16,8 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
-import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
+import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -46,16 +45,14 @@ import strikt.assertions.isTrue
 internal class ImageHandlerTests : JUnit5Minutests {
 
   internal class Fixture {
-    val artifactRepository = InMemoryArtifactRepository()
-    val deliveryConfigRepository = InMemoryDeliveryConfigRepository()
+    val repository = combinedInMemoryRepository()
     val igorService = mockk<ArtifactService>()
     val baseImageCache = mockk<BaseImageCache>()
     val imageService = mockk<ImageService>()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
     val taskLauncher = mockk<TaskLauncher>()
     val handler = ImageHandler(
-      artifactRepository,
-      deliveryConfigRepository,
+      repository,
       baseImageCache,
       igorService,
       imageService,
@@ -119,11 +116,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
   fun tests() = rootContext<Fixture> {
     fixture { Fixture() }
 
-    after {
-      deliveryConfigRepository.dropAll()
-      artifactRepository.dropAll()
-    }
-
     context("the artifact is not a Debian") {
       before {
         runHandler(DockerArtifact(artifact.name))
@@ -179,7 +171,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
         }
 
         test("it gets registered automatically") {
-          expectThat(artifactRepository.isRegistered(artifact.name, artifact.type)).isTrue()
+          expectThat(repository.isRegistered(artifact.name, artifact.type)).isTrue()
         }
 
         test("an event gets published") {
@@ -191,8 +183,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
       context("the artifact is registered") {
         before {
-          artifactRepository.register(artifact)
-          deliveryConfigRepository.store(deliveryConfig)
+          repository.register(artifact)
+          repository.storeDeliveryConfig(deliveryConfig)
         }
 
         context("there are no known versions for the artifact in the repository or in Igor") {
@@ -218,12 +210,6 @@ internal class ImageHandlerTests : JUnit5Minutests {
           }
         }
 
-        context("there is no cached base image") {
-        }
-
-        context("we cannot get a base image from CloudDriver") {
-        }
-
         context("the base image is cached") {
           before {
             every {
@@ -233,7 +219,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
           context("the desired version is known") {
             before {
-              artifactRepository.store(artifact.name, artifact.type, image.appVersion, FINAL)
+              repository.storeArtifact(artifact.name, artifact.type, image.appVersion, FINAL)
             }
 
             context("an AMI for the desired version and base image already exists") {
