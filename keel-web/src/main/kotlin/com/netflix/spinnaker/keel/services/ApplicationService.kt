@@ -38,14 +38,14 @@ import org.springframework.stereotype.Component
 @Component
 class ApplicationService(
   private val repository: KeelRepository,
-  private val constraints: List<ConstraintEvaluator<*>>
+  private val constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
-  private val explicitConstraints: List<ConstraintEvaluator<*>> = constraints.filter { !it.isImplicit() }
-  private val statefulEvaluators: List<ConstraintEvaluator<*>> = explicitConstraints
+  private val explicitConstraintEvaluators: List<ConstraintEvaluator<*>> = constraintEvaluators.filter { !it.isImplicit() }
+  private val statefulEvaluators: List<ConstraintEvaluator<*>> = explicitConstraintEvaluators
     .filterIsInstance<StatefulConstraintEvaluator<*>>()
 
-  private val statelessEvaluators = explicitConstraints - statefulEvaluators
+  private val statelessEvaluators = explicitConstraintEvaluators - statefulEvaluators
 
   fun hasManagedResources(application: String) = repository.hasManagedResources(application)
 
@@ -177,8 +177,8 @@ class ApplicationService(
           type = constraint.type,
           currentlyPassing = it.canPromote(artifact, version = version, deliveryConfig = deliveryConfig, targetEnvironment = environment),
           attributes = when (constraint) {
-              is DependsOnConstraint -> DependOnConstraintMetadata(constraint.environment)
-              is TimeWindowConstraint -> AllowedTimesConstraintMetadata(constraint.windows, constraint.tz)
+            is DependsOnConstraint -> DependOnConstraintMetadata(constraint.environment)
+            is TimeWindowConstraint -> AllowedTimesConstraintMetadata(constraint.windows, constraint.tz)
             else -> null
           }
         )
