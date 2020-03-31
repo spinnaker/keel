@@ -7,26 +7,31 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
+import com.netflix.spinnaker.keel.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.BuildMetadata
+import com.netflix.spinnaker.keel.core.api.DependOnConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
+import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -41,6 +46,8 @@ import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -67,15 +74,17 @@ class ApplicationServiceTests : JUnit5Minutests {
       resourceRepository = resourceRepository,
       clock = clock
     )
-    val applicationService = ApplicationService(repository)
 
     val application = "fnord"
-
     val artifact = DebianArtifact(
       name = application,
       deliveryConfigName = "manifest",
       reference = "fnord",
-      statuses = setOf(ArtifactStatus.RELEASE)
+      statuses = setOf(ArtifactStatus.RELEASE),
+      vmOptions = VirtualMachineOptions(
+        baseOs = "xenial",
+        regions = setOf("us-west-2", "us-east-1")
+      )
     )
 
     val clusterDefaults = ClusterSpec.ServerGroupSpec(
@@ -151,6 +160,17 @@ class ApplicationServiceTests : JUnit5Minutests {
       artifacts = setOf(artifact),
       environments = environments.values.toSet()
     )
+
+    val statelessEvaluator = mockk<ConstraintEvaluator<*>>() {
+      every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
+      every { isImplicit() } returns false
+      every { canPromote(any(), any(), any(), any()) } answers {
+        secondArg<String>() in listOf("fnord-1.0.0-h0.a0a0a0a", "fnord-1.0.1-h1.b1b1b1b")
+      }
+    }
+
+    // subject
+    val applicationService = ApplicationService(repository, listOf(statelessEvaluator))
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {
@@ -293,7 +313,9 @@ class ApplicationServiceTests : JUnit5Minutests {
           environments = setOf(
             ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.3-h3.d3d3d3d", state = "approved"),
             ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.3-h3.d3d3d3d", state = "pending"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.3-h3.d3d3d3d", state = "pending", statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)))
+            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.3-h3.d3d3d3d", state = "pending",
+              statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
           ),
           build = BuildMetadata(3),
           git = GitMetadata("d3d3d3d")
@@ -304,7 +326,9 @@ class ApplicationServiceTests : JUnit5Minutests {
           environments = setOf( // todo eb: this is changing every time (deployed at time...
             ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.2-h2.c2c2c2c", state = "current", deployedAt = Instant.parse("2020-03-25T05:00:00Z")),
             ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.2-h2.c2c2c2c", state = "pending"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.2-h2.c2c2c2c", state = "pending", statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)))
+            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.2-h2.c2c2c2c", state = "pending",
+              statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
           ),
           build = BuildMetadata(2),
           git = GitMetadata("c2c2c2c")
@@ -315,7 +339,10 @@ class ApplicationServiceTests : JUnit5Minutests {
           environments = setOf(
             ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.1-h1.b1b1b1b", state = "previous", deployedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedAt = Instant.parse("2020-03-25T05:00:00Z"), replacedBy = "fnord-1.0.2-h2.c2c2c2c"),
             ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.1-h1.b1b1b1b", state = "current", deployedAt = Instant.parse("2020-03-25T04:00:00Z")),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.1-h1.b1b1b1b", state = "pending", statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)))
+            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.1-h1.b1b1b1b", state = "pending",
+              statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging")))
+            )
           ),
           build = BuildMetadata(1),
           git = GitMetadata("b1b1b1b")
@@ -326,7 +353,9 @@ class ApplicationServiceTests : JUnit5Minutests {
           environments = setOf(
             ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.0-h0.a0a0a0a", state = "previous", deployedAt = Instant.parse("2020-03-25T00:00:00Z"), replacedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedBy = "fnord-1.0.1-h1.b1b1b1b"),
             ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.0-h0.a0a0a0a", state = "previous", deployedAt = Instant.parse("2020-03-25T01:00:00Z"), replacedAt = Instant.parse("2020-03-25T04:00:00Z"), replacedBy = "fnord-1.0.1-h1.b1b1b1b"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.0-h0.a0a0a0a", state = "current", deployedAt = Instant.parse("2020-03-25T02:00:00Z"), statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", OVERRIDE_PASS, startedAt = Instant.parse("2020-03-25T00:00:00Z"), judgedBy = "lpollo@acme.com", judgedAt = Instant.parse("2020-03-25T01:30:00Z"), comment = "Aye!"), StatefulConstraintSummary("pipeline", NOT_EVALUATED)))
+            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.0-h0.a0a0a0a", state = "current", deployedAt = Instant.parse("2020-03-25T02:00:00Z"),
+              statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", OVERRIDE_PASS, startedAt = Instant.parse("2020-03-25T00:00:00Z"), judgedBy = "lpollo@acme.com", judgedAt = Instant.parse("2020-03-25T01:30:00Z"), comment = "Aye!"), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging"))))
           ),
           build = BuildMetadata(0),
           git = GitMetadata("a0a0a0a")
