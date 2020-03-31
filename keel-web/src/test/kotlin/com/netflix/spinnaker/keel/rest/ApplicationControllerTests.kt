@@ -178,7 +178,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     before {
       clock.reset()
-      every { authorizationSupport.userCanReadApplication(application) } returns true
+      every { authorizationSupport.userCan("READ", "APPLICATION", any()) } returns false
     }
 
     after {
@@ -321,7 +321,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
       test("rejects an unauthorized user from judging constraints") {
         before {
-          every { authorizationSupport.userCanWriteApplication(application) } returns false
+          every { authorizationSupport.userCan("WRITE", "APPLICATION", application) } returns false
         }
         val request = post(
           "/application/$application/environment/prod/constraint",
