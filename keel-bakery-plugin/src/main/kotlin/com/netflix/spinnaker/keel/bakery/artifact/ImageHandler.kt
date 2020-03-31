@@ -37,7 +37,7 @@ class ImageHandler(
       } else {
         val latestVersion = artifact.findLatestVersion()
         val latestBaseImageVersion = artifact.getLatestBaseImageVersion()
-        val image = imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+        val image = imageService.getLatestImage(artifact.name, "test")
 
         val imageMissing = image == null
         val versionsDiffer = image?.appVersion != latestVersion || image?.baseAmiVersion != latestBaseImageVersion

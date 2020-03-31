@@ -225,7 +225,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             context("an AMI for the desired version and base image already exists") {
               before {
                 every {
-                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                  imageService.getLatestImage(artifact.name, "test")
                 } returns image
 
                 runHandler(artifact)
@@ -241,7 +241,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             context("an AMI for the desired version does not exist") {
               before {
                 every {
-                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                  imageService.getLatestImage(artifact.name, "test")
                 } returns image.copy(
                   appVersion = "${artifact.name}-0.160.0-h62.24d0843"
                 )
@@ -289,7 +289,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             context("an AMI exists, but it has an older base AMI") {
               before {
                 every {
-                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                  imageService.getLatestImage(artifact.name, "test")
                 } returns image.copy(
                   baseAmiVersion = "nflx-base-5.377.0-h1229.3c8e02c"
                 )
@@ -311,13 +311,10 @@ internal class ImageHandlerTests : JUnit5Minutests {
               }
             }
 
-            /*
-             * I'm not sure this is actually a realistic scenario as the ImageService shouldn't return the image in this case
-             */
             context("an AMI exists, but it does not have all the regions we need") {
               before {
                 every {
-                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                  imageService.getLatestImage(artifact.name, "test")
                 } returns image.copy(
                   regions = artifact.vmOptions.regions.take(1).toSet()
                 )
@@ -342,7 +339,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             context("an AMI exists, and it has more than just the regions we need") {
               before {
                 every {
-                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                  imageService.getLatestImage(artifact.name, "test")
                 } returns image.copy(
                   regions = artifact.vmOptions.regions + "ap-south-1"
                 )
