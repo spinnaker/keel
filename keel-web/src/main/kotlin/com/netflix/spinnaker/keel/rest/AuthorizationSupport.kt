@@ -43,12 +43,16 @@ class AuthorizationSupport(
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
   enum class Action {
-    READ, WRITE
+    READ, WRITE;
+    override fun toString() = name.toLowerCase()
   }
 
   enum class Entity {
-    APPLICATION, DELIVERY_CONFIG, RESOURCE
+    APPLICATION, DELIVERY_CONFIG, RESOURCE;
+    override fun toString() = name.toLowerCase()
   }
+
+  data class Permission(val action: Action, val entity: Entity)
 
   fun userCan(action: Action, entity: Entity, identifier: String): Boolean {
     return try {

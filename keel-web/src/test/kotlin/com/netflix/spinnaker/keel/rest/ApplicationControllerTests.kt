@@ -26,6 +26,9 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Permission
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
@@ -51,7 +54,6 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import strikt.api.expectThat
@@ -178,7 +180,6 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     before {
       clock.reset()
-      every { authorizationSupport.userCan("READ", "APPLICATION", any()) } returns false
     }
 
     after {
@@ -190,6 +191,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("application with delivery config exists") {
       before {
+        every { authorizationSupport.userCan(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
         combinedRepository.upsertDeliveryConfig(deliveryConfig)
         // these events are required because Resource.toResourceSummary() relies on events to determine resource status
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
@@ -318,23 +320,13 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             "resources"
           )
       }
-
-      test("rejects an unauthorized user from judging constraints") {
-        before {
-          every { authorizationSupport.userCan("WRITE", "APPLICATION", application) } returns false
-        }
-        val request = post(
-          "/application/$application/environment/prod/constraint",
-          UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
-        )
-          .accept(MediaType.APPLICATION_JSON_VALUE)
-        mvc
-          .perform(request)
-          .andExpect(status().is4xxClientError)
-      }
     }
 
     context("application is not managed") {
+      before {
+        every { authorizationSupport.userCan(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
+      }
+
       test("API returns gracefully") {
         val request = get("/application/bananas")
           .accept(MediaType.APPLICATION_JSON_VALUE)
@@ -349,6 +341,16 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             """.trimIndent()
           ))
       }
+    }
+
+    context("API permission checks") {
+      testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
+        ApiRequest("GET /application/fnord")
+          to Permission(Action.READ, Entity.APPLICATION),
+        ApiRequest("POST /application/fnord/environment/prod/constraint",
+          UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS))
+          to Permission(Action.WRITE, Entity.APPLICATION)
+      ))
     }
   }
 }

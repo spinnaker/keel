@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -57,9 +58,14 @@ internal class ResourceControllerTests {
     resourceRepository.dropAll()
   }
 
+  @BeforeEach
+  fun mockAuthz() {
+    every { authorizationSupport.userCan(Action.READ.name, Entity.RESOURCE.name, any()) } returns true
+  }
+
   @Test
   fun `can't diff a resource when unauthorized`() {
-    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns false
+    every { authorizationSupport.userCan(Action.READ.name, Entity.RESOURCE.name, any()) } returns false
 
     val request = post("/resources/diff")
       .accept(APPLICATION_JSON)
@@ -81,8 +87,6 @@ internal class ResourceControllerTests {
 
   @Test
   fun `an invalid request body results in an HTTP 400`() {
-    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
-
     val request = post("/resources/diff")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
@@ -102,8 +106,6 @@ internal class ResourceControllerTests {
 
   @Test
   fun `can get a resource as YAML`() {
-    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
-
     resourceRepository.store(resource)
     val request = get("/resources/${resource.id}")
       .accept(APPLICATION_YAML)
@@ -119,8 +121,6 @@ internal class ResourceControllerTests {
 
   @Test
   fun `unknown resource name results in a 404`() {
-    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
-
     val request = get("/resources/i-do-not-exist")
       .accept(APPLICATION_YAML)
     mvc
