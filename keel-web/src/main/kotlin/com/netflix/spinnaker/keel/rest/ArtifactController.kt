@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus.ACCEPTED
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -74,6 +75,7 @@ class ArtifactController(
     path = ["/pin"]
   )
   @ResponseStatus(ACCEPTED)
+  @PreAuthorize("@authorizationSupport.userCanWriteDeliveryConfig(#pin.deliveryConfigName)")
   fun pin(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody pin: EnvironmentArtifactPin
@@ -90,6 +92,7 @@ class ArtifactController(
     path = ["/pin"]
   )
   @ResponseStatus(ACCEPTED)
+  @PreAuthorize("@authorizationSupport.userCanWriteDeliveryConfig(#pin.deliveryConfigName)")
   fun deletePin(@RequestBody pin: EnvironmentArtifactPin) {
     val deliveryConfig = repository.getDeliveryConfig(pin.deliveryConfigName)
     repository.deletePin(deliveryConfig, pin.targetEnvironment, pin.reference, valueOf(pin.type.toUpperCase()))
@@ -99,6 +102,7 @@ class ArtifactController(
     path = ["/pin/{deliveryConfig}/{targetEnvironment}"]
   )
   @ResponseStatus(ACCEPTED)
+  @PreAuthorize("@authorizationSupport.userCanWriteDeliveryConfig(#deliveryConfigName)")
   fun deletePin(
     @PathVariable("deliveryConfig") deliveryConfigName: String,
     @PathVariable("targetEnvironment") targetEnvironment: String
@@ -111,6 +115,7 @@ class ArtifactController(
     path = ["/veto"]
   )
   @ResponseStatus(ACCEPTED)
+  @PreAuthorize("@authorizationSupport.userCanWriteDeliveryConfig(#veto.deliveryConfigName)")
   fun veto(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody veto: EnvironmentArtifactVeto
@@ -127,6 +132,7 @@ class ArtifactController(
   @DeleteMapping(
     path = ["/veto/{deliveryConfigName}/{targetEnvironment}/{type}/{reference}/{version}"]
   )
+  @PreAuthorize("@authorizationSupport.userCanWriteDeliveryConfig(#deliveryConfigName)")
   fun deleteVeto(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("deliveryConfigName") deliveryConfigName: String,
@@ -151,6 +157,9 @@ class ArtifactController(
     @PathVariable name: String,
     @PathVariable type: ArtifactType
   ): List<String> =
+    // FIXME: we can't authorize this call at the moment because neither the application name nor the delivery config
+    //  name are passed into this method. This means this method would also currently return artifact versions across
+    //  applications if the artifact names and types match, which I think is a bug.
     repository.artifactVersions(name, type)
 
   // Debian Artifacts should contain a releaseStatus in the metadata

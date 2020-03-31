@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAU
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -25,6 +26,7 @@ class EventController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCanReadResource(#id)")
   fun eventHistory(
     @PathVariable("id") id: String,
     @RequestParam("limit") limit: Int?

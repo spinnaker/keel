@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
+import com.netflix.spinnaker.keel.core.api.id
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.DiffResult
 import com.netflix.spinnaker.keel.pause.ActuationPauser
@@ -33,7 +34,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -51,6 +51,7 @@ class ResourceController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCanReadResource(#id)")
   fun get(@PathVariable("id") id: String): Resource<*> {
     log.debug("Getting: $id")
     return repository.getResource(id)
@@ -60,6 +61,7 @@ class ResourceController(
     path = ["/{id}/status"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCanReadResource(#id)")
   fun getStatus(@PathVariable("id") id: String): ResourceStatus =
     if (actuationPauser.isPaused(id)) { // todo eb: we could make determining status easier and more straight forward.
       PAUSED
@@ -71,6 +73,7 @@ class ResourceController(
     path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCanWriteResource(#id)")
   fun pauseResource(@PathVariable("id") id: String) {
     actuationPauser.pauseResource(id)
   }
@@ -79,6 +82,7 @@ class ResourceController(
     path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCanWriteResource(#id)")
   fun resumeResource(@PathVariable("id") id: String) {
     actuationPauser.resumeResource(id)
   }
@@ -88,9 +92,8 @@ class ResourceController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCanModifySpec(#user, #resource.spec)")
+  @PreAuthorize("@authorizationSupport.userCanWriteSpec(#resource.id)")
   fun diff(
-    @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody resource: SubmittedResource<*>
   ): DiffResult {
     log.debug("Diffing: $resource")

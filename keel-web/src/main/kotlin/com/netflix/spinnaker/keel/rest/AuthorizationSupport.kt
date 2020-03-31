@@ -18,13 +18,13 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 
@@ -35,34 +35,51 @@ class AuthorizationSupport(
 ) {
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
-  fun userCanModifyResource(name: String): Boolean =
+  fun userCanWriteResource(id: String): Boolean =
     try {
-      val resource = repository.getResource(name)
-      userCanModifySpec(resource.serviceAccount, resource.id)
+      val resource = repository.getResource(id)
+      userCanWriteSpec(resource.serviceAccount, resource.id)
     } catch (e: NoSuchResourceException) {
       // If resource doesn't exist return true so a 404 is propagated from the controller.
       true
     }
 
-  fun userCanModifySpec(serviceAccount: String, specOrName: Any): Boolean {
-    val auth = SecurityContextHolder.getContext().authentication
-    return userCanAccessServiceAccount(auth, serviceAccount, "Resource: $specOrName")
+  fun userCanReadResource(id: String) = userCanWriteResource(id)
+
+  fun userCanWriteSpec(serviceAccount: String, specOrName: Any): Boolean {
+    return userCanAccessServiceAccount(serviceAccount, "Resource: $specOrName")
   }
 
-  fun userCanModifyApplication(application: String): Boolean = try {
-    val deliveryConfig = repository.getDeliveryConfigForApplication(application)
-    userCanModifyDeliveryConfig(deliveryConfig.serviceAccount, application, deliveryConfig.name)
+  fun userCanReadSpec(serviceAccount: String, specOrName: Any) = userCanWriteSpec(serviceAccount, specOrName)
+
+  fun userCanWriteApplication(application: String): Boolean = try {
+    val deliveryConfig = repository.getDeliveryConfigsByApplication(application).first()
+    userCanWriteDeliveryConfig(deliveryConfig)
   } catch (e: NoSuchElementException) {
     // If there are no delivery configs for that application return true so this is handled correctly in the controller.
     true
   }
 
-  fun userCanModifyDeliveryConfig(serviceAccount: String, application: String, manifestName: String): Boolean {
-    val auth = SecurityContextHolder.getContext().authentication
-    return userCanAccessServiceAccount(auth, serviceAccount, "Delivery config for application $application: $manifestName")
+  fun userCanReadApplication(application: String) = userCanWriteApplication(application)
+
+  fun userCanWriteDeliveryConfig(deliveryConfig: DeliveryConfig): Boolean {
+    return userCanAccessServiceAccount(
+      deliveryConfig.serviceAccount,
+      "Delivery config for application ${deliveryConfig.application}: ${deliveryConfig.name}"
+    )
   }
 
-  fun userCanAccessServiceAccount(auth: Authentication, serviceAccount: String, specOrName: Any): Boolean {
+  fun userCanReadDeliveryConfig(deliveryConfig: DeliveryConfig) = userCanWriteDeliveryConfig(deliveryConfig)
+
+  fun userCanWriteDeliveryConfig(deliveryConfigName: String): Boolean {
+    val deliveryConfig = repository.getDeliveryConfig(deliveryConfigName)
+    return userCanWriteDeliveryConfig(deliveryConfig)
+  }
+
+  fun userCanReadDeliveryConfig(deliveryConfigName: String) = userCanWriteDeliveryConfig(deliveryConfigName)
+
+  fun userCanAccessServiceAccount(serviceAccount: String, specOrName: Any): Boolean {
+    val auth = SecurityContextHolder.getContext().authentication
     val hasPermission = permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored-svcAcct-auth")
     log.debug(
       "[AUTH] {} is trying to access service account {}. They{} have permission. {}",
