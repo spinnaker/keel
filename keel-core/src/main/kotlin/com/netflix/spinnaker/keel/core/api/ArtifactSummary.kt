@@ -80,13 +80,13 @@ data class StatelessConstraintSummary(
   val attributes: ConstraintMetadata? = null
 )
 
-abstract class ConstraintMetadata(val type: String)
+abstract class ConstraintMetadata()
 
 data class DependOnConstraintMetadata(
   val environment: String
-) : ConstraintMetadata("depends-on")
+) : ConstraintMetadata()
 
 data class AllowedTimesConstraintMetadata(
   val windows: List<TimeWindow>,
   val tz: String? = null
-) : ConstraintMetadata("allowed-times")
+) : ConstraintMetadata()
