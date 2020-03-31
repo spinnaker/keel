@@ -75,8 +75,6 @@ data class StatefulConstraintSummary(
 data class StatelessConstraintSummary(
   val type: String,
   val currentlyPassing: Boolean,
-  val status: ConstraintStatus? = null,
-  val comment: String? = null,
   val attributes: ConstraintMetadata? = null
 )
 
@@ -88,5 +86,5 @@ data class DependOnConstraintMetadata(
 
 data class AllowedTimesConstraintMetadata(
   val windows: List<TimeWindow>,
-  val tz: String? = null
+  val timezone: String? = null
 ) : ConstraintMetadata()
