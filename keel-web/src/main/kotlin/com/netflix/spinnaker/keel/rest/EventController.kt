@@ -26,7 +26,7 @@ class EventController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCanReadResource(#id)")
+  @PreAuthorize("@authorizationSupport.userCan('READ', 'RESOURCE', #id)")
   fun eventHistory(
     @PathVariable("id") id: String,
     @RequestParam("limit") limit: Int?

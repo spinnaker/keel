@@ -48,7 +48,7 @@ class ApplicationController(
     path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCanReadApplication(#application)")
+  @PreAuthorize("@authorizationSupport.userCan('READ', 'APPLICATION', #application)")
   fun get(
     @PathVariable("application") application: String,
     @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean,
@@ -104,7 +104,7 @@ class ApplicationController(
   @PostMapping(
     path = ["/{application}/pause"]
   )
-  @PreAuthorize("@authorizationSupport.userCanWriteApplication(#application)")
+  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'APPLICATION', #application)")
   fun pause(@PathVariable("application") application: String) {
     actuationPauser.pauseApplication(application)
   }
@@ -112,7 +112,7 @@ class ApplicationController(
   @DeleteMapping(
     path = ["/{application}/pause"]
   )
-  @PreAuthorize("@authorizationSupport.userCanWriteApplication(#application)")
+  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'APPLICATION', #application)")
   fun resume(@PathVariable("application") application: String) {
     actuationPauser.resumeApplication(application)
   }

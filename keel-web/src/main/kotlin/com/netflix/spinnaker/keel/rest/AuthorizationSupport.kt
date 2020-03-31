@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
+import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.exceptions.NoSuchEntityException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -31,11 +32,8 @@ import org.springframework.stereotype.Component
  *
  * Permission is granted based on the user (as identified by the X-SPINNAKER-USER request header, or X509 client
  * certificate, or metatron identity) having access to the "service account" associated with keel's entities
- * (e.g. delivery configs, resources, etc).
- *
- * Although the authorization function names seem to imply a difference between read and write permissions to those
- * entities, currently they're ignored -- we just check that a user has membership in the service account, but we keep
- * the distinction in place for future implementation.
+ * (e.g. delivery configs, resources, etc), and that service account having access to the corresponding application
+ * in Spinnaker with the right permission level (READ or WRITE).
  */
 @Component
 class AuthorizationSupport(
@@ -52,48 +50,37 @@ class AuthorizationSupport(
     APPLICATION, DELIVERY_CONFIG, RESOURCE
   }
 
-  fun userCan(action: Action, entity: Entity, identifier: String) =
-    try {
+  fun userCan(action: Action, entity: Entity, identifier: String): Boolean {
+    return try {
+      val auth = SecurityContextHolder.getContext().authentication
       val serviceAccount = when (entity) {
         Entity.RESOURCE -> repository.getResource(identifier).serviceAccount
         Entity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
         Entity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
       }
-      userCanAccessServiceAccount(serviceAccount, "${entity.name} $identifier")
+      val application = when (entity) {
+        Entity.RESOURCE -> repository.getResource(identifier).application
+        Entity.APPLICATION -> identifier
+        Entity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
+      }
+      val hasServiceAccountAccess = permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
+        .also {
+          log.debug("[ACCESS {}] User {}: access to service account {}.",
+            if (it) "ALLOWED" else "DENIED", auth.principal, serviceAccount)
+        }
+      val hasApplicationAccess = permissionEvaluator.hasPermission(serviceAccount, application, "APPLICATION", action.name)
+        .also {
+          log.debug("[ACCESS {}] Service account {}: permission to {} {} in application {}.",
+            if (it) "ALLOWED" else "DENIED", serviceAccount, action.name, "${entity.name} $identifier", application)
+        }
+      hasServiceAccountAccess && hasApplicationAccess
     } catch (e: NoSuchEntityException) {
       // If entity doesn't exist return true so a 404 is returned from the controller.
       log.debug("${entity.name} $identifier not found. Allowing request to return 404.")
       true
     }
-
-  fun userCanReadResource(id: String) =
-    userCan(Action.READ, Entity.RESOURCE, id)
-
-  fun userCanWriteResource(id: String) =
-    userCan(Action.WRITE, Entity.RESOURCE, id)
-
-  fun userCanReadApplication(application: String) =
-    userCan(Action.READ, Entity.APPLICATION, application)
-
-  fun userCanWriteApplication(application: String) =
-    userCan(Action.WRITE, Entity.APPLICATION, application)
-
-  fun userCanReadDeliveryConfig(deliveryConfigName: String) =
-    userCan(Action.READ, Entity.DELIVERY_CONFIG, deliveryConfigName)
-
-  fun userCanWriteDeliveryConfig(deliveryConfigName: String) =
-    userCan(Action.WRITE, Entity.DELIVERY_CONFIG, deliveryConfigName)
-
-  fun userCanAccessServiceAccount(serviceAccount: String, entityDescription: String): Boolean {
-    val auth = SecurityContextHolder.getContext().authentication
-    val hasPermission = permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored-svcAcct-auth")
-    log.debug(
-      "[AUTH] {} is trying to access service account {}. They{} have permission. {}",
-      auth.principal,
-      serviceAccount,
-      if (hasPermission) "" else " DO NOT",
-      entityDescription
-    )
-    return hasPermission
   }
+
+  fun userCan(action: String, entity: String, identifier: String) =
+    userCan(Action.valueOf(action), Entity.valueOf(entity), identifier)
 }

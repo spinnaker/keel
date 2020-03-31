@@ -3,13 +3,15 @@ package com.netflix.spinnaker.keel.rest
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
-import com.netflix.spinnaker.keel.exceptions.AuthorizationException
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -40,9 +42,8 @@ class InteractiveNotificationCallbackController(
     val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
-    val deliveryConfig = repository.getDeliveryConfig(currentState.deliveryConfigName)
-    if (!authorizationSupport.userCanWriteDeliveryConfig(currentState.deliveryConfigName)) {
-      throw AuthorizationException(user, deliveryConfig.serviceAccount)
+    if (!authorizationSupport.userCan(Action.WRITE, Entity.DELIVERY_CONFIG, currentState.deliveryConfigName)) {
+      throw AccessDeniedException("User $user does not have access to delivery config ${currentState.deliveryConfigName}")
     }
 
     log.debug("Updating constraint status based on notification interaction: " +
