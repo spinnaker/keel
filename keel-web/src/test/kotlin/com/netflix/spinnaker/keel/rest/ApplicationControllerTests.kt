@@ -522,7 +522,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   statelessConstraints:
                   - type: "depends-on"
                     currentlyPassing: false
-                  - attributes:
+                    attributes:
                       environment: "staging"
                 build:
                   id: 3
@@ -546,8 +546,8 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   statelessConstraints:
                   - type: "depends-on"
                     currentlyPassing: false
-                  - attributes:
-                    environment: "staging"
+                    attributes:
+                      environment: "staging"
                 build:
                   id: 2
                 git:
@@ -572,9 +572,9 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                     status: "NOT_EVALUATED"
                   statelessConstraints:
                   - type: "depends-on"
-                    currentlyPassing: false
-                  - attributes:
-                    environment: "staging"
+                    currentlyPassing: true
+                    attributes:
+                      environment: "staging"
                 build:
                   id: 1
                 git:
@@ -607,8 +607,8 @@ internal class ApplicationControllerTests : JUnit5Minutests {
                   statelessConstraints:
                   - type: "depends-on"
                     currentlyPassing: true
-                  - attributes:
-                    environment: "staging"
+                    attributes:
+                      environment: "staging"
                 build:
                   id: 0
                 git:
