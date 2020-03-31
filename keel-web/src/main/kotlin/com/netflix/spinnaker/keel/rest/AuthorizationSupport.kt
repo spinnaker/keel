@@ -50,7 +50,7 @@ class AuthorizationSupport(
   }
 
   fun userCanModifyApplication(application: String): Boolean = try {
-    val deliveryConfig = repository.getDeliveryConfigsByApplication(application).first()
+    val deliveryConfig = repository.getDeliveryConfigForApplication(application)
     userCanModifyDeliveryConfig(deliveryConfig.serviceAccount, application, deliveryConfig.name)
   } catch (e: NoSuchElementException) {
     // If there are no delivery configs for that application return true so this is handled correctly in the controller.

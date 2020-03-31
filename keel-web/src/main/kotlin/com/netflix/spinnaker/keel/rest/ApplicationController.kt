@@ -17,15 +17,13 @@
  */
 package com.netflix.spinnaker.keel.rest
 
+import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
-import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.pause.ActuationPauser
-import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
+import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.services.ApplicationService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
-import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.security.access.prepost.PreAuthorize
@@ -43,8 +41,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/application"])
 class ApplicationController(
   private val actuationPauser: ActuationPauser,
-  private val applicationService: ApplicationService,
-  private val repository: KeelRepository
+  private val applicationService: ApplicationService
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -90,23 +87,19 @@ class ApplicationController(
     @PathVariable("environment") environment: String,
     @RequestBody status: UpdatedConstraintStatus
   ) {
-    // we assume there's one manifest per application
-    val manifest = repository.getDeliveryConfigsByApplication(application).firstOrNull()
-      ?: throw NoDeliveryConfigForApplication(application)
-    val currentState = repository.getConstraintState(
-      manifest.name,
-      environment,
-      status.artifactVersion,
-      status.type) ?: throw InvalidConstraintException(
-      "${manifest.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
-
-    repository.storeConstraintState(
-      currentState.copy(
-        status = status.status,
-        comment = status.comment ?: currentState.comment,
-        judgedAt = Instant.now(),
-        judgedBy = user))
+    applicationService.updateConstraintStatus(user, application, environment, status)
   }
+
+  @GetMapping(
+    path = ["/{application}/environment/{environment}/constraints"],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  fun getConstraintState(
+    @PathVariable("application") application: String,
+    @PathVariable("environment") environment: String,
+    @RequestParam("limit") limit: Int?
+  ): List<ConstraintState> =
+    applicationService.getConstraintStatesFor(application, environment, limit ?: DEFAULT_MAX_EVENTS)
 
   @PostMapping(
     path = ["/{application}/pause"]
