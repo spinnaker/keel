@@ -24,6 +24,8 @@ import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
+import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigException
+import com.netflix.spinnaker.keel.exceptions.TooManyDeliveryConfigsException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

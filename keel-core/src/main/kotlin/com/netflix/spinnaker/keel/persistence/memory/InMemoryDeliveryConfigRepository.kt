@@ -5,10 +5,10 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.core.api.UID
+import com.netflix.spinnaker.keel.exceptions.NoDeliveryConfigForApplication
+import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigName
+import com.netflix.spinnaker.keel.exceptions.OrphanedResourceException
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
-import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
-import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

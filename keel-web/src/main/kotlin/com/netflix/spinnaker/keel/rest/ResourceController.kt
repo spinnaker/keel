@@ -92,7 +92,7 @@ class ResourceController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCanWriteSpec(#resource.id)")
+  @PreAuthorize("@authorizationSupport.userCanReadResource(#resource.id)")
   fun diff(
     @RequestBody resource: SubmittedResource<*>
   ): DiffResult {

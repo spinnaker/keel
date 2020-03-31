@@ -18,16 +18,25 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
-import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.serviceAccount
+import com.netflix.spinnaker.keel.exceptions.NoSuchEntityException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 
+/**
+ * Support for authorization of REST API calls.
+ *
+ * Permission is granted based on the user (as identified by the X-SPINNAKER-USER request header, or X509 client
+ * certificate, or metatron identity) having access to the "service account" associated with keel's entities
+ * (e.g. delivery configs, resources, etc).
+ *
+ * Although the authorization function names seem to imply a difference between read and write permissions to those
+ * entities, currently they're ignored -- we just check that a user has membership in the service account, but we keep
+ * the distinction in place for future implementation.
+ */
 @Component
 class AuthorizationSupport(
   private val permissionEvaluator: FiatPermissionEvaluator,
@@ -35,50 +44,47 @@ class AuthorizationSupport(
 ) {
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
-  fun userCanWriteResource(id: String): Boolean =
+  enum class Action {
+    READ, WRITE
+  }
+
+  enum class Entity {
+    APPLICATION, DELIVERY_CONFIG, RESOURCE
+  }
+
+  fun userCan(action: Action, entity: Entity, identifier: String) =
     try {
-      val resource = repository.getResource(id)
-      userCanWriteSpec(resource.serviceAccount, resource.id)
-    } catch (e: NoSuchResourceException) {
-      // If resource doesn't exist return true so a 404 is propagated from the controller.
+      val serviceAccount = when (entity) {
+        Entity.RESOURCE -> repository.getResource(identifier).serviceAccount
+        Entity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
+        Entity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
+      }
+      userCanAccessServiceAccount(serviceAccount, "${entity.name} $identifier")
+    } catch (e: NoSuchEntityException) {
+      // If entity doesn't exist return true so a 404 is returned from the controller.
+      log.debug("${entity.name} $identifier not found. Allowing request to return 404.")
       true
     }
 
-  fun userCanReadResource(id: String) = userCanWriteResource(id)
+  fun userCanReadResource(id: String) =
+    userCan(Action.READ, Entity.RESOURCE, id)
 
-  fun userCanWriteSpec(serviceAccount: String, specOrName: Any): Boolean {
-    return userCanAccessServiceAccount(serviceAccount, "Resource: $specOrName")
-  }
+  fun userCanWriteResource(id: String) =
+    userCan(Action.WRITE, Entity.RESOURCE, id)
 
-  fun userCanReadSpec(serviceAccount: String, specOrName: Any) = userCanWriteSpec(serviceAccount, specOrName)
+  fun userCanReadApplication(application: String) =
+    userCan(Action.READ, Entity.APPLICATION, application)
 
-  fun userCanWriteApplication(application: String): Boolean = try {
-    val deliveryConfig = repository.getDeliveryConfigsByApplication(application).first()
-    userCanWriteDeliveryConfig(deliveryConfig)
-  } catch (e: NoSuchElementException) {
-    // If there are no delivery configs for that application return true so this is handled correctly in the controller.
-    true
-  }
+  fun userCanWriteApplication(application: String) =
+    userCan(Action.WRITE, Entity.APPLICATION, application)
 
-  fun userCanReadApplication(application: String) = userCanWriteApplication(application)
+  fun userCanReadDeliveryConfig(deliveryConfigName: String) =
+    userCan(Action.READ, Entity.DELIVERY_CONFIG, deliveryConfigName)
 
-  fun userCanWriteDeliveryConfig(deliveryConfig: DeliveryConfig): Boolean {
-    return userCanAccessServiceAccount(
-      deliveryConfig.serviceAccount,
-      "Delivery config for application ${deliveryConfig.application}: ${deliveryConfig.name}"
-    )
-  }
+  fun userCanWriteDeliveryConfig(deliveryConfigName: String) =
+    userCan(Action.WRITE, Entity.DELIVERY_CONFIG, deliveryConfigName)
 
-  fun userCanReadDeliveryConfig(deliveryConfig: DeliveryConfig) = userCanWriteDeliveryConfig(deliveryConfig)
-
-  fun userCanWriteDeliveryConfig(deliveryConfigName: String): Boolean {
-    val deliveryConfig = repository.getDeliveryConfig(deliveryConfigName)
-    return userCanWriteDeliveryConfig(deliveryConfig)
-  }
-
-  fun userCanReadDeliveryConfig(deliveryConfigName: String) = userCanWriteDeliveryConfig(deliveryConfigName)
-
-  fun userCanAccessServiceAccount(serviceAccount: String, specOrName: Any): Boolean {
+  fun userCanAccessServiceAccount(serviceAccount: String, entityDescription: String): Boolean {
     val auth = SecurityContextHolder.getContext().authentication
     val hasPermission = permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored-svcAcct-auth")
     log.debug(
@@ -86,7 +92,7 @@ class AuthorizationSupport(
       auth.principal,
       serviceAccount,
       if (hasPermission) "" else " DO NOT",
-      specOrName
+      entityDescription
     )
     return hasPermission
   }

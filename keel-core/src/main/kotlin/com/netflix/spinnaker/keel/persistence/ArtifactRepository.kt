@@ -263,21 +263,3 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
     return pending.filter { isOlder(artifact, it, currentVersion) }
   }
 }
-
-class NoSuchArtifactException(name: String, type: ArtifactType) :
-  RuntimeException("No $type artifact named $name is registered") {
-  constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type)
-}
-
-class ArtifactReferenceNotFoundException(deliveryConfig: String, reference: String, type: ArtifactType) :
-  RuntimeException("No $type artifact with reference $reference in delivery config $deliveryConfig is registered")
-
-class ArtifactNotFoundException(name: String, type: ArtifactType, reference: String, deliveryConfig: String?) :
-  RuntimeException("No $type artifact named $name with reference $reference in delivery config $deliveryConfig is registered") {
-  constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type, artifact.reference, artifact.deliveryConfigName)
-}
-
-class ArtifactAlreadyRegistered(name: String, type: ArtifactType) :
-  RuntimeException("The $type artifact $name is already registered") {
-  constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type)
-}

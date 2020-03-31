@@ -16,8 +16,12 @@ import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.exceptions.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
+import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigException
+import com.netflix.spinnaker.keel.exceptions.NoSuchResourceException
+import com.netflix.spinnaker.keel.exceptions.TooManyDeliveryConfigsException
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1

@@ -20,10 +20,10 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.comparator
-import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
-import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
+import com.netflix.spinnaker.keel.exceptions.ArtifactNotFoundException
+import com.netflix.spinnaker.keel.exceptions.ArtifactReferenceNotFoundException
+import com.netflix.spinnaker.keel.exceptions.NoSuchArtifactException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
-import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

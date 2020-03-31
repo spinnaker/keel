@@ -57,7 +57,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `can't diff a resource when unauthorized`() {
-    every { authorizationSupport.userCanWriteSpec("fzlem@netflix.com", any()) } returns false
+    every { authorizationSupport.userCanWriteResource(any()) } returns false
 
     val request = post("/resources/diff")
       .accept(APPLICATION_JSON)
@@ -79,7 +79,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `an invalid request body results in an HTTP 400`() {
-    every { authorizationSupport.userCanWriteSpec(any(), any()) } returns true
+    every { authorizationSupport.userCanWriteResource(any()) } returns true
     val request = post("/resources/diff")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
@@ -115,7 +115,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `unknown resource name results in a 404`() {
-    every { authorizationSupport.userCanWriteSpec("keel@spinnaker", any()) } returns true
+    every { authorizationSupport.userCanWriteResource(any()) } returns true
     val request = get("/resources/i-do-not-exist")
       .accept(APPLICATION_YAML)
     mvc
