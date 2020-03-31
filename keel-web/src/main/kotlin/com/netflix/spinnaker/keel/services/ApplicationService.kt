@@ -28,7 +28,7 @@ import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
+import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -57,11 +57,12 @@ class ApplicationService(
    * This function assumes there's a single delivery config associated with the application.
    */
   fun getResourceSummariesFor(application: String): List<ResourceSummary> =
-    getFirstDeliveryConfigFor(application)
-      ?.let { deliveryConfig ->
-        repository.getResourceSummaries(deliveryConfig)
-      }
-      ?: emptyList()
+    try {
+      val config = repository.getDeliveryConfigForApplication(application)
+      repository.getResourceSummaries(config)
+    } catch (e: NoSuchDeliveryConfigException) {
+      emptyList()
+    }
 
   /**
    * Returns a list of [EnvironmentSummary] for the specific application.
@@ -69,11 +70,12 @@ class ApplicationService(
    * This function assumes there's a single delivery config associated with the application.
    */
   fun getEnvironmentSummariesFor(application: String): List<EnvironmentSummary> =
-    getFirstDeliveryConfigFor(application)
-      ?.let { deliveryConfig ->
-        repository.getEnvironmentSummaries(deliveryConfig)
-      }
-      ?: emptyList()
+    try {
+      val config = repository.getDeliveryConfigForApplication(application)
+      repository.getEnvironmentSummaries(config)
+    } catch (e: NoSuchDeliveryConfigException) {
+      emptyList()
+    }
 
   /**
    * Returns a list of [ArtifactSummary] for the specified application by traversing the list of [EnvironmentSummary]
@@ -82,9 +84,7 @@ class ApplicationService(
    * This function assumes there's a single delivery config associated with the application.
    */
   fun getArtifactSummariesFor(application: String): List<ArtifactSummary> {
-    val deliveryConfig = getFirstDeliveryConfigFor(application)
-      ?: throw InvalidRequestException("No delivery config found for application $application")
-
+    val deliveryConfig = repository.getDeliveryConfigForApplication(application)
     val environmentSummaries = getEnvironmentSummariesFor(application)
 
     return deliveryConfig.artifacts.map { artifact ->
@@ -202,14 +202,25 @@ class ApplicationService(
   ): ArtifactVersionSummary =
     when (artifact.type) {
       deb -> {
-        val appversion = AppVersion.parseName(version)
-        ArtifactVersionSummary(
+        var summary = ArtifactVersionSummary(
           version = version,
           environments = environments,
-          displayName = appversion?.version ?: version.removePrefix("${artifact.name}-"),
-          build = if (appversion != null) BuildMetadata(id = appversion.buildNumber.toInt()) else null,
-          git = if (appversion != null) GitMetadata(commit = appversion.commit) else null
+          displayName = version.removePrefix("${artifact.name}-")
         )
+
+        // attempt to parse helpful info from the appversion.
+        // todo: replace, this is brittle
+        val appversion = AppVersion.parseName(version)
+        if (appversion?.version != null) {
+          summary = summary.copy(displayName = appversion.version)
+        }
+        if (appversion?.buildNumber != null) {
+          summary = summary.copy(build = BuildMetadata(id = appversion.buildNumber.toInt()))
+        }
+        if (appversion?.commit != null) {
+          summary = summary.copy(git = GitMetadata(commit = appversion.commit))
+        }
+        summary
       }
       docker -> {
         var build: BuildMetadata? = null
@@ -236,14 +247,6 @@ class ApplicationService(
         )
       }
     }
-
-  fun getFirstDeliveryConfigFor(application: String): DeliveryConfig? =
-    repository.getDeliveryConfigsByApplication(application).also {
-      if (it.size > 1) {
-        log.warn("Application $application has ${it.size} delivery configs. " +
-          "Returning the first one: ${it.first().name}.")
-      }
-    }.firstOrNull()
 
   private val ArtifactVersions.key: String
     get() = "${type.name}:$name"

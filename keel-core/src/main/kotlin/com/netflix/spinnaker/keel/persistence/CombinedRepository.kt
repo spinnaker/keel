@@ -88,6 +88,18 @@ class CombinedRepository(
       null
     }
 
+    val existingConfig = try {
+      getDeliveryConfigForApplication(deliveryConfig.application)
+    } catch (e: NoSuchDeliveryConfigException) {
+      null
+    }
+
+    if (old == null && existingConfig != null) {
+      // we only allow one delivery config, so throw an error if someone is trying to submit a new config
+      // instead of updating the existing config
+      throw TooManyDeliveryConfigsException(deliveryConfig.application, existingConfig.name)
+    }
+
     deliveryConfig.resources.forEach { resource ->
       upsert(resource)
     }
@@ -235,7 +247,7 @@ class CombinedRepository(
   override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     deliveryConfigRepository.deliveryConfigFor(resourceId)
 
-  override fun getDeliveryConfigsByApplication(application: String): Collection<DeliveryConfig> =
+  override fun getDeliveryConfigForApplication(application: String): DeliveryConfig =
     deliveryConfigRepository.getByApplication(application)
 
   override fun deleteDeliveryConfigByApplication(application: String): Int =
