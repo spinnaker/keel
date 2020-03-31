@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.clouddriver.ImageService
+import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
@@ -39,11 +40,14 @@ class ImageHandler(
         val latestBaseImageVersion = artifact.getLatestBaseImageVersion()
         val image = imageService.getLatestImage(artifact.name, "test")
 
-        val imageMissing = image == null
         val versionsDiffer = image?.appVersion != latestVersion || image?.baseAmiVersion != latestBaseImageVersion
         val regionsDiffer = !(image?.regions ?: emptySet()).containsAll(artifact.vmOptions.regions)
-        if (imageMissing || versionsDiffer || regionsDiffer) {
-          launchBake(artifact, latestVersion, regionsDiffer)
+        if (image == null || versionsDiffer || regionsDiffer) {
+          launchBake(artifact, latestVersion)
+        }
+
+        if (image != null && regionsDiffer) {
+          publisher.publishEvent(ImageRegionMismatchDetected(image, artifact.vmOptions.regions))
         }
       }
     }
@@ -88,8 +92,7 @@ class ImageHandler(
 
   private suspend fun launchBake(
     artifact: DebianArtifact,
-    desiredVersion: String,
-    rebake: Boolean
+    desiredVersion: String
   ): List<Task> {
     val appVersion = AppVersion.parseName(desiredVersion)
     val packageName = appVersion.packageName
@@ -133,10 +136,6 @@ class ImageHandler(
               "user" to "keel",
               "vmType" to "hvm"
             )
-              .let {
-                if (rebake) it + ("rebake" to true)
-                else it
-              }
           )
         ),
         artifacts = listOf(artifactPayload)
@@ -165,3 +164,5 @@ data class BakeCredentials(
   val serviceAccount: String,
   val application: String
 )
+
+data class ImageRegionMismatchDetected(val image: Image, val regions: Set<String>)

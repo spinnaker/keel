@@ -322,7 +322,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 runHandler(artifact)
               }
 
-              test("a re-bake is launched") {
+              test("a bake is launched") {
                 expectThat(bakeTask)
                   .isCaptured()
                   .captured
@@ -331,8 +331,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   .and {
                     get("type").isEqualTo("bake")
                     get("regions").isEqualTo(artifact.vmOptions.regions)
-                    get("rebake").isEqualTo(true)
                   }
+              }
+
+              test("an event is triggered because we want to track region mismatches") {
+                verify {
+                  publisher.publishEvent(any<ImageRegionMismatchDetected>())
+                }
               }
             }
 
