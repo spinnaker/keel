@@ -31,8 +31,8 @@ import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import java.time.Instant
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import org.springframework.stereotype.Component
 
 /**

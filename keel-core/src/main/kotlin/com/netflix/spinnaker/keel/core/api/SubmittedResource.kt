@@ -36,10 +36,10 @@ data class SubmittedResource<T : ResourceSpec>(
   @Description("The specification of the resource")
   @JsonTypeInfo(use = Id.NAME, include = As.EXTERNAL_PROPERTY, property = "kind")
   val spec: T
-)
-
-val SubmittedResource<*>.id: String
-  get() = generateId(kind, spec)
+) {
+  val id: String
+    get() = generateId(kind, spec)
+}
 
 fun <T : ResourceSpec> SubmittedResource<T>.normalize(): Resource<T> =
   Resource(

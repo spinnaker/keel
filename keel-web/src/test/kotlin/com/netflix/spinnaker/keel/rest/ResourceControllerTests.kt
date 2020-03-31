@@ -4,6 +4,8 @@ import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
@@ -57,7 +59,7 @@ internal class ResourceControllerTests {
 
   @Test
   fun `can't diff a resource when unauthorized`() {
-    every { authorizationSupport.userCanWriteResource(any()) } returns false
+    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns false
 
     val request = post("/resources/diff")
       .accept(APPLICATION_JSON)
@@ -79,7 +81,8 @@ internal class ResourceControllerTests {
 
   @Test
   fun `an invalid request body results in an HTTP 400`() {
-    every { authorizationSupport.userCanWriteResource(any()) } returns true
+    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
+
     val request = post("/resources/diff")
       .accept(APPLICATION_YAML)
       .contentType(APPLICATION_YAML)
@@ -99,8 +102,9 @@ internal class ResourceControllerTests {
 
   @Test
   fun `can get a resource as YAML`() {
-    resourceRepository.store(resource)
+    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
 
+    resourceRepository.store(resource)
     val request = get("/resources/${resource.id}")
       .accept(APPLICATION_YAML)
     val result = mvc
@@ -115,7 +119,8 @@ internal class ResourceControllerTests {
 
   @Test
   fun `unknown resource name results in a 404`() {
-    every { authorizationSupport.userCanWriteResource(any()) } returns true
+    every { authorizationSupport.userCan(Action.READ, Entity.RESOURCE, any()) } returns true
+
     val request = get("/resources/i-do-not-exist")
       .accept(APPLICATION_YAML)
     mvc
