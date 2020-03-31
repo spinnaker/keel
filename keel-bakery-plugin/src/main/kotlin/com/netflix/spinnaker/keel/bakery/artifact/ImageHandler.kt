@@ -38,8 +38,12 @@ class ImageHandler(
         val latestVersion = artifact.findLatestVersion()
         val latestBaseImageVersion = artifact.getLatestBaseImageVersion()
         val image = imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
-        if (image == null || image.appVersion != latestVersion || image.baseAmiVersion != latestBaseImageVersion || !image.regions.containsAll(artifact.vmOptions.regions)) {
-          launchBake(artifact, latestVersion)
+
+        val imageMissing = image == null
+        val versionsDiffer = image?.appVersion != latestVersion || image?.baseAmiVersion != latestBaseImageVersion
+        val regionsDiffer = !(image?.regions ?: emptySet()).containsAll(artifact.vmOptions.regions)
+        if (imageMissing || versionsDiffer || regionsDiffer) {
+          launchBake(artifact, latestVersion, regionsDiffer)
         }
       }
     }
@@ -84,7 +88,8 @@ class ImageHandler(
 
   private suspend fun launchBake(
     artifact: DebianArtifact,
-    desiredVersion: String
+    desiredVersion: String,
+    rebake: Boolean
   ): List<Task> {
     val appVersion = AppVersion.parseName(desiredVersion)
     val packageName = appVersion.packageName
@@ -128,6 +133,10 @@ class ImageHandler(
               "user" to "keel",
               "vmType" to "hvm"
             )
+              .let {
+                if (rebake) it + ("rebake" to true)
+                else it
+              }
           )
         ),
         artifacts = listOf(artifactPayload)

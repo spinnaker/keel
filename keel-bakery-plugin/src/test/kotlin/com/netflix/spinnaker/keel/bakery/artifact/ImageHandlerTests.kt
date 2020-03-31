@@ -325,7 +325,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 runHandler(artifact)
               }
 
-              test("a bake is launched") {
+              test("a re-bake is launched") {
                 expectThat(bakeTask)
                   .isCaptured()
                   .captured
@@ -334,6 +334,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   .and {
                     get("type").isEqualTo("bake")
                     get("regions").isEqualTo(artifact.vmOptions.regions)
+                    get("rebake").isEqualTo(true)
                   }
               }
             }
