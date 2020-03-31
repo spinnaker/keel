@@ -38,7 +38,7 @@ class ImageHandler(
         val latestVersion = artifact.findLatestVersion()
         val latestBaseImageVersion = artifact.getLatestBaseImageVersion()
         val image = imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
-        if (image == null || image.appVersion != latestVersion || image.baseAmiVersion != latestBaseImageVersion) {
+        if (image == null || image.appVersion != latestVersion || image.baseAmiVersion != latestBaseImageVersion || !image.regions.containsAll(artifact.vmOptions.regions)) {
           launchBake(artifact, latestVersion)
         }
       }

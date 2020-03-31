@@ -305,7 +305,54 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   .first()
                   .and {
                     get("type").isEqualTo("bake")
+                    get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
+                    get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
                   }
+              }
+            }
+
+            /*
+             * I'm not sure this is actually a realistic scenario as the ImageService shouldn't return the image in this case
+             */
+            context("an AMI exists, but it does not have all the regions we need") {
+              before {
+                every {
+                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                } returns image.copy(
+                  regions = artifact.vmOptions.regions.take(1).toSet()
+                )
+
+                runHandler(artifact)
+              }
+
+              test("a bake is launched") {
+                expectThat(bakeTask)
+                  .isCaptured()
+                  .captured
+                  .hasSize(1)
+                  .first()
+                  .and {
+                    get("type").isEqualTo("bake")
+                    get("regions").isEqualTo(artifact.vmOptions.regions)
+                  }
+              }
+            }
+
+            context("an AMI exists, and it has more than just the regions we need") {
+              before {
+                every {
+                  imageService.getLatestImageWithAllRegions(artifact.name, "test", artifact.vmOptions.regions.toList())
+                } returns image.copy(
+                  regions = artifact.vmOptions.regions + "ap-south-1"
+                )
+
+                runHandler(artifact)
+              }
+
+              test("no bake is launched") {
+                verify(exactly = 0) {
+                  taskLauncher.submitJob(any(), any(), any(), any(), any(), any(), any(), any<List<Map<String, Any?>>>())
+                }
               }
             }
           }
