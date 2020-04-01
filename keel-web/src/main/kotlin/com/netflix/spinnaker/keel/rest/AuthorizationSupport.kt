@@ -22,6 +22,9 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.exceptions.NoSuchEntityException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.APPLICATION
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.RESOURCE
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
@@ -58,14 +61,14 @@ class AuthorizationSupport(
     return try {
       val auth = SecurityContextHolder.getContext().authentication
       val serviceAccount = when (entity) {
-        Entity.RESOURCE -> repository.getResource(identifier).serviceAccount
-        Entity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
-        Entity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
+        RESOURCE -> repository.getResource(identifier).serviceAccount
+        APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
+        DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
       }
       val application = when (entity) {
-        Entity.RESOURCE -> repository.getResource(identifier).application
-        Entity.APPLICATION -> identifier
-        Entity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
+        RESOURCE -> repository.getResource(identifier).application
+        APPLICATION -> identifier
+        DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
       }
       val hasServiceAccountAccess = permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
         .also {

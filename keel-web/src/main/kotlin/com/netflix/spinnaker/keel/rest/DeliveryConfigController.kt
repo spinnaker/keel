@@ -67,7 +67,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'DELIVERY_CONFIG', #deliveryConfig.name)")
+  @PreAuthorize("@authorizationSupport.userCan('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun diff(@RequestBody deliveryConfig: SubmittedDeliveryConfig): List<EnvironmentDiff> =
     adHocDiffer.calculate(deliveryConfig)
 
