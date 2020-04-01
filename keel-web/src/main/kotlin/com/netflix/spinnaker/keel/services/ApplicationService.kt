@@ -8,20 +8,30 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
+import com.netflix.spinnaker.keel.constraints.StatefulConstraintEvaluator
+import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
+import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.BuildMetadata
+import com.netflix.spinnaker.keel.core.api.DependOnConstraintMetadata
+import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
+import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
+import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
+import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -30,13 +40,38 @@ import org.springframework.stereotype.Component
  */
 @Component
 class ApplicationService(
-  private val repository: KeelRepository
+  private val repository: KeelRepository,
+  constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+  private val statelessEvaluators: List<ConstraintEvaluator<*>> =
+    constraintEvaluators.filter { !it.isImplicit() && it !is StatefulConstraintEvaluator }
 
   fun hasManagedResources(application: String) = repository.hasManagedResources(application)
 
   fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
+
+  fun getConstraintStatesFor(application: String, environment: String, limit: Int): List<ConstraintState> {
+    val config = repository.getDeliveryConfigForApplication(application)
+    return repository.constraintStateFor(config.name, environment, limit)
+  }
+
+  fun updateConstraintStatus(user: String, application: String, environment: String, status: UpdatedConstraintStatus) {
+    val config = repository.getDeliveryConfigForApplication(application)
+    val currentState = repository.getConstraintState(
+      config.name,
+      environment,
+      status.artifactVersion,
+      status.type) ?: throw InvalidConstraintException(
+      "${config.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
+
+    repository.storeConstraintState(
+      currentState.copy(
+        status = status.status,
+        comment = status.comment ?: currentState.comment,
+        judgedAt = Instant.now(),
+        judgedBy = user))
+  }
 
   /**
    * Returns a list of [ResourceSummary] for the specified application.
@@ -97,10 +132,12 @@ class ApplicationService(
               )
             }?.let { artifactSummaryInEnvironment ->
               addStatefulConstraintSummaries(artifactSummaryInEnvironment, deliveryConfig, environment, version)
-              // TODO: add stateless constraint summaries
-            }?.also { artifactSummaryInEnvironment ->
-              artifactSummariesInEnvironments.add(artifactSummaryInEnvironment)
             }
+              ?.let { artifactSummaryInEnvironment ->
+                addStatelessConstraintSummaries(artifactSummaryInEnvironment, deliveryConfig, environment, version, artifact)
+              }?.also { artifactSummaryInEnvironment ->
+                artifactSummariesInEnvironments.add(artifactSummaryInEnvironment)
+              }
           }
         }
 
@@ -143,6 +180,39 @@ class ApplicationService(
   }
 
   /**
+   * Adds details about any stateless constraints in the given environment to the [ArtifactSummaryInEnvironment].
+   */
+  private fun addStatelessConstraintSummaries(
+    artifactSummaryInEnvironment: ArtifactSummaryInEnvironment,
+    deliveryConfig: DeliveryConfig,
+    environment: Environment,
+    version: String,
+    artifact: DeliveryArtifact
+  ): ArtifactSummaryInEnvironment {
+    val statelessConstraints: List<StatelessConstraintSummary> = environment.constraints.filter { constraint ->
+      constraint !is StatefulConstraint
+    }.mapNotNull { constraint ->
+      statelessEvaluators.find { evaluator ->
+        evaluator.supportedType.name == constraint.type
+      }?.let {
+        StatelessConstraintSummary(
+          type = constraint.type,
+          currentlyPassing = it.canPromote(artifact, version = version, deliveryConfig = deliveryConfig, targetEnvironment = environment),
+          attributes = when (constraint) {
+            is DependsOnConstraint -> DependOnConstraintMetadata(constraint.environment)
+            is TimeWindowConstraint -> AllowedTimesConstraintMetadata(constraint.windows, constraint.tz)
+            else -> null
+          }
+        )
+      }
+    }
+
+    return artifactSummaryInEnvironment.copy(
+      statelessConstraints = statelessConstraints
+    )
+  }
+
+  /**
    * Takes an artifact version, plus information about the type of artifact, and constructs a summary view.
    * This should be supplemented/re-written to use actual data from stash/git/etc instead of parsing everything
    * from the version string.
@@ -154,14 +224,25 @@ class ApplicationService(
   ): ArtifactVersionSummary =
     when (artifact.type) {
       deb -> {
-        val appversion = AppVersion.parseName(version)
-        ArtifactVersionSummary(
+        var summary = ArtifactVersionSummary(
           version = version,
           environments = environments,
-          displayName = appversion?.version ?: version.removePrefix("${artifact.name}-"),
-          build = if (appversion != null) BuildMetadata(id = appversion.buildNumber.toInt()) else null,
-          git = if (appversion != null) GitMetadata(commit = appversion.commit) else null
+          displayName = version.removePrefix("${artifact.name}-")
         )
+
+        // attempt to parse helpful info from the appversion.
+        // todo: replace, this is brittle
+        val appversion = AppVersion.parseName(version)
+        if (appversion?.version != null) {
+          summary = summary.copy(displayName = appversion.version)
+        }
+        if (appversion?.buildNumber != null) {
+          summary = summary.copy(build = BuildMetadata(id = appversion.buildNumber.toInt()))
+        }
+        if (appversion?.commit != null) {
+          summary = summary.copy(git = GitMetadata(commit = appversion.commit))
+        }
+        summary
       }
       docker -> {
         var build: BuildMetadata? = null
