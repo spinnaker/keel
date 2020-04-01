@@ -7,8 +7,10 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Test
+import com.ninjasquad.springmockk.MockkBean
+import dev.minutest.junit.JUnit5Minutests
+import dev.minutest.rootContext
+import io.mockk.clearAllMocks
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -26,58 +28,61 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
-internal class ArtifactControllerTests {
+internal class ArtifactControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var mvc: MockMvc
 
   @Autowired
   lateinit var artifactRepository: InMemoryArtifactRepository
 
-  @AfterEach
-  fun clearRepository() {
-    artifactRepository.dropAll()
-  }
+  @MockkBean
+  lateinit var authorizationSupport: AuthorizationSupport
 
-  @Test
-  fun `can get the versions of an artifact`() {
-    val artifact = DebianArtifact(
-      name = "fnord",
-      deliveryConfigName = "myconfig",
-      vmOptions = VirtualMachineOptions(
-        baseOs = "bionic",
-        regions = setOf("us-west-2")
-      )
-    )
-    with(artifactRepository) {
-      register(artifact)
-      store(artifact, "fnord-2.1.0-18ed1dc", FINAL)
-      store(artifact, "fnord-2.0.0-608bd90", FINAL)
-      store(artifact, "fnord-1.0.0-41595c4", FINAL)
+  fun tests() = rootContext {
+    after {
+      artifactRepository.dropAll()
+      clearAllMocks()
     }
 
-    val request = get("/artifacts/${artifact.name}/${artifact.type}")
-      .accept(APPLICATION_YAML)
-    mvc
-      .perform(request)
-      .andExpect(status().isOk)
-      .andExpect(content().string(
-        """---
-          |- "fnord-2.1.0-18ed1dc"
-          |- "fnord-2.0.0-608bd90"
-          |- "fnord-1.0.0-41595c4"
-        """.trimMargin()
-      ))
-  }
+    test("can get the versions of an artifact") {
+      val artifact = DebianArtifact(
+        name = "fnord",
+        deliveryConfigName = "myconfig",
+        vmOptions = VirtualMachineOptions(
+          baseOs = "bionic",
+          regions = setOf("us-west-2")
+        )
+      )
+      with(artifactRepository) {
+        register(artifact)
+        store(artifact, "fnord-2.1.0-18ed1dc", FINAL)
+        store(artifact, "fnord-2.0.0-608bd90", FINAL)
+        store(artifact, "fnord-1.0.0-41595c4", FINAL)
+      }
 
-  @Test
-  fun `versions empty for an artifact we're not tracking`() {
-    val request = get("/artifacts/unregistered/deb")
-      .accept(APPLICATION_YAML)
-    mvc
-      .perform(request)
-      .andExpect(status().isOk)
-      .andExpect(content().string(
-        """--- []""".trimMargin()
-      ))
+      val request = get("/artifacts/${artifact.name}/${artifact.type}")
+        .accept(APPLICATION_YAML)
+      mvc
+        .perform(request)
+        .andExpect(status().isOk)
+        .andExpect(content().string(
+          """---
+            |- "fnord-2.1.0-18ed1dc"
+            |- "fnord-2.0.0-608bd90"
+            |- "fnord-1.0.0-41595c4"
+          """.trimMargin()
+        ))
+    }
+
+    test("versions empty for an artifact we're not tracking") {
+      val request = get("/artifacts/unregistered/deb")
+        .accept(APPLICATION_YAML)
+      mvc
+        .perform(request)
+        .andExpect(status().isOk)
+        .andExpect(content().string(
+          """--- []""".trimMargin()
+        ))
+    }
   }
 }

@@ -157,9 +157,6 @@ class ArtifactController(
     @PathVariable name: String,
     @PathVariable type: ArtifactType
   ): List<String> =
-    // FIXME: we can't authorize this call at the moment because neither the application name nor the delivery config
-    //  name are passed into this method. This means this method would also currently return artifact versions across
-    //  applications if the artifact names and types match, which I think is a bug.
     repository.artifactVersions(name, type)
 
   // Debian Artifacts should contain a releaseStatus in the metadata

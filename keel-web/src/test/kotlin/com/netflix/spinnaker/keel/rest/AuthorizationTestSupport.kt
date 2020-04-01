@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
  */
 fun ContextBuilder<*>.testApiPermissions(
   mvc: MockMvc,
-  jsonMapper: ObjectMapper,
+  jsonMapper: ObjectMapper = ObjectMapper(),
   authorizationSupport: AuthorizationSupport,
   apis: Map<ApiRequest, AuthorizationSupport.Permission>
 ) {

@@ -32,6 +32,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun upsert(
     @RequestBody
     @SwaggerRequestBody(
@@ -76,7 +77,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'DELIVERY_CONFIG', #deliveryConfig.name)")
+  @PreAuthorize("@authorizationSupport.userCan('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) =
     // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
     //  in [ExceptionHandler])

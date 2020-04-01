@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -12,16 +13,22 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Permission
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
+import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.every
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
@@ -62,7 +69,50 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var repository: KeelRepository
 
+  @MockkBean
+  lateinit var authorizationSupport: AuthorizationSupport
+
+  @Autowired
+  @Qualifier("jsonMapper")
+  lateinit var jsonMapper: ObjectMapper
+
+  private val deliveryConfig = SubmittedDeliveryConfig(
+    name = "keel-manifest",
+    application = "keel",
+    serviceAccount = "keel@spinnaker",
+    artifacts = setOf(DebianArtifact(
+      name = "keel",
+      vmOptions = VirtualMachineOptions(
+        baseOs = "bionic",
+        regions = setOf("us-west-2")
+      )
+    )),
+    environments = setOf(
+      SubmittedEnvironment(
+        name = "test",
+        resources = setOf(SubmittedResource(
+          kind = TEST_API_V1.qualify("whatever"),
+          spec = DummyResourceSpec(data = "resource in test")
+        ))
+      ),
+      SubmittedEnvironment(
+        name = "prod",
+        resources = setOf(SubmittedResource(
+          kind = TEST_API_V1.qualify("whatever"),
+          spec = DummyResourceSpec(data = "resource in prod")
+        )),
+        constraints = setOf(DependsOnConstraint("test"))
+      )
+    )
+  )
+
   fun tests() = rootContext {
+    before {
+      every {
+        authorizationSupport.userCan(any() as String, any() as String, any())
+      } returns true
+    }
+
     after {
       deliveryConfigRepository.dropAll()
       resourceRepository.dropAll()
@@ -71,37 +121,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
     context("getting a delivery config manifest") {
       before {
-        repository.upsertDeliveryConfig(
-          SubmittedDeliveryConfig(
-            name = "keel-manifest",
-            application = "keel",
-            serviceAccount = "keel@spinnaker",
-            artifacts = setOf(DebianArtifact(
-              name = "keel",
-              vmOptions = VirtualMachineOptions(
-                baseOs = "bionic",
-                regions = setOf("us-west-2")
-              )
-            )),
-            environments = setOf(
-              SubmittedEnvironment(
-                name = "test",
-                resources = setOf(SubmittedResource(
-                  kind = TEST_API_V1.qualify("whatever"),
-                  spec = DummyResourceSpec(data = "resource in test")
-                ))
-              ),
-              SubmittedEnvironment(
-                name = "prod",
-                resources = setOf(SubmittedResource(
-                  kind = TEST_API_V1.qualify("whatever"),
-                  spec = DummyResourceSpec(data = "resource in prod")
-                )),
-                constraints = setOf(DependsOnConstraint("test"))
-              )
-            )
-          )
-        )
+        repository.upsertDeliveryConfig(deliveryConfig)
       }
 
       setOf(APPLICATION_YAML, APPLICATION_JSON).forEach { contentType ->
@@ -310,5 +330,10 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         }
       }
     }
+
+    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
+      ApiRequest("POST /delivery-configs", deliveryConfig)
+        to Permission(Action.WRITE, Entity.DELIVERY_CONFIG)
+    ))
   }
 }
