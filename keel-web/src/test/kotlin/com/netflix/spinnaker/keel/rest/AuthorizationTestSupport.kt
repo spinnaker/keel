@@ -13,9 +13,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 /**
- *  This function loops through the APIs defined by the controller tests and dynamically adds a context/test for each,
- *  so you don't have to manually write those tests in your REST controller test classes. This avoids a lot of
- *  unnecessary repetition defining these API permission check tests.
+ *  This function loops through the specified API requests and permissions and adds a test for each,
+ *  so that you don't have to manually write those tests in your REST controller test classes.
  */
 fun ContextBuilder<*>.testApiPermissions(
   mvc: MockMvc,
@@ -23,23 +22,25 @@ fun ContextBuilder<*>.testApiPermissions(
   authorizationSupport: AuthorizationSupport,
   apis: Map<ApiRequest, AuthorizationSupport.Permission>
 ) {
-  // For each API/permission pair in the map, define a context for that check, mock the authorization call with the
-  // corresponding arguments (READ/WRITE action, entity type) so that it returns false, and define a test that checks
-  // the reponse code is a 403 (FORBIDDEN).
-  apis.forEach { (api, permission) ->
-    val (method, uri) = api.request.split(Regex("""\s+"""))
-    context("API permission check for $api") {
-      before {
+  context("caller is not authorized") {
+    before {
+      // For each distinct permission in the map, mock the authorization call with the corresponding arguments
+      // (READ/WRITE action, entity type) so that it returns false.
+      apis.values.distinct().forEach { permission ->
         every {
           authorizationSupport.userCan(permission.action.name, permission.entity.name, any())
         } returns false
       }
+    }
 
+    // For each API in the map, define  a test that checks the response code is a 403 (FORBIDDEN).
+    apis.keys.forEach { api ->
+      val (method, uri) = api.request.split(Regex("""\s+"""))
       test("$api is forbidden") {
         val request = when (method) {
           "GET" -> get(uri)
-          "POST" -> post(uri).maybeAddData(jsonMapper, api.data)
-          "PUT" -> put(uri).maybeAddData(jsonMapper, api.data)
+          "POST" -> post(uri).addData(jsonMapper, api.data)
+          "PUT" -> put(uri).addData(jsonMapper, api.data)
           "DELETE" -> delete(uri)
           else -> throw IllegalArgumentException("Unsupported method $method for test")
         }
@@ -52,7 +53,7 @@ fun ContextBuilder<*>.testApiPermissions(
   }
 }
 
-private fun MockHttpServletRequestBuilder.maybeAddData(jsonMapper: ObjectMapper, data: Any?) =
+private fun MockHttpServletRequestBuilder.addData(jsonMapper: ObjectMapper, data: Any?) =
   if (data != null) {
     content(jsonMapper.writeValueAsString(data))
       .contentType(MediaType.APPLICATION_JSON)

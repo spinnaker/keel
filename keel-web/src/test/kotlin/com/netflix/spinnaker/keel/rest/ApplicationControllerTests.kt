@@ -343,14 +343,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
     }
 
-    context("API permission checks") {
-      testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
-        ApiRequest("GET /application/fnord")
-          to Permission(Action.READ, Entity.APPLICATION),
-        ApiRequest("POST /application/fnord/environment/prod/constraint",
-          UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS))
-          to Permission(Action.WRITE, Entity.APPLICATION)
-      ))
-    }
+    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
+      ApiRequest("GET /application/fnord")
+        to Permission(Action.READ, Entity.APPLICATION),
+      ApiRequest("POST /application/fnord/environment/prod/constraint",
+        UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS))
+        to Permission(Action.WRITE, Entity.APPLICATION)
+    ))
   }
 }
