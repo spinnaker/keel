@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
@@ -395,13 +396,34 @@ class SqlArtifactRepository(
         .execute()
     }
     sqlRetry.withRetry(WRITE) {
+      // update old "CURRENT" to "PREVIOUS, set promotionReference for use in summary data
       jooq
         .update(ENVIRONMENT_ARTIFACT_VERSIONS)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, PREVIOUS.name)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE, version)
         .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.ne(version))
+        .execute()
+    }
+    sqlRetry.withRetry(WRITE) {
+      // update any past artifacts that were "APPROVED" to be "SKIPPED
+      // because the new version takes precedence
+      val approvedButOld = jooq.select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .where(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(APPROVED.name))
+        .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .filter { artifact.versioningStrategy.comparator.compare(it, version) > 0 } // get the lower versions
+
+      jooq
+        .update(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE, version)
+        .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(APPROVED.name))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.`in`(*approvedButOld.toTypedArray()))
         .execute()
     }
   }
@@ -685,7 +707,8 @@ class SqlArtifactRepository(
             pending = versions[PENDING] ?: emptyList(),
             approved = versions[APPROVED] ?: emptyList(),
             previous = versions[PREVIOUS] ?: emptyList(),
-            vetoed = versions[VETOED] ?: emptyList()
+            vetoed = versions[VETOED] ?: emptyList(),
+            skipped = versions[SKIPPED] ?: emptyList()
           )
         )
       }.toSet()
@@ -830,6 +853,7 @@ class SqlArtifactRepository(
         .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
         .limit(1)
         .fetchOne { (version, deployedAt, promotionStatus) ->
+          // todo eb: use PROMOTION_REFERENCE and add a new column, REPLACED_TIME to avoid this nested query
           val (replacedBy, replacedAt) = when (promotionStatus) {
             CURRENT.name, PREVIOUS.name -> {
               jooq
