@@ -50,7 +50,7 @@ class ResourceController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'RESOURCE', #id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)")
   fun get(@PathVariable("id") id: String): Resource<*> {
     log.debug("Getting: $id")
     return repository.getResource(id)
@@ -60,7 +60,7 @@ class ResourceController(
     path = ["/{id}/status"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'RESOURCE', #id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)")
   fun getStatus(@PathVariable("id") id: String): ResourceStatus =
     if (actuationPauser.isPaused(id)) { // todo eb: we could make determining status easier and more straight forward.
       PAUSED
@@ -72,7 +72,7 @@ class ResourceController(
     path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'RESOURCE', #id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)")
   fun pauseResource(@PathVariable("id") id: String) {
     actuationPauser.pauseResource(id)
   }
@@ -81,7 +81,7 @@ class ResourceController(
     path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'RESOURCE', #id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)")
   fun resumeResource(@PathVariable("id") id: String) {
     actuationPauser.resumeResource(id)
   }
@@ -91,7 +91,7 @@ class ResourceController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'RESOURCE', #resource.id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #resource.id)")
   fun diff(
     @RequestBody resource: SubmittedResource<*>
   ): DiffResult {

@@ -31,6 +31,9 @@ import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.APPLICATION
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -41,6 +44,7 @@ import org.springframework.stereotype.Component
 @Component
 class ApplicationService(
   private val repository: KeelRepository,
+  private val authorizationSupport: AuthorizationSupport,
   constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -80,6 +84,7 @@ class ApplicationService(
    */
   fun getResourceSummariesFor(application: String): List<ResourceSummary> =
     try {
+      authorizationSupport.hasCloudAccountPermission(READ, APPLICATION, application)
       val config = repository.getDeliveryConfigForApplication(application)
       repository.getResourceSummaries(config)
     } catch (e: NoSuchDeliveryConfigException) {
@@ -93,6 +98,7 @@ class ApplicationService(
    */
   fun getEnvironmentSummariesFor(application: String): List<EnvironmentSummary> =
     try {
+      authorizationSupport.hasCloudAccountPermission(READ, APPLICATION, application)
       val config = repository.getDeliveryConfigForApplication(application)
       repository.getEnvironmentSummaries(config)
     } catch (e: NoSuchDeliveryConfigException) {

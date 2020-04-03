@@ -27,8 +27,13 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Permission
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.APPLICATION
+import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
@@ -108,6 +113,19 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
   @Autowired
   lateinit var yamlMapper: YAMLMapper
+
+  val authorizedCalls = mapOf(
+    ApiRequest("GET /application/fnord") to setOf(
+      Permission(APPLICATION_AUTHZ, READ, APPLICATION),
+      Permission(CLOUD_ACCOUNT_AUTHZ, READ, APPLICATION)
+    ),
+    ApiRequest("POST /application/fnord/environment/prod/constraint",
+      UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
+    ) to setOf(
+      Permission(APPLICATION_AUTHZ, WRITE, APPLICATION),
+      Permission(SERVICE_ACCOUNT_AUTHZ, READ, APPLICATION)
+    )
+  )
 
   class Fixture {
     val application = "fnord"
@@ -191,12 +209,12 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("application with delivery config exists") {
       before {
-        every { authorizationSupport.userCan(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
         combinedRepository.upsertDeliveryConfig(deliveryConfig)
         // these events are required because Resource.toResourceSummary() relies on events to determine resource status
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
           resourceRepository.appendHistory(ResourceValid(resource))
         }
+        mockApiAuthorization(authorizationSupport, authorizedCalls)
       }
 
       test("can get basic summary by application") {
@@ -324,7 +342,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("application is not managed") {
       before {
-        every { authorizationSupport.userCan(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
+        every { authorizationSupport.hasApplicationPermission(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
       }
 
       test("API returns gracefully") {
@@ -343,12 +361,6 @@ internal class ApplicationControllerTests : JUnit5Minutests {
       }
     }
 
-    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
-      ApiRequest("GET /application/fnord")
-        to Permission(Action.READ, Entity.APPLICATION),
-      ApiRequest("POST /application/fnord/environment/prod/constraint",
-        UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS))
-        to Permission(Action.WRITE, Entity.APPLICATION)
-    ))
+    testApiPermissions(mvc, jsonMapper, authorizationSupport, authorizedCalls)
   }
 }

@@ -42,7 +42,8 @@ class InteractiveNotificationCallbackController(
     val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
-    if (!authorizationSupport.userCan(Action.WRITE, Entity.DELIVERY_CONFIG, currentState.deliveryConfigName)) {
+    if (!authorizationSupport.hasApplicationPermission(
+        Action.WRITE.name, Entity.DELIVERY_CONFIG.name, currentState.deliveryConfigName)) {
       throw AccessDeniedException("User $user does not have access to delivery config ${currentState.deliveryConfigName}")
     }
 

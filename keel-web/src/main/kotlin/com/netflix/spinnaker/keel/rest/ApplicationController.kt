@@ -41,7 +41,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/application"])
 class ApplicationController(
   private val actuationPauser: ActuationPauser,
-  private val applicationService: ApplicationService
+  private val applicationService: ApplicationService,
+  private val authorizationSupport: AuthorizationSupport
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -49,7 +50,8 @@ class ApplicationController(
     path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'APPLICATION', #application)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
+  /** See [ApplicationService] for additional authorization checks performed */
   fun get(
     @PathVariable("application") application: String,
     @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean,
@@ -59,7 +61,6 @@ class ApplicationController(
       "applicationPaused" to actuationPauser.applicationIsPaused(application),
       "hasManagedResources" to applicationService.hasManagedResources(application),
       "currentEnvironmentConstraints" to applicationService.getConstraintStatesFor(application)
-
     ).also { results ->
       // for backwards-compatibility
       if (includeDetails && !entities.contains("resources")) {
@@ -81,7 +82,8 @@ class ApplicationController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'APPLICATION', #application)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)" +
+    "and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)")
   fun updateConstraintStatus(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("application") application: String,
@@ -105,7 +107,7 @@ class ApplicationController(
   @PostMapping(
     path = ["/{application}/pause"]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'APPLICATION', #application)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)")
   fun pause(@PathVariable("application") application: String) {
     actuationPauser.pauseApplication(application)
   }
@@ -113,7 +115,7 @@ class ApplicationController(
   @DeleteMapping(
     path = ["/{application}/pause"]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'APPLICATION', #application)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)")
   fun resume(@PathVariable("application") application: String) {
     actuationPauser.resumeApplication(application)
   }

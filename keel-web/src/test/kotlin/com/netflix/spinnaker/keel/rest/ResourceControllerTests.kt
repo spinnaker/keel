@@ -60,12 +60,12 @@ internal class ResourceControllerTests {
 
   @BeforeEach
   fun mockAuthz() {
-    every { authorizationSupport.userCan(Action.READ.name, Entity.RESOURCE.name, any()) } returns true
+    every { authorizationSupport.hasApplicationPermission(Action.READ.name, Entity.RESOURCE.name, any()) } returns true
   }
 
   @Test
   fun `can't diff a resource when unauthorized`() {
-    every { authorizationSupport.userCan(Action.READ.name, Entity.RESOURCE.name, any()) } returns false
+    every { authorizationSupport.hasApplicationPermission(Action.READ.name, Entity.RESOURCE.name, any()) } returns false
 
     val request = post("/resources/diff")
       .accept(APPLICATION_JSON)

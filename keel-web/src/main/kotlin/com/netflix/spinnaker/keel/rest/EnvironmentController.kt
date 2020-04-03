@@ -18,7 +18,7 @@ class EnvironmentController(
     path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'APPLICATION', #application)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
   fun list(@PathVariable("application") application: String) =
     repository
       .getDeliveryConfigForApplication(application)

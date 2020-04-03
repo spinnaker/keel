@@ -13,9 +13,9 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Permission
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
@@ -109,7 +109,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
   fun tests() = rootContext {
     before {
       every {
-        authorizationSupport.userCan(any() as String, any() as String, any())
+        authorizationSupport.hasApplicationPermission(any() as String, any() as String, any())
       } returns true
     }
 
@@ -333,7 +333,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
     testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
       ApiRequest("POST /delivery-configs", deliveryConfig)
-        to Permission(Action.WRITE, Entity.DELIVERY_CONFIG)
+        to setOf(Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG))
     ))
   }
 }

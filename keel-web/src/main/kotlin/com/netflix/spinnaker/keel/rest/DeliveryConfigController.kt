@@ -32,7 +32,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'DELIVERY_CONFIG', #deliveryConfig.name)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun upsert(
     @RequestBody
     @SwaggerRequestBody(
@@ -46,7 +46,7 @@ class DeliveryConfigController(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'DELIVERY_CONFIG', #name)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'DELIVERY_CONFIG', #name)")
   fun get(@PathVariable("name") name: String): DeliveryConfig =
     repository.getDeliveryConfig(name)
 
@@ -54,7 +54,7 @@ class DeliveryConfigController(
     path = ["/{name}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('WRITE', 'DELIVERY_CONFIG', #name)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #name)")
   fun delete(@PathVariable("name") name: String): DeliveryConfig {
     val deliveryConfig = repository.getDeliveryConfig(name)
     log.info("Deleting delivery config $name: $deliveryConfig")
@@ -68,7 +68,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun diff(@RequestBody deliveryConfig: SubmittedDeliveryConfig): List<EnvironmentDiff> =
     adHocDiffer.calculate(deliveryConfig)
 
@@ -77,7 +77,7 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.userCan('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'DELIVERY_CONFIG', #deliveryConfig.name)")
   fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) =
     // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
     //  in [ExceptionHandler])
