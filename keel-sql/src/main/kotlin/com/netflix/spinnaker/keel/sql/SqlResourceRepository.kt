@@ -13,7 +13,7 @@ import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.Scope
 import com.netflix.spinnaker.keel.events.ResourceEvent
-import com.netflix.spinnaker.keel.exceptions.NoSuchResourceId
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT

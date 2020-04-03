@@ -9,10 +9,10 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
-import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.test.DummyResourceHandlerV1
 import com.netflix.spinnaker.keel.test.DummyResourceSpec

@@ -12,9 +12,9 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.exceptions.NoSuchArtifactException
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher

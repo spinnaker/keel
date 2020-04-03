@@ -16,10 +16,10 @@ import com.netflix.spinnaker.keel.constraints.allPass
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
-import com.netflix.spinnaker.keel.exceptions.NoDeliveryConfigForApplication
-import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigName
-import com.netflix.spinnaker.keel.exceptions.OrphanedResourceException
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
+import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
+import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.CURRENT_CONSTRAINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG

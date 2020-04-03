@@ -260,3 +260,12 @@ inline fun <reified T : ResourceSpec> ResourceRepository.get(id: String): Resour
 enum class ResourceStatus {
   HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, VETOED, RESUMED, UNKNOWN
 }
+
+abstract class NoSuchResourceException(override val message: String?) :
+  NoSuchEntityException(message)
+
+class NoSuchResourceId(id: String) :
+  NoSuchResourceException("No resource with id $id exists in the database")
+
+class NoSuchApplication(application: String) :
+  NoSuchEntityException("No resource with application name $application exists in the database")

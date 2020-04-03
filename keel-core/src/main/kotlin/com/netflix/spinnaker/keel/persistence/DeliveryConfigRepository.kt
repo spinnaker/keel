@@ -2,8 +2,11 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.core.api.UID
+import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.netflix.spinnaker.kork.exceptions.UserException
 
 interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfig> {
 
@@ -139,3 +142,21 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String)
   fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
 }
+
+abstract class NoSuchDeliveryConfigException(message: String) :
+  NoSuchEntityException(message)
+
+class NoSuchDeliveryConfigName(name: String) :
+  NoSuchDeliveryConfigException("No delivery config named $name exists in the database")
+
+class NoDeliveryConfigForApplication(application: String) :
+  NoSuchDeliveryConfigException("No delivery config for application $application exists in the database")
+
+class NoMatchingArtifactException(deliveryConfigName: String, type: ArtifactType, reference: String) :
+  NoSuchEntityException("No artifact with reference $reference and type $type found in delivery config $deliveryConfigName")
+
+class TooManyDeliveryConfigsException(application: String, existing: String) :
+  UserException("A delivery config already exists for application $application, and we only allow one per application - please delete existing config $existing before submitting a new config")
+
+class OrphanedResourceException(id: String) :
+  SystemException("Resource $id exists without being a part of a delivery config")

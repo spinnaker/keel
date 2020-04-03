@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
-import com.netflix.spinnaker.keel.exceptions.NoSuchResourceId
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent

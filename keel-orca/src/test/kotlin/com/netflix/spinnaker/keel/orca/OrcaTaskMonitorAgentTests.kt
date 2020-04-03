@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
-import com.netflix.spinnaker.keel.exceptions.NoSuchResourceId
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository

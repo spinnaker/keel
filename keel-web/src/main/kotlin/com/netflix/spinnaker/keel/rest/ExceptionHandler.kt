@@ -11,13 +11,13 @@ import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
-import com.netflix.spinnaker.keel.exceptions.ArtifactAlreadyRegistered
 import com.netflix.spinnaker.keel.exceptions.FailedNormalizationException
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
-import com.netflix.spinnaker.keel.exceptions.NoSuchArtifactException
-import com.netflix.spinnaker.keel.exceptions.NoSuchDeliveryConfigException
-import com.netflix.spinnaker.keel.exceptions.NoSuchResourceException
 import com.netflix.spinnaker.keel.exceptions.ValidationException
+import com.netflix.spinnaker.keel.persistence.ArtifactAlreadyRegistered
+import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
+import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
+import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import java.lang.IllegalArgumentException
 import java.time.format.DateTimeParseException
 import org.slf4j.LoggerFactory

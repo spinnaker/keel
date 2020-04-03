@@ -28,8 +28,8 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.core.TagComparator
 import com.netflix.spinnaker.keel.exceptions.NoDockerImageSatisfiesConstraints
-import com.netflix.spinnaker.keel.exceptions.NoMatchingArtifactException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 
 /**
  * Provides the basic functionality for deciding what digest is desired.

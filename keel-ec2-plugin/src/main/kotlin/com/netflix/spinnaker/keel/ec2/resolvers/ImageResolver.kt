@@ -22,8 +22,8 @@ import com.netflix.spinnaker.keel.ec2.NoImageFound
 import com.netflix.spinnaker.keel.ec2.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.ec2.NoImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
-import com.netflix.spinnaker.keel.exceptions.NoMatchingArtifactException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory

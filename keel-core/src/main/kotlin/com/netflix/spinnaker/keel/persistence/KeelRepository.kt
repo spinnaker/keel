@@ -22,7 +22,6 @@ import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
-import com.netflix.spinnaker.keel.exceptions.NoSuchResourceException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

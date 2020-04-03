@@ -25,10 +25,10 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
-import com.netflix.spinnaker.keel.exceptions.ArtifactNotFoundException
-import com.netflix.spinnaker.keel.exceptions.ArtifactReferenceNotFoundException
-import com.netflix.spinnaker.keel.exceptions.NoSuchArtifactException
+import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
+import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ARTIFACT_LAST_CHECKED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT

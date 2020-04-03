@@ -21,8 +21,8 @@ import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
-import com.netflix.spinnaker.keel.exceptions.NoSuchEntityException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchEntityException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.security.access.AccessDeniedException
