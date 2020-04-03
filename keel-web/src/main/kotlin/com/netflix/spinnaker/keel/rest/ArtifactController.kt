@@ -75,7 +75,9 @@ class ArtifactController(
     path = ["/pin"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #pin.deliveryConfigName)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #pin.deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #pin.deliveryConfigName)"""
+  )
   fun pin(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody pin: EnvironmentArtifactPin
