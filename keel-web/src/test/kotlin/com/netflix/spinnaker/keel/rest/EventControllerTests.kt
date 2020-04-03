@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Resource
@@ -19,17 +20,23 @@ import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.RESOURCE
+import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import com.netflix.spinnaker.time.MutableClock
+import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import java.net.URI
 import java.time.Duration
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
@@ -69,15 +76,25 @@ internal class EventControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var actuationPauser: ActuationPauser
 
-  object Fixture {
+  @Autowired
+  @Qualifier("jsonMapper")
+  lateinit var jsonMapper: ObjectMapper
+
+  @MockkBean
+  lateinit var authorizationSupport: AuthorizationSupport
+
+  companion object Fixture {
     val resource: Resource<*> = resource()
     val eventsUri: URI = URI.create("/resources/events/${resource.id}")
+    val TEN_MINUTES: Duration = Duration.ofMinutes(10)
   }
 
   fun tests() = rootContext<Fixture> {
     fixture { Fixture }
 
     context("no resource exists") {
+      before { mockAllApiAuthorization(authorizationSupport) }
+
       test("event eventHistory endpoint responds with 404") {
         val request = get("/resources/events/${resource.id}")
           .accept(APPLICATION_JSON)
@@ -89,6 +106,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("a resource exists with events") {
       before {
+        mockAllApiAuthorization(authorizationSupport)
         with(resourceRepository) {
           store(resource)
           appendHistory(ResourceCreated(resource, clock))
@@ -167,6 +185,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with application paused at various times") {
       before {
+        mockAllApiAuthorization(authorizationSupport)
         with(resourceRepository) {
           dropAll()
           store(resource)
@@ -201,6 +220,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with a new resource created AFTER the application is paused") {
       before {
+        mockAllApiAuthorization(authorizationSupport)
         with(resourceRepository) {
           dropAll()
           actuationPauser.pauseApplication(resource.application)
@@ -228,6 +248,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with application pauses BEFORE and AFTER a new resource is created") {
       before {
+        mockAllApiAuthorization(authorizationSupport)
         with(resourceRepository) {
           dropAll()
           actuationPauser.pauseApplication(resource.application)
@@ -255,10 +276,13 @@ internal class EventControllerTests : JUnit5Minutests {
           )
       }
     }
-  }
 
-  companion object {
-    val TEN_MINUTES: Duration = Duration.ofMinutes(10)
+    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
+      ApiRequest("GET /resources/events/${resource.id}") to setOf(
+        Permission(APPLICATION_AUTHZ, READ, RESOURCE),
+        Permission(CLOUD_ACCOUNT_AUTHZ, READ, RESOURCE)
+      )
+    ))
   }
 }
 

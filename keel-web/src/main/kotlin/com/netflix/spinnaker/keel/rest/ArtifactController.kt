@@ -92,7 +92,9 @@ class ArtifactController(
     path = ["/pin"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #pin.deliveryConfigName)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  )
   fun deletePin(@RequestBody pin: EnvironmentArtifactPin) {
     val deliveryConfig = repository.getDeliveryConfig(pin.deliveryConfigName)
     repository.deletePin(deliveryConfig, pin.targetEnvironment, pin.reference, valueOf(pin.type.toUpperCase()))
@@ -102,7 +104,9 @@ class ArtifactController(
     path = ["/pin/{deliveryConfig}/{targetEnvironment}"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  )
   fun deletePin(
     @PathVariable("deliveryConfig") deliveryConfigName: String,
     @PathVariable("targetEnvironment") targetEnvironment: String
@@ -115,7 +119,9 @@ class ArtifactController(
     path = ["/veto"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #veto.deliveryConfigName)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  )
   fun veto(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @RequestBody veto: EnvironmentArtifactVeto
@@ -132,7 +138,9 @@ class ArtifactController(
   @DeleteMapping(
     path = ["/veto/{deliveryConfigName}/{targetEnvironment}/{type}/{reference}/{version}"]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  )
   fun deleteVeto(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("deliveryConfigName") deliveryConfigName: String,

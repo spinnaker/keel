@@ -50,8 +50,9 @@ class ApplicationController(
     path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
-  /** See [ApplicationService] for additional authorization checks performed */
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)
+    and @authorizationSupport.hasCloudAccountPermission('READ', 'APPLICATION', #application)"""
+  )
   fun get(
     @PathVariable("application") application: String,
     @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean,
@@ -82,8 +83,9 @@ class ApplicationController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)" +
-    "and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)"""
+  )
   fun updateConstraintStatus(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("application") application: String,
@@ -97,6 +99,7 @@ class ApplicationController(
     path = ["/{application}/environment/{environment}/constraints"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
   fun getConstraintState(
     @PathVariable("application") application: String,
     @PathVariable("environment") environment: String,
@@ -115,7 +118,9 @@ class ApplicationController(
   @DeleteMapping(
     path = ["/{application}/pause"]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)"""
+  )
   fun resume(@PathVariable("application") application: String) {
     actuationPauser.resumeApplication(application)
   }

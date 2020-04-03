@@ -114,22 +114,34 @@ internal class ApplicationControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var yamlMapper: YAMLMapper
 
+  companion object {
+    const val application = "fnord"
+  }
+
   val authorizedCalls = mapOf(
-    ApiRequest("GET /application/fnord") to setOf(
+    ApiRequest("GET /application/$application") to setOf(
       Permission(APPLICATION_AUTHZ, READ, APPLICATION),
       Permission(CLOUD_ACCOUNT_AUTHZ, READ, APPLICATION)
     ),
-    ApiRequest("POST /application/fnord/environment/prod/constraint",
+    ApiRequest("GET /application/$application/environment/prod/constraints") to setOf(
+      Permission(APPLICATION_AUTHZ, READ, APPLICATION)
+    ),
+    ApiRequest("POST /application/$application/environment/prod/constraint",
       UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
     ) to setOf(
+      Permission(APPLICATION_AUTHZ, WRITE, APPLICATION),
+      Permission(SERVICE_ACCOUNT_AUTHZ, READ, APPLICATION)
+    ),
+    ApiRequest("POST /application/$application/pause") to setOf(
+      Permission(APPLICATION_AUTHZ, WRITE, APPLICATION)
+    ),
+    ApiRequest("DELETE /application/$application/pause") to setOf(
       Permission(APPLICATION_AUTHZ, WRITE, APPLICATION),
       Permission(SERVICE_ACCOUNT_AUTHZ, READ, APPLICATION)
     )
   )
 
   class Fixture {
-    val application = "fnord"
-
     val artifact = DebianArtifact(
       name = application,
       deliveryConfigName = "manifest",

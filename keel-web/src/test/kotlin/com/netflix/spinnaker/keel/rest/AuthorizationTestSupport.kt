@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
 import dev.minutest.ContextBuilder
 import io.mockk.Runs
 import io.mockk.every
@@ -22,6 +24,30 @@ data class Permission(
   val action: AuthorizationSupport.Action,
   val entity: AuthorizationSupport.Entity
 )
+
+/**
+ * Mocks the authorization for any and all API calls. Use judiciously!
+ */
+fun ContextBuilder<*>.mockAllApiAuthorization(authorizationSupport: AuthorizationSupport) {
+  every {
+    authorizationSupport.hasApplicationPermission(any<String>(), any(), any())
+  } returns true
+  every {
+    authorizationSupport.hasApplicationPermission(any<Action>(), any(), any())
+  } just Runs
+  every {
+    authorizationSupport.hasServiceAccountAccess(any<String>(), any())
+  } returns true
+  every {
+    authorizationSupport.hasServiceAccountAccess(any<Entity>(), any())
+  } just Runs
+  every {
+    authorizationSupport.hasCloudAccountPermission(any<String>(), any(), any())
+  } returns true
+  every {
+    authorizationSupport.hasCloudAccountPermission(any<Action>(), any(), any())
+  } just Runs
+}
 
 /**
  * Mocks the authorization for the specified API requests and permissions.

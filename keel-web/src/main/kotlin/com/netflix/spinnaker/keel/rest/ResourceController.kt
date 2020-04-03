@@ -50,7 +50,9 @@ class ResourceController(
     path = ["/{id}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)
+    and @authorizationSupport.hasCloudAccountPermission('READ', 'RESOURCE', #id)"""
+  )
   fun get(@PathVariable("id") id: String): Resource<*> {
     log.debug("Getting: $id")
     return repository.getResource(id)
@@ -60,7 +62,9 @@ class ResourceController(
     path = ["/{id}/status"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #id)
+    and @authorizationSupport.hasCloudAccountPermission('READ', 'RESOURCE', #id)"""
+  )
   fun getStatus(@PathVariable("id") id: String): ResourceStatus =
     if (actuationPauser.isPaused(id)) { // todo eb: we could make determining status easier and more straight forward.
       PAUSED
@@ -81,7 +85,9 @@ class ResourceController(
     path = ["/{id}/pause"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)
+    and @authorizationSupport.hasServiceAccountAccess('RESOURCE', #id)"""
+  )
   fun resumeResource(@PathVariable("id") id: String) {
     actuationPauser.resumeResource(id)
   }
@@ -91,7 +97,7 @@ class ResourceController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'RESOURCE', #resource.id)")
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #resource.spec.application)")
   fun diff(
     @RequestBody resource: SubmittedResource<*>
   ): DiffResult {

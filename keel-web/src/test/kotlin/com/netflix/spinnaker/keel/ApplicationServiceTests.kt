@@ -170,7 +170,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     // subject
-    val applicationService = ApplicationService(repository, mockk(), listOf(statelessEvaluator))
+    val applicationService = ApplicationService(repository, listOf(statelessEvaluator))
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {
