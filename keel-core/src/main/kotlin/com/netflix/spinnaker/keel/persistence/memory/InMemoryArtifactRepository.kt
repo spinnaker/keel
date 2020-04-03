@@ -17,7 +17,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.APPROVED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
-import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.SUPERSEDED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
@@ -45,7 +45,7 @@ class InMemoryArtifactRepository(
   private val deployedVersions = mutableMapOf<EnvironmentVersionsKey, MutableList<Pair<String, Instant>>>()
   private val vetoedVersions = mutableMapOf<EnvironmentVersionsKey, MutableList<String>>()
   private val pinnedVersions = mutableMapOf<EnvironmentVersionsKey, EnvironmentArtifactPin>()
-  private val skippedVersions = mutableMapOf<EnvironmentVersionsKey, MutableList<Skipped>>()
+  private val supersededVersions = mutableMapOf<EnvironmentVersionsKey, MutableList<Superseded>>()
   private val statusByEnvironment = mutableMapOf<EnvironmentVersionsKey, MutableMap<String, PromotionStatus>>()
   private val vetoReference = mutableMapOf<EnvironmentVersionsKey, MutableMap<String, String>>()
   private val lastCheckTimes = mutableMapOf<DeliveryArtifact, Instant>()
@@ -252,12 +252,12 @@ class InMemoryArtifactRepository(
     val statuses = statusByEnvironment.getOrPut(key, ::mutableMapOf)
     // update all previous "current" versions to "previous"
     statuses.filterValues { it == CURRENT }.forEach { statuses[it.key] = PREVIOUS }
-    // update all previous "approved" versions with a lower version number to "skipped"
+    // update all previous "approved" versions with a lower version number to "superseded"
     statuses
       .filterValues { it == APPROVED }
       .filterKeys { artifact.versioningStrategy.comparator.compare(it, version) > 0 }
       .forEach {
-        statuses[it.key] = SKIPPED
+        statuses[it.key] = SUPERSEDED
       }
     statuses[version] = CURRENT
   }
@@ -372,12 +372,12 @@ class InMemoryArtifactRepository(
     statuses[version] = DEPLOYING
   }
 
-  override fun markAsSkipped(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String, skippedByVersion: String) {
+  override fun markAsSuperseded(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String, supersededByVersion: String) {
     val artifactId = getId(artifact) ?: throw NoSuchArtifactException(artifact)
     val key = EnvironmentVersionsKey(artifactId, deliveryConfig, targetEnvironment)
     val statuses = statusByEnvironment.getOrPut(key, ::mutableMapOf)
-    statuses[version] = SKIPPED
-    skippedVersions.getOrPut(key, ::mutableListOf).add(Skipped(version, skippedByVersion, clock.instant()))
+    statuses[version] = SUPERSEDED
+    supersededVersions.getOrPut(key, ::mutableListOf).add(Superseded(version, supersededByVersion, clock.instant()))
   }
 
   override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> =
@@ -412,11 +412,11 @@ class InMemoryArtifactRepository(
               versions = ArtifactVersionStatus(
                 current = currentVersion,
                 deploying = statuses.filterValues { it == DEPLOYING }.keys.firstOrNull(),
-                pending = removeLowerIfCurrentExists(artifact, currentVersion, pending),
+                pending = removeOlderIfCurrentExists(artifact, currentVersion, pending),
                 approved = statuses.filterValues { it == APPROVED }.keys.toList(),
                 previous = statuses.filterValues { it == PREVIOUS }.keys.toList(),
                 vetoed = statuses.filterValues { it == VETOED }.keys.toList(),
-                skipped = lowerThanCurrent(artifact, currentVersion, pending).plus(statuses.filterValues { it == SKIPPED }.keys.toList())
+                superseded = removeNewerIfCurrentExists(artifact, currentVersion, pending).plus(statuses.filterValues { it == SUPERSEDED }.keys.toList())
               )
             )
           }
@@ -519,10 +519,10 @@ class InMemoryArtifactRepository(
       .toList()
   }
 
-  private data class Skipped(
+  private data class Superseded(
     val version: String,
-    val skippedByVersion: String,
-    val skippedAt: Instant
+    val supersededByVersion: String,
+    val supersededAt: Instant
   )
 
   private data class ArtifactVersionAndStatus(

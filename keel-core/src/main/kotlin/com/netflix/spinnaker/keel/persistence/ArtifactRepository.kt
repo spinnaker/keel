@@ -164,14 +164,14 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   )
 
   /**
-   * Marks a version of an artifact as skipped for an environment, with information on what version skipped it.
+   * Marks a version of an artifact as superseded for an environment, with information on what version superseded it.
    */
-  fun markAsSkipped(
+  fun markAsSuperseded(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
     targetEnvironment: String,
-    skippedByVersion: String
+    supersededByVersion: String
   )
 
   /**
@@ -222,23 +222,24 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact>
 
   /**
-   * Returns true if the new version is lower than the existing version.
+   * Returns true if the version is older (lower) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isLower(artifact: DeliveryArtifact, new: String, existing: String): Boolean =
-    artifact.versioningStrategy.comparator.compare(new, existing) > 0
+  fun isOlder(artifact: DeliveryArtifact, new: String, existingVersion: String): Boolean =
+    artifact.versioningStrategy.comparator.compare(new, existingVersion) > 0
 
   /**
-   * Returns true if the new version is higher than the existing version.
+   * Returns true if the version is newer (higher) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isHigher(artifact: DeliveryArtifact, new: String, existing: String): Boolean =
-    artifact.versioningStrategy.comparator.compare(new, existing) < 0
+  fun isNewer(artifact: DeliveryArtifact, version: String, existingVersion: String): Boolean =
+    artifact.versioningStrategy.comparator.compare(version, existingVersion) < 0
 
   /**
-   * Given a list of versions and a current version, removes all versions lower than the current version from the list.
+   * Given a list of pending versions and a current version, removes all versions older than the current version
+   * from the list. If there's no current, returns all pending versions.
    */
-  fun removeLowerIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeOlderIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
     if (pending == null) {
       return emptyList()
     }
@@ -247,18 +248,19 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
       return pending
     }
 
-    return pending.filter { isHigher(artifact, it, currentVersion) }
+    return pending.filter { isNewer(artifact, it, currentVersion) }
   }
 
   /**
-   * Given a list of versions and a current version, returns all versions lower than the current version from the list.
+   * Given a list of pending versions and a current version, returns all versions older than the current
+   * version from the list. If there's no current version or no pending versions, returns an empty list.
    */
-  fun lowerThanCurrent(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeNewerIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
     if (pending == null || currentVersion == null) {
       return emptyList()
     }
 
-    return pending.filter { isLower(artifact, it, currentVersion) }
+    return pending.filter { isOlder(artifact, it, currentVersion) }
   }
 }
 

@@ -41,8 +41,8 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
       statuses = setOf(RELEASE)
     )
 
-    val environment1 = Environment("aa")
-    val environment2 = Environment(
+    val environmentA = Environment("aa")
+    val environmentB = Environment(
       name = "bb",
       constraints = setOf(DependsOnConstraint("test"), ManualJudgementConstraint())
     )
@@ -51,11 +51,10 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
       application = "fnord",
       serviceAccount = "keel@spinnaker",
       artifacts = setOf(artifact),
-      environments = setOf(environment1, environment2)
+      environments = setOf(environmentA, environmentB)
     )
     val version1 = "keeldemo-1.0.1-h11.1a1a1a1" // release
     val version2 = "keeldemo-1.0.2-h12.2b2b2b2" // release
-//    val version3 = "keeldemo-1.0.3-h13.3c3c3c3" // release
   }
 
   open fun Fixture<T>.persist() {
@@ -81,30 +80,30 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
       subject.flush()
     }
 
-    context("artifact 1 skipped in env 1, mj before env 2") {
+    context("artifact 1 superseded in envA, manual judgement before envB") {
       before {
-        // version 1 and 2 are approved in env 1 approved in env 1
-        subject.approveVersionFor(manifest, artifact, version1, environment1.name)
-        subject.approveVersionFor(manifest, artifact, version2, environment1.name)
-        // only version 2 is approved in env 2
-        subject.approveVersionFor(manifest, artifact, version2, environment2.name)
-        // version 1 has been skipped in env 1 by version 2
-        subject.markAsSkipped(manifest, artifact, version1, environment1.name, version2)
+        // version 1 and 2 are approved in env A
+        subject.approveVersionFor(manifest, artifact, version1, environmentA.name)
+        subject.approveVersionFor(manifest, artifact, version2, environmentA.name)
+        // only version 2 is approved in env B
+        subject.approveVersionFor(manifest, artifact, version2, environmentB.name)
+        // version 1 has been superseded in env A by version 2
+        subject.markAsSuperseded(manifest, artifact, version1, environmentA.name, version2)
         // version 2 was successfully deployed to both envs
-        subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environment1.name)
-        subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environment2.name)
+        subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environmentA.name)
+        subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environmentB.name)
       }
 
-      test("skipped versions don't get a pending status in the next env") {
+      test("superseded versions don't get a pending status in the next env") {
         val summaries = subject.getEnvironmentSummaries(manifest).sortedBy { it.name }
         expect {
           that(summaries.size).isEqualTo(2)
           that(summaries[0].artifacts.first().versions.current).isEqualTo(version2)
           that(summaries[0].artifacts.first().versions.pending).isEmpty()
-          that(summaries[0].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
+          that(summaries[0].artifacts.first().versions.superseded).containsExactlyInAnyOrder(version1)
           that(summaries[1].artifacts.first().versions.current).isEqualTo(version2)
           that(summaries[1].artifacts.first().versions.pending).isEmpty()
-          that(summaries[1].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
+          that(summaries[1].artifacts.first().versions.superseded).containsExactlyInAnyOrder(version1)
         }
       }
     }
