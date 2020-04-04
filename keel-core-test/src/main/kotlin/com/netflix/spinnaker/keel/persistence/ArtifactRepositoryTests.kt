@@ -418,14 +418,14 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
               subject.markAsSuccessfullyDeployedTo(manifest, artifact1, version3, environment1.name)
             }
 
-            test("the lower version was marked as superseded") {
+            test("the lower version was marked as skipped") {
               val result = versionsIn(environment1)
               expectThat(result) {
                 get(ArtifactVersionStatus::pending).isEmpty()
                 get(ArtifactVersionStatus::current).isEqualTo(version3)
                 get(ArtifactVersionStatus::deploying).isNull()
                 get(ArtifactVersionStatus::previous).containsExactly(version1)
-                get(ArtifactVersionStatus::superseded).containsExactly(version2)
+                get(ArtifactVersionStatus::skipped).containsExactly(version2)
               }
             }
           }

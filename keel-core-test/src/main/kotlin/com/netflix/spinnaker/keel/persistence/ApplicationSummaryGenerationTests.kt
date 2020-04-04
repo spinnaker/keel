@@ -80,30 +80,30 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
       subject.flush()
     }
 
-    context("artifact 1 superseded in envA, manual judgement before envB") {
+    context("artifact 1 skipped in envA, manual judgement before envB") {
       before {
         // version 1 and 2 are approved in env A
         subject.approveVersionFor(manifest, artifact, version1, environmentA.name)
         subject.approveVersionFor(manifest, artifact, version2, environmentA.name)
         // only version 2 is approved in env B
         subject.approveVersionFor(manifest, artifact, version2, environmentB.name)
-        // version 1 has been superseded in env A by version 2
-        subject.markAsSuperseded(manifest, artifact, version1, environmentA.name, version2)
+        // version 1 has been skipped in env A by version 2
+        subject.markAsSkipped(manifest, artifact, version1, environmentA.name, version2)
         // version 2 was successfully deployed to both envs
         subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environmentA.name)
         subject.markAsSuccessfullyDeployedTo(manifest, artifact, version2, environmentB.name)
       }
 
-      test("superseded versions don't get a pending status in the next env") {
+      test("skipped versions don't get a pending status in the next env") {
         val summaries = subject.getEnvironmentSummaries(manifest).sortedBy { it.name }
         expect {
           that(summaries.size).isEqualTo(2)
           that(summaries[0].artifacts.first().versions.current).isEqualTo(version2)
           that(summaries[0].artifacts.first().versions.pending).isEmpty()
-          that(summaries[0].artifacts.first().versions.superseded).containsExactlyInAnyOrder(version1)
+          that(summaries[0].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
           that(summaries[1].artifacts.first().versions.current).isEqualTo(version2)
           that(summaries[1].artifacts.first().versions.pending).isEmpty()
-          that(summaries[1].artifacts.first().versions.superseded).containsExactlyInAnyOrder(version1)
+          that(summaries[1].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
         }
       }
     }

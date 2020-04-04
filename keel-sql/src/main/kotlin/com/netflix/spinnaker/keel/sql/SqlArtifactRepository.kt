@@ -21,7 +21,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
-import com.netflix.spinnaker.keel.core.api.PromotionStatus.SUPERSEDED
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
@@ -407,7 +407,7 @@ class SqlArtifactRepository(
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.ne(version))
           .execute()
-        // update any past artifacts that were "APPROVED" to be "SUPERSEDED"
+        // update any past artifacts that were "APPROVED" to be "SKIPPED"
         // because the new version takes precedence
         val approvedButOld = txn.select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
           .from(ENVIRONMENT_ARTIFACT_VERSIONS)
@@ -417,7 +417,7 @@ class SqlArtifactRepository(
 
         txn
           .update(ENVIRONMENT_ARTIFACT_VERSIONS)
-          .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SUPERSEDED.name)
+          .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, version)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_AT, currentTimestamp())
           .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
@@ -617,7 +617,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun markAsSuperseded(
+  override fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
@@ -632,11 +632,11 @@ class SqlArtifactRepository(
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, environmentUid)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
-        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SUPERSEDED.name)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, supersededByVersion)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_AT, currentTimestamp())
         .onDuplicateKeyUpdate()
-        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SUPERSEDED.name)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, supersededByVersion)
         .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_AT, currentTimestamp())
         .execute()
@@ -738,7 +738,7 @@ class SqlArtifactRepository(
             approved = versions[APPROVED] ?: emptyList(),
             previous = versions[PREVIOUS] ?: emptyList(),
             vetoed = versions[VETOED] ?: emptyList(),
-            superseded = removeNewerIfCurrentExists(artifact, currentVersion, versions[PENDING]).plus(versions[SUPERSEDED]
+            skipped = removeNewerIfCurrentExists(artifact, currentVersion, versions[PENDING]).plus(versions[SKIPPED]
               ?: emptyList())
           )
         )

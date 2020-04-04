@@ -32,7 +32,7 @@ enum class PromotionStatus {
   VETOED,
 
   /**
-   * Was approved for the environment, but a newer version was deployed instead
+   * Was approved for the environment, but a newer version was deployed or evaluated instead
    */
-  SUPERSEDED
+  SKIPPED
 }

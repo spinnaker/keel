@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
-import com.netflix.spinnaker.keel.core.api.PromotionStatus.SUPERSEDED
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 
 /**
@@ -39,7 +39,7 @@ data class EnvironmentSummary(
           in it.versions.approved -> APPROVED
           in it.versions.pending -> PENDING
           in it.versions.vetoed -> VETOED
-          in it.versions.superseded -> SUPERSEDED
+          in it.versions.skipped -> SKIPPED
           else -> throw IllegalStateException("Unknown promotion status for artifact ${it.type}:${it.name}@$version in environment ${this.name}"
           )
         }
@@ -60,5 +60,5 @@ data class ArtifactVersionStatus(
   val approved: List<String>,
   val previous: List<String>,
   val vetoed: List<String>,
-  val superseded: List<String>
+  val skipped: List<String>
 )

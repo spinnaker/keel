@@ -164,9 +164,9 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   )
 
   /**
-   * Marks a version of an artifact as superseded for an environment, with information on what version superseded it.
+   * Marks a version of an artifact as skipped for an environment, with information on what version superseded it.
    */
-  fun markAsSuperseded(
+  fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
