@@ -7,7 +7,7 @@ enum class PromotionStatus {
   PENDING,
 
   /**
-   * Has passed constraints successfully, and wil be deployed imminently
+   * Has passed constraints successfully, and will be deployed imminently
    */
   APPROVED,
 
