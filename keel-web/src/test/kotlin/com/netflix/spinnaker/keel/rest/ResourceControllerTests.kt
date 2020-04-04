@@ -7,8 +7,8 @@ import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.APPLICATION
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.RESOURCE
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.APPLICATION
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.RESOURCE
 import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
@@ -115,8 +115,8 @@ internal class ResourceControllerTests : JUnit5Minutests {
 
     testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
       ApiRequest("GET /resources/${resource.id}") to setOf(
-        Permission(APPLICATION_AUTHZ, READ, RESOURCE),
-        Permission(CLOUD_ACCOUNT_AUTHZ, READ, RESOURCE)
+        ApplicationPermission(READ, RESOURCE),
+        CloudAccountPermission(READ, RESOURCE)
       ),
       ApiRequest("GET /resources/${resource.id}/status") to setOf(
         Permission(APPLICATION_AUTHZ, READ, RESOURCE),

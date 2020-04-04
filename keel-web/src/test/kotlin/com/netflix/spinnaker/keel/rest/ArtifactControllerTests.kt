@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration

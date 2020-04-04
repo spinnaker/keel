@@ -2,7 +2,10 @@ package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source
+import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
 import dev.minutest.ContextBuilder
 import io.mockk.Runs
 import io.mockk.every
@@ -19,11 +22,20 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 enum class AuthorizationType { APPLICATION_AUTHZ, SERVICE_ACCOUNT_AUTHZ, CLOUD_ACCOUNT_AUTHZ }
 
-data class Permission(
+open class Permission(
   val authorizationType: AuthorizationType,
-  val action: AuthorizationSupport.Action,
-  val entity: AuthorizationSupport.Entity
+  open val action: Action,
+  open val source: Source
 )
+
+data class ApplicationPermission(override val action: Action, override val source: Source) :
+  Permission(APPLICATION_AUTHZ, action, source)
+
+data class CloudAccountPermission(override val action: Action, override val source: Source) :
+  Permission(CLOUD_ACCOUNT_AUTHZ, action, source)
+
+data class ServiceAccountPermission(override val source: Source) :
+  Permission(SERVICE_ACCOUNT_AUTHZ, Action.READ, source)
 
 /**
  * Mocks the authorization for any and all API calls. Use judiciously!
@@ -39,7 +51,7 @@ fun ContextBuilder<*>.mockAllApiAuthorization(authorizationSupport: Authorizatio
     authorizationSupport.hasServiceAccountAccess(any<String>(), any())
   } returns true
   every {
-    authorizationSupport.hasServiceAccountAccess(any<Entity>(), any())
+    authorizationSupport.hasServiceAccountAccess(any<Source>(), any())
   } just Runs
   every {
     authorizationSupport.hasCloudAccountPermission(any<String>(), any(), any())
@@ -62,26 +74,26 @@ fun ContextBuilder<*>.mockApiAuthorization(
     when (permission.authorizationType) {
       AuthorizationType.APPLICATION_AUTHZ -> run {
         every {
-          authorizationSupport.hasApplicationPermission(permission.action.name, permission.entity.name, any())
+          authorizationSupport.hasApplicationPermission(permission.action.name, permission.source.name, any())
         } returns true
         every {
-          authorizationSupport.hasApplicationPermission(permission.action, permission.entity, any())
+          authorizationSupport.hasApplicationPermission(permission.action, permission.source, any())
         } just Runs
       }
       AuthorizationType.SERVICE_ACCOUNT_AUTHZ -> run {
         every {
-          authorizationSupport.hasServiceAccountAccess(permission.entity.name, any())
+          authorizationSupport.hasServiceAccountAccess(permission.source.name, any())
         } returns true
         every {
-          authorizationSupport.hasServiceAccountAccess(permission.entity, any())
+          authorizationSupport.hasServiceAccountAccess(permission.source, any())
         } just Runs
       }
       AuthorizationType.CLOUD_ACCOUNT_AUTHZ -> run {
         every {
-          authorizationSupport.hasCloudAccountPermission(permission.action.name, permission.entity.name, any())
+          authorizationSupport.hasCloudAccountPermission(permission.action.name, permission.source.name, any())
         } returns true
         every {
-          authorizationSupport.hasCloudAccountPermission(permission.action, permission.entity, any())
+          authorizationSupport.hasCloudAccountPermission(permission.action, permission.source, any())
         } just Runs
       }
     }
@@ -107,26 +119,26 @@ fun ContextBuilder<*>.testApiPermissions(
         when (permission.authorizationType) {
           AuthorizationType.APPLICATION_AUTHZ -> run {
             every {
-              authorizationSupport.hasApplicationPermission(permission.action.name, permission.entity.name, any())
+              authorizationSupport.hasApplicationPermission(permission.action.name, permission.source.name, any())
             } returns false
             every {
-              authorizationSupport.hasApplicationPermission(permission.action, permission.entity, any())
+              authorizationSupport.hasApplicationPermission(permission.action, permission.source, any())
             } throws AccessDeniedException("Nuh-uh!")
           }
           AuthorizationType.SERVICE_ACCOUNT_AUTHZ -> run {
             every {
-              authorizationSupport.hasServiceAccountAccess(permission.entity.name, any())
+              authorizationSupport.hasServiceAccountAccess(permission.source.name, any())
             } returns false
             every {
-              authorizationSupport.hasServiceAccountAccess(permission.entity, any())
+              authorizationSupport.hasServiceAccountAccess(permission.source, any())
             } throws AccessDeniedException("Nuh-uh!")
           }
           AuthorizationType.CLOUD_ACCOUNT_AUTHZ -> run {
             every {
-              authorizationSupport.hasCloudAccountPermission(permission.action.name, permission.entity.name, any())
+              authorizationSupport.hasCloudAccountPermission(permission.action.name, permission.source.name, any())
             } returns false
             every {
-              authorizationSupport.hasCloudAccountPermission(permission.action, permission.entity, any())
+              authorizationSupport.hasCloudAccountPermission(permission.action, permission.source, any())
             } throws AccessDeniedException("Nuh-uh!")
           }
         }

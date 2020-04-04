@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
 import org.slf4j.LoggerFactory
@@ -43,7 +43,7 @@ class InteractiveNotificationCallbackController(
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     if (!authorizationSupport.hasApplicationPermission(
-        Action.WRITE.name, Entity.DELIVERY_CONFIG.name, currentState.deliveryConfigName)) {
+        Action.WRITE.name, Source.DELIVERY_CONFIG.name, currentState.deliveryConfigName)) {
       throw AccessDeniedException("User $user does not have access to delivery config ${currentState.deliveryConfigName}")
     }
 

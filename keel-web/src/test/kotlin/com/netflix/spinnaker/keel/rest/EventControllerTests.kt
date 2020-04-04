@@ -21,7 +21,7 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.RESOURCE
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.RESOURCE
 import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper

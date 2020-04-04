@@ -26,11 +26,9 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.APPLICATION
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.APPLICATION
 import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
 import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
@@ -41,7 +39,6 @@ import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
-import io.mockk.every
 import io.mockk.mockk
 import java.time.Clock
 import java.time.Instant
@@ -354,7 +351,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("application is not managed") {
       before {
-        every { authorizationSupport.hasApplicationPermission(Action.READ.name, Entity.APPLICATION.name, any()) } returns true
+        mockApiAuthorization(authorizationSupport, authorizedCalls)
       }
 
       test("API returns gracefully") {

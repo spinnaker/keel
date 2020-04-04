@@ -14,7 +14,7 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Entity.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
@@ -25,7 +25,6 @@ import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import io.mockk.every
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
@@ -108,9 +107,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
   fun tests() = rootContext {
     before {
-      every {
-        authorizationSupport.hasApplicationPermission(any() as String, any() as String, any())
-      } returns true
+      mockAllApiAuthorization(authorizationSupport)
     }
 
     after {
