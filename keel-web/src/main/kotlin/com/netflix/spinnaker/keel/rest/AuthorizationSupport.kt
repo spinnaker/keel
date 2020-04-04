@@ -149,15 +149,13 @@ class AuthorizationSupport(
     }
   }
 
-  private fun withAuthentication(source: Source, identifier: String, block: (Authentication) -> Unit): Boolean {
-    return try {
+  private fun withAuthentication(source: Source, identifier: String, block: (Authentication) -> Unit) {
+    try {
       val auth = SecurityContextHolder.getContext().authentication
       block(auth)
-      true
     } catch (e: NoSuchEntityException) {
       // If entity doesn't exist return true so a 404 is returned from the controller.
       log.debug("${source.name} $identifier not found. Allowing request to return 404.")
-      true
     }
   }
 

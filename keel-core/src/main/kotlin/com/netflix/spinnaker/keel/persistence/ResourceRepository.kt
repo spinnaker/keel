@@ -257,10 +257,6 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
 inline fun <reified T : ResourceSpec> ResourceRepository.get(id: String): Resource<T> =
   get(id).also { check(it.spec is T) } as Resource<T>
 
-enum class ResourceStatus {
-  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, VETOED, RESUMED, UNKNOWN
-}
-
 abstract class NoSuchResourceException(override val message: String?) :
   NoSuchEntityException(message)
 
@@ -269,3 +265,7 @@ class NoSuchResourceId(id: String) :
 
 class NoSuchApplication(application: String) :
   NoSuchEntityException("No resource with application name $application exists in the database")
+
+enum class ResourceStatus {
+  HAPPY, ACTUATING, UNHAPPY, CREATED, DIFF, ERROR, PAUSED, VETOED, RESUMED, UNKNOWN
+}

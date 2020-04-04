@@ -41,8 +41,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/application"])
 class ApplicationController(
   private val actuationPauser: ActuationPauser,
-  private val applicationService: ApplicationService,
-  private val authorizationSupport: AuthorizationSupport
+  private val applicationService: ApplicationService
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

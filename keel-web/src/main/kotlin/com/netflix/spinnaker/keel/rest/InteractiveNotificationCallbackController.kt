@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
-import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -42,10 +41,8 @@ class InteractiveNotificationCallbackController(
     val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
-    if (!authorizationSupport.hasApplicationPermission(
-        Action.WRITE.name, Source.DELIVERY_CONFIG.name, currentState.deliveryConfigName)) {
-      throw AccessDeniedException("User $user does not have access to delivery config ${currentState.deliveryConfigName}")
-    }
+    authorizationSupport.hasApplicationPermission(
+      Action.WRITE, Source.DELIVERY_CONFIG, currentState.deliveryConfigName)
 
     log.debug("Updating constraint status based on notification interaction: " +
       "user = $user, status = ${callback.actionPerformed.value}")
