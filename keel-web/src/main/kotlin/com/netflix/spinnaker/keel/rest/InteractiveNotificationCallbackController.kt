@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import java.time.Instant
 import org.slf4j.LoggerFactory
@@ -42,7 +42,7 @@ class InteractiveNotificationCallbackController(
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     authorizationSupport.hasApplicationPermission(
-      Action.WRITE, SourceEntity.DELIVERY_CONFIG, currentState.deliveryConfigName)
+      Action.WRITE, TargetEntity.DELIVERY_CONFIG, currentState.deliveryConfigName)
 
     log.debug("Updating constraint status based on notification interaction: " +
       "user = $user, status = ${callback.actionPerformed.value}")

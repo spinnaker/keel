@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Resource
@@ -21,7 +20,7 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.RESOURCE
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.RESOURCE
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
@@ -30,11 +29,11 @@ import com.netflix.spinnaker.time.MutableClock
 import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.clearAllMocks
 import java.net.URI
 import java.time.Duration
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
@@ -75,10 +74,6 @@ internal class EventControllerTests : JUnit5Minutests {
   @Autowired
   lateinit var actuationPauser: ActuationPauser
 
-  @Autowired
-  @Qualifier("jsonMapper")
-  lateinit var jsonMapper: ObjectMapper
-
   @MockkBean
   lateinit var authorizationSupport: AuthorizationSupport
 
@@ -90,6 +85,10 @@ internal class EventControllerTests : JUnit5Minutests {
 
   fun tests() = rootContext<Fixture> {
     fixture { Fixture }
+
+    after {
+      clearAllMocks()
+    }
 
     context("no resource exists") {
       before { authorizationSupport.allowAll() }
@@ -129,6 +128,8 @@ internal class EventControllerTests : JUnit5Minutests {
 
       setOf(APPLICATION_YAML, APPLICATION_JSON).forEach { accept ->
         context("getting event history as $accept") {
+          before { authorizationSupport.allowAll() }
+
           test("the list contains the most recent 10 events") {
             val request = get(eventsUri).accept(accept)
             val result = mvc
@@ -277,17 +278,32 @@ internal class EventControllerTests : JUnit5Minutests {
     }
 
     context("API permission checks") {
-      context("caller is not authorized for GET /resources/events/test:whatever:62353534") {
-        before {
-          authorizationSupport.denyApplicationAccess(READ, RESOURCE)
-          authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
-        }
-        test("request is forbidden") {
-          val request = get("/resources/events/${resource.id}")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("GET /resources/events/${resource.id}") {
+        context("with no READ access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(READ, RESOURCE)
+            authorizationSupport.allowCloudAccountAccess(READ, RESOURCE)
+          }
+          test("request is forbidden") {
+            val request = get("/resources/events/${resource.id}")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no READ access to CLOUD_ACCOUNT") {
+          before {
+            authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
+            authorizationSupport.allowApplicationAccess(READ, RESOURCE)
+          }
+          test("request is forbidden") {
+            val request = get("/resources/events/${resource.id}")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
     }

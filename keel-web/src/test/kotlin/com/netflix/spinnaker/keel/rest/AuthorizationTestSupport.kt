@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -24,7 +24,7 @@ fun AuthorizationSupport.allowAll() {
     hasServiceAccountAccess(any<String>(), any())
   } returns true
   every {
-    hasServiceAccountAccess(any<SourceEntity>(), any())
+    hasServiceAccountAccess(any<TargetEntity>(), any())
   } just Runs
   every {
     hasCloudAccountPermission(any<String>(), any(), any())
@@ -35,38 +35,74 @@ fun AuthorizationSupport.allowAll() {
 }
 
 /**
+ * Mocks authorization to pass for [AuthorizationSupport.hasApplicationPermission].
+ */
+fun AuthorizationSupport.allowApplicationAccess(action: Action, target: TargetEntity) {
+  every {
+    hasApplicationPermission(action.name, target.name, any())
+  } returns true
+  every {
+    hasApplicationPermission(action, target, any())
+  } just Runs
+}
+
+/**
  * Mocks authorization to fail for [AuthorizationSupport.hasApplicationPermission].
  */
-fun AuthorizationSupport.denyApplicationAccess(action: Action, source: SourceEntity) {
+fun AuthorizationSupport.denyApplicationAccess(action: Action, target: TargetEntity) {
   every {
-    hasApplicationPermission(action.name, source.name, any())
+    hasApplicationPermission(action.name, target.name, any())
   } returns false
   every {
-    hasApplicationPermission(action, source, any())
+    hasApplicationPermission(action, target, any())
   } throws AccessDeniedException("Nuh-uh!")
+}
+
+/**
+ * Mocks authorization to pass for [AuthorizationSupport.hasCloudAccountPermission].
+ */
+fun AuthorizationSupport.allowCloudAccountAccess(action: Action, target: TargetEntity) {
+  every {
+    hasCloudAccountPermission(action.name, target.name, any())
+  } returns true
+  every {
+    hasCloudAccountPermission(action, target, any())
+  } just Runs
 }
 
 /**
  * Mocks authorization to fail for [AuthorizationSupport.hasCloudAccountPermission].
  */
-fun AuthorizationSupport.denyCloudAccountAccess(action: Action, source: SourceEntity) {
+fun AuthorizationSupport.denyCloudAccountAccess(action: Action, target: TargetEntity) {
   every {
-    hasCloudAccountPermission(action.name, source.name, any())
+    hasCloudAccountPermission(action.name, target.name, any())
   } returns false
   every {
-    hasCloudAccountPermission(action, source, any())
+    hasCloudAccountPermission(action, target, any())
   } throws AccessDeniedException("Nuh-uh!")
+}
+
+/**
+ * Mocks authorization to pass for [AuthorizationSupport.hasServiceAccountAccess].
+ */
+fun AuthorizationSupport.allowServiceAccountAccess(target: TargetEntity) {
+  every {
+    hasServiceAccountAccess(target.name, any())
+  } returns true
+  every {
+    hasServiceAccountAccess(target, any())
+  } just Runs
 }
 
 /**
  * Mocks authorization to fail for [AuthorizationSupport.hasServiceAccountAccess].
  */
-fun AuthorizationSupport.denyServiceAccountAccess(source: SourceEntity) {
+fun AuthorizationSupport.denyServiceAccountAccess(target: TargetEntity) {
   every {
-    hasServiceAccountAccess(source.name, any())
+    hasServiceAccountAccess(target.name, any())
   } returns false
   every {
-    hasServiceAccountAccess(source, any())
+    hasServiceAccountAccess(target, any())
   } throws AccessDeniedException("Nuh-uh!")
 }
 

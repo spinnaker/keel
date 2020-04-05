@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchEntityException
+import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.security.access.AccessDeniedException
@@ -52,7 +53,8 @@ import org.springframework.stereotype.Component
 @Component
 class AuthorizationSupport(
   private val permissionEvaluator: FiatPermissionEvaluator,
-  private val repository: KeelRepository
+  private val repository: KeelRepository,
+  private val dynamicConfigService: DynamicConfigService
 ) {
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -61,41 +63,48 @@ class AuthorizationSupport(
     override fun toString() = name.toLowerCase()
   }
 
-  enum class SourceEntity {
+  enum class TargetEntity {
     APPLICATION, DELIVERY_CONFIG, RESOURCE;
     override fun toString() = name.toLowerCase()
   }
 
+  private fun enabled() = dynamicConfigService.isEnabled("keel.authorization", true)
+
   /**
    * Verifies that the caller has the specified permission (action) to access the application associated with the
-   * specified source object.
+   * specified target object.
    */
-  fun hasApplicationPermission(action: String, source: String, identifier: String) =
-    passes { hasApplicationPermission(Action.valueOf(action), SourceEntity.valueOf(source), identifier) }
+  fun hasApplicationPermission(action: String, target: String, identifier: String) =
+    passes { hasApplicationPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
-  fun hasServiceAccountAccess(source: String, identifier: String) =
-    passes { hasServiceAccountAccess(SourceEntity.valueOf(source), identifier) }
+  fun hasServiceAccountAccess(target: String, identifier: String) =
+    passes { hasServiceAccountAccess(TargetEntity.valueOf(target), identifier) }
 
-  fun hasCloudAccountPermission(action: String, source: String, identifier: String) =
-    passes { hasCloudAccountPermission(Action.valueOf(action), SourceEntity.valueOf(source), identifier) }
+  fun hasCloudAccountPermission(action: String, target: String, identifier: String) =
+    passes { hasCloudAccountPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
   /**
    * Verifies that the caller has the specified permission (action) to access the application associated with the
-   * specified source object.
+   * specified target object.
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasApplicationPermission(action: Action, source: SourceEntity, identifier: String) {
-    withAuthentication(source, identifier) { auth ->
-      val application = when (source) {
-        SourceEntity.RESOURCE -> repository.getResource(identifier).application
-        SourceEntity.APPLICATION -> identifier
-        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
+  fun hasApplicationPermission(action: Action, target: TargetEntity, identifier: String) {
+    if (!enabled()) return
+
+    withAuthentication(target, identifier) { auth ->
+      val application = when (target) {
+        TargetEntity.RESOURCE -> repository.getResource(identifier).application
+        TargetEntity.APPLICATION -> identifier
+        TargetEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
       }
       permissionEvaluator.hasPermission(auth, application, "APPLICATION", action.name)
         .also { allowed ->
           log.debug("[ACCESS {}] User {}: permission to {} application {}.", allowed.str, auth.principal, action.name,
             application)
+          if (!allowed) {
+            throw AccessDeniedException("User ${auth.principal} does not have access to application $application")
+          }
         }
     }
   }
@@ -105,35 +114,42 @@ class AuthorizationSupport(
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasServiceAccountAccess(source: SourceEntity, identifier: String) {
-    withAuthentication(source, identifier) { auth ->
-      val serviceAccount = when (source) {
-        SourceEntity.RESOURCE -> repository.getResource(identifier).serviceAccount
-        SourceEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
-        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
+  fun hasServiceAccountAccess(target: TargetEntity, identifier: String) {
+    if (!enabled()) return
+
+    withAuthentication(target, identifier) { auth ->
+      val serviceAccount = when (target) {
+        TargetEntity.RESOURCE -> repository.getResource(identifier).serviceAccount
+        TargetEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
+        TargetEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
       }
       permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
         .also { allowed ->
           log.debug("[ACCESS {}] User {}: access to service account {}.", allowed.str, auth.principal, serviceAccount)
+          if (!allowed) {
+            throw AccessDeniedException("User ${auth.principal} does not have access to service account $serviceAccount")
+          }
         }
     }
   }
 
   /**
    * Verifies that the caller has the specified permission to all applicable resources (i.e. resources whose specs
-   * are [Locatable]) identified by the source type and identifier, as follows:
-   *   - If source is RESOURCE, check the resource itself
-   *   - If source is DELIVERY_CONFIG, check all the resources in all the environments of the delivery config
-   *   - If source is APPLICATION, do the same as for DELIVERY_CONFIG
+   * are [Locatable]) identified by the target type and identifier, as follows:
+   *   - If target is RESOURCE, check the resource itself
+   *   - If target is DELIVERY_CONFIG, check all the resources in all the environments of the delivery config
+   *   - If target is APPLICATION, do the same as for DELIVERY_CONFIG
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasCloudAccountPermission(action: Action, source: SourceEntity, identifier: String) {
-    withAuthentication(source, identifier) { auth ->
-      val locatableResources = when (source) {
-        SourceEntity.RESOURCE -> listOf(repository.getResource(identifier))
-        SourceEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).resources
-        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).resources
+  fun hasCloudAccountPermission(action: Action, target: TargetEntity, identifier: String) {
+    if (!enabled()) return
+
+    withAuthentication(target, identifier) { auth ->
+      val locatableResources = when (target) {
+        TargetEntity.RESOURCE -> listOf(repository.getResource(identifier))
+        TargetEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).resources
+        TargetEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).resources
       }.filter { it.spec is Locatable<*> }
 
       locatableResources.forEach {
@@ -149,13 +165,13 @@ class AuthorizationSupport(
     }
   }
 
-  private fun withAuthentication(source: SourceEntity, identifier: String, block: (Authentication) -> Unit) {
+  private fun withAuthentication(target: TargetEntity, identifier: String, block: (Authentication) -> Unit) {
     try {
       val auth = SecurityContextHolder.getContext().authentication
       block(auth)
     } catch (e: NoSuchEntityException) {
       // If entity doesn't exist return true so a 404 is returned from the controller.
-      log.debug("${source.name} $identifier not found. Allowing request to return 404.")
+      log.debug("${target.name} $identifier not found. Allowing request to return 404.")
     }
   }
 

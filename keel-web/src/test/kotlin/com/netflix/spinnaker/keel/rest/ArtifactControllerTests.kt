@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.DELIVERY_CONFIG
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import com.ninjasquad.springmockk.MockkBean
@@ -18,7 +18,6 @@ import dev.minutest.rootContext
 import io.mockk.clearAllMocks
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
@@ -45,7 +44,6 @@ internal class ArtifactControllerTests : JUnit5Minutests {
   lateinit var artifactRepository: InMemoryArtifactRepository
 
   @Autowired
-  @Qualifier("jsonMapper")
   lateinit var jsonMapper: ObjectMapper
 
   @MockkBean
@@ -99,60 +97,124 @@ internal class ArtifactControllerTests : JUnit5Minutests {
     }
 
     context("API permission checks") {
-      context("caller is not authorized for POST /artifacts/pin") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
-          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
-        }
-        test("request is forbidden") {
-          val request = post("/artifacts/pin").addData(jsonMapper,
-            EnvironmentArtifactPin("myconfig", "test", "ref", "deb", "0.0.1", null, null)
-          )
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("POST /artifacts/pin") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = post("/artifacts/pin").addData(jsonMapper,
+              EnvironmentArtifactPin("myconfig", "test", "ref", "deb", "0.0.1", null, null)
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+            authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = post("/artifacts/pin").addData(jsonMapper,
+              EnvironmentArtifactPin("myconfig", "test", "ref", "deb", "0.0.1", null, null)
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for DELETE /artifacts/pin/myconfig/test") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
-          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
-        }
-        test("request is forbidden") {
-          val request = delete("/artifacts/pin/myconfig/test")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("DELETE /artifacts/pin/myconfig/test") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = delete("/artifacts/pin/myconfig/test")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+            authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = delete("/artifacts/pin/myconfig/test")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for POST /artifacts/veto") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
-          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
-        }
-        test("request is forbidden") {
-          val request = post("/artifacts/veto").addData(jsonMapper,
-            EnvironmentArtifactVeto("myconfig", "test", "ref", "deb", "0.0.1")
-          )
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("POST /artifacts/veto") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = post("/artifacts/veto").addData(jsonMapper,
+              EnvironmentArtifactVeto("myconfig", "test", "ref", "deb", "0.0.1")
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+            authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = post("/artifacts/veto").addData(jsonMapper,
+              EnvironmentArtifactVeto("myconfig", "test", "ref", "deb", "0.0.1")
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for DELETE /artifacts/veto/myconfig/test/deb/ref/0.0.1") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
-          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
-        }
-        test("request is forbidden") {
-          val request = delete("/artifacts/veto/myconfig/test/deb/ref/0.0.1")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("DELETE /artifacts/veto/myconfig/test/deb/ref/0.0.1") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = delete("/artifacts/veto/myconfig/test/deb/ref/0.0.1")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+            authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = delete("/artifacts/veto/myconfig/test/deb/ref/0.0.1")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
     }

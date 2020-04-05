@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.DeliveryConfig
@@ -28,7 +27,7 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepos
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.APPLICATION
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICATION
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
@@ -106,9 +105,6 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
   @Autowired
   lateinit var jsonMapper: ObjectMapper
-
-  @Autowired
-  lateinit var yamlMapper: YAMLMapper
 
   companion object {
     const val application = "fnord"
@@ -347,69 +343,120 @@ internal class ApplicationControllerTests : JUnit5Minutests {
     }
 
     context("API permission checks") {
-      context("caller is not authorized for GET /application/fnord") {
-        before {
-          authorizationSupport.denyApplicationAccess(READ, APPLICATION)
-          authorizationSupport.denyCloudAccountAccess(READ, APPLICATION)
-        }
-        test("request is forbidden") {
-          val request = get("/application/fnord")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("GET /application/fnord") {
+        context("with no READ access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(READ, APPLICATION)
+            authorizationSupport.allowCloudAccountAccess(READ, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = get("/application/fnord")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no READ access to CLOUD_ACCOUNT") {
+          before {
+            authorizationSupport.denyCloudAccountAccess(READ, APPLICATION)
+            authorizationSupport.allowApplicationAccess(READ, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = get("/application/fnord")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for GET /application/fnord/environment/prod/constraints") {
-        before {
-          authorizationSupport.denyApplicationAccess(READ, APPLICATION)
-        }
-        test("request is forbidden") {
-          val request = get("/application/fnord/environment/prod/constraints")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("GET /application/fnord/environment/prod/constraints") {
+        context("with no READ access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(READ, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = get("/application/fnord/environment/prod/constraints")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for POST /application/fnord/environment/prod/constraint") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
-          authorizationSupport.denyServiceAccountAccess(APPLICATION)
-        }
-        test("request is forbidden") {
-          val request = post("/application/fnord/environment/prod/constraint").addData(jsonMapper,
-            UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
-          )
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("POST /application/fnord/environment/prod/constraint") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
+            authorizationSupport.allowServiceAccountAccess(APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = post("/application/fnord/environment/prod/constraint").addData(jsonMapper,
+              UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(APPLICATION)
+            authorizationSupport.allowApplicationAccess(WRITE, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = post("/application/fnord/environment/prod/constraint").addData(jsonMapper,
+              UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
+            )
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for POST /application/fnord/pause") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
-        }
-        test("request is forbidden") {
-          val request = post("/application/fnord/pause")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("POST /application/fnord/pause") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = post("/application/fnord/pause")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
-      context("caller is not authorized for DELETE /application/fnord/pause") {
-        before {
-          authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
-          authorizationSupport.denyServiceAccountAccess(APPLICATION)
-        }
-        test("request is forbidden") {
-          val request = delete("/application/fnord/pause")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-            .header("X-SPINNAKER-USER", "keel@keel.io")
+      context("DELETE /application/fnord/pause") {
+        context("with no WRITE access to APPLICATION") {
+          before {
+            authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
+            authorizationSupport.allowServiceAccountAccess(APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = delete("/application/fnord/pause")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
 
-          mvc.perform(request).andExpect(status().isForbidden)
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to SERVICE_ACCOUNT") {
+          before {
+            authorizationSupport.denyServiceAccountAccess(APPLICATION)
+            authorizationSupport.allowApplicationAccess(WRITE, APPLICATION)
+          }
+          test("request is forbidden") {
+            val request = delete("/application/fnord/pause")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
         }
       }
     }
