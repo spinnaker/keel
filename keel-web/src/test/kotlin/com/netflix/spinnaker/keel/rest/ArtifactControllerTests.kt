@@ -8,11 +8,8 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.DELIVERY_CONFIG
-import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
-import com.netflix.spinnaker.keel.rest.AuthorizationType.SERVICE_ACCOUNT_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
 import com.ninjasquad.springmockk.MockkBean
@@ -25,9 +22,12 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
+import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -98,27 +98,63 @@ internal class ArtifactControllerTests : JUnit5Minutests {
         ))
     }
 
-    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
-      ApiRequest("POST /artifacts/pin",
-        EnvironmentArtifactPin("myconfig", "test", "ref", "deb", "0.0.1", null, null)
-      ) to setOf(
-        Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG),
-        Permission(SERVICE_ACCOUNT_AUTHZ, READ, DELIVERY_CONFIG)
-      ),
-      ApiRequest("DELETE /artifacts/pin/myconfig/test") to setOf(
-        Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG),
-        Permission(SERVICE_ACCOUNT_AUTHZ, READ, DELIVERY_CONFIG)
-      ),
-      ApiRequest("POST /artifacts/veto",
-        EnvironmentArtifactVeto("myconfig", "test", "ref", "deb", "0.0.1")
-      ) to setOf(
-        Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG),
-        Permission(SERVICE_ACCOUNT_AUTHZ, READ, DELIVERY_CONFIG)
-      ),
-      ApiRequest("DELETE /artifacts/veto/myconfig/test/deb/ref/0.0.1") to setOf(
-        Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG),
-        Permission(SERVICE_ACCOUNT_AUTHZ, READ, DELIVERY_CONFIG)
-      )
-    ))
+    context("API permission checks") {
+      context("caller is not authorized for POST /artifacts/pin") {
+        before {
+          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+        }
+        test("request is forbidden") {
+          val request = post("/artifacts/pin").addData(jsonMapper,
+            EnvironmentArtifactPin("myconfig", "test", "ref", "deb", "0.0.1", null, null)
+          )
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+      context("caller is not authorized for DELETE /artifacts/pin/myconfig/test") {
+        before {
+          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+        }
+        test("request is forbidden") {
+          val request = delete("/artifacts/pin/myconfig/test")
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+      context("caller is not authorized for POST /artifacts/veto") {
+        before {
+          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+        }
+        test("request is forbidden") {
+          val request = post("/artifacts/veto").addData(jsonMapper,
+            EnvironmentArtifactVeto("myconfig", "test", "ref", "deb", "0.0.1")
+          )
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+      context("caller is not authorized for DELETE /artifacts/veto/myconfig/test/deb/ref/0.0.1") {
+        before {
+          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+          authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
+        }
+        test("request is forbidden") {
+          val request = delete("/artifacts/veto/myconfig/test/deb/ref/0.0.1")
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+    }
   }
 }

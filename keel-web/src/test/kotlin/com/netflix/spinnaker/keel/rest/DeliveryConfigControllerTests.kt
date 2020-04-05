@@ -14,8 +14,7 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.DELIVERY_CONFIG
-import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
@@ -31,6 +30,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
@@ -107,7 +107,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
   fun tests() = rootContext {
     before {
-      mockAllApiAuthorization(authorizationSupport)
+      authorizationSupport.allowAll()
     }
 
     after {
@@ -328,9 +328,19 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
       }
     }
 
-    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
-      ApiRequest("POST /delivery-configs", deliveryConfig)
-        to setOf(Permission(APPLICATION_AUTHZ, WRITE, DELIVERY_CONFIG))
-    ))
+    context("API permission checks") {
+      context("caller is not authorized for POST /delivery-configs") {
+        before {
+          authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+        }
+        test("request is forbidden") {
+          val request = post("/delivery-configs").addData(jsonMapper, deliveryConfig)
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+    }
   }
 }

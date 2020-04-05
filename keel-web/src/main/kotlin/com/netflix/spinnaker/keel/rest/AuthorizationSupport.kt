@@ -61,36 +61,36 @@ class AuthorizationSupport(
     override fun toString() = name.toLowerCase()
   }
 
-  enum class Source {
+  enum class SourceEntity {
     APPLICATION, DELIVERY_CONFIG, RESOURCE;
     override fun toString() = name.toLowerCase()
   }
 
   /**
    * Verifies that the caller has the specified permission (action) to access the application associated with the
-   * specified entity.
+   * specified source object.
    */
-  fun hasApplicationPermission(action: String, entity: String, identifier: String) =
-    passes { hasApplicationPermission(Action.valueOf(action), Source.valueOf(entity), identifier) }
+  fun hasApplicationPermission(action: String, source: String, identifier: String) =
+    passes { hasApplicationPermission(Action.valueOf(action), SourceEntity.valueOf(source), identifier) }
 
-  fun hasServiceAccountAccess(entity: String, identifier: String) =
-    passes { hasServiceAccountAccess(Source.valueOf(entity), identifier) }
+  fun hasServiceAccountAccess(source: String, identifier: String) =
+    passes { hasServiceAccountAccess(SourceEntity.valueOf(source), identifier) }
 
-  fun hasCloudAccountPermission(action: String, entity: String, identifier: String) =
-    passes { hasCloudAccountPermission(Action.valueOf(action), Source.valueOf(entity), identifier) }
+  fun hasCloudAccountPermission(action: String, source: String, identifier: String) =
+    passes { hasCloudAccountPermission(Action.valueOf(action), SourceEntity.valueOf(source), identifier) }
 
   /**
    * Verifies that the caller has the specified permission (action) to access the application associated with the
-   * specified entity.
+   * specified source object.
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasApplicationPermission(action: Action, source: Source, identifier: String) {
+  fun hasApplicationPermission(action: Action, source: SourceEntity, identifier: String) {
     withAuthentication(source, identifier) { auth ->
       val application = when (source) {
-        Source.RESOURCE -> repository.getResource(identifier).application
-        Source.APPLICATION -> identifier
-        Source.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
+        SourceEntity.RESOURCE -> repository.getResource(identifier).application
+        SourceEntity.APPLICATION -> identifier
+        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).application
       }
       permissionEvaluator.hasPermission(auth, application, "APPLICATION", action.name)
         .also { allowed ->
@@ -105,12 +105,12 @@ class AuthorizationSupport(
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasServiceAccountAccess(source: Source, identifier: String) {
+  fun hasServiceAccountAccess(source: SourceEntity, identifier: String) {
     withAuthentication(source, identifier) { auth ->
       val serviceAccount = when (source) {
-        Source.RESOURCE -> repository.getResource(identifier).serviceAccount
-        Source.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
-        Source.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
+        SourceEntity.RESOURCE -> repository.getResource(identifier).serviceAccount
+        SourceEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
+        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
       }
       permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
         .also { allowed ->
@@ -121,19 +121,19 @@ class AuthorizationSupport(
 
   /**
    * Verifies that the caller has the specified permission to all applicable resources (i.e. resources whose specs
-   * are [Locatable]) identified by the entity type and identifier, as follows:
-   *   - If entity is RESOURCE, check the resource itself
-   *   - If entity is DELIVERY_CONFIG, check all the resources in all the environments of the delivery config
-   *   - If entity is APPLICATION, do the same as for DELIVERY_CONFIG
+   * are [Locatable]) identified by the source type and identifier, as follows:
+   *   - If source is RESOURCE, check the resource itself
+   *   - If source is DELIVERY_CONFIG, check all the resources in all the environments of the delivery config
+   *   - If source is APPLICATION, do the same as for DELIVERY_CONFIG
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasCloudAccountPermission(action: Action, source: Source, identifier: String) {
+  fun hasCloudAccountPermission(action: Action, source: SourceEntity, identifier: String) {
     withAuthentication(source, identifier) { auth ->
       val locatableResources = when (source) {
-        Source.RESOURCE -> listOf(repository.getResource(identifier))
-        Source.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).resources
-        Source.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).resources
+        SourceEntity.RESOURCE -> listOf(repository.getResource(identifier))
+        SourceEntity.APPLICATION -> repository.getDeliveryConfigForApplication(identifier).resources
+        SourceEntity.DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).resources
       }.filter { it.spec is Locatable<*> }
 
       locatableResources.forEach {
@@ -149,7 +149,7 @@ class AuthorizationSupport(
     }
   }
 
-  private fun withAuthentication(source: Source, identifier: String, block: (Authentication) -> Unit) {
+  private fun withAuthentication(source: SourceEntity, identifier: String, block: (Authentication) -> Unit) {
     try {
       val auth = SecurityContextHolder.getContext().authentication
       block(auth)

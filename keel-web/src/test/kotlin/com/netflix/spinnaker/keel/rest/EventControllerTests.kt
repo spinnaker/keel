@@ -21,9 +21,7 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Source.RESOURCE
-import com.netflix.spinnaker.keel.rest.AuthorizationType.APPLICATION_AUTHZ
-import com.netflix.spinnaker.keel.rest.AuthorizationType.CLOUD_ACCOUNT_AUTHZ
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.SourceEntity.RESOURCE
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.resource
@@ -43,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.test.context.junit.jupiter.SpringExtension
@@ -93,7 +92,7 @@ internal class EventControllerTests : JUnit5Minutests {
     fixture { Fixture }
 
     context("no resource exists") {
-      before { mockAllApiAuthorization(authorizationSupport) }
+      before { authorizationSupport.allowAll() }
 
       test("event eventHistory endpoint responds with 404") {
         val request = get("/resources/events/${resource.id}")
@@ -106,7 +105,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("a resource exists with events") {
       before {
-        mockAllApiAuthorization(authorizationSupport)
+        authorizationSupport.allowAll()
         with(resourceRepository) {
           store(resource)
           appendHistory(ResourceCreated(resource, clock))
@@ -185,7 +184,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with application paused at various times") {
       before {
-        mockAllApiAuthorization(authorizationSupport)
+        authorizationSupport.allowAll()
         with(resourceRepository) {
           dropAll()
           store(resource)
@@ -220,7 +219,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with a new resource created AFTER the application is paused") {
       before {
-        mockAllApiAuthorization(authorizationSupport)
+        authorizationSupport.allowAll()
         with(resourceRepository) {
           dropAll()
           actuationPauser.pauseApplication(resource.application)
@@ -248,7 +247,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("with application pauses BEFORE and AFTER a new resource is created") {
       before {
-        mockAllApiAuthorization(authorizationSupport)
+        authorizationSupport.allowAll()
         with(resourceRepository) {
           dropAll()
           actuationPauser.pauseApplication(resource.application)
@@ -277,12 +276,21 @@ internal class EventControllerTests : JUnit5Minutests {
       }
     }
 
-    testApiPermissions(mvc, jsonMapper, authorizationSupport, mapOf(
-      ApiRequest("GET /resources/events/${resource.id}") to setOf(
-        Permission(APPLICATION_AUTHZ, READ, RESOURCE),
-        Permission(CLOUD_ACCOUNT_AUTHZ, READ, RESOURCE)
-      )
-    ))
+    context("API permission checks") {
+      context("caller is not authorized for GET /resources/events/test:whatever:62353534") {
+        before {
+          authorizationSupport.denyApplicationAccess(READ, RESOURCE)
+          authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
+        }
+        test("request is forbidden") {
+          val request = get("/resources/events/${resource.id}")
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .header("X-SPINNAKER-USER", "keel@keel.io")
+
+          mvc.perform(request).andExpect(status().isForbidden)
+        }
+      }
+    }
   }
 }
 
