@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.test.locatableResource
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -41,6 +42,10 @@ internal class AuthorizationSupportTests : JUnit5Minutests {
   fun tests() = rootContext<AuthorizationSupport> {
     fixture {
       AuthorizationSupport(permissionEvaluator, combinedRepository, dynamicConfigService)
+    }
+
+    after {
+      clearAllMocks()
     }
 
     context("authorization is enabled") {
