@@ -13,7 +13,6 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
-import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
@@ -161,11 +160,17 @@ class ApplicationServiceTests : JUnit5Minutests {
       environments = environments.values.toSet()
     )
 
+    val version0 = "fnord-1.0.0-h0.a0a0a0a"
+    val version1 = "fnord-1.0.1-h1.b1b1b1b"
+    val version2 = "fnord-1.0.2-h2.c2c2c2c"
+    val version3 = "fnord-1.0.3-h3.d3d3d3d"
+    val version4 = "fnord-1.0.4-h4.e4e4e4e"
+
     val statelessEvaluator = mockk<ConstraintEvaluator<*>>() {
       every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
       every { isImplicit() } returns false
       every { canPromote(any(), any(), any(), any()) } answers {
-        secondArg<String>() in listOf("fnord-1.0.0-h0.a0a0a0a", "fnord-1.0.1-h1.b1b1b1b")
+        secondArg<String>() in listOf(version0, version1)
       }
     }
 
@@ -196,31 +201,33 @@ class ApplicationServiceTests : JUnit5Minutests {
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
           repository.resourceAppendHistory(ResourceValid(resource))
         }
-        repository.storeArtifact(artifact, "fnord-1.0.0-h0.a0a0a0a", ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, "fnord-1.0.1-h1.b1b1b1b", ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, "fnord-1.0.2-h2.c2c2c2c", ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, "fnord-1.0.3-h3.d3d3d3d", ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version0, ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version1, ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version2, ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version3, ArtifactStatus.RELEASE)
+//        repository.storeArtifact(artifact, version4, ArtifactStatus.RELEASE)
 
         // with our fake clock moving forward, simulate artifact approvals and deployments
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "test")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "test")
         clock.tickHours(1) // 2020-03-25T01:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "staging")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "staging")
         val productionDeployed = clock.tickHours(1) // 2020-03-25T02:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.0-h0.a0a0a0a", "production")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "production")
         clock.tickHours(1) // 2020-03-25T03:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.b1b1b1b", "test")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version1, "test")
         clock.tickHours(1) // 2020-03-25T04:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.1-h1.b1b1b1b", "staging")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version1, "staging")
         clock.tickHours(1) // 2020-03-25T05:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, "fnord-1.0.2-h2.c2c2c2c", "test")
-        repository.approveVersionFor(deliveryConfig, artifact, "fnord-1.0.3-h3.d3d3d3d", "test")
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version2, "test")
+//        repository.markAsSkipped(deliveryConfig, artifact, version3, "test", version4)
+        repository.approveVersionFor(deliveryConfig, artifact, version3, "test")
         repository.storeConstraintState(
           ConstraintState(
             deliveryConfigName = deliveryConfig.name,
             environmentName = "production",
-            artifactVersion = "fnord-1.0.0-h0.a0a0a0a",
+            artifactVersion = version0,
             type = "manual-judgement",
-            status = ConstraintStatus.OVERRIDE_PASS,
+            status = OVERRIDE_PASS,
             createdAt = clock.start,
             judgedAt = productionDeployed.minus(Duration.ofMinutes(30)),
             judgedBy = "lpollo@acme.com",
@@ -253,8 +260,8 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.type,
             artifact.statuses,
             ArtifactVersionStatus(
-              current = "fnord-1.0.0-h0.a0a0a0a",
-              pending = listOf("fnord-1.0.1-h1.b1b1b1b", "fnord-1.0.2-h2.c2c2c2c", "fnord-1.0.3-h3.d3d3d3d"),
+              current = version0,
+              pending = listOf(version1, version2, version3),
               approved = listOf(),
               previous = listOf(),
               vetoed = listOf(),
@@ -270,10 +277,10 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.type,
             artifact.statuses,
             ArtifactVersionStatus(
-              current = "fnord-1.0.1-h1.b1b1b1b",
-              pending = listOf("fnord-1.0.2-h2.c2c2c2c", "fnord-1.0.3-h3.d3d3d3d"),
+              current = version1,
+              pending = listOf(version2, version3),
               approved = listOf(),
-              previous = listOf("fnord-1.0.0-h0.a0a0a0a"),
+              previous = listOf(version0),
               vetoed = listOf(),
               deploying = null,
               skipped = listOf()
@@ -287,10 +294,10 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.type,
             artifact.statuses,
             ArtifactVersionStatus(
-              current = "fnord-1.0.2-h2.c2c2c2c",
+              current = version2,
               pending = listOf(),
-              approved = listOf("fnord-1.0.3-h3.d3d3d3d"),
-              previous = listOf("fnord-1.0.0-h0.a0a0a0a", "fnord-1.0.1-h1.b1b1b1b"),
+              approved = listOf(version3),
+              previous = listOf(version0, version1),
               vetoed = listOf(),
               deploying = null,
               skipped = listOf()
@@ -311,12 +318,12 @@ class ApplicationServiceTests : JUnit5Minutests {
       test("can get artifact summaries by application") {
         val summaries = applicationService.getArtifactSummariesFor(application)
         val v3 = ArtifactVersionSummary(
-          version = "fnord-1.0.3-h3.d3d3d3d",
+          version = version3,
           displayName = "1.0.3",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.3-h3.d3d3d3d", state = "approved"),
-            ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.3-h3.d3d3d3d", state = "pending"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.3-h3.d3d3d3d", state = "pending",
+            ArtifactSummaryInEnvironment(environment = "test", version = version3, state = "approved"),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version3, state = "pending"),
+            ArtifactSummaryInEnvironment(environment = "production", version = version3, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
               statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
           ),
@@ -324,12 +331,12 @@ class ApplicationServiceTests : JUnit5Minutests {
           git = GitMetadata("d3d3d3d")
         )
         val v2 = ArtifactVersionSummary(
-          version = "fnord-1.0.2-h2.c2c2c2c",
+          version = version2,
           displayName = "1.0.2",
-          environments = setOf( // todo eb: this is changing every time (deployed at time...
-            ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.2-h2.c2c2c2c", state = "current", deployedAt = Instant.parse("2020-03-25T05:00:00Z")),
-            ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.2-h2.c2c2c2c", state = "pending"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.2-h2.c2c2c2c", state = "pending",
+          environments = setOf(
+            ArtifactSummaryInEnvironment(environment = "test", version = version2, state = "current", deployedAt = Instant.parse("2020-03-25T05:00:00Z")),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version2, state = "pending"),
+            ArtifactSummaryInEnvironment(environment = "production", version = version2, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
               statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
           ),
@@ -337,12 +344,12 @@ class ApplicationServiceTests : JUnit5Minutests {
           git = GitMetadata("c2c2c2c")
         )
         val v1 = ArtifactVersionSummary(
-          version = "fnord-1.0.1-h1.b1b1b1b",
+          version = version1,
           displayName = "1.0.1",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.1-h1.b1b1b1b", state = "previous", deployedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedAt = Instant.parse("2020-03-25T05:00:00Z"), replacedBy = "fnord-1.0.2-h2.c2c2c2c"),
-            ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.1-h1.b1b1b1b", state = "current", deployedAt = Instant.parse("2020-03-25T04:00:00Z")),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.1-h1.b1b1b1b", state = "pending",
+            ArtifactSummaryInEnvironment(environment = "test", version = version1, state = "previous", deployedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedAt = Instant.parse("2020-03-25T05:00:00Z"), replacedBy = version2),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version1, state = "current", deployedAt = Instant.parse("2020-03-25T04:00:00Z")),
+            ArtifactSummaryInEnvironment(environment = "production", version = version1, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
               statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging")))
             )
@@ -351,12 +358,12 @@ class ApplicationServiceTests : JUnit5Minutests {
           git = GitMetadata("b1b1b1b")
         )
         val v0 = ArtifactVersionSummary(
-          version = "fnord-1.0.0-h0.a0a0a0a",
+          version = version0,
           displayName = "1.0.0",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = "fnord-1.0.0-h0.a0a0a0a", state = "previous", deployedAt = Instant.parse("2020-03-25T00:00:00Z"), replacedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedBy = "fnord-1.0.1-h1.b1b1b1b"),
-            ArtifactSummaryInEnvironment(environment = "staging", version = "fnord-1.0.0-h0.a0a0a0a", state = "previous", deployedAt = Instant.parse("2020-03-25T01:00:00Z"), replacedAt = Instant.parse("2020-03-25T04:00:00Z"), replacedBy = "fnord-1.0.1-h1.b1b1b1b"),
-            ArtifactSummaryInEnvironment(environment = "production", version = "fnord-1.0.0-h0.a0a0a0a", state = "current", deployedAt = Instant.parse("2020-03-25T02:00:00Z"),
+            ArtifactSummaryInEnvironment(environment = "test", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T00:00:00Z"), replacedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedBy = version1),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T01:00:00Z"), replacedAt = Instant.parse("2020-03-25T04:00:00Z"), replacedBy = version1),
+            ArtifactSummaryInEnvironment(environment = "production", version = version0, state = "current", deployedAt = Instant.parse("2020-03-25T02:00:00Z"),
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", OVERRIDE_PASS, startedAt = Instant.parse("2020-03-25T00:00:00Z"), judgedBy = "lpollo@acme.com", judgedAt = Instant.parse("2020-03-25T01:30:00Z"), comment = "Aye!"), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
               statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging"))))
           ),
@@ -366,10 +373,10 @@ class ApplicationServiceTests : JUnit5Minutests {
 
         expect {
           that(summaries.size).isEqualTo(1)
-          that(summaries.first().versions.find { it.version == "fnord-1.0.3-h3.d3d3d3d" }).isEqualTo(v3)
-          that(summaries.first().versions.find { it.version == "fnord-1.0.2-h2.c2c2c2c" }).isEqualTo(v2)
-          that(summaries.first().versions.find { it.version == "fnord-1.0.1-h1.b1b1b1b" }).isEqualTo(v1)
-          that(summaries.first().versions.find { it.version == "fnord-1.0.0-h0.a0a0a0a" }).isEqualTo(v0)
+          that(summaries.first().versions.find { it.version == version3 }).isEqualTo(v3)
+          that(summaries.first().versions.find { it.version == version2 }).isEqualTo(v2)
+          that(summaries.first().versions.find { it.version == version1 }).isEqualTo(v1)
+          that(summaries.first().versions.find { it.version == version0 }).isEqualTo(v0)
         }
       }
 
@@ -379,7 +386,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
 
       test("pending manual judgement") {
-        val judgement = ConstraintState(deliveryConfig.name, "production", "fnord-1.0.2-h2.c2c2c2c", "manual-judgement", PENDING)
+        val judgement = ConstraintState(deliveryConfig.name, "production", version2, "manual-judgement", PENDING)
         repository.storeConstraintState(judgement)
 
         val states = applicationService.getConstraintStatesFor(application, "production", 10)
@@ -392,10 +399,10 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
 
       test("approve manual judgement") {
-        val judgement = ConstraintState(deliveryConfig.name, "production", "fnord-1.0.2-h2.c2c2c2c", "manual-judgement", PENDING)
+        val judgement = ConstraintState(deliveryConfig.name, "production", version2, "manual-judgement", PENDING)
         repository.storeConstraintState(judgement)
 
-        val updatedState = UpdatedConstraintStatus("manual-judgement", "fnord-1.0.2-h2.c2c2c2c", OVERRIDE_PASS)
+        val updatedState = UpdatedConstraintStatus("manual-judgement", version2, OVERRIDE_PASS)
         applicationService.updateConstraintStatus("keel", application, "production", updatedState)
 
         val states = applicationService.getConstraintStatesFor(application, "production", 10)
