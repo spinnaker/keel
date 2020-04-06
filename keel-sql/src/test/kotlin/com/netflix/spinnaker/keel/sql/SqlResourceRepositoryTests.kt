@@ -19,6 +19,7 @@ internal object SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResource
       jooq,
       clock,
       DummyResourceTypeIdentifier,
+      emptyList(),
       configuredObjectMapper(),
       sqlRetry
     )

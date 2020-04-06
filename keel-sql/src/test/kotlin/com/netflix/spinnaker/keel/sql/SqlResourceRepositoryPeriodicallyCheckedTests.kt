@@ -38,7 +38,7 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
 
   override val factory: (clock: Clock) -> SqlResourceRepository = { clock ->
-    SqlResourceRepository(jooq, clock, DummyResourceTypeIdentifier, configuredObjectMapper(), sqlRetry)
+    SqlResourceRepository(jooq, clock, DummyResourceTypeIdentifier, emptyList(), configuredObjectMapper(), sqlRetry)
   }
 
   override fun flush() {

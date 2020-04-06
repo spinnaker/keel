@@ -3,6 +3,7 @@ package com.netflix.spinnaker.config
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.events.PersistentEvent.Companion.clock
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
+import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import com.netflix.spinnaker.keel.sql.SqlAgentLockRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
@@ -51,9 +52,10 @@ class SqlConfiguration {
     jooq: DSLContext,
     clock: Clock,
     resourceTypeIdentifier: ResourceTypeIdentifier,
+    specMigrators: List<SpecMigrator>,
     objectMapper: ObjectMapper
   ) =
-    SqlResourceRepository(jooq, clock, resourceTypeIdentifier, objectMapper, SqlRetry(sqlRetryProperties))
+    SqlResourceRepository(jooq, clock, resourceTypeIdentifier, specMigrators, objectMapper, SqlRetry(sqlRetryProperties))
 
   @Bean
   fun artifactRepository(jooq: DSLContext, clock: Clock, objectMapper: ObjectMapper) =

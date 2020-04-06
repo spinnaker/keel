@@ -24,7 +24,7 @@ internal object SqlDeliveryConfigRepositoryTests : DeliveryConfigRepositoryTests
     SqlDeliveryConfigRepository(jooq, Clock.systemUTC(), resourceTypeIdentifier, objectMapper, sqlRetry)
 
   override fun createResourceRepository(resourceTypeIdentifier: ResourceTypeIdentifier): SqlResourceRepository =
-    SqlResourceRepository(jooq, Clock.systemUTC(), resourceTypeIdentifier, objectMapper, sqlRetry)
+    SqlResourceRepository(jooq, Clock.systemUTC(), resourceTypeIdentifier, emptyList(), objectMapper, sqlRetry)
 
   override fun createArtifactRepository(): SqlArtifactRepository =
     SqlArtifactRepository(jooq, Clock.systemUTC(), objectMapper, sqlRetry)

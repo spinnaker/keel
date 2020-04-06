@@ -21,6 +21,8 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
+import com.netflix.spinnaker.keel.resources.SpecMigrator
+import com.netflix.spinnaker.keel.resources.migrate
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
@@ -38,6 +40,7 @@ open class SqlResourceRepository(
   private val jooq: DSLContext,
   private val clock: Clock,
   private val resourceTypeIdentifier: ResourceTypeIdentifier,
+  private val specMigrators: List<SpecMigrator>,
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry
 ) : ResourceRepository {
@@ -85,11 +88,15 @@ open class SqlResourceRepository(
    * Constructs a resource object from its database representation
    */
   private fun constructResource(kind: String, metadata: String, spec: String) =
-    Resource(
-      parseKind(kind),
-      objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-      objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind)))
-    )
+    specMigrators
+      .migrate(parseKind(kind), objectMapper.readValue(spec))
+      .let { (endKind, endSpec) ->
+        Resource(
+          endKind,
+          objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
+          objectMapper.convertValue(endSpec, resourceTypeIdentifier.identify(endKind))
+        )
+      }
 
   override fun hasManagedResources(application: String): Boolean {
     return sqlRetry.withRetry(READ) {
