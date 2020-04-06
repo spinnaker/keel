@@ -38,7 +38,7 @@ data class SubmittedResource<T : ResourceSpec>(
   val spec: T
 )
 
-val SubmittedResource<*>.id: String
+val <T : ResourceSpec> SubmittedResource<T>.id: String
   get() = generateId(kind, spec)
 
 fun <T : ResourceSpec> SubmittedResource<T>.normalize(): Resource<T> =

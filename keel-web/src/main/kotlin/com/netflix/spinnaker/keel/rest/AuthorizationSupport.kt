@@ -71,15 +71,22 @@ class AuthorizationSupport(
   private fun enabled() = dynamicConfigService.isEnabled("keel.authorization", true)
 
   /**
-   * Verifies that the caller has the specified permission (action) to access the application associated with the
+   * Returns true if the caller has the specified permission (action) to access the application associated with the
    * specified target object.
    */
   fun hasApplicationPermission(action: String, target: String, identifier: String) =
     passes { hasApplicationPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
+  /**
+   * Returns true if  the caller has access to the specified service account.
+   */
   fun hasServiceAccountAccess(target: String, identifier: String) =
     passes { hasServiceAccountAccess(TargetEntity.valueOf(target), identifier) }
 
+  /**
+   * Returns true if the caller has the specified permission (action) to access the cloud account associated with the
+   * specified target object.
+   */
   fun hasCloudAccountPermission(action: String, target: String, identifier: String) =
     passes { hasCloudAccountPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
