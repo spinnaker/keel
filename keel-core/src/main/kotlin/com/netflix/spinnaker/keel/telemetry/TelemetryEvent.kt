@@ -11,6 +11,8 @@ data class ResourceCheckSkipped(
   val skipper: String = "unknown"
 ) : TelemetryEvent()
 
+object ResourceCheckCompleted : TelemetryEvent()
+
 data class ResourceCheckTimedOut(
   val kind: ResourceKind,
   val id: String,

@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.EnvironmentsCheckTimedOut
+import com.netflix.spinnaker.keel.telemetry.ResourceCheckCompleted
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceLoadFailed
 import java.time.Duration
@@ -79,7 +80,10 @@ class CheckScheduler(
                    * to prevent the cancellation of all coroutines under [job]
                    */
                   withTimeout(checkTimeout.toMillis()) {
-                    launch { resourceActuator.checkResource(it) }
+                    launch {
+                      resourceActuator.checkResource(it)
+                      publisher.publishEvent(ResourceCheckCompleted)
+                    }
                   }
                 } catch (e: TimeoutCancellationException) {
                   log.error("Timed out checking resource ${it.id}", e)
