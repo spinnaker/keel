@@ -38,7 +38,7 @@ class ArtifactDeployedListenerTests : JUnit5Minutests {
     }
 
     context("no artifact associated with the resource") {
-      test("nothing is marked deploying") {
+      test("nothing is marked as deployed") {
         subject.onArtifactVersionDeployed(event)
         verify(exactly = 0) { repository.isApprovedFor(config, any(), event.artifactVersion, any()) }
         verify(exactly = 0) { repository.markAsSuccessfullyDeployedTo(config, any(), event.artifactVersion, any()) }
@@ -54,7 +54,7 @@ class ArtifactDeployedListenerTests : JUnit5Minutests {
           every { repository.isApprovedFor(any(), any(), event.artifactVersion, any()) } returns true
         }
 
-        test("version is marked deploying") {
+        test("version is marked as deployed") {
           subject.onArtifactVersionDeployed(event)
           verify(exactly = 1) { repository.markAsSuccessfullyDeployedTo(any(), any(), event.artifactVersion, any()) }
         }
@@ -64,7 +64,7 @@ class ArtifactDeployedListenerTests : JUnit5Minutests {
         before {
           every { repository.isApprovedFor(any(), any(), event.artifactVersion, any()) } returns false
         }
-        test("nothing is marked as deploying") {
+        test("nothing is marked as deployed") {
           subject.onArtifactVersionDeployed(event)
           verify(exactly = 0) { repository.markAsDeployingTo(config, any(), event.artifactVersion, any()) }
         }
