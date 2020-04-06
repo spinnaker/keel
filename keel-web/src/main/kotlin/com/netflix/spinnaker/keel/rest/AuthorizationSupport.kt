@@ -75,20 +75,20 @@ class AuthorizationSupport(
    * specified target object.
    */
   fun hasApplicationPermission(action: String, target: String, identifier: String) =
-    passes { hasApplicationPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
+    passes { checkApplicationPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
   /**
    * Returns true if  the caller has access to the specified service account.
    */
   fun hasServiceAccountAccess(target: String, identifier: String) =
-    passes { hasServiceAccountAccess(TargetEntity.valueOf(target), identifier) }
+    passes { checkServiceAccountAccess(TargetEntity.valueOf(target), identifier) }
 
   /**
    * Returns true if the caller has the specified permission (action) to access the cloud account associated with the
    * specified target object.
    */
   fun hasCloudAccountPermission(action: String, target: String, identifier: String) =
-    passes { hasCloudAccountPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
+    passes { checkCloudAccountPermission(Action.valueOf(action), TargetEntity.valueOf(target), identifier) }
 
   /**
    * Verifies that the caller has the specified permission (action) to access the application associated with the
@@ -96,7 +96,7 @@ class AuthorizationSupport(
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasApplicationPermission(action: Action, target: TargetEntity, identifier: String) {
+  fun checkApplicationPermission(action: Action, target: TargetEntity, identifier: String) {
     if (!enabled()) return
 
     withAuthentication(target, identifier) { auth ->
@@ -121,7 +121,7 @@ class AuthorizationSupport(
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasServiceAccountAccess(target: TargetEntity, identifier: String) {
+  fun checkServiceAccountAccess(target: TargetEntity, identifier: String) {
     if (!enabled()) return
 
     withAuthentication(target, identifier) { auth ->
@@ -149,7 +149,7 @@ class AuthorizationSupport(
    *
    * @throws AccessDeniedException if caller does not have the required permission.
    */
-  fun hasCloudAccountPermission(action: Action, target: TargetEntity, identifier: String) {
+  fun checkCloudAccountPermission(action: Action, target: TargetEntity, identifier: String) {
     if (!enabled()) return
 
     withAuthentication(target, identifier) { auth ->

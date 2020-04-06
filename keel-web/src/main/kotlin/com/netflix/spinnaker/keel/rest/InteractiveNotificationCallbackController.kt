@@ -41,7 +41,7 @@ class InteractiveNotificationCallbackController(
     val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
       ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
-    authorizationSupport.hasApplicationPermission(
+    authorizationSupport.checkApplicationPermission(
       Action.WRITE, TargetEntity.DELIVERY_CONFIG, currentState.deliveryConfigName)
 
     log.debug("Updating constraint status based on notification interaction: " +
