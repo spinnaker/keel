@@ -11,12 +11,11 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
-import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
-import com.netflix.spinnaker.keel.constraints.SupportedConstraintType
+import com.netflix.spinnaker.keel.constraints.DependsOnConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
@@ -45,7 +44,6 @@ import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
-import io.mockk.every
 import io.mockk.mockk
 import java.time.Duration
 import java.time.Instant
@@ -166,16 +164,10 @@ class ApplicationServiceTests : JUnit5Minutests {
     val version3 = "fnord-1.0.3-h3.d3d3d3d"
     val version4 = "fnord-1.0.4-h4.e4e4e4e"
 
-    val statelessEvaluator = mockk<ConstraintEvaluator<*>>() {
-      every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
-      every { isImplicit() } returns false
-      every { canPromote(any(), any(), any(), any()) } answers {
-        secondArg<String>() in listOf(version0, version1)
-      }
-    }
+    val dependsOnEvaluator = DependsOnConstraintEvaluator(artifactRepository, mockk())
 
     // subject
-    val applicationService = ApplicationService(repository, listOf(statelessEvaluator))
+    val applicationService = ApplicationService(repository, listOf(dependsOnEvaluator))
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {
@@ -205,22 +197,26 @@ class ApplicationServiceTests : JUnit5Minutests {
         repository.storeArtifact(artifact, version1, ArtifactStatus.RELEASE)
         repository.storeArtifact(artifact, version2, ArtifactStatus.RELEASE)
         repository.storeArtifact(artifact, version3, ArtifactStatus.RELEASE)
-//        repository.storeArtifact(artifact, version4, ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version4, ArtifactStatus.RELEASE)
 
         // with our fake clock moving forward, simulate artifact approvals and deployments
+        // v0
         repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "test")
         clock.tickHours(1) // 2020-03-25T01:00:00.00Z
         repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "staging")
         val productionDeployed = clock.tickHours(1) // 2020-03-25T02:00:00.00Z
         repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version0, "production")
+
+        // v1 skipped by v2
         clock.tickHours(1) // 2020-03-25T03:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version1, "test")
-        clock.tickHours(1) // 2020-03-25T04:00:00.00Z
-        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version1, "staging")
-        clock.tickHours(1) // 2020-03-25T05:00:00.00Z
+        repository.markAsSkipped(deliveryConfig, artifact, version1, "test", version2)
         repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version2, "test")
-//        repository.markAsSkipped(deliveryConfig, artifact, version3, "test", version4)
-        repository.approveVersionFor(deliveryConfig, artifact, version3, "test")
+        clock.tickHours(1) // 2020-03-25T04:00:00.00Z
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version2, "staging")
+        clock.tickHours(1) // 2020-03-25T05:00:00.00Z
+        repository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version3, "test")
+
+        repository.approveVersionFor(deliveryConfig, artifact, version4, "test")
         repository.storeConstraintState(
           ConstraintState(
             deliveryConfigName = deliveryConfig.name,
@@ -261,7 +257,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.statuses,
             ArtifactVersionStatus(
               current = version0,
-              pending = listOf(version1, version2, version3),
+              pending = listOf(version1, version2, version3, version4),
               approved = listOf(),
               previous = listOf(),
               vetoed = listOf(),
@@ -277,13 +273,13 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.type,
             artifact.statuses,
             ArtifactVersionStatus(
-              current = version1,
-              pending = listOf(version2, version3),
+              current = version2,
+              pending = listOf(version3, version4),
               approved = listOf(),
               previous = listOf(version0),
               vetoed = listOf(),
               deploying = null,
-              skipped = listOf()
+              skipped = listOf(version1)
             )
           ))
         )
@@ -294,13 +290,13 @@ class ApplicationServiceTests : JUnit5Minutests {
             artifact.type,
             artifact.statuses,
             ArtifactVersionStatus(
-              current = version2,
+              current = version3,
               pending = listOf(),
-              approved = listOf(version3),
-              previous = listOf(version0, version1),
+              approved = listOf(version4),
+              previous = listOf(version0, version2),
               vetoed = listOf(),
               deploying = null,
-              skipped = listOf()
+              skipped = listOf(version1)
             )
           ))
         )
@@ -317,11 +313,24 @@ class ApplicationServiceTests : JUnit5Minutests {
 
       test("can get artifact summaries by application") {
         val summaries = applicationService.getArtifactSummariesFor(application)
+        val v4 = ArtifactVersionSummary(
+          version = version4,
+          displayName = "1.0.4",
+          environments = setOf(
+            ArtifactSummaryInEnvironment(environment = "test", version = version4, state = "approved"),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version4, state = "pending"),
+            ArtifactSummaryInEnvironment(environment = "production", version = version4, state = "pending",
+              statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
+          ),
+          build = BuildMetadata(4),
+          git = GitMetadata("e4e4e4e")
+        )
         val v3 = ArtifactVersionSummary(
           version = version3,
           displayName = "1.0.3",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = version3, state = "approved"),
+            ArtifactSummaryInEnvironment(environment = "test", version = version3, state = "current", deployedAt = Instant.parse("2020-03-25T05:00:00Z")),
             ArtifactSummaryInEnvironment(environment = "staging", version = version3, state = "pending"),
             ArtifactSummaryInEnvironment(environment = "production", version = version3, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
@@ -334,11 +343,12 @@ class ApplicationServiceTests : JUnit5Minutests {
           version = version2,
           displayName = "1.0.2",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = version2, state = "current", deployedAt = Instant.parse("2020-03-25T05:00:00Z")),
-            ArtifactSummaryInEnvironment(environment = "staging", version = version2, state = "pending"),
+            ArtifactSummaryInEnvironment(environment = "test", version = version2, state = "previous", deployedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedAt = Instant.parse("2020-03-25T05:00:00Z"), replacedBy = version3),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version2, state = "current", deployedAt = Instant.parse("2020-03-25T04:00:00Z")),
             ArtifactSummaryInEnvironment(environment = "production", version = version2, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
-              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging"))))
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging")))
+            )
           ),
           build = BuildMetadata(2),
           git = GitMetadata("c2c2c2c")
@@ -347,11 +357,11 @@ class ApplicationServiceTests : JUnit5Minutests {
           version = version1,
           displayName = "1.0.1",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = version1, state = "previous", deployedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedAt = Instant.parse("2020-03-25T05:00:00Z"), replacedBy = version2),
-            ArtifactSummaryInEnvironment(environment = "staging", version = version1, state = "current", deployedAt = Instant.parse("2020-03-25T04:00:00Z")),
+            ArtifactSummaryInEnvironment(environment = "test", version = version1, state = "skipped", replacedBy = version2, replacedAt = Instant.parse("2020-03-25T03:00:00Z")),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version1, state = "skipped"),
             ArtifactSummaryInEnvironment(environment = "production", version = version1, state = "pending",
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", NOT_EVALUATED), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
-              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging")))
+              statelessConstraints = listOf(StatelessConstraintSummary("depends-on", false, DependOnConstraintMetadata("staging")))
             )
           ),
           build = BuildMetadata(1),
@@ -361,8 +371,8 @@ class ApplicationServiceTests : JUnit5Minutests {
           version = version0,
           displayName = "1.0.0",
           environments = setOf(
-            ArtifactSummaryInEnvironment(environment = "test", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T00:00:00Z"), replacedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedBy = version1),
-            ArtifactSummaryInEnvironment(environment = "staging", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T01:00:00Z"), replacedAt = Instant.parse("2020-03-25T04:00:00Z"), replacedBy = version1),
+            ArtifactSummaryInEnvironment(environment = "test", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T00:00:00Z"), replacedAt = Instant.parse("2020-03-25T03:00:00Z"), replacedBy = version2),
+            ArtifactSummaryInEnvironment(environment = "staging", version = version0, state = "previous", deployedAt = Instant.parse("2020-03-25T01:00:00Z"), replacedAt = Instant.parse("2020-03-25T04:00:00Z"), replacedBy = version2),
             ArtifactSummaryInEnvironment(environment = "production", version = version0, state = "current", deployedAt = Instant.parse("2020-03-25T02:00:00Z"),
               statefulConstraints = listOf(StatefulConstraintSummary("manual-judgement", OVERRIDE_PASS, startedAt = Instant.parse("2020-03-25T00:00:00Z"), judgedBy = "lpollo@acme.com", judgedAt = Instant.parse("2020-03-25T01:30:00Z"), comment = "Aye!"), StatefulConstraintSummary("pipeline", NOT_EVALUATED)),
               statelessConstraints = listOf(StatelessConstraintSummary("depends-on", true, DependOnConstraintMetadata("staging"))))
@@ -373,6 +383,7 @@ class ApplicationServiceTests : JUnit5Minutests {
 
         expect {
           that(summaries.size).isEqualTo(1)
+          that(summaries.first().versions.find { it.version == version4 }).isEqualTo(v4)
           that(summaries.first().versions.find { it.version == version3 }).isEqualTo(v3)
           that(summaries.first().versions.find { it.version == version2 }).isEqualTo(v2)
           that(summaries.first().versions.find { it.version == version1 }).isEqualTo(v1)
