@@ -107,8 +107,9 @@ class AuthorizationSupport(
       }
       permissionEvaluator.hasPermission(auth, application, "APPLICATION", action.name)
         .also { allowed ->
-          log.debug("[ACCESS {}] User {}: permission to {} application {}.", allowed.str, auth.principal, action.name,
-            application)
+          log.debug("[ACCESS {}] User {}: permission to {} application {}.",
+            allowed.toAuthorization(), auth.principal, action.name, application)
+
           if (!allowed) {
             throw AccessDeniedException("User ${auth.principal} does not have access to application $application")
           }
@@ -132,7 +133,9 @@ class AuthorizationSupport(
       }
       permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
         .also { allowed ->
-          log.debug("[ACCESS {}] User {}: access to service account {}.", allowed.str, auth.principal, serviceAccount)
+          log.debug("[ACCESS {}] User {}: access to service account {}.",
+            allowed.toAuthorization(), auth.principal, serviceAccount)
+
           if (!allowed) {
             throw AccessDeniedException("User ${auth.principal} does not have access to service account $serviceAccount")
           }
@@ -163,7 +166,9 @@ class AuthorizationSupport(
         val account = (it.spec as Locatable<*>).locations.account
         permissionEvaluator.hasPermission(auth, account, "ACCOUNT", action.name)
           .also { allowed ->
-            log.debug("[ACCESS {}] User {}: {} access to cloud account {}.", allowed.str, auth.principal, action.name, account)
+            log.debug("[ACCESS {}] User {}: {} access to cloud account {}.",
+              allowed.toAuthorization(), auth.principal, action.name, account)
+
             if (!allowed) {
               throw AccessDeniedException("User ${auth.principal} does not have access to cloud account $account")
             }
@@ -190,6 +195,5 @@ class AuthorizationSupport(
       false
     }
 
-  val Boolean.str: String
-    get() = if (this) "ALLOWED" else "DENIED"
+  private fun Boolean.toAuthorization() = if (this) "ALLOWED" else "DENIED"
 }

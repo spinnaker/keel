@@ -77,9 +77,6 @@ internal class AuthorizationSupportTests : JUnit5Minutests {
         context("user has no ${action.name} access to application") {
           before {
             every {
-              dynamicConfigService.isEnabled("keel.authorization", true)
-            } returns true
-            every {
               permissionEvaluator.hasPermission(any() as Authentication, application, "APPLICATION", action.name)
             } returns false
           }
