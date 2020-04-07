@@ -4,6 +4,7 @@ import com.netflix.spectator.api.BasicTag
 import com.netflix.spectator.api.Counter
 import com.netflix.spectator.api.Registry
 import com.netflix.spectator.api.patterns.PolledMeter
+import com.netflix.spinnaker.keel.actuation.ResourceCheckCompleted
 import com.netflix.spinnaker.keel.actuation.ScheduledArtifactCheckStarting
 import com.netflix.spinnaker.keel.actuation.ScheduledEnvironmentCheckStarting
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
