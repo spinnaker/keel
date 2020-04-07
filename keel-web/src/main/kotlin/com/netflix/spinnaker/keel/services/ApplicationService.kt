@@ -130,7 +130,7 @@ class ApplicationService(
               )
               SKIPPED -> {
                 // some environments contain relevant info for skipped artifacts, so
-                // try and find that before defaulting to less information
+                // try and find that summary before defaulting to less information
                 val potentialSummary = repository.getArtifactSummaryInEnvironment(
                   deliveryConfig = deliveryConfig,
                   environmentName = environmentSummary.name,

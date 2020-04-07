@@ -12,7 +12,7 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import java.time.Clock
 import strikt.api.expect
-import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.containsExactly
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 
@@ -99,10 +99,10 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
           that(envSummaries.size).isEqualTo(2)
           that(envSummaries[0].artifacts.first().versions.current).isEqualTo(version2)
           that(envSummaries[0].artifacts.first().versions.pending).isEmpty()
-          that(envSummaries[0].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
+          that(envSummaries[0].artifacts.first().versions.skipped).containsExactly(version1)
           that(envSummaries[1].artifacts.first().versions.current).isEqualTo(version2)
           that(envSummaries[1].artifacts.first().versions.pending).isEmpty()
-          that(envSummaries[1].artifacts.first().versions.skipped).containsExactlyInAnyOrder(version1)
+          that(envSummaries[1].artifacts.first().versions.skipped).containsExactly(version1)
         }
       }
     }
