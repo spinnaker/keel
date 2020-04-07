@@ -168,6 +168,7 @@ class ApplicationService(
       return@map ArtifactSummary(
         name = artifact.name,
         type = artifact.type,
+        reference = artifact.reference,
         versions = artifactVersionSummaries.toSet()
       )
     }
