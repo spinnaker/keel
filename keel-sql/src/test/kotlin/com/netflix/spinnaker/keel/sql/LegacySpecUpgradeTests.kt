@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
+import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.resource
@@ -59,15 +59,7 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
     val v2 = SupportedKind(ResourceKind.parseKind("test/whatever@v2"), SpecV2::class.java)
     val v3 = SupportedKind(ResourceKind.parseKind("test/whatever@v3"), SpecV3::class.java)
 
-    val resourceTypeIdentifier = object : ResourceTypeIdentifier {
-      override fun identify(kind: ResourceKind): Class<out ResourceSpec> =
-        when (kind) {
-          v1.kind -> SpecV1::class.java
-          v2.kind -> SpecV2::class.java
-          v3.kind -> SpecV3::class.java
-          else -> super.identify(kind)
-        }
-    }
+    val resourceTypeIdentifier = ResourceSpecIdentifier(v1, v2, v3)
 
     val v1to2Migrator = object : SpecMigrator<SpecV1, SpecV2> {
       override val input = v1

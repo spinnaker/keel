@@ -20,7 +20,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
-import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
+import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.resources.migrate
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -39,7 +39,7 @@ import org.jooq.impl.DSL.select
 open class SqlResourceRepository(
   private val jooq: DSLContext,
   private val clock: Clock,
-  private val resourceTypeIdentifier: ResourceTypeIdentifier,
+  private val resourceSpecIdentifier: ResourceSpecIdentifier,
   private val specMigrators: List<SpecMigrator<*, *>>,
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry
@@ -89,7 +89,7 @@ open class SqlResourceRepository(
    */
   private fun constructResource(kind: String, metadata: String, spec: String) =
     specMigrators
-      .migrate(parseKind(kind), objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind))))
+      .migrate(parseKind(kind), objectMapper.readValue(spec, resourceSpecIdentifier.identify(parseKind(kind))))
       .let { (endKind, endSpec) ->
         Resource(
           endKind,
@@ -130,7 +130,7 @@ open class SqlResourceRepository(
           Resource(
             kind = parseKind(kind),
             metadata = objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-            spec = objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind)))
+            spec = objectMapper.readValue(spec, resourceSpecIdentifier.identify(parseKind(kind)))
           ).toResourceSummary(deliveryConfig)
         }
     }
