@@ -34,21 +34,7 @@ import org.springframework.stereotype.Component
 /**
  * Support for authorization of REST API calls.
  *
- * Permission may be granted based on checking that the user (as identified by the X-SPINNAKER-USER request header,
- * or X509 client certificate) has access to the application with the right permission level (READ or WRITE) and,
- * optionally, for cases where the API will trigger actuation using the service account associated with the delivery
- * config, that the caller has access to that service account. Finally, if the API will attempt to read information
- * from the cloud provider directly (e.g. when retrieving resources to display on the UI), access to the cloud
- * account may also be checked for each applicable resource (implementors of [Locatable]).
- *
- * Use the following guidelines to determine what level of check is required for each API:
- *   - Operations that read data from keel’s database exclusively should require READ access to the application.
- *   - Operations that read data from keel’s database and from cloud infrastructure should require READ access to
- *     the application AND, for each resource returned, READ access to the corresponding cloud account.
- *   - Operations that trigger storing data in keel’s database, but do NOT trigger infrastructure changes, should
- *     require WRITE access to the application.
- *   - Operations that trigger actuation, whereby the service account will take action on behalf of the original caller,
- *     should check the caller has access to the service account, in addition to WRITE access to the application.
+ * @see https://github.com/spinnaker/keel/blob/master/docs/authorization.md
  */
 @Component
 class AuthorizationSupport(

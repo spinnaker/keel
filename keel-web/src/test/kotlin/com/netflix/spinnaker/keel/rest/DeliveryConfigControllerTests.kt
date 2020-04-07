@@ -13,6 +13,7 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
@@ -327,6 +328,34 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
     }
 
     context("API permission checks") {
+      context("GET /delivery-configs") {
+        context("with no READ access to application") {
+          before {
+            authorizationSupport.denyApplicationAccess(READ, DELIVERY_CONFIG)
+            authorizationSupport.allowCloudAccountAccess(READ, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = get("/delivery-configs/${deliveryConfig.name}")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no READ access to cloud account") {
+          before {
+            authorizationSupport.denyCloudAccountAccess(READ, DELIVERY_CONFIG)
+            authorizationSupport.allowApplicationAccess(READ, DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = get("/delivery-configs/${deliveryConfig.name}")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+      }
       context("POST /delivery-configs") {
         context("with no WRITE access to application") {
           before {
