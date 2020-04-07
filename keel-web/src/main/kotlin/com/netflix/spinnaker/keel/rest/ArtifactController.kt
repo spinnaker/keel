@@ -94,8 +94,8 @@ class ArtifactController(
     path = ["/pin"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
-    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #pin.deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #pin.deliveryConfigName)"""
   )
   fun deletePin(@RequestBody pin: EnvironmentArtifactPin) {
     val deliveryConfig = repository.getDeliveryConfig(pin.deliveryConfigName)
@@ -121,8 +121,8 @@ class ArtifactController(
     path = ["/veto"]
   )
   @ResponseStatus(ACCEPTED)
-  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #deliveryConfigName)
-    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #deliveryConfigName)"""
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #veto.deliveryConfigName)
+    and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #veto.deliveryConfigName)"""
   )
   fun veto(
     @RequestHeader("X-SPINNAKER-USER") user: String,
