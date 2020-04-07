@@ -9,7 +9,6 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
@@ -53,7 +52,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
           return when (kind) {
             parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
             parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
-            else -> throw UnsupportedKind(kind)
+            else -> super.identify(kind)
           }
         }
       }

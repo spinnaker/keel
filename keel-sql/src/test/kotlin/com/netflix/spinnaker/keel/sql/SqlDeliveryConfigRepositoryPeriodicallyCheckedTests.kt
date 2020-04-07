@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepositoryPeriodicallyCheckedTests
+import com.netflix.spinnaker.keel.persistence.DummyResourceTypeIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties

@@ -51,7 +51,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
   JUnit5Minutests {
 
   abstract fun createDeliveryConfigRepository(resourceTypeIdentifier: ResourceTypeIdentifier): D
-  abstract fun createResourceRepository(): R
+  abstract fun createResourceRepository(resourceTypeIdentifier: ResourceTypeIdentifier): R
   abstract fun createArtifactRepository(): A
 
   open fun flush() {}
@@ -72,38 +72,25 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
     environments = setOf(firstEnv)
   )
 
-  val resourceTypeIdentifier: ResourceTypeIdentifier =
-    object : ResourceTypeIdentifier {
-      override fun identify(kind: ResourceKind): Class<out ResourceSpec> {
-        return when (kind) {
-          parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
-          parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
-          else -> error("unsupported kind $kind")
-        }
-      }
-    }
-
   data class Fixture<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository>(
     val deliveryConfigRepositoryProvider: (ResourceTypeIdentifier) -> D,
-    val resourceRepositoryProvider: () -> R,
+    val resourceRepositoryProvider: (ResourceTypeIdentifier) -> R,
     val artifactRepositoryProvider: () -> A
   ) {
     private val clock: Clock = Clock.systemUTC()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
 
-    val resourceTypeIdentifier: ResourceTypeIdentifier =
-      object : ResourceTypeIdentifier {
-        override fun identify(kind: ResourceKind): Class<out ResourceSpec> {
-          return when (kind) {
-            parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
-            parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
-            else -> error("unsupported kind $kind")
-          }
+    val resourceTypeIdentifier = object : ResourceTypeIdentifier {
+      override fun identify(kind: ResourceKind): Class<out ResourceSpec> =
+        when (kind) {
+          parseKind("ec2/security-group@v1") -> DummyResourceSpec::class.java
+          parseKind("ec2/cluster@v1") -> DummyResourceSpec::class.java
+          else -> DummyResourceTypeIdentifier.identify(kind)
         }
-      }
+    }
 
     internal val deliveryConfigRepository: D = deliveryConfigRepositoryProvider(resourceTypeIdentifier)
-    internal val resourceRepository: R = resourceRepositoryProvider()
+    internal val resourceRepository: R = resourceRepositoryProvider(resourceTypeIdentifier)
     internal val artifactRepository: A = artifactRepositoryProvider()
 
     val subject = CombinedRepository(
@@ -299,6 +286,9 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
                 .isEmpty()
             }
           }
+        }
+
+        context("creation using an older schema") {
         }
       }
     }

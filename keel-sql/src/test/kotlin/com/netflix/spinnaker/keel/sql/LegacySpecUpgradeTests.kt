@@ -5,7 +5,6 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
@@ -66,7 +65,7 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
           v1.kind -> SpecV1::class.java
           v2.kind -> SpecV2::class.java
           v3.kind -> SpecV3::class.java
-          else -> throw UnsupportedKind(kind)
+          else -> super.identify(kind)
         }
     }
 

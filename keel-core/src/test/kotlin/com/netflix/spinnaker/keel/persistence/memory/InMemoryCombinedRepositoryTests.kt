@@ -11,7 +11,7 @@ class InMemoryCombinedRepositoryTests : CombinedRepositoryTests<InMemoryDelivery
   override fun createDeliveryConfigRepository(resourceTypeIdentifier: ResourceTypeIdentifier) =
     deliveryConfigRepository
 
-  override fun createResourceRepository() =
+  override fun createResourceRepository(resourceTypeIdentifier: ResourceTypeIdentifier) =
     resourceRepository
 
   override fun createArtifactRepository() =

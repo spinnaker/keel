@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
+import com.netflix.spinnaker.keel.persistence.DummyResourceTypeIdentifier
 import com.netflix.spinnaker.keel.persistence.ResourceRepositoryPeriodicallyCheckedTests
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
