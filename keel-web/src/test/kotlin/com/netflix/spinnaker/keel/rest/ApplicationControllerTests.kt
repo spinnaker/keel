@@ -344,7 +344,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
     context("API permission checks") {
       context("GET /application/fnord") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, APPLICATION)
             authorizationSupport.allowCloudAccountAccess(READ, APPLICATION)
@@ -357,7 +357,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no READ access to CLOUD_ACCOUNT") {
+        context("with no READ access to cloud account") {
           before {
             authorizationSupport.denyCloudAccountAccess(READ, APPLICATION)
             authorizationSupport.allowApplicationAccess(READ, APPLICATION)
@@ -372,7 +372,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         }
       }
       context("GET /application/fnord/environment/prod/constraints") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, APPLICATION)
           }
@@ -386,7 +386,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         }
       }
       context("POST /application/fnord/environment/prod/constraint") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
             authorizationSupport.allowServiceAccountAccess(APPLICATION)
@@ -401,7 +401,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(APPLICATION)
             authorizationSupport.allowApplicationAccess(WRITE, APPLICATION)
@@ -418,7 +418,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         }
       }
       context("POST /application/fnord/pause") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
           }
@@ -432,7 +432,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         }
       }
       context("DELETE /application/fnord/pause") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, APPLICATION)
             authorizationSupport.allowServiceAccountAccess(APPLICATION)
@@ -445,7 +445,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(APPLICATION)
             authorizationSupport.allowApplicationAccess(WRITE, APPLICATION)

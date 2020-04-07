@@ -98,7 +98,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
 
     context("API permission checks") {
       context("POST /artifacts/pin") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
             authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
@@ -113,7 +113,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
             authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
@@ -130,7 +130,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
         }
       }
       context("DELETE /artifacts/pin/myconfig/test") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
             authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
@@ -143,7 +143,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
             authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
@@ -158,7 +158,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
         }
       }
       context("POST /artifacts/veto") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
             authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
@@ -173,7 +173,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
             authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
@@ -190,7 +190,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
         }
       }
       context("DELETE /artifacts/veto/myconfig/test/deb/ref/0.0.1") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
             authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
@@ -203,7 +203,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
             authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)

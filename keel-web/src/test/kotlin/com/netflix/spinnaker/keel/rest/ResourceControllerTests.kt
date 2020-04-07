@@ -111,7 +111,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
 
     context("API permission checks") {
       context("GET /resources/test:${resource.id}") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, RESOURCE)
             authorizationSupport.allowCloudAccountAccess(READ, RESOURCE)
@@ -124,7 +124,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no READ access to CLOUD_ACCOUNT") {
+        context("with no READ access to cloud account") {
           before {
             authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
             authorizationSupport.allowApplicationAccess(READ, RESOURCE)
@@ -139,7 +139,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
         }
       }
       context("GET /resources/test:${resource.id}/status") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, RESOURCE)
             authorizationSupport.allowCloudAccountAccess(READ, RESOURCE)
@@ -152,7 +152,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no READ access to CLOUD_ACCOUNT") {
+        context("with no READ access to cloud account") {
           before {
             authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
             authorizationSupport.allowApplicationAccess(READ, RESOURCE)
@@ -167,7 +167,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
         }
       }
       context("POST /resources/test:${resource.id}/pause") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, RESOURCE)
           }
@@ -181,7 +181,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
         }
       }
       context("DELETE /resources/test:${resource.id}/pause") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, RESOURCE)
             authorizationSupport.allowServiceAccountAccess(RESOURCE)
@@ -194,7 +194,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no access to SERVICE_ACCOUNT") {
+        context("with no access to service account") {
           before {
             authorizationSupport.denyServiceAccountAccess(RESOURCE)
             authorizationSupport.allowApplicationAccess(WRITE, RESOURCE)
@@ -209,7 +209,7 @@ internal class ResourceControllerTests : JUnit5Minutests {
         }
       }
       context("POST /resources/diff") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, APPLICATION)
           }

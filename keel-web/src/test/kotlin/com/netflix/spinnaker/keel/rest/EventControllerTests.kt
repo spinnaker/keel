@@ -279,7 +279,7 @@ internal class EventControllerTests : JUnit5Minutests {
 
     context("API permission checks") {
       context("GET /resources/events/${resource.id}") {
-        context("with no READ access to APPLICATION") {
+        context("with no READ access to application") {
           before {
             authorizationSupport.denyApplicationAccess(READ, RESOURCE)
             authorizationSupport.allowCloudAccountAccess(READ, RESOURCE)
@@ -292,7 +292,7 @@ internal class EventControllerTests : JUnit5Minutests {
             mvc.perform(request).andExpect(status().isForbidden)
           }
         }
-        context("with no READ access to CLOUD_ACCOUNT") {
+        context("with no READ access to cloud account") {
           before {
             authorizationSupport.denyCloudAccountAccess(READ, RESOURCE)
             authorizationSupport.allowApplicationAccess(READ, RESOURCE)

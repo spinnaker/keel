@@ -328,7 +328,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
     context("API permission checks") {
       context("POST /delivery-configs") {
-        context("with no WRITE access to APPLICATION") {
+        context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
           }
