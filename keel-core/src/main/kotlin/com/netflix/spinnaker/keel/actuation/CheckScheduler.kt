@@ -8,7 +8,6 @@ import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.EnvironmentsCheckTimedOut
-import com.netflix.spinnaker.keel.telemetry.ResourceCheckCompleted
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceLoadFailed
 import java.time.Duration
@@ -61,7 +60,6 @@ class CheckScheduler(
   fun checkResources() {
     if (enabled.get()) {
       log.debug("Starting scheduled resource validation…")
-      publisher.publishEvent(ScheduledResourceCheckStarting)
 
       val job = launch {
         supervisorScope {
