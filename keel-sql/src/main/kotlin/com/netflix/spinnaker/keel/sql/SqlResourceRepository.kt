@@ -40,7 +40,7 @@ open class SqlResourceRepository(
   private val jooq: DSLContext,
   private val clock: Clock,
   private val resourceTypeIdentifier: ResourceTypeIdentifier,
-  private val specMigrators: List<SpecMigrator>,
+  private val specMigrators: List<SpecMigrator<*, *>>,
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry
 ) : ResourceRepository {
@@ -89,12 +89,12 @@ open class SqlResourceRepository(
    */
   private fun constructResource(kind: String, metadata: String, spec: String) =
     specMigrators
-      .migrate(parseKind(kind), objectMapper.readValue(spec))
+      .migrate(parseKind(kind), objectMapper.readValue(spec, resourceTypeIdentifier.identify(parseKind(kind))))
       .let { (endKind, endSpec) ->
         Resource(
           endKind,
           objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-          objectMapper.convertValue(endSpec, resourceTypeIdentifier.identify(endKind))
+          endSpec
         )
       }
 

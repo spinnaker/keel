@@ -1,25 +1,30 @@
 package com.netflix.spinnaker.keel.resources
 
 import com.netflix.spinnaker.keel.api.ResourceKind
+import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 
 /**
- * A component used to migrate an older version of a [com.netflix.spinnaker.keel.api.ResourceSpec]
- * to a current one.
+ * A component used to migrate an older version of a [ResourceSpec] to a current one.
  */
-interface SpecMigrator {
-  val supportedKind: ResourceKind
+interface SpecMigrator<I : ResourceSpec, O : ResourceSpec> {
+  val input: SupportedKind<I>
+  val output: SupportedKind<O>
 
-  fun migrate(spec: Map<String, Any?>): Pair<ResourceKind, Map<String, Any?>>
+  fun migrate(spec: I): O
 }
 
 /**
  * Recursively applies [SpecMigrator]s to bring a [spec] of [kind] up to the latest version.
  */
-fun Collection<SpecMigrator>.migrate(
+fun <I : ResourceSpec> Collection<SpecMigrator<*, *>>.migrate(
   kind: ResourceKind,
-  spec: Map<String, Any?>
-): Pair<ResourceKind, Map<String, Any?>> =
-  find { it.supportedKind == kind }
-    ?.migrate(spec)
-    ?.let { (kind, spec) -> migrate(kind, spec) }
+  spec: I
+): Pair<ResourceKind, ResourceSpec> =
+  find { it.input.kind == kind }
+    ?.let {
+      val migrator = it as SpecMigrator<I, *>
+      val result = migrator.migrate(spec)
+      migrate(migrator.output.kind, result)
+    }
     ?: kind to spec

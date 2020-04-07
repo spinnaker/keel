@@ -52,7 +52,7 @@ class SqlConfiguration {
     jooq: DSLContext,
     clock: Clock,
     resourceTypeIdentifier: ResourceTypeIdentifier,
-    specMigrators: List<SpecMigrator>,
+    specMigrators: List<SpecMigrator<*, *>>,
     objectMapper: ObjectMapper
   ) =
     SqlResourceRepository(jooq, clock, resourceTypeIdentifier, specMigrators, objectMapper, SqlRetry(sqlRetryProperties))

@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
 import com.netflix.spinnaker.keel.resources.ResourceTypeIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -23,14 +24,14 @@ import strikt.assertions.succeeded
 
 internal class LegacySpecUpgradeTests : JUnit5Minutests {
 
-  data class AncientSpec(
+  data class SpecV1(
     val name: String
   ) : ResourceSpec {
     override val id = name
     override val application = "fnord"
   }
 
-  data class OldSpec(
+  data class SpecV2(
     val name: String,
     val number: Int
   ) : ResourceSpec {
@@ -38,7 +39,7 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
     override val application = "fnord"
   }
 
-  data class NewSpec(
+  data class SpecV3(
     val name: String,
     val number: Int,
     val timestamp: Instant
@@ -55,35 +56,33 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
     private val retryProperties = RetryProperties(1, 0)
     private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
 
-    val ancientKind = ResourceKind.parseKind("test/whatever@v1")
-    val oldKind = ResourceKind.parseKind("test/whatever@v2")
-    val newKind = ResourceKind.parseKind("test/whatever@v3")
+    val v1 = SupportedKind(ResourceKind.parseKind("test/whatever@v1"), SpecV1::class.java)
+    val v2 = SupportedKind(ResourceKind.parseKind("test/whatever@v2"), SpecV2::class.java)
+    val v3 = SupportedKind(ResourceKind.parseKind("test/whatever@v3"), SpecV3::class.java)
 
     val resourceTypeIdentifier = object : ResourceTypeIdentifier {
-      override fun identify(kind: ResourceKind): Class<out ResourceSpec> {
-        return if (kind == newKind) NewSpec::class.java
-        else throw UnsupportedKind(kind)
-      }
+      override fun identify(kind: ResourceKind): Class<out ResourceSpec> =
+        when (kind) {
+          v1.kind -> SpecV1::class.java
+          v2.kind -> SpecV2::class.java
+          v3.kind -> SpecV3::class.java
+          else -> throw UnsupportedKind(kind)
+        }
     }
 
-    val v1to2Migrator = object : SpecMigrator {
-      override val supportedKind = ancientKind
+    val v1to2Migrator = object : SpecMigrator<SpecV1, SpecV2> {
+      override val input = v1
+      override val output = v2
 
-      override fun migrate(spec: Map<String, Any?>): Pair<ResourceKind, Map<String, Any?>> =
-        oldKind to mapOf(
-          "name" to spec["name"],
-          "number" to 1
-        )
+      override fun migrate(spec: SpecV1): SpecV2 =
+        SpecV2(spec.name, 1)
     }
-    val v2to3Migrator = object : SpecMigrator {
-      override val supportedKind = oldKind
+    val v2to3Migrator = object : SpecMigrator<SpecV2, SpecV3> {
+      override val input = v2
+      override val output = v3
 
-      override fun migrate(spec: Map<String, Any?>): Pair<ResourceKind, Map<String, Any?>> =
-        newKind to mapOf(
-          "name" to spec["name"],
-          "number" to spec["number"],
-          "timestamp" to EPOCH
-        )
+      override fun migrate(spec: SpecV2): SpecV3 =
+        SpecV3(spec.name, spec.number, EPOCH)
     }
 
     val repository = SqlResourceRepository(
@@ -95,8 +94,8 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
       sqlRetry
     )
 
-    val ancientResource = resource(ancientKind, AncientSpec("whatever"))
-    val oldResource = resource(oldKind, OldSpec("whatever", 2))
+    val ancientResource = resource(v1.kind, SpecV1("whatever"))
+    val oldResource = resource(v2.kind, SpecV2("whatever", 2))
   }
 
   fun tests() = rootContext<Fixture> {
@@ -111,7 +110,7 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
         test("the spec is converted to the new kind before being returned") {
           expectCatching { repository.get(oldResource.id) }
             .succeeded()
-            .isA<Resource<NewSpec>>()
+            .isA<Resource<SpecV3>>()
             .and {
               get { spec.name }.isEqualTo(oldResource.spec.name)
               get { spec.number }.isEqualTo(oldResource.spec.number)
@@ -130,7 +129,7 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
         test("the spec is converted to the newest kind before being returned") {
           expectCatching { repository.get(oldResource.id) }
             .succeeded()
-            .isA<Resource<NewSpec>>()
+            .isA<Resource<SpecV3>>()
             .and {
               get { spec.name }.isEqualTo(ancientResource.spec.name)
               get { spec.number }.isEqualTo(1)
