@@ -360,6 +360,20 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         context("with no WRITE access to application") {
           before {
             authorizationSupport.denyApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.allowServiceAccountAccess(DELIVERY_CONFIG)
+          }
+          test("request is forbidden") {
+            val request = post("/delivery-configs").addData(jsonMapper, deliveryConfig)
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .header("X-SPINNAKER-USER", "keel@keel.io")
+
+            mvc.perform(request).andExpect(status().isForbidden)
+          }
+        }
+        context("with no access to service account") {
+          before {
+            authorizationSupport.allowApplicationAccess(WRITE, DELIVERY_CONFIG)
+            authorizationSupport.denyServiceAccountAccess(DELIVERY_CONFIG)
           }
           test("request is forbidden") {
             val request = post("/delivery-configs").addData(jsonMapper, deliveryConfig)
