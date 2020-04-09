@@ -106,7 +106,7 @@ class TitusClusterHandler(
       .map { it.name }
       .any { region ->
         orcaService
-          .getCorrelatedExecutions("${resource.id}:$region")
+          .getCorrelatedExecutions("${resource.id}:$region", resource.serviceAccount)
           .isNotEmpty()
       }
 

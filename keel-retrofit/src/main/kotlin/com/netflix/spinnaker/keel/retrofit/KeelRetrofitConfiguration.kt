@@ -16,6 +16,8 @@
 package com.netflix.spinnaker.keel.retrofit
 
 import com.netflix.spinnaker.config.OkHttp3ClientConfiguration
+import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
+import com.netflix.spinnaker.okhttp.OkHttp3MetricsInterceptor
 import com.netflix.spinnaker.okhttp.OkHttpClientConfigurationProperties
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import okhttp3.ConnectionPool
@@ -45,34 +47,50 @@ class KeelRetrofitConfiguration {
     okHttpClientProperties: OkHttpClientConfigurationProperties,
     retrofitProperties: KeelRetrofitProperties,
     interceptors: Set<Interceptor>?
-  ): OkHttpClient = okHttpClientConfig
-    .create()
-    .apply {
-      networkInterceptors()
-        .add(Interceptor { chain ->
-          chain.proceed(
-            chain.request().newBuilder()
-              .header("User-Agent", retrofitProperties.userAgent)
-              .build()
-          )
-        })
-      interceptors?.forEach {
-        log.info("Adding OkHttp Interceptor: ${it.javaClass.simpleName}")
-        addNetworkInterceptor(it)
+  ): OkHttpClient {
+    val builder = okHttpClientConfig
+      .create()
+      .apply {
+        networkInterceptors()
+          .add(Interceptor { chain ->
+            chain.proceed(
+              chain.request().newBuilder()
+                .header("User-Agent", retrofitProperties.userAgent)
+                .build()
+            )
+          })
+        interceptors?.forEach {
+          log.info("Adding OkHttp Interceptor: ${it.javaClass.simpleName}")
+          addInterceptor(it)
+        }
+        connectionPool(ConnectionPool(
+          okHttpClientProperties.connectionPool.maxIdleConnections,
+          okHttpClientProperties.connectionPool.keepAliveDurationMs.toLong(),
+          MILLISECONDS
+        ))
+        retryOnConnectionFailure(okHttpClientProperties.isRetryOnConnectionFailure)
       }
 
-      connectionPool(ConnectionPool(
-        okHttpClientProperties.connectionPool.maxIdleConnections,
-        okHttpClientProperties.connectionPool.keepAliveDurationMs.toLong(),
-        MILLISECONDS
-      ))
-      retryOnConnectionFailure(okHttpClientProperties.isRetryOnConnectionFailure)
+    builder.interceptors().also { it ->
+      // If the metrics interceptor (which complains about X-SPINNAKER-* auth headers missing in the request)
+      // is present, move it to the end of the list so that our interceptor that adds those headers comes first
+      val metricsInterceptor = it.find { interceptor -> interceptor is OkHttp3MetricsInterceptor }
+      if (metricsInterceptor != null) {
+        it.removeAll { interceptor -> interceptor == metricsInterceptor } // for some reason there are 2 copies, so remove both
+        it.add(metricsInterceptor)
+      }
     }
-    .build()
+
+    return builder.build()
+  }
 
   @Bean
   fun retrofitLoggingInterceptor(@Value("\${retrofit2.log-level:BASIC}") retrofitLogLevel: String) =
     HttpLoggingInterceptor().apply {
       level = HttpLoggingInterceptor.Level.valueOf(retrofitLogLevel)
     }
+
+  @Bean
+  fun authorizationHeadersInterceptor(fiatPermissionEvaluator: FiatPermissionEvaluator) =
+    AuthorizationHeadersInterceptor(fiatPermissionEvaluator)
 }
