@@ -54,7 +54,7 @@ class OrcaTaskLauncherTests : JUnit5Minutests {
     val deliveryConfigRepository = InMemoryDeliveryConfigRepository(clock)
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
     val combinedRepository = combinedInMemoryRepository(deliveryConfigRepository = deliveryConfigRepository)
-    val taskLauncher = OrcaTaskLauncher(orcaService, combinedRepository, publisher)
+    val taskLauncher = OrcaTaskLauncher(orcaService, combinedRepository, publisher, mockk())
     val resource: Resource<DummyResourceSpec> = resource()
     val request = slot<OrchestrationRequest>()
   }

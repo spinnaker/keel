@@ -92,7 +92,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val taskLauncher = OrcaTaskLauncher(
     orcaService,
     combinedRepository,
-    publisher
+    publisher,
+    mockk()
   )
 
   val vpcWest = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")

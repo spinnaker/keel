@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.time.Clock
@@ -26,6 +27,7 @@ class OrcaTaskMonitorAgent(
   private val resourceRepository: ResourceRepository,
   private val orcaService: OrcaService,
   private val publisher: ApplicationEventPublisher,
+  private val authorizationSupport: AuthorizationSupport,
   private val clock: Clock
 ) : ScheduledAgent {
 
@@ -49,6 +51,8 @@ class OrcaTaskMonitorAgent(
         .associate {
           it.subject to
             async {
+              // TODO: add service account to task tracking table
+              // authorizationSupport.withSpinnakerAuthHeaders(serviceAccount) {
               orcaService.getOrchestrationExecution(it.id)
             }
         }

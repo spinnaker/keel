@@ -168,8 +168,11 @@ fun Collection<ResourceHandler<*, *>>.supporting(
   group: String,
   unqualifiedKind: String
 ): List<ResourceHandler<*, *>> =
-  filter { it.supportedKind.kind.group == group && it.supportedKind.kind.kind == unqualifiedKind }
-    ?: throw UnsupportedKind("$group/$unqualifiedKind")
+  filter {
+    it.supportedKind.kind.group == group && it.supportedKind.kind.kind == unqualifiedKind
+  }.ifEmpty {
+    throw UnsupportedKind("$group/$unqualifiedKind")
+  }
 
 /**
  * Searches a list of [ResourceHandler] and returns the ones that support the specified [specClass].

@@ -61,6 +61,7 @@ import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.time.Clock
@@ -82,7 +83,8 @@ class TitusClusterHandler(
   private val clock: Clock,
   private val taskLauncher: TaskLauncher,
   private val publisher: ApplicationEventPublisher,
-  resolvers: List<Resolver<*>>
+  resolvers: List<Resolver<*>>,
+  private val authorizationSupport: AuthorizationSupport
 ) : ResourceHandler<TitusClusterSpec, Map<String, TitusServerGroup>>(resolvers) {
 
   private val mapper = configuredObjectMapper()
@@ -96,9 +98,11 @@ class TitusClusterHandler(
     }
 
   override suspend fun current(resource: Resource<TitusClusterSpec>): Map<String, TitusServerGroup> =
-    cloudDriverService
-      .getServerGroups(resource)
-      .byRegion()
+    authorizationSupport.withSpinnakerAuthHeaders(resource.serviceAccount) {
+      cloudDriverService
+        .getServerGroups(resource)
+        .byRegion()
+    }
 
   override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
     resource
@@ -107,9 +111,11 @@ class TitusClusterHandler(
       .regions
       .map { it.name }
       .any { region ->
-        orcaService
-          .getCorrelatedExecutions("${resource.id}:$region")
-          .isNotEmpty()
+        authorizationSupport.withSpinnakerAuthHeaders(resource.serviceAccount) {
+          orcaService
+            .getCorrelatedExecutions("${resource.id}:$region")
+            .isNotEmpty()
+        }
       }
 
   override suspend fun upsert(

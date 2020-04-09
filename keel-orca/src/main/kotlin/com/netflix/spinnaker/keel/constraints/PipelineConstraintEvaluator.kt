@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.model.toOrcaNotification
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import java.time.Clock
 import java.util.HashMap
 import kotlinx.coroutines.runBlocking
@@ -39,8 +40,9 @@ class PipelineConstraintEvaluator(
   private val orcaService: OrcaService,
   repository: KeelRepository,
   override val eventPublisher: ApplicationEventPublisher,
-  private val clock: Clock
-) : StatefulConstraintEvaluator<PipelineConstraint>(repository) {
+  private val clock: Clock,
+  override val authorizationSupport: AuthorizationSupport
+) : StatefulConstraintEvaluator<PipelineConstraint>(repository, authorizationSupport) {
   override val supportedType = SupportedConstraintType<PipelineConstraint>("pipeline")
   private val log by lazy { getLogger(javaClass) }
 

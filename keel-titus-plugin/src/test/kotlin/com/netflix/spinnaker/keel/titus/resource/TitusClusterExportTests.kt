@@ -56,7 +56,8 @@ internal class TitusClusterExportTests : JUnit5Minutests {
   val taskLauncher = OrcaTaskLauncher(
     orcaService,
     combinedRepository,
-    publisher
+    publisher,
+    mockk()
   )
   val clock = Clock.systemUTC()
 
@@ -136,7 +137,8 @@ internal class TitusClusterExportTests : JUnit5Minutests {
         clock,
         taskLauncher,
         publisher,
-        resolvers
+        resolvers,
+        mockk()
       )
     }
 

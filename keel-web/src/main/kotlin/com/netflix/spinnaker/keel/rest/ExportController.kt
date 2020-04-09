@@ -113,12 +113,11 @@ class ExportController(
       if (version == null) {
         version = handlers
           .supporting(group, normalizedType)
+          .ifEmpty { error("Unable to find version for group $group, $normalizedType") }
           .map { h -> h.supportedKind.kind.version }
           .sortedWith(versionComparator)
           .last()
       }
-
-      (version != null) || error("Unable to find version for group $group, $normalizedType")
 
       "$group/$normalizedType@v$version"
     }.let(ResourceKind.Companion::parseKind)

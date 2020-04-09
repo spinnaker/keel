@@ -27,10 +27,16 @@ import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICA
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.RESOURCE
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.SERVICE_ACCOUNT
+import com.netflix.spinnaker.kork.common.Header.ACCOUNTS
+import com.netflix.spinnaker.kork.common.Header.USER
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
@@ -196,4 +202,19 @@ class AuthorizationSupport(
     }
 
   private fun Boolean.toAuthorization() = if (this) "ALLOWED" else "DENIED"
+
+  suspend fun <R> withSpinnakerAuthHeaders(
+    user: String,
+    block: suspend CoroutineScope.() -> R
+  ): R {
+    try {
+      val accounts = permissionEvaluator.getPermission(user).accounts.joinToString(",") { it.name }
+      MDC.put(USER.header, user)
+      MDC.put(ACCOUNTS.header, accounts)
+      return withContext(MDCContext(), block)
+    } finally {
+      MDC.remove(USER.header)
+      MDC.remove(ACCOUNTS.header)
+    }
+  }
 }

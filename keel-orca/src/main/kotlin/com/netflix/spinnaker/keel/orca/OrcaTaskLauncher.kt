@@ -32,6 +32,7 @@ import com.netflix.spinnaker.keel.model.OrchestrationTrigger
 import com.netflix.spinnaker.keel.model.toOrcaNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.TaskRecord
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -43,7 +44,8 @@ import org.springframework.stereotype.Component
 class OrcaTaskLauncher(
   private val orcaService: OrcaService,
   private val repository: KeelRepository,
-  private val publisher: ApplicationEventPublisher
+  private val publisher: ApplicationEventPublisher,
+  private val authorizationSupport: AuthorizationSupport
 ) : TaskLauncher {
   override suspend fun submitJob(
     resource: Resource<*>,
@@ -73,29 +75,33 @@ class OrcaTaskLauncher(
     type: SubjectType,
     artifacts: List<Map<String, Any?>>
   ) =
-    orcaService
-      .orchestrate(
-        user,
-        OrchestrationRequest(
-          name = description,
-          application = application,
-          description = description,
-          job = stages.map { Job(it["type"].toString(), it) },
-          trigger = OrchestrationTrigger(
-            correlationId = correlationId,
-            notifications = notifications.map { it.toOrcaNotification() },
-            artifacts = artifacts
+    authorizationSupport.withSpinnakerAuthHeaders(user) {
+      orcaService
+        .orchestrate(
+          user,
+          OrchestrationRequest(
+            name = description,
+            application = application,
+            description = description,
+            job = stages.map { Job(it["type"].toString(), it) },
+            trigger = OrchestrationTrigger(
+              correlationId = correlationId,
+              notifications = notifications.map { it.toOrcaNotification() },
+              artifacts = artifacts
+            )
           )
         )
-      )
-      .let {
-        log.info("Started task {} to upsert {}", it.ref, subject)
-        publisher.publishEvent(TaskCreatedEvent(
-          TaskRecord(id = it.taskId, name = description, subject = "$type:$subject")))
-        Task(id = it.taskId, name = description)
-      }
+        .let {
+          log.info("Started task {} to upsert {}", it.ref, subject)
+          publisher.publishEvent(TaskCreatedEvent(
+            TaskRecord(id = it.taskId, name = description, subject = "$type:$subject")))
+          Task(id = it.taskId, name = description)
+        }
+    }
 
   override suspend fun correlatedTasksRunning(correlationId: String): Boolean =
+    // TODO: find a way to get user to pass to orca without polluting the parent interface
+    //  authorizationSupport.withSpinnakerAuthHeaders(user) {
     orcaService
       .getCorrelatedExecutions(correlationId)
       .isNotEmpty()

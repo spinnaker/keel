@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import java.time.Clock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -59,8 +60,9 @@ class CanaryConstraintEvaluator(
   private val orcaService: OrcaService,
   repository: KeelRepository,
   private val clock: Clock,
-  override val eventPublisher: ApplicationEventPublisher
-) : StatefulConstraintEvaluator<CanaryConstraint>(repository) {
+  override val eventPublisher: ApplicationEventPublisher,
+  override val authorizationSupport: AuthorizationSupport
+) : StatefulConstraintEvaluator<CanaryConstraint>(repository, authorizationSupport) {
   override val supportedType = SupportedConstraintType<CanaryConstraint>("canary")
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
   private val correlatedMessagePrefix = "Correlated canary tasks found"
@@ -89,7 +91,9 @@ class CanaryConstraintEvaluator(
         runBlocking {
           stillRunning.forEach {
             log.warn("Cancelling still running canary $judge:${it.region} as at least one region has failed.")
-            orcaService.cancelOrchestration(it.executionId)
+            authorizationSupport.withSpinnakerAuthHeaders(deliveryConfig.serviceAccount) {
+              orcaService.cancelOrchestration(it.executionId)
+            }
           }
         }
       }
@@ -116,7 +120,7 @@ class CanaryConstraintEvaluator(
 
     val regionsToTrigger = shouldTrigger(constraint, attributes)
     val regionsWithCorrelatedExecutions = runBlocking {
-      constraint.regionsWithCorrelatedExecutions(judge)
+      constraint.regionsWithCorrelatedExecutions(deliveryConfig, judge)
     }
     val unknownExecutions = regionsWithCorrelatedExecutions.filter {
       regionsToTrigger.contains(it.key)
@@ -252,11 +256,14 @@ class CanaryConstraintEvaluator(
     map { it.region }
       .toSet()
 
-  suspend fun CanaryConstraint.regionsWithCorrelatedExecutions(prefix: String): Map<String, String> =
+  suspend fun CanaryConstraint.regionsWithCorrelatedExecutions(deliveryConfig: DeliveryConfig, prefix: String):
+    Map<String, String> =
     coroutineScope {
       regions.associateWith { region ->
         async {
-          orcaService.getCorrelatedExecutions("$prefix:$region")
+          authorizationSupport.withSpinnakerAuthHeaders(deliveryConfig.serviceAccount) {
+            orcaService.getCorrelatedExecutions("$prefix:$region")
+          }
         }
       }
         .mapValues { it.value.await() }

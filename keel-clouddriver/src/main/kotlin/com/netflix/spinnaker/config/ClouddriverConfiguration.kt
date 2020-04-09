@@ -20,6 +20,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.MemoryCloudDriverCache
+import com.netflix.spinnaker.keel.retrofit.SpinnakerCallAdapterFactory
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -50,6 +51,7 @@ class ClouddriverConfiguration {
     CloudDriverService =
     Retrofit.Builder()
       .addConverterFactory(JacksonConverterFactory.create(objectMapper))
+      .addCallAdapterFactory(SpinnakerCallAdapterFactory)
       .baseUrl(clouddriverEndpoint)
       .client(retrofitClient)
       .build()

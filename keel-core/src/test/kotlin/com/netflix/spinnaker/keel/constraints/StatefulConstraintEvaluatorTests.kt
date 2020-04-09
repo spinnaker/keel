@@ -42,7 +42,7 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       repository: KeelRepository,
       override val eventPublisher: ApplicationEventPublisher,
       val delegate: StatefulConstraintEvaluator<FakeConstraint>
-    ) : StatefulConstraintEvaluator<FakeConstraint>(repository) {
+    ) : StatefulConstraintEvaluator<FakeConstraint>(repository, mockk()) {
       override fun canPromote(
         artifact: DeliveryArtifact,
         version: String,

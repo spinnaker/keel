@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel.orca
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
+import com.netflix.spinnaker.keel.retrofit.SpinnakerCall
 import java.time.Instant
 import java.util.HashMap
 import retrofit2.http.Body
@@ -31,28 +32,49 @@ interface OrcaService {
 
   @POST("/ops")
   @Headers("Content-Type: application/context+json", "X-SPINNAKER-USER-ORIGIN: keel")
-  suspend fun orchestrate(@Header("X-SPINNAKER-USER") user: String, @Body request: OrchestrationRequest):
-    TaskRefResponse
+  suspend fun orchestrate(
+    @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
+    @Body request: OrchestrationRequest
+  ): TaskRefResponse
 
   @POST("/orchestrate/{pipelineConfigId}")
   @Headers("Content-Type: application/context+json", "X-SPINNAKER-USER-ORIGIN: keel")
   suspend fun triggerPipeline(
     @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
     @Path("pipelineConfigId") pipelineConfigId: String,
     @Body trigger: HashMap<String, Any>
   ): TaskRefResponse
 
   @GET("/pipelines/{id}")
-  suspend fun getPipelineExecution(@Path("id") id: String): ExecutionDetailResponse
+  suspend fun getPipelineExecution(
+//    @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
+    @Path("id") id: String
+  ): ExecutionDetailResponse
 
   @GET("/tasks/{id}")
-  suspend fun getOrchestrationExecution(@Path("id") id: String): ExecutionDetailResponse
+  suspend fun getOrchestrationExecution(
+//    @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
+    @Path("id") id: String
+  ): ExecutionDetailResponse
 
   @PUT("/tasks/{id}/cancel")
-  suspend fun cancelOrchestration(@Path("id") id: String)
+  suspend fun cancelOrchestration(
+//    @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
+    @Path("id") id: String
+  )
 
   @GET("/executions/correlated/{correlationId}")
-  suspend fun getCorrelatedExecutions(@Path("correlationId") correlationId: String): List<String>
+  @SpinnakerCall
+  suspend fun getCorrelatedExecutions(
+//    @Header("X-SPINNAKER-USER") user: String,
+//    @Header("X-SPINNAKER-ACCOUNTS") accounts: Set<String>,
+    @Path("correlationId") correlationId: String
+  ): List<String>
 }
 
 data class TaskRefResponse(

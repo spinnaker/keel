@@ -75,7 +75,8 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     combinedRepository,
-    publisher
+    publisher,
+    mockk()
   )
   private val mapper = ObjectMapper().registerKotlinModule()
   private val yamlMapper = configuredYamlMapper()

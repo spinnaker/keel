@@ -23,7 +23,7 @@ internal class ManualJudgementConstraintEvaluatorTests : JUnit5Minutests {
     val clock = MutableClock()
     val repository = combinedMockRepository(clock = clock)
     val publisher: ApplicationEventPublisher = mockk()
-    val subject = ManualJudgementConstraintEvaluator(repository, clock, publisher)
+    val subject = ManualJudgementConstraintEvaluator(repository, clock, publisher, mockk())
 
     val configName = "my-config"
     val version = "1.1.1"

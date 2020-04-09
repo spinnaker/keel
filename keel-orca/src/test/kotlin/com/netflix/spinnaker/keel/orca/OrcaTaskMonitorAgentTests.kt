@@ -60,7 +60,7 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
   data class OrcaTaskMonitorAgentFixture(
     var event: TaskCreatedEvent
   ) {
-    val subject: OrcaTaskMonitorAgent = OrcaTaskMonitorAgent(repository, resourceRepository, orcaService, publisher, clock)
+    val subject: OrcaTaskMonitorAgent = OrcaTaskMonitorAgent(repository, resourceRepository, orcaService, publisher, mockk(), clock)
   }
 
   fun orcaTaskMonitorAgentTests() = rootContext<OrcaTaskMonitorAgentFixture> {

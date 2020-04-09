@@ -17,6 +17,7 @@ package com.netflix.spinnaker.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.retrofit.SpinnakerCallAdapterFactory
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -47,6 +48,7 @@ class OrcaConfiguration {
       .baseUrl(orcaEndpoint)
       .client(retrofitClient)
       .addConverterFactory(JacksonConverterFactory.create(objectMapper))
+      .addCallAdapterFactory(SpinnakerCallAdapterFactory)
       .build()
       .create(OrcaService::class.java)
 }

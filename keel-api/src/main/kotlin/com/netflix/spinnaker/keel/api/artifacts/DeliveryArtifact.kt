@@ -19,7 +19,7 @@ sealed class DeliveryArtifact {
   abstract val versioningStrategy: VersioningStrategy
   abstract val reference: String // friendly reference to use within a delivery config
   abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
-  override fun toString() = "$type:$name" + if (reference != null) " (ref: $reference)" else ""
+  override fun toString() = "$type:$name (ref: $reference)"
 }
 
 data class DebianArtifact(

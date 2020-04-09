@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import java.time.Clock
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
@@ -13,8 +14,9 @@ import org.springframework.stereotype.Component
 class ManualJudgementConstraintEvaluator(
   repository: KeelRepository,
   private val clock: Clock,
-  override val eventPublisher: ApplicationEventPublisher
-) : StatefulConstraintEvaluator<ManualJudgementConstraint>(repository) {
+  override val eventPublisher: ApplicationEventPublisher,
+  override val authorizationSupport: AuthorizationSupport
+) : StatefulConstraintEvaluator<ManualJudgementConstraint>(repository, authorizationSupport) {
 
   override val supportedType = SupportedConstraintType<ManualJudgementConstraint>("manual-judgement")
 

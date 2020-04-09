@@ -93,7 +93,8 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     combinedRepository,
-    publisher
+    publisher,
+    mockk()
   )
   private val objectMapper = configuredObjectMapper()
   private val normalizers = emptyList<Resolver<SecurityGroupSpec>>()

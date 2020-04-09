@@ -32,7 +32,7 @@ internal class AuthorizationSupportTests : JUnit5Minutests {
   private val resource = locatableResource()
   private val deliveryConfig = DeliveryConfig(
     name = "manifest",
-    application = ApplicationControllerTests.application,
+    application = "fnord",
     serviceAccount = "keel@spinnaker",
     artifacts = emptySet(),
     environments = setOf(Environment("test", setOf(resource)))

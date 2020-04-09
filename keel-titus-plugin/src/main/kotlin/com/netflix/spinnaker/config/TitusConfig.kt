@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterHandler
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import java.time.Clock
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
@@ -40,7 +41,8 @@ class TitusConfig {
     clock: Clock,
     taskLauncher: TaskLauncher,
     publisher: ApplicationEventPublisher,
-    resolvers: List<Resolver<*>>
+    resolvers: List<Resolver<*>>,
+    authorizationSupport: AuthorizationSupport
   ): TitusClusterHandler = TitusClusterHandler(
     cloudDriverService,
     cloudDriverCache,
@@ -48,6 +50,7 @@ class TitusConfig {
     clock,
     taskLauncher,
     publisher,
-    resolvers
+    resolvers,
+    authorizationSupport
   )
 }

@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator.Companion.getConstraintForEnvironment
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.rest.AuthorizationSupport
 import org.springframework.context.ApplicationEventPublisher
 
 interface ConstraintEvaluator<T : Constraint> {
@@ -56,7 +57,8 @@ inline fun <reified T : Constraint> SupportedConstraintType(name: String): Suppo
   SupportedConstraintType(name, T::class.java)
 
 abstract class StatefulConstraintEvaluator<T : Constraint>(
-  protected val repository: KeelRepository
+  protected val repository: KeelRepository,
+  protected open val authorizationSupport: AuthorizationSupport
 ) : ConstraintEvaluator<T> {
 
   override fun canPromote(

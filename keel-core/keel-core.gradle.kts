@@ -37,7 +37,11 @@ dependencies {
   api("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   api("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
 
+  implementation(project(":keel-retrofit"))
   implementation("org.springframework:spring-tx")
+  implementation("org.springframework.security:spring-security-core")
+  implementation("com.netflix.spinnaker.fiat:fiat-api:${property("fiatVersion")}")
+  implementation("com.netflix.spinnaker.fiat:fiat-core:${property("fiatVersion")}")
 
   testImplementation(project(":keel-test"))
   testImplementation(project(":keel-core-test"))
