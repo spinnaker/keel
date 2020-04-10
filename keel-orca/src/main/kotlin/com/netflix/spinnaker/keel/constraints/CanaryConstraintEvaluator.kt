@@ -13,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
@@ -54,6 +55,7 @@ import org.springframework.stereotype.Component
  *    failureCancelsRunningRegions: false
  */
 @Component
+@ConditionalOnProperty("orca.enabled")
 class CanaryConstraintEvaluator(
   private val handlers: List<CanaryConstraintDeployHandler>,
   private val orcaService: OrcaService,

@@ -49,6 +49,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
     val igorService = mockk<ArtifactService>()
     val baseImageCache = mockk<BaseImageCache>()
     val imageService = mockk<ImageService>()
+    val bakeHistory = mockk<BakeHistory>()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
     val taskLauncher = mockk<TaskLauncher>()
     val handler = ImageHandler(
@@ -56,6 +57,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       baseImageCache,
       igorService,
       imageService,
+      bakeHistory,
       publisher,
       taskLauncher,
       BakeCredentials("keel@spinnaker.io", "keel")
@@ -247,44 +249,76 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 } returns image.copy(
                   appVersion = "${artifact.name}-0.160.0-h62.24d0843"
                 )
-
-                runHandler(artifact)
               }
 
-              test("a bake is launched") {
-                expectThat(bakeTask)
-                  .isCaptured()
-                  .captured
-                  .hasSize(1)
-                  .first()
-                  .and {
-                    get("type").isEqualTo("bake")
-                    get("package").isEqualTo("${image.appVersion.replaceFirst('-', '_')}_all.deb")
-                    get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
-                    get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
-                    get("storeType").isEqualTo(artifact.vmOptions.storeType.toString().toLowerCase())
-                    get("regions").isEqualTo(artifact.vmOptions.regions)
+              context("but wait, we've baked this before") {
+                before {
+                  every { bakeHistory.contains(image.appVersion, image.baseAmiVersion) } returns true
+
+                  runHandler(artifact)
+                }
+
+                test("no bake is launched") {
+                  verify(exactly = 0) {
+                    taskLauncher.submitJob(any(), any(), any(), any(), any(), any(), any(), any<List<Map<String, Any?>>>())
                   }
-              }
+                }
 
-              test("authentication details are derived from the artifact's delivery config") {
-                expect {
-                  that(bakeTaskUser).isCaptured().captured.isEqualTo(deliveryConfig.serviceAccount)
-                  that(bakeTaskApplication).isCaptured().captured.isEqualTo(deliveryConfig.application)
+                test("an event is triggered") {
+                  verify {
+                    publisher.publishEvent(RecurrentBakeDetected(image.appVersion, image.baseAmiVersion))
+                  }
                 }
               }
 
-              test("the artifact details are attached") {
-                expectThat(bakeTaskArtifact)
-                  .isCaptured()
-                  .captured
-                  .hasSize(1)
-                  .first()
-                  .and {
-                    get("name").isEqualTo(artifact.name)
-                    get("version").isEqualTo(image.appVersion.removePrefix("${artifact.name}-"))
-                    get("reference").isEqualTo("/${image.appVersion.replaceFirst('-', '_')}_all.deb")
+              context("we have never baked this before") {
+                before {
+                  every { bakeHistory.contains(any(), any()) } returns false
+
+                  runHandler(artifact)
+                }
+
+                test("a bake is launched") {
+                  expectThat(bakeTask)
+                    .isCaptured()
+                    .captured
+                    .hasSize(1)
+                    .first()
+                    .and {
+                      get("type").isEqualTo("bake")
+                      get("package").isEqualTo("${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                      get("baseOs").isEqualTo(artifact.vmOptions.baseOs)
+                      get("baseLabel").isEqualTo(artifact.vmOptions.baseLabel.toString().toLowerCase())
+                      get("storeType").isEqualTo(artifact.vmOptions.storeType.toString().toLowerCase())
+                      get("regions").isEqualTo(artifact.vmOptions.regions)
+                    }
+                }
+
+                test("authentication details are derived from the artifact's delivery config") {
+                  expect {
+                    that(bakeTaskUser).isCaptured().captured.isEqualTo(deliveryConfig.serviceAccount)
+                    that(bakeTaskApplication).isCaptured().captured.isEqualTo(deliveryConfig.application)
                   }
+                }
+
+                test("the artifact details are attached") {
+                  expectThat(bakeTaskArtifact)
+                    .isCaptured()
+                    .captured
+                    .hasSize(1)
+                    .first()
+                    .and {
+                      get("name").isEqualTo(artifact.name)
+                      get("version").isEqualTo(image.appVersion.removePrefix("${artifact.name}-"))
+                      get("reference").isEqualTo("/${image.appVersion.replaceFirst('-', '_')}_all.deb")
+                    }
+                }
+
+                test("the task is recorded in the bake history") {
+                  verify {
+                    bakeHistory.add(image.appVersion, image.baseAmiVersion, artifact.vmOptions.regions, any())
+                  }
+                }
               }
             }
 
@@ -295,6 +329,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 } returns image.copy(
                   baseAmiVersion = "nflx-base-5.377.0-h1229.3c8e02c"
                 )
+
+                every { bakeHistory.contains(any(), any()) } returns false
 
                 runHandler(artifact)
               }
@@ -320,6 +356,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
                 } returns image.copy(
                   regions = artifact.vmOptions.regions.take(1).toSet()
                 )
+
+                every { bakeHistory.contains(any(), any()) } returns false
 
                 runHandler(artifact)
               }
@@ -375,6 +413,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
             every {
               imageService.getLatestImage(artifact.name, "test")
             } returns image
+
+            every { bakeHistory.contains(any(), any()) } returns false
 
             runHandler(artifact)
           }

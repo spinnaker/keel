@@ -24,6 +24,7 @@ class ImageHandler(
   private val baseImageCache: BaseImageCache,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
+  private val bakeHistory: BakeHistory,
   private val publisher: ApplicationEventPublisher,
   private val taskLauncher: TaskLauncher,
   private val defaultCredentials: BakeCredentials
@@ -36,24 +37,59 @@ class ImageHandler(
           ArtifactCheckSkipped(artifact.type, artifact.name, "ActuationInProgress")
         )
       } else {
-        val latestVersion = artifact.findLatestArtifactVersion()
-        val latestBaseImageVersion = artifact.findLatestBaseAmiVersion()
+        val latestArtifactVersion = artifact.findLatestArtifactVersion()
+        val latestBaseAmiVersion = artifact.findLatestBaseAmiVersion()
         val image = artifact.findLatestAmi()
 
         if (image == null) {
           log.debug("No image found for {}", artifact.name)
         } else {
-          log.debug("Latest known {} version: {}", artifact.name, latestVersion)
+          log.debug("Latest known {} version: {}", artifact.name, latestArtifactVersion)
           log.debug("Latest baked {} version: {}", artifact.name, image.appVersion)
-          log.debug("Latest {} {} base AMI version: {}", artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel, latestBaseImageVersion)
+          log.debug("Latest {} {} base AMI version: {}", artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel, latestBaseAmiVersion)
           log.debug("Latest baked {} base AMI version: {}", artifact.name, image.baseAmiVersion)
         }
 
-        val versionsDiffer = image?.appVersion != latestVersion || image?.baseAmiVersion != latestBaseImageVersion
+        val versionsDiffer = image?.appVersion != latestArtifactVersion || image?.baseAmiVersion != latestBaseAmiVersion
         val regionsDiffer = !(image?.regions ?: emptySet()).containsAll(artifact.vmOptions.regions)
         if (image == null || versionsDiffer || regionsDiffer) {
-          log.info("Versions or regions for {} differ, launching bake", artifact.name)
-          launchBake(artifact, latestVersion)
+          if (bakeHistory.contains(latestArtifactVersion, latestBaseAmiVersion)) {
+            log.warn("Artifact version {} and base AMI version {} were baked previously", latestArtifactVersion, latestBaseAmiVersion)
+            publisher.publishEvent(RecurrentBakeDetected(latestArtifactVersion, latestBaseAmiVersion))
+          } else {
+            if (image == null) {
+              log.info("No AMI found for {}, launching bake", artifact.name)
+            } else {
+              log.info(
+                """Diff detected between desired and current image for {}.
+                  |  Artifact version
+                  |    current: {}
+                  |    desired: {}
+                  |  Base AMI version
+                  |    current: {}
+                  |    desired: {}
+                  |  Regions
+                  |    current: {}
+                  |    desired: {}""".trimMargin(),
+                artifact.name,
+                image.appVersion,
+                latestArtifactVersion,
+                image.baseAmiVersion,
+                latestBaseAmiVersion,
+                image.regions.joinToString(),
+                artifact.vmOptions.regions.joinToString()
+              )
+            }
+            launchBake(artifact, latestArtifactVersion)
+              .also { tasks ->
+                bakeHistory.add(
+                  latestArtifactVersion,
+                  latestBaseAmiVersion,
+                  artifact.vmOptions.regions,
+                  tasks.first().id
+                )
+              }
+          }
         } else {
           log.debug("Existing image for {} is up-to-date", artifact.name)
         }
@@ -182,4 +218,5 @@ data class BakeCredentials(
 )
 
 data class ImageRegionMismatchDetected(val image: Image, val regions: Set<String>)
+data class RecurrentBakeDetected(val appVersion: String, val baseAmiVersion: String)
 data class BakeLaunched(val appVersion: String)
