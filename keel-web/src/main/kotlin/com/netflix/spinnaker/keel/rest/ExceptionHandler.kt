@@ -85,8 +85,8 @@ class ExceptionHandler(
     log.error(e.message)
     return ApiError(
       if (e.message == null || e.message == "Access is denied") {
-        "Access denied. Please make sure you have access to the service account specified in your delivery config, " +
-          "and that the service account has access to the target application and cloud account."
+        "Access denied. Please make sure you have access to the service account specified in your delivery config. " +
+          "If you do have access, check that the service account has access to this application along with all the cloud accounts included in the delivery config."
       } else {
         e.message!!
       }
