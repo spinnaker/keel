@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.orca
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.actuation.SubjectType.RESOURCE
 import com.netflix.spinnaker.keel.api.actuation.Task
+import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
@@ -50,7 +51,7 @@ class OrcaTaskMonitorAgent(
           it.subject to
             async {
               // TODO: need to add serviceAccount to tasks table to pass along to orca here
-              orcaService.getOrchestrationExecution(it.id)
+              orcaService.getOrchestrationExecution(it.id, DEFAULT_SERVICE_ACCOUNT)
             }
         }
         .mapValues { it.value.await() }
