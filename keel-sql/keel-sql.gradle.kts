@@ -44,15 +44,14 @@ tasks.getByName<Delete>("clean") {
 }
 
 dependencies {
-  api("org.jooq:jooq:3.11.11")
-  api("com.netflix.spinnaker.kork:kork-sql")
-
   implementation(project(":keel-core"))
   implementation("com.netflix.spinnaker.kork:kork-sql")
   implementation("org.springframework:spring-jdbc")
   implementation("org.springframework:spring-tx")
+  implementation("org.jooq:jooq:3.11.11")
   implementation("com.zaxxer:HikariCP")
   implementation("org.liquibase:liquibase-core")
+  implementation("com.netflix.spinnaker.kork:kork-sql")
 
   runtimeOnly("mysql:mysql-connector-java")
 

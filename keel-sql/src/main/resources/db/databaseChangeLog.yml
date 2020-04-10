@@ -126,5 +126,5 @@ databaseChangeLog:
       file: changelog/20200402-more-artifact-info.yml
       relativeToChangelogFile: true
   - include:
-      file: changelog/20200409-create-bake-history-table.yml
+      file: changelog/20200410-rename-diff-fingerprint-column.yml
       relativeToChangelogFile: true

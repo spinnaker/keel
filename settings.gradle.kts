@@ -18,7 +18,6 @@ include(
   "keel-api",
   "keel-api-jackson",
   "keel-artifact",
-  "keel-bakery-history-sql",
   "keel-bakery-plugin",
   "keel-bom",
   "keel-clouddriver",

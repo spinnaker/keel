@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
@@ -25,7 +26,7 @@ class ImageHandler(
   private val baseImageCache: BaseImageCache,
   private val igorService: ArtifactService,
   private val imageService: ImageService,
-  private val bakeHistory: BakeHistory,
+  private val diffFingerprintRepository: DiffFingerprintRepository,
   private val publisher: ApplicationEventPublisher,
   private val taskLauncher: TaskLauncher,
   private val defaultCredentials: BakeCredentials
@@ -52,19 +53,12 @@ class ImageHandler(
             log.info("Image for {} delta: {}", artifact.name, diff.toDebug())
           }
 
-          if (bakeHistory.contains(latestArtifactVersion, latestBaseAmiVersion)) {
+          if (diffFingerprintRepository.seen("ami:${artifact.name}", diff)) {
             log.warn("Artifact version {} and base AMI version {} were baked previously", latestArtifactVersion, latestBaseAmiVersion)
             publisher.publishEvent(RecurrentBakeDetected(latestArtifactVersion, latestBaseAmiVersion))
           } else {
             launchBake(artifact, latestArtifactVersion)
-              .also { tasks ->
-                bakeHistory.add(
-                  latestArtifactVersion,
-                  latestBaseAmiVersion,
-                  artifact.vmOptions.regions,
-                  tasks.first().id
-                )
-              }
+            diffFingerprintRepository.store("ami:${artifact.name}", diff)
           }
         } else {
           log.debug("Existing image for {} is up-to-date", artifact.name)

@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
 import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import com.netflix.spinnaker.keel.test.deliveryConfig
@@ -49,7 +50,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
     val igorService = mockk<ArtifactService>()
     val baseImageCache = mockk<BaseImageCache>()
     val imageService = mockk<ImageService>()
-    val bakeHistory = mockk<BakeHistory>()
+    val diffFingerprintRepository = mockk<DiffFingerprintRepository>()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
     val taskLauncher = mockk<TaskLauncher>()
     val handler = ImageHandler(
@@ -57,7 +58,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       baseImageCache,
       igorService,
       imageService,
-      bakeHistory,
+      diffFingerprintRepository,
       publisher,
       taskLauncher,
       BakeCredentials("keel@spinnaker.io", "keel")
@@ -253,7 +254,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
               context("but wait, we've baked this before") {
                 before {
-                  every { bakeHistory.contains(image.appVersion, image.baseAmiVersion) } returns true
+                  every { diffFingerprintRepository.seen("ami:${artifact.name}", any()) } returns true
 
                   runHandler(artifact)
                 }
@@ -273,7 +274,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
               context("we have never baked this before") {
                 before {
-                  every { bakeHistory.contains(any(), any()) } returns false
+                  every { diffFingerprintRepository.seen("ami:${artifact.name}", any()) } returns false
 
                   runHandler(artifact)
                 }
@@ -314,9 +315,9 @@ internal class ImageHandlerTests : JUnit5Minutests {
                     }
                 }
 
-                test("the task is recorded in the bake history") {
+                test("the diff fingerprint of the image is recorded") {
                   verify {
-                    bakeHistory.add(image.appVersion, image.baseAmiVersion, artifact.vmOptions.regions, any())
+                    diffFingerprintRepository.store("ami:${artifact.name}", any())
                   }
                 }
               }
@@ -330,7 +331,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   baseAmiVersion = "nflx-base-5.377.0-h1229.3c8e02c"
                 )
 
-                every { bakeHistory.contains(any(), any()) } returns false
+                every { diffFingerprintRepository.seen("ami:${artifact.name}", any()) } returns false
 
                 runHandler(artifact)
               }
@@ -357,7 +358,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
                   regions = artifact.vmOptions.regions.take(1).toSet()
                 )
 
-                every { bakeHistory.contains(any(), any()) } returns false
+                every { diffFingerprintRepository.seen("ami:${artifact.name}", any()) } returns false
 
                 runHandler(artifact)
               }
@@ -414,7 +415,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
               imageService.getLatestImage(artifact.name, "test")
             } returns image
 
-            every { bakeHistory.contains(any(), any()) } returns false
+            every { diffFingerprintRepository.seen("ami:${artifact.name}", any()) } returns false
 
             runHandler(artifact)
           }

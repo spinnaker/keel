@@ -14,7 +14,6 @@ import java.time.Clock
 import java.util.HashMap
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory.getLogger
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
@@ -36,7 +35,6 @@ import org.springframework.stereotype.Component
  *
  */
 @Component
-@ConditionalOnProperty("orca.enabled")
 class PipelineConstraintEvaluator(
   private val orcaService: OrcaService,
   repository: KeelRepository,
