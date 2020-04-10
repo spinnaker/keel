@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -39,47 +40,22 @@ class ImageHandler(
       } else {
         val latestArtifactVersion = artifact.findLatestArtifactVersion()
         val latestBaseAmiVersion = artifact.findLatestBaseAmiVersion()
-        val image = artifact.findLatestAmi()
 
-        if (image == null) {
-          log.debug("No image found for {}", artifact.name)
-        } else {
-          log.debug("Latest known {} version: {}", artifact.name, latestArtifactVersion)
-          log.debug("Latest baked {} version: {}", artifact.name, image.appVersion)
-          log.debug("Latest {} {} base AMI version: {}", artifact.vmOptions.baseOs, artifact.vmOptions.baseLabel, latestBaseAmiVersion)
-          log.debug("Latest baked {} base AMI version: {}", artifact.name, image.baseAmiVersion)
-        }
+        val desired = Image(latestBaseAmiVersion, latestArtifactVersion, artifact.vmOptions.regions)
+        val current = artifact.findLatestAmi()
+        val diff = DefaultResourceDiff(desired, current)
 
-        val versionsDiffer = image?.appVersion != latestArtifactVersion || image?.baseAmiVersion != latestBaseAmiVersion
-        val regionsDiffer = !(image?.regions ?: emptySet()).containsAll(artifact.vmOptions.regions)
-        if (image == null || versionsDiffer || regionsDiffer) {
+        if (diff.hasChanges()) {
+          if (current == null) {
+            log.info("No AMI found for {}", artifact.name)
+          } else {
+            log.info("Image for {} delta: {}", artifact.name, diff.toDebug())
+          }
+
           if (bakeHistory.contains(latestArtifactVersion, latestBaseAmiVersion)) {
             log.warn("Artifact version {} and base AMI version {} were baked previously", latestArtifactVersion, latestBaseAmiVersion)
             publisher.publishEvent(RecurrentBakeDetected(latestArtifactVersion, latestBaseAmiVersion))
           } else {
-            if (image == null) {
-              log.info("No AMI found for {}, launching bake", artifact.name)
-            } else {
-              log.info(
-                """Diff detected between desired and current image for {}.
-                  |  Artifact version
-                  |    current: {}
-                  |    desired: {}
-                  |  Base AMI version
-                  |    current: {}
-                  |    desired: {}
-                  |  Regions
-                  |    current: {}
-                  |    desired: {}""".trimMargin(),
-                artifact.name,
-                image.appVersion,
-                latestArtifactVersion,
-                image.baseAmiVersion,
-                latestBaseAmiVersion,
-                image.regions.joinToString(),
-                artifact.vmOptions.regions.joinToString()
-              )
-            }
             launchBake(artifact, latestArtifactVersion)
               .also { tasks ->
                 bakeHistory.add(
@@ -94,8 +70,8 @@ class ImageHandler(
           log.debug("Existing image for {} is up-to-date", artifact.name)
         }
 
-        if (image != null && regionsDiffer) {
-          publisher.publishEvent(ImageRegionMismatchDetected(image, artifact.vmOptions.regions))
+        if (current != null && diff.affectedRootPropertyNames == setOf("regions")) {
+          publisher.publishEvent(ImageRegionMismatchDetected(current, artifact.vmOptions.regions))
         }
       }
     }
