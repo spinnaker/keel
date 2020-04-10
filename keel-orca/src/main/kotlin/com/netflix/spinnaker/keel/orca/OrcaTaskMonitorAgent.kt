@@ -50,7 +50,6 @@ class OrcaTaskMonitorAgent(
         .associate {
           it.subject to
             async {
-              // TODO: need to add serviceAccount to tasks table to pass along to orca here
               orcaService.getOrchestrationExecution(it.id, DEFAULT_SERVICE_ACCOUNT)
             }
         }
