@@ -96,9 +96,9 @@ class OrcaTaskLauncher(
         Task(id = it.taskId, name = description)
       }
 
-  override suspend fun correlatedTasksRunning(correlationId: String, user: String?): Boolean =
+  override suspend fun correlatedTasksRunning(correlationId: String): Boolean =
     orcaService
-      .getCorrelatedExecutions(correlationId, user ?: DEFAULT_SERVICE_ACCOUNT)
+      .getCorrelatedExecutions(correlationId, DEFAULT_SERVICE_ACCOUNT)
       .isNotEmpty()
 
   private val Resource<*>.notifications: Set<NotificationConfig>

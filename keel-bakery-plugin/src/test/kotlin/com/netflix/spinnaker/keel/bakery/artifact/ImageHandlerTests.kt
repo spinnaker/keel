@@ -135,7 +135,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
     context("a bake is already running for the artifact") {
       before {
         every {
-          taskLauncher.correlatedTasksRunning(artifact.correlationId, "keel")
+          taskLauncher.correlatedTasksRunning(artifact.correlationId)
         } returns true
 
         runHandler(artifact)
@@ -159,7 +159,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
     context("no bake is currently running") {
       before {
         every {
-          taskLauncher.correlatedTasksRunning(artifact.correlationId, "keel")
+          taskLauncher.correlatedTasksRunning(artifact.correlationId)
         } returns false
       }
 

@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.artifact
 
 import com.netflix.spinnaker.igor.ArtifactService
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -36,6 +37,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
   val debianArtifact = DebianArtifact(name = "fnord", deliveryConfigName = "fnord-config", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
   val dockerArtifact = DockerArtifact(name = "fnord/myimage", tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB, deliveryConfigName = "fnord-config")
+  val deliveryConfig = DeliveryConfig(name = "fnord-config", application = "fnord", serviceAccount = "keel", artifacts = setOf(debianArtifact, dockerArtifact))
 
   data class ArtifactFixture(
     val event: ArtifactEvent,
@@ -57,6 +59,10 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         ),
         artifact = debianArtifact
       )
+    }
+
+    before {
+      every { repository.getDeliveryConfig(any()) } returns deliveryConfig
     }
 
     context("the artifact is not something we're tracking") {
@@ -129,11 +135,15 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   fun artifactRegisteredEventTests() = rootContext<RegisteredFixture> {
     fixture {
       DebianArtifact(name = "fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))).let {
-      RegisteredFixture(
-        event = ArtifactRegisteredEvent(it),
-        artifact = it
-      )
+        RegisteredFixture(
+          event = ArtifactRegisteredEvent(it),
+          artifact = it
+        )
+      }
     }
+
+    before {
+      every { repository.getDeliveryConfig(any()) } returns deliveryConfig
     }
 
     context("artifact is already registered") {
@@ -223,13 +233,17 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       )
     }
 
+    before {
+      every { repository.getDeliveryConfig(any()) } returns deliveryConfig
+    }
+
     context("we don't have any versions of an artifact") {
       before {
         every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
         every { repository.artifactVersions(debArtifact) } returns listOf()
         every { repository.artifactVersions(dockerArtifact) } returns listOf()
         coEvery { artifactService.getVersions(debArtifact.name) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
-        coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name) } returns listOf("master-h5.blahblah")
+        coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h5.blahblah")
         coEvery { artifactService.getArtifact(debArtifact.name, "0.161.0-h61.116f116") } returns newerKorkDeb
         every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) } returns true
         every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null) } returns true
@@ -252,7 +266,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       context("a new version") {
         before {
           coEvery { artifactService.getVersions(debArtifact.name) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
-          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name) } returns listOf("master-h6.hehehe")
+          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h6.hehehe")
           coEvery { artifactService.getArtifact(debArtifact.name, "0.161.0-h61.116f116") } returns newerKorkDeb
           every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) } returns true
           every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null) } returns true
@@ -268,7 +282,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       context("no new version") {
         before {
           coEvery { artifactService.getVersions(debArtifact.name) } returns listOf("0.156.0-h58.f67fe09")
-          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name) } returns listOf("master-h5.blahblah")
+          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h5.blahblah")
         }
 
         test("store not called") {
@@ -281,7 +295,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       context("no version information ") {
         before {
           coEvery { artifactService.getVersions(debArtifact.name) } returns listOf()
-          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name) } returns listOf()
+          coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf()
         }
 
         test("store not called") {

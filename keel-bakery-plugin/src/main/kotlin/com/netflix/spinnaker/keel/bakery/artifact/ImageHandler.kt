@@ -31,8 +31,7 @@ class ImageHandler(
 
   override suspend fun handle(artifact: DeliveryArtifact) {
     if (artifact is DebianArtifact) {
-      val deliveryConfig = artifact.deliveryConfigName?.let { repository.getDeliveryConfig(it) }
-      if (taskLauncher.correlatedTasksRunning(artifact.correlationId, deliveryConfig?.serviceAccount)) {
+      if (taskLauncher.correlatedTasksRunning(artifact.correlationId)) {
         publisher.publishEvent(
           ArtifactCheckSkipped(artifact.type, artifact.name, "ActuationInProgress")
         )
