@@ -3,13 +3,17 @@ package com.netflix.spinnaker.keel.ec2.resource
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.PipelineStage
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
@@ -57,6 +61,7 @@ import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
+import com.netflix.spinnaker.keel.front50.model.DeployStage
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -64,6 +69,7 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import java.lang.IllegalArgumentException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -380,6 +386,60 @@ class ClusterHandler(
     )
 
     return spec
+  }
+
+  override fun export(pipelineStage: PipelineStage, artifact: DeliveryArtifact): ClusterSpec? {
+    if (pipelineStage !is DeployStage || artifact !is DebianArtifact) {
+      throw IllegalArgumentException(
+        "EC2 cluster handler only supports exporting deploy stages with Debian artifacts " +
+          "(received stage: ${pipelineStage.type}, artifact: ${artifact.type})."
+      )
+    }
+
+    if (pipelineStage.clusters.isEmpty()) {
+      return null
+    }
+
+    if (pipelineStage.clusters.size > 1) {
+      log.warn("Deploy stage ${pipelineStage.name} has more than 1 cluster. Exporting only the first.")
+    }
+
+    val cluster = pipelineStage.clusters.first()
+
+    return ClusterSpec(
+      moniker = Moniker(
+        app = cluster.application,
+        stack = if (cluster.stack.isEmpty()) cluster.account else cluster.stack
+      ),
+      imageProvider = ReferenceArtifactImageProvider(reference = artifact.reference),
+      locations = SubnetAwareLocations(
+        account = cluster.account,
+        subnet = cluster.subnetType,
+        regions = cluster.availabilityZones.map { (region, azs) ->
+          SubnetAwareRegionSpec(region, azs)
+        }.toSet()
+      ),
+      // TODO: use objectMapper.convert() instead of copying properties with the same names all over
+      _defaults = ServerGroupSpec(
+        launchConfiguration = LaunchConfigurationSpec(
+          instanceType = cluster.instanceType,
+          ebsOptimized = cluster.ebsOptimized,
+          iamRole = cluster.iamRole,
+          keyPair = cluster.keyPair,
+          instanceMonitoring = cluster.instanceMonitoring
+        ),
+        capacity = cluster.capacity,
+        dependencies = null, // TODO add sec groups
+        health = HealthSpec(
+          cooldown = Duration.ofSeconds(cluster.cooldown),
+          // warmup = Duration.ofSeconds(cluster.warmup)
+          healthCheckType = HealthCheckType.valueOf(cluster.healthCheckType),
+          // enabledMetrics
+          terminationPolicies = cluster.terminationPolicies.map { TerminationPolicy.valueOf(it.name) }.toSet()
+        )
+      )
+      // overrides = mutableMapOf() // TODO: support multiple server groups
+    )
   }
 
   private fun List<ResourceDiff<ServerGroup>>.createsNewServerGroups() =

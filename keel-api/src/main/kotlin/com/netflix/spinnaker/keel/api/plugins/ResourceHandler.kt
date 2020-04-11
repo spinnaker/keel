@@ -1,11 +1,13 @@
 package com.netflix.spinnaker.keel.api.plugins
 
 import com.netflix.spinnaker.keel.api.Exportable
+import com.netflix.spinnaker.keel.api.PipelineStage
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -134,6 +136,13 @@ abstract class ResourceHandler<S : ResourceSpec, R : Any>(
    * Generate a spec from currently existing resources.
    */
   open suspend fun export(exportable: Exportable): S {
+    TODO("Not implemented")
+  }
+
+  /**
+   * Generate a spec from pipeline deploy stage details and the associated artifact.
+   */
+  open fun export(pipelineStage: PipelineStage, artifact: DeliveryArtifact): S? {
     TODO("Not implemented")
   }
 
