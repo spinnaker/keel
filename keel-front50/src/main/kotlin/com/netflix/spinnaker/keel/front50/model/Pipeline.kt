@@ -21,9 +21,9 @@ class Pipeline(
     return stages.subList(0, i).filterIsInstance<BakeStage>()?.last()
   }
 
-  fun findDownstreamDeploy(stage: Stage): DeployStage? {
+  fun findDownstreamDeploys(stage: Stage): List<DeployStage> {
     val i = stages.indexOf(stage)
-    return stages.slice(i until stages.size).filterIsInstance<DeployStage>()?.first()
+    return stages.slice(i until stages.size).filterIsInstance<DeployStage>()
   }
 
   fun findDeployForCluster(findImageStage: FindImageStage) =
@@ -34,7 +34,7 @@ class Pipeline(
           findImageStage.cloudProvider == cluster.cloudProvider &&
             findImageStage.moniker == cluster.moniker &&
             findImageStage.credentials == cluster.account &&
-            cluster.regions.containsAll(findImageStage.regions)
+            cluster.region in findImageStage.regions
         }
       }
 

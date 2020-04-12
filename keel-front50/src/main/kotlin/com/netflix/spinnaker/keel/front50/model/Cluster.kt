@@ -49,8 +49,9 @@ data class Cluster(
   val moniker: ClusterMoniker
     get() = ClusterMoniker(application, stack)
 
-  val regions: Set<String>
-    get() = availabilityZones.keys
+  val region: String
+    // The UI only supports one region per deploy
+    get() = availabilityZones.keys.first()
 
   val name: String
     get() = if (stack.isNullOrEmpty()) account else stack
