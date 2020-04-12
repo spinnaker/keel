@@ -32,7 +32,7 @@ data class Cluster(
   val onFailure: Boolean,
   val preferSourceCapacity: Boolean = false,
   val provider: String = "aws",
-  val rollback: Rollback,
+  val rollback: Rollback? = null,
   val scaleDown: Boolean = true,
   val securityGroups: List<String> = emptyList(),
   val stack: String,
@@ -51,4 +51,7 @@ data class Cluster(
 
   val regions: Set<String>
     get() = availabilityZones.keys
+
+  val name: String
+    get() = if (stack.isNullOrEmpty()) account else stack
 }

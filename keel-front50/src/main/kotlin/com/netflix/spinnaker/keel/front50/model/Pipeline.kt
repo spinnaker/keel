@@ -38,6 +38,13 @@ class Pipeline(
         }
       }
 
+  fun hasManualJudgment(deployStage: DeployStage) =
+    try {
+      stages[stages.indexOf(deployStage) - 1].type == "manualJudgment"
+    } catch (e: IndexOutOfBoundsException) {
+      false
+    }
+
   override fun equals(other: Any?) = if (other is Pipeline) {
     other.id == this.id
   } else {
