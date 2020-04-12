@@ -116,7 +116,7 @@ class ExportService(
       application = application,
       serviceAccount = serviceAccount,
       artifacts = artifacts,
-      environments = allEnvironments
+      environments = allEnvironments.sensibleOrder()
     )
 
     log.info("Successfully generated delivery config for application $application with " +
@@ -176,9 +176,9 @@ class ExportService(
         // TODO: handle load balancers
         val cluster = deploy.clusters.first()
         log.debug("Attempting to build environment for cluster ${cluster.moniker}")
+
         val provider = cluster.cloudProvider
-        val kind = PROVIDERS_TO_CLUSTER_KINDS[provider]
-          ?: error("Unsupported cluster cloud provider '$provider'")
+        val kind = PROVIDERS_TO_CLUSTER_KINDS[provider] ?: error("Unsupported cluster cloud provider '$provider'")
         val handler = handlers.supporting(kind)
         val spec = handler.export(deploy, artifact)
 
@@ -271,4 +271,24 @@ class ExportService(
 
     return constraints
   }
+
+  /**
+   * Attempts to order the set of environments in a more sensible fashion than just randomly.
+   */
+  private fun Set<SubmittedEnvironment>.sensibleOrder() =
+    toSortedSet(
+      Comparator { env1, env2 ->
+        val env1DependsOn = env1.constraints.filterIsInstance<DependsOnConstraint>().firstOrNull()
+        val env2DependsOn = env2.constraints.filterIsInstance<DependsOnConstraint>().firstOrNull()
+        when {
+          env1DependsOn?.environment == env2.name -> 1
+          env2DependsOn?.environment == env1.name -> -1
+          else -> when {
+            env1.constraints.isEmpty() -> -1
+            env2.constraints.isEmpty() -> 1
+            else -> env1.name.compareTo(env2.name)
+          }
+        }
+      }
+    )
 }
