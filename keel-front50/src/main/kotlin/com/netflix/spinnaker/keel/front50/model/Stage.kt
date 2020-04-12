@@ -8,10 +8,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.netflix.spinnaker.keel.api.PipelineStage
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BaseLabel
 import com.netflix.spinnaker.keel.api.artifacts.BaseLabel.RELEASE
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.StoreType
 import com.netflix.spinnaker.keel.api.artifacts.StoreType.EBS
+import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import java.lang.IllegalArgumentException
 
 @JsonTypeInfo(
   use = Id.NAME,
@@ -52,7 +56,24 @@ data class BakeStage(
   val storeType: StoreType = EBS,
   val vmType: String = "hvm",
   val cloudProviderType: String = "aws"
-) : Stage(type, name, refId, requisiteStageRefIds, restrictExecutionDuringTimeWindow)
+) : Stage(type, name, refId, requisiteStageRefIds, restrictExecutionDuringTimeWindow) {
+
+  val artifact: DebianArtifact
+    get() = DebianArtifact(
+      name = `package`,
+      vmOptions = VirtualMachineOptions(
+        baseLabel = baseLabel,
+        baseOs = baseOs,
+        regions = regions,
+        storeType = storeType
+      ),
+      statuses = try {
+        setOf(ArtifactStatus.valueOf(baseLabel.name))
+      } catch (e: IllegalArgumentException) {
+        emptySet<ArtifactStatus>()
+      }
+    )
+}
 
 data class DeployStage(
   override val type: String = "deploy",
@@ -65,9 +86,11 @@ data class DeployStage(
 
 data class ClusterMoniker(
   val app: String,
-  val cluster: String,
-  val stack: String? = null
-)
+  val stack: String? = null,
+  val cluster: String = app + if (stack == null) "" else "-$stack"
+) {
+  override fun toString() = cluster
+}
 
 enum class SelectionStrategy {
   LARGEST,

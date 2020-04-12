@@ -39,11 +39,16 @@ data class Cluster(
   val strategy: String,
   val subnetType: String,
   val suspendedProcesses: List<String> = emptyList(),
+  val tags: Map<String, String> = emptyMap(),
   val targetGroups: List<Map<String, Any?>> = emptyList(),
   val targetHealthyDeployPercentage: Int,
   val terminationPolicies: Set<TerminationPolicy>,
   val useAmiBlockDeviceMappings: Boolean = false,
   val useSourceCapacity: Boolean = false
 ) {
-  // fun toResource() = SubmittedResource(kind = ResourceKind.parseKind("ec2/cluster@v1"), spec = ClusterSpec)
+  val moniker: ClusterMoniker
+    get() = ClusterMoniker(application, stack)
+
+  val regions: Set<String>
+    get() = availabilityZones.keys
 }

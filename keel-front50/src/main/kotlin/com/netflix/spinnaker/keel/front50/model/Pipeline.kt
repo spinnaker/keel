@@ -21,10 +21,22 @@ class Pipeline(
     return stages.subList(0, i).filterIsInstance<BakeStage>()?.last()
   }
 
-  fun findDownstreamDeploy(bakeStage: BakeStage): DeployStage? {
-    val i = stages.indexOf(bakeStage)
+  fun findDownstreamDeploy(stage: Stage): DeployStage? {
+    val i = stages.indexOf(stage)
     return stages.slice(i until stages.size).filterIsInstance<DeployStage>()?.first()
   }
+
+  fun findDeployForCluster(findImageStage: FindImageStage) =
+    stages
+      .filterIsInstance<DeployStage>()
+      .find { deploy ->
+        deploy.clusters.any { cluster ->
+          findImageStage.cloudProvider == cluster.cloudProvider &&
+            findImageStage.moniker == cluster.moniker &&
+            findImageStage.credentials == cluster.account &&
+            cluster.regions.containsAll(findImageStage.regions)
+        }
+      }
 
   override fun equals(other: Any?) = if (other is Pipeline) {
     other.id == this.id
@@ -33,4 +45,14 @@ class Pipeline(
   }
 
   override fun hashCode() = id.hashCode()
+}
+
+fun List<Pipeline>.findPipelineWithDeployForCluster(findImageStage: FindImageStage): Pair<Pipeline, DeployStage>? {
+  forEach { pipeline ->
+    val deploy = pipeline.findDeployForCluster(findImageStage)
+    if (deploy != null) {
+      return pipeline to deploy
+    }
+  }
+  return null
 }

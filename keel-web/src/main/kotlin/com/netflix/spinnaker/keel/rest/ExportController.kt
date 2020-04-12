@@ -3,9 +3,7 @@ package com.netflix.spinnaker.keel.rest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.ResourceKind
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
@@ -15,10 +13,12 @@ import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.front50.Front50Service
 import com.netflix.spinnaker.keel.front50.model.BakeStage
+import com.netflix.spinnaker.keel.front50.model.FindImageStage
 import com.netflix.spinnaker.keel.front50.model.Pipeline
+import com.netflix.spinnaker.keel.front50.model.Stage
+import com.netflix.spinnaker.keel.front50.model.findPipelineWithDeployForCluster
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
-import java.lang.IllegalArgumentException
 import kotlinx.coroutines.runBlocking
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.slf4j.LoggerFactory
@@ -61,6 +61,11 @@ class ExportController(
       listOf("findImage", "deploy"),
       listOf("findImageFromTags", "deploy"),
       listOf("bake", "deploy")
+    )
+
+    val CLUSTER_PROVIDERS_TO_KINDS = mapOf(
+      "aws" to ResourceKind.parseKind("ec2/cluster@v1"),
+      "titus" to ResourceKind.parseKind("titus/cluster@v1")
     )
   }
 
@@ -154,41 +159,54 @@ class ExportController(
           shape in EXPORTABLE_PIPELINE_PATTERNS
       }
 
-    val pipelinesToBakesToArtifacts: Map<Pipeline, Pair<BakeStage, DebianArtifact>> = pipelines
-      .filter { pipeline -> pipeline.stages.any { stage -> stage is BakeStage } }
+    val pipelinesToStagesToArtifacts: Map<Pipeline, Pair<Stage, DebianArtifact>> = pipelines
+      .filter { pipeline ->
+        pipeline.stages.any { stage ->
+          stage is BakeStage || stage is FindImageStage
+        }
+      }
       .associateWith { pipeline ->
-        val bake = pipeline.stages.filterIsInstance<BakeStage>().first()
-        with(bake) {
-          bake to DebianArtifact(
-            name = `package`,
-            vmOptions = VirtualMachineOptions(
-              baseLabel = baseLabel,
-              baseOs = baseOs,
-              regions = regions,
-              storeType = storeType
-            ),
-            statuses = try {
-              setOf(ArtifactStatus.valueOf(baseLabel.name))
-            } catch (e: IllegalArgumentException) {
-              emptySet<ArtifactStatus>()
-            }
-          )
+        val stage = pipeline.stages.filterIsInstance<BakeStage>().firstOrNull()
+          ?: pipeline.stages.filterIsInstance<FindImageStage>().first()
+
+        assert(stage is BakeStage || stage is FindImageStage)
+
+        stage to when (stage) {
+          is BakeStage -> stage.artifact
+          is FindImageStage -> run {
+            // Look for another pipeline in the app that has a deploy stage for the cluster referenced in the findImage.
+            // The other pipeline must have either baked or found the image itself.
+            // TODO: implement the case for the other pipeline also having a findImage, not a bake.
+            val (otherPipeline, deploy) = pipelines.findPipelineWithDeployForCluster(stage)
+              ?: error("Deploy stage with cluster definition matching find image stage '${stage.name}' not found.")
+            log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+
+            val bake = otherPipeline.findUpstreamBake(deploy)
+              ?: error("Upstream bake stage from deploy stage '${deploy.name}' not found.")
+            log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+            bake.artifact
+          }
+          else -> error("This should never happen as the stages are filtered to match known types.")
         }
       }
 
-    val environments = pipelinesToBakesToArtifacts.mapNotNull { (pipeline, bakeToArtifact) ->
-      val (bake, artifact) = bakeToArtifact
-      val deploy = pipeline.findDownstreamDeploy(bake)
+    val environments = pipelinesToStagesToArtifacts.mapNotNull { (pipeline, stageToArtifact) ->
+      val (stage, artifact) = stageToArtifact
+      val deploy = pipeline.findDownstreamDeploy(stage)
 
       if (deploy == null || deploy.clusters.isEmpty()) {
-        log.warn("Downstream deploy stage not found after bake stage ${bake.name} for pipeline ${pipeline.name}")
+        log.warn("Downstream deploy stage not found after stage ${stage.name} for pipeline ${pipeline.name}")
         null
       } else {
         if (deploy.clusters.size > 1) {
           log.warn("Deploy stage ${deploy.name} for pipeline ${pipeline.name} has more than 1 cluster. Exporting only the first.")
         }
 
-        val kind = ResourceKind.parseKind("ec2/cluster@v1")
+        // TODO: handle load balancers
+        log.debug("Attempting to build environment for cluster ${deploy.clusters.first().moniker}")
+        val provider = deploy.clusters.first().cloudProvider
+        val kind = CLUSTER_PROVIDERS_TO_KINDS[provider]
+          ?: error("Unsupported cluster cloud provider '$provider'")
         val handler = handlers.supporting(kind)
         val spec = handler.export(deploy, artifact)
 
@@ -210,7 +228,7 @@ class ExportController(
       }
     }.toSet()
 
-    val artifacts = pipelinesToBakesToArtifacts.map { (_, bakeToArtifact) ->
+    val artifacts = pipelinesToStagesToArtifacts.map { (_, bakeToArtifact) ->
       bakeToArtifact.second
     }.distinct().toSet()
 
