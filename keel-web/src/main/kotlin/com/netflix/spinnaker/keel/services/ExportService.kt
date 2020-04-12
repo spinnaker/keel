@@ -74,27 +74,7 @@ class ExportService(
       .associateWith { pipeline ->
         val stage = pipeline.stages.filterIsInstance<BakeStage>().firstOrNull()
           ?: pipeline.stages.filterIsInstance<FindImageStage>().first()
-
-        assert(stage is BakeStage || stage is FindImageStage)
-
-        val artifact = when (stage) {
-          is BakeStage -> stage.artifact
-          is FindImageStage -> run {
-            // Look for another pipeline in the app that has a deploy stage for the cluster referenced in the findImage.
-            // The other pipeline must have either baked or found the image itself.
-            // TODO: implement the case for the other pipeline also having a findImage, not a bake.
-            val (otherPipeline, deploy) = pipelines.findPipelineWithDeployForCluster(stage)
-              ?: error("Deploy stage with cluster definition matching find image stage '${stage.name}' not found.")
-            log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
-
-            val bake = otherPipeline.findUpstreamBake(deploy)
-              ?: error("Upstream bake stage from deploy stage '${deploy.name}' not found.")
-            log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
-            bake.artifact
-          }
-          else -> error("This should never happen as the stages are filtered to match known types.")
-        }
-
+        val artifact = stageToArtifact(stage, pipelines)
         stage to artifact
       }
 
@@ -102,101 +82,15 @@ class ExportService(
     val pipelinesToEnvironments: Map<Pipeline, List<SubmittedEnvironment>> = pipelinesToStagesToArtifacts
       .map { (pipeline, stageToArtifact) ->
         val (stage, artifact) = stageToArtifact
-        val deploys = pipeline.findDownstreamDeploys(stage)
-        val environments = deploys
-          .mapNotNull { deploy ->
-            if (deploy == null || deploy.clusters.isEmpty()) {
-              log.warn("Downstream deploy stage not found after stage ${stage.name} for pipeline ${pipeline.name}")
-              return@mapNotNull null
-            }
-
-            if (deploy.clusters.size > 1) {
-              log.warn("Deploy stage ${deploy.name} for pipeline ${pipeline.name} has more than 1 cluster. Exporting only the first.")
-            }
-
-            // TODO: handle load balancers
-            val cluster = deploy.clusters.first()
-            log.debug("Attempting to build environment for cluster ${cluster.moniker}")
-            val provider = cluster.cloudProvider
-            val kind = PROVIDERS_TO_CLUSTER_KINDS[provider]
-              ?: error("Unsupported cluster cloud provider '$provider'")
-            val handler = handlers.supporting(kind)
-            val spec = handler.export(deploy, artifact)
-
-            if (spec == null) {
-              log.warn("No resource exported for kind $kind")
-              return@mapNotNull null
-            }
-
-            val constraints = if (pipeline.hasManualJudgment(deploy)) {
-              log.debug("Adding manual judgment constraint for environment ${cluster.name} based on manual judgment stage in pipeline ${pipeline.name}")
-              setOf(ManualJudgementConstraint())
-            } else {
-              emptySet<Constraint>()
-            }
-
-            val environment = SubmittedEnvironment(
-              name = if (deploys.size > 1) "${cluster.name}-${cluster.region}" else cluster.name,
-              resources = setOf(
-                SubmittedResource(
-                  kind = kind,
-                  metadata = emptyMap(), // TODO
-                  spec = spec
-                )
-              ),
-              constraints = constraints
-            )
-
-            return@mapNotNull environment
-          }
+        val environments = deploymentsToEnvironments(pipeline, stage, artifact)
         pipeline to environments
       }.toMap()
 
     // Now look at the pipeline triggers and dependencies between pipelines and add constraints
     val allEnvironments = pipelinesToEnvironments.flatMap { (pipeline, environments) ->
       environments.map { environment ->
-        val constraints = mutableSetOf<Constraint>()
-
-        val trigger = pipeline.triggers.also {
-          if (it.size > 1) {
-            log.warn("Pipeline has more than 1 trigger. Using only the first.")
-          }
-        }.firstOrNull()
-
-        if (trigger == null || !trigger.enabled) {
-          // if there's no trigger, the pipeline is triggered manually, i.e. the equivalent of a manual judgment
-          log.debug("Pipeline '${pipeline.name}' for environment ${environment.name} has no triggers, or trigger is disabled. " +
-            "Adding manual-judgment constraint.")
-          constraints.add(ManualJudgementConstraint())
-        } else if (trigger.type == "pipeline") {
-          // if trigger is a pipeline trigger, find the upstream environment matching that pipeline to make a depends-on
-          // constraint
-          val upstreamEnvironment = pipelinesToEnvironments.filter { (pipeline, _) ->
-            application == trigger.application
-            pipeline.id == trigger.pipeline
-          }.entries.firstOrNull()
-            // use the first pipeline mapping found, and the last environment within (which would match the last deploy,
-            // in case there's more than one)
-            ?.let { (_, envs) ->
-              envs.last()
-            }
-
-          if (upstreamEnvironment != null) {
-            log.debug("Pipeline '${pipeline.name}' for environment ${environment.name} has pipeline trigger. " +
-              "Adding matching depends-on constraint on upstream environment ${upstreamEnvironment.name}.")
-            constraints.add(DependsOnConstraint(upstreamEnvironment.name))
-          } else {
-            log.warn("Pipeline '${pipeline.name}' for environment ${environment.name} has pipeline trigger, " +
-              "but upstream environment not found.")
-          }
-        } else if (trigger.type == "rocket" || trigger.type == "jenkins") {
-          log.debug("Pipeline '${pipeline.name}' for environment ${environment.name} has CI trigger. " +
-            "This will be handled automatically by artifact detection and approval.")
-        } else {
-          log.warn("Ignoring unsupported trigger type ${trigger.type} in pipeline '${pipeline.name}' for export")
-        }
-
-        return@map environment.copy(
+        val constraints = triggersToConstraints(application, pipeline, environment, pipelinesToEnvironments)
+        environment.copy(
           constraints = environment.constraints + constraints
         )
       }
@@ -227,8 +121,154 @@ class ExportService(
 
     log.info("Successfully generated delivery config for application $application with " +
       "artifacts: ${artifacts.map { "${it.type}:${it.name}" }}, " +
-      "environments: ${allEnvironments.map { it.name }}")
+      "environments: ${allEnvironments.map { it.name }}"
+    )
 
     return deliveryConfig
+  }
+
+  /**
+   * Extracts a [DeliveryArtifact] from a `bake` or `findImage` pipeline stage.
+   */
+  private fun stageToArtifact(
+    stage: Stage,
+    pipelines: List<Pipeline>
+  ): DebianArtifact {
+    return when (stage) {
+      is BakeStage -> stage.artifact
+      is FindImageStage -> run {
+        // Look for another pipeline in the app that has a deploy stage for the cluster referenced in findImage.
+        // The other pipeline must have either baked or found the image itself.
+        // TODO: implement the case for the other pipeline also having a findImage, not a bake.
+        val (otherPipeline, deploy) = pipelines.findPipelineWithDeployForCluster(stage)
+          ?: error("Deploy stage with cluster definition matching find image stage '${stage.name}' not found.")
+        log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+
+        val bake = otherPipeline.findUpstreamBake(deploy)
+          ?: error("Upstream bake stage from deploy stage '${deploy.name}' not found.")
+        log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+        bake.artifact
+      }
+      else -> error("Unsupported artifact-provider stage of type ${stage.type}. Can only use bake or findImage.")
+    }
+  }
+
+  /**
+   * Attempts to extract [SubmittedEnvironment]s from the deploy stages within the pipeline.
+   */
+  private fun deploymentsToEnvironments(
+    pipeline: Pipeline,
+    artifactProviderStage: Stage,
+    artifact: DebianArtifact
+  ): List<SubmittedEnvironment> {
+    val deploys = pipeline.findDownstreamDeploys(artifactProviderStage)
+    val environments = deploys
+      .mapNotNull { deploy ->
+        if (deploy == null || deploy.clusters.isEmpty()) {
+          log.warn("Downstream deploy stage not found after stage ${artifactProviderStage.name} for pipeline ${pipeline.name}")
+          return@mapNotNull null
+        }
+
+        if (deploy.clusters.size > 1) {
+          log.warn("Deploy stage ${deploy.name} for pipeline ${pipeline.name} has more than 1 cluster. Exporting only the first.")
+        }
+
+        // TODO: handle load balancers
+        val cluster = deploy.clusters.first()
+        log.debug("Attempting to build environment for cluster ${cluster.moniker}")
+        val provider = cluster.cloudProvider
+        val kind = PROVIDERS_TO_CLUSTER_KINDS[provider]
+          ?: error("Unsupported cluster cloud provider '$provider'")
+        val handler = handlers.supporting(kind)
+        val spec = handler.export(deploy, artifact)
+
+        if (spec == null) {
+          log.warn("No resource exported for kind $kind")
+          return@mapNotNull null
+        }
+
+        val constraints = if (pipeline.hasManualJudgment(deploy)) {
+          log.debug("Adding manual judgment constraint for environment ${cluster.name} based on manual judgment stage in pipeline ${pipeline.name}")
+          setOf(ManualJudgementConstraint())
+        } else {
+          emptySet<Constraint>()
+        }
+
+        val environment = SubmittedEnvironment(
+          name = if (deploys.size > 1) "${cluster.name}-${cluster.region}" else cluster.name,
+          resources = setOf(
+            SubmittedResource(
+              kind = kind,
+              metadata = emptyMap(), // TODO
+              spec = spec
+            )
+          ),
+          constraints = constraints
+        )
+
+        return@mapNotNull environment
+      }
+    return environments
+  }
+
+  /**
+   * Attempts to extract [Constraint]s from the pipeline triggers.
+   */
+  private fun triggersToConstraints(
+    application: String,
+    pipeline: Pipeline,
+    environment: SubmittedEnvironment,
+    pipelinesToEnvironments: Map<Pipeline, List<SubmittedEnvironment>>
+  ): Set<Constraint> {
+    val constraints = mutableSetOf<Constraint>()
+
+    val trigger = pipeline.triggers.also {
+      if (it.size > 1) {
+        log.warn("Pipeline has more than 1 trigger. Using only the first.")
+      }
+    }.firstOrNull()
+
+    if (trigger == null || !trigger.enabled) {
+      // if there's no trigger, the pipeline is triggered manually, i.e. the equivalent of a manual judgment
+      log.debug(
+        "Pipeline '${pipeline.name}' for environment ${environment.name} has no triggers, or trigger is disabled. " +
+          "Adding manual-judgment constraint."
+      )
+      constraints.add(ManualJudgementConstraint())
+    } else if (trigger.type == "pipeline") {
+      // if trigger is a pipeline trigger, find the upstream environment matching that pipeline to make a depends-on
+      // constraint
+      val upstreamEnvironment = pipelinesToEnvironments.entries.find { (pipeline, _) ->
+        application == trigger.application
+        pipeline.id == trigger.pipeline
+      }
+        ?.let { (_, envs) ->
+          // use the last environment within the matching pipeline (which would match the last deploy,
+          // in case there's more than one)
+          envs.last()
+        }
+
+      if (upstreamEnvironment != null) {
+        log.debug(
+          "Pipeline '${pipeline.name}' for environment ${environment.name} has pipeline trigger. " +
+            "Adding matching depends-on constraint on upstream environment ${upstreamEnvironment.name}."
+        )
+        constraints.add(DependsOnConstraint(upstreamEnvironment.name))
+      } else {
+        log.warn(
+          "Pipeline '${pipeline.name}' for environment ${environment.name} has pipeline trigger, " +
+            "but upstream environment not found."
+        )
+      }
+    } else if (trigger.type == "rocket" || trigger.type == "jenkins") {
+      log.debug(
+        "Pipeline '${pipeline.name}' for environment ${environment.name} has CI trigger. " +
+          "This will be handled automatically by artifact detection and approval."
+      )
+    } else {
+      log.warn("Ignoring unsupported trigger type ${trigger.type} in pipeline '${pipeline.name}' for export")
+    }
+
+    return constraints
   }
 }
