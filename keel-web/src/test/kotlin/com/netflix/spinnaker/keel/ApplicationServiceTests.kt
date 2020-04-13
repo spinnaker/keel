@@ -264,7 +264,8 @@ class ApplicationServiceTests : JUnit5Minutests {
               vetoed = listOf(),
               deploying = null,
               skipped = listOf()
-            )
+            ),
+            null
           ))
         )
         val expectedStage = EnvironmentSummary(
@@ -282,7 +283,8 @@ class ApplicationServiceTests : JUnit5Minutests {
               vetoed = listOf(),
               deploying = null,
               skipped = listOf(version1)
-            )
+            ),
+            null
           ))
         )
         val expectedTest = EnvironmentSummary(
@@ -300,7 +302,8 @@ class ApplicationServiceTests : JUnit5Minutests {
               vetoed = listOf(),
               deploying = null,
               skipped = listOf(version1)
-            )
+            ),
+            null
           ))
         )
         expect {

@@ -4,7 +4,6 @@ import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.StatefulConstraint
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -85,7 +84,7 @@ class ApplicationService(
 
   fun deletePin(application: String, pin: EnvironmentArtifactPin) {
     val config = repository.getDeliveryConfigForApplication(application)
-    repository.deletePin(config, pin.targetEnvironment, pin.reference, ArtifactType.valueOf(pin.type))
+    repository.deletePin(config, pin.targetEnvironment, pin.reference)
   }
 
   fun deletePin(application: String, targetEnvironment: String) {
@@ -178,8 +177,7 @@ class ApplicationService(
                 val potentialSummary = repository.getArtifactSummaryInEnvironment(
                   deliveryConfig = deliveryConfig,
                   environmentName = environmentSummary.name,
-                  artifactName = artifact.name,
-                  artifactType = artifact.type,
+                  artifactReference = artifact.reference,
                   version = version
                 )
                 if (potentialSummary == null || potentialSummary.state == "pending") {
@@ -195,8 +193,7 @@ class ApplicationService(
               else -> repository.getArtifactSummaryInEnvironment(
                 deliveryConfig = deliveryConfig,
                 environmentName = environmentSummary.name,
-                artifactName = artifact.name,
-                artifactType = artifact.type,
+                artifactReference = artifact.reference,
                 version = version
               )
             }
