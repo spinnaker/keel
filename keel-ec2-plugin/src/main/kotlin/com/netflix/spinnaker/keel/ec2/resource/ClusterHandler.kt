@@ -429,7 +429,10 @@ class ClusterHandler(
           instanceMonitoring = cluster.instanceMonitoring
         ),
         capacity = cluster.capacity,
-        dependencies = null, // TODO add sec groups
+        dependencies = ClusterDependencies(
+          // FIXME: convert security group IDs to names
+          securityGroupNames = cluster.securityGroups
+        ),
         health = HealthSpec(
           cooldown = Duration.ofSeconds(cluster.cooldown),
           // warmup = Duration.ofSeconds(cluster.warmup)
