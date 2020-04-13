@@ -115,7 +115,7 @@ class ExportController(
   }
 
   @GetMapping(
-    path = ["/pipelines/{application}"],
+    path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
