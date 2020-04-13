@@ -430,8 +430,9 @@ class ClusterHandler(
         ),
         capacity = cluster.capacity,
         dependencies = ClusterDependencies(
-          // FIXME: convert security group IDs to names
-          securityGroupNames = cluster.securityGroups
+          securityGroupNames = cluster.securityGroups.map {
+            cloudDriverCache.securityGroupById(cluster.account, cluster.region, it).name
+          }.toSortedSet()
         ),
         health = HealthSpec(
           cooldown = Duration.ofSeconds(cluster.cooldown),

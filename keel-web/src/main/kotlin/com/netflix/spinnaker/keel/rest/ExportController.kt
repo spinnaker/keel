@@ -5,10 +5,10 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
-import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
+import com.netflix.spinnaker.keel.services.ExportFromPipelinesResult
 import com.netflix.spinnaker.keel.services.ExportService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import kotlinx.coroutines.runBlocking
@@ -118,12 +118,14 @@ class ExportController(
     path = ["/{application}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)")
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)
+    and @authorizationSupport.hasServiceAccountAccess(#serviceAccount)"""
+  )
   fun get(
     @PathVariable("application") application: String,
     @RequestParam("serviceAccount") serviceAccount: String,
     @RequestHeader("X-SPINNAKER-USER") user: String
-  ): SubmittedDeliveryConfig {
+  ): ExportFromPipelinesResult {
     return exportService.exportFromPipelines(application, serviceAccount)
   }
 

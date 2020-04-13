@@ -33,7 +33,7 @@ class MemoryCloudDriverCache(
 
   private val securityGroupSummariesById = Caffeine.newBuilder()
     .maximumSize(1000)
-    .expireAfterWrite(1, MINUTES)
+    .expireAfterWrite(5, MINUTES)
     .build<String, SecurityGroupSummary>()
 
   private val networks = Caffeine.newBuilder()

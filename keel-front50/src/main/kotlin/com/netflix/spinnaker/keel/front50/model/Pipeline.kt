@@ -54,6 +54,10 @@ class Pipeline(
   override fun hashCode() = id.hashCode()
 }
 
+/**
+ * Searches the list of pipelines for one that contains a deploy stage matching the cluster described in the given
+ * [FindImageStage]. Returns a pair of the pipeline and deploy stage, if found.
+ */
 fun List<Pipeline>.findPipelineWithDeployForCluster(findImageStage: FindImageStage): Pair<Pipeline, DeployStage>? {
   forEach { pipeline ->
     val deploy = pipeline.findDeployForCluster(findImageStage)

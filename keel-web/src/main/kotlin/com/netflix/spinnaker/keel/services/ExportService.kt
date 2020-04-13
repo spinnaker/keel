@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.services
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -50,7 +51,7 @@ class ExportService(
    *
    * Supports only a sub-set of well-known pipeline patterns (see [EXPORTABLE_PIPELINE_PATTERNS]).
    */
-  fun exportFromPipelines(application: String, serviceAccount: String): SubmittedDeliveryConfig {
+  fun exportFromPipelines(application: String, serviceAccount: String): ExportFromPipelinesResult {
     val pipelines = runBlocking {
       front50Service.pipelinesByApplication(application, serviceAccount)
     }
@@ -124,7 +125,11 @@ class ExportService(
       "environments: ${allEnvironments.map { it.name }}"
     )
 
-    return deliveryConfig
+    return ExportFromPipelinesResult(
+      exported = pipelinesToEnvironments,
+      skipped = pipelines - pipelinesToEnvironments.keys,
+      deliveryConfig = deliveryConfig
+    )
   }
 
   /**
@@ -291,4 +296,29 @@ class ExportService(
         }
       }
     )
+}
+
+data class ExportFromPipelinesResult(
+  @JsonIgnore
+  val exported: Map<Pipeline, List<SubmittedEnvironment>>,
+  @JsonIgnore
+  val skipped: List<Pipeline>,
+  val deliveryConfig: SubmittedDeliveryConfig
+) {
+  val pipelines: Map<String, Any> = mapOf(
+    "exported" to exported.entries.map { (pipeline, environments) ->
+      mapOf(
+        "id" to pipeline.id,
+        "name" to pipeline.name,
+        "environments" to environments.map { it.name }
+      )
+    },
+    "skipped" to skipped.map { pipeline ->
+      mapOf(
+        "id" to pipeline.id,
+        "name" to pipeline.name
+        // TODO: "reason" to <reason why skipped>
+      )
+    }
+  )
 }
