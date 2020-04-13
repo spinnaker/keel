@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
+import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.pause.ActuationPauser
@@ -92,18 +93,16 @@ class ResourceActuator(
           if (response.vetoArtifact && resource.spec is VersionedArtifactProvider) {
             try {
               val versionedArtifact = when (desired) {
-                is Map<*, *> -> {
-                  if (desired.size > 0) {
-                    (desired as Map<String, VersionedArtifactProvider>).values.first()
-                  } else {
-                    null
-                  }
-                }
-                is VersionedArtifactProvider -> desired
-                else -> null
-              }?.let {
-                it.completeVersionedArtifactOrNull()
-              }
+                      is Map<*, *> -> {
+                        if (desired.size > 0) {
+                          (desired as Map<String, VersionedArtifactProvider>).values.first()
+                        } else {
+                          null
+                        }
+                      }
+                      is VersionedArtifactProvider -> desired
+                      else -> null
+                    }?.completeVersionedArtifactOrNull()
 
               if (versionedArtifact != null) {
                 with(versionedArtifact) {
@@ -156,12 +155,13 @@ class ResourceActuator(
               }
           }
           else -> {
-            log.info("Resource {} is valid [$coid]", id)
-            // TODO: not sure this logic belongs here
             val lastEvent = resourceRepository.lastEvent(id)
-            if (lastEvent is ResourceDeltaDetected || lastEvent is ResourceActuationLaunched) {
+            if (lastEvent is ResourceDeltaDetected || lastEvent is ResourceActuationLaunched ||
+              lastEvent is ResourceTaskSucceeded) {
+              log.info("Resource {} delta resolved [$coid]", id)
               publisher.publishEvent(ResourceDeltaResolved(resource, clock))
             } else {
+              log.info("Resource {} is valid [$coid]", id)
               publisher.publishEvent(ResourceValid(resource, clock))
             }
           }
