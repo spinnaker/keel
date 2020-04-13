@@ -430,8 +430,12 @@ class ClusterHandler(
         ),
         capacity = cluster.capacity,
         dependencies = ClusterDependencies(
-          securityGroupNames = cluster.securityGroups.map {
-            cloudDriverCache.securityGroupById(cluster.account, cluster.region, it).name
+          securityGroupNames = cluster.securityGroups.map { sg ->
+            if (sg.startsWith("sg-")) {
+              cloudDriverCache.securityGroupById(cluster.account, cluster.region, sg).name
+            } else {
+              sg
+            }
           }.toSortedSet()
         ),
         health = HealthSpec(
