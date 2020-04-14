@@ -21,13 +21,13 @@ import java.util.TimeZone
 
 class ObjectMapperSingleton private constructor() {
   companion object {
-    val instance: ObjectMapper by lazy { ObjectMapper() }
+    val instance: ObjectMapper by lazy { ObjectMapper().configureMe() }
   }
 }
 
 class YamlMapperSingleton private constructor() {
   companion object {
-    val instance: YAMLMapper by lazy { YAMLMapper() }
+    val instance: YAMLMapper by lazy { YAMLMapper().configureMe() }
   }
 }
 
@@ -35,16 +35,13 @@ class YamlMapperSingleton private constructor() {
  * Factory method for [ObjectMapper]s configured how we like 'em.
  */
 fun configuredObjectMapper(): ObjectMapper =
-  ObjectMapperSingleton.instance.configureMe()
+  ObjectMapperSingleton.instance
 
 /**
  * Factory method for [YAMLMapper]s configured how we like 'em.
  */
 fun configuredYamlMapper(): YAMLMapper =
-  YamlMapperSingleton
-    .instance
-    .configureMe()
-    .disable(USE_NATIVE_TYPE_ID)
+  YamlMapperSingleton.instance.disable(USE_NATIVE_TYPE_ID)
 
 private fun <T : ObjectMapper> T.configureMe(): T =
   apply {
