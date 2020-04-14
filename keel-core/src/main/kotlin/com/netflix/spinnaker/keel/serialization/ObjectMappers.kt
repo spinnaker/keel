@@ -19,17 +19,20 @@ import de.huxhorn.sulky.ulid.ULID
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
+object ObjectMapperSingleton : ObjectMapper()
+object YamlMapperSingleton : YAMLMapper()
+
 /**
  * Factory method for [ObjectMapper]s configured how we like 'em.
  */
 fun configuredObjectMapper(): ObjectMapper =
-  ObjectMapper().configureMe()
+  ObjectMapperSingleton.configureMe()
 
 /**
  * Factory method for [YAMLMapper]s configured how we like 'em.
  */
 fun configuredYamlMapper(): YAMLMapper =
-  YAMLMapper()
+  YamlMapperSingleton
     .configureMe()
     .disable(USE_NATIVE_TYPE_ID)
 
