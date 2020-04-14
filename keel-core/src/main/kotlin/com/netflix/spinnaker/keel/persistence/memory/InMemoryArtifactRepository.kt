@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
+import com.netflix.spinnaker.keel.core.api.Pinned
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.APPROVED
@@ -21,7 +22,6 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
-import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import java.time.Clock
@@ -131,7 +131,7 @@ class InMemoryArtifactRepository(
       .values
       .firstOrNull {
         it.deliveryConfigName == deliveryConfigName && it.reference == reference
-      } ?: throw ArtifactReferenceNotFoundException(deliveryConfigName, reference)
+      } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
 
   override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
     store(artifact.name, artifact.type, version, status)
@@ -445,7 +445,7 @@ class InMemoryArtifactRepository(
       reference = reference,
       targetEnvironment = targetEnvironment,
       version = version,
-      pinnedAt = clock.millis(),
+      pinnedAt = clock.instant(),
       pinnedBy = pinnedBy,
       comment = comment
     )
@@ -529,6 +529,9 @@ class InMemoryArtifactRepository(
           replacedBy = skipped.replacedByVersion
         }
     }
+    val pinned: Pinned? = pinnedVersions[key]?.let { it ->
+      Pinned(at = it.pinnedAt, by = it.pinnedBy, comment = it.comment)
+    }
 
     return ArtifactSummaryInEnvironment(
       environment = environmentName,
@@ -539,7 +542,8 @@ class InMemoryArtifactRepository(
       deployedAt = deployedAt,
       replacedAt = replacedAt,
       replacedBy = replacedBy,
-      pinned = pinnedVersions[key]?.version == version
+      isPinned = pinned != null,
+      pinned = pinned
     )
   }
 
@@ -573,7 +577,7 @@ class InMemoryArtifactRepository(
     val reference: String,
     val version: String?,
     val pinnedBy: String?,
-    val pinnedAt: Long?,
+    val pinnedAt: Instant,
     val comment: String?
   )
 }

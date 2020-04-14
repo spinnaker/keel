@@ -279,9 +279,6 @@ class NoSuchArtifactException(name: String, type: ArtifactType) :
   constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type)
 }
 
-class ArtifactReferenceNotFoundException(deliveryConfig: String, reference: String) :
-  NoSuchEntityException("No artifact with reference $reference in delivery config $deliveryConfig is registered")
-
 class ArtifactNotFoundException(reference: String, deliveryConfig: String?) :
   NoSuchEntityException("No artifact with reference $reference in delivery config $deliveryConfig is registered") {
   constructor(artifact: DeliveryArtifact) : this(artifact.reference, artifact.deliveryConfigName)

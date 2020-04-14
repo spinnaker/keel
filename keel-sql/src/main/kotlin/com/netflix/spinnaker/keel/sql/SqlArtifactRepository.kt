@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
+import com.netflix.spinnaker.keel.core.api.Pinned
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.APPROVED
@@ -26,7 +27,6 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
-import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ARTIFACT_LAST_CHECKED
@@ -161,7 +161,7 @@ class SqlArtifactRepository(
     }
       ?.let { (name, details, reference, type) ->
         mapToArtifact(name, ArtifactType.valueOf(type), details, reference, deliveryConfigName)
-      } ?: throw ArtifactReferenceNotFoundException(deliveryConfigName, reference)
+      } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
   override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
@@ -824,7 +824,7 @@ class SqlArtifactRepository(
               reference,
               deliveryConfig.name),
             version = version,
-            pinnedAt = pinnedAt,
+            pinnedAt = Instant.ofEpochMilli(pinnedAt),
             pinnedBy = pinnedBy,
             comment = comment
           )
@@ -895,6 +895,16 @@ class SqlArtifactRepository(
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
         .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
         .fetchOne { (version, deployedAt, promotionStatus, replacedBy, replacedAt) ->
+          val pinned: Pinned? = jooq
+            .select(ENVIRONMENT_ARTIFACT_PIN.PINNED_BY, ENVIRONMENT_ARTIFACT_PIN.PINNED_AT, ENVIRONMENT_ARTIFACT_PIN.COMMENT)
+            .from(ENVIRONMENT_ARTIFACT_PIN)
+            .where(ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environmentName)))
+            .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artifact.uid))
+            .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION.eq(version))
+            .fetchOne { (pinnedBy, pinnedAt, comment) ->
+              Pinned(at = Instant.ofEpochMilli(pinnedAt), by = pinnedBy, comment = comment)
+            }
+
           ArtifactSummaryInEnvironment(
             environment = environmentName,
             version = version,
@@ -902,13 +912,8 @@ class SqlArtifactRepository(
             deployedAt = deployedAt?.toInstant(ZoneOffset.UTC),
             replacedAt = replacedAt?.toInstant(ZoneOffset.UTC),
             replacedBy = replacedBy,
-            pinned = jooq
-              .fetchExists(
-                ENVIRONMENT_ARTIFACT_PIN,
-                ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environmentName))
-                  .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artifact.uid))
-                  .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION.eq(version))
-              )
+            isPinned = pinned != null,
+            pinned = pinned
           )
         }
     }

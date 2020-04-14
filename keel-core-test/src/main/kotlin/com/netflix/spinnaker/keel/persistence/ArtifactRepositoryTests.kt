@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
+import com.netflix.spinnaker.keel.core.api.Pinned
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
@@ -502,7 +503,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           )
           expectThat(envArtifactSummary)
             .isNotNull()
-            .get { pinned }
+            .get { isPinned }
             .isFalse()
         }
 
@@ -518,7 +519,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
 
           test("pinned version cannot be vetoed") {
-            expectThat(subject.markAsVetoedIn(manifest, artifact2, pin1.version!!, pin1.targetEnvironment))
+            expectThat(subject.markAsVetoedIn(manifest, artifact2, pin1.version, pin1.targetEnvironment))
               .isFalse()
           }
 
@@ -532,7 +533,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
                 artifact = artifact2,
                 version = version4,
                 pinnedBy = pin1.pinnedBy,
-                pinnedAt = clock.millis(),
+                pinnedAt = clock.instant(),
                 comment = pin1.comment
               )))
           }
@@ -544,10 +545,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
               artifactReference = artifact2.reference,
               version = version4
             )
-            expectThat(envArtifactSummary)
-              .isNotNull()
-              .get { pinned }
-              .isTrue()
+            expect {
+              that(envArtifactSummary).isNotNull()
+              that(envArtifactSummary?.isPinned).isTrue()
+              that(envArtifactSummary?.pinned).isEqualTo(Pinned(by = pin1.pinnedBy, at = clock.instant(), comment = pin1.comment))
+            }
           }
         }
       }

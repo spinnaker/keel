@@ -252,11 +252,11 @@ class ApplicationServiceTests : JUnit5Minutests {
         val expectedProd = EnvironmentSummary(
           deliveryConfig.environments.find { it.name == "production" }!!,
           setOf(ArtifactVersions(
-            artifact.name,
-            artifact.type,
-            artifact.reference,
-            artifact.statuses,
-            ArtifactVersionStatus(
+            name = artifact.name,
+            type = artifact.type,
+            reference = artifact.reference,
+            statuses = artifact.statuses,
+            versions = ArtifactVersionStatus(
               current = version0,
               pending = listOf(version1, version2, version3, version4),
               approved = listOf(),
@@ -265,17 +265,17 @@ class ApplicationServiceTests : JUnit5Minutests {
               deploying = null,
               skipped = listOf()
             ),
-            null
+            pinnedVersion = null
           ))
         )
         val expectedStage = EnvironmentSummary(
           deliveryConfig.environments.find { it.name == "staging" }!!,
           setOf(ArtifactVersions(
-            artifact.name,
-            artifact.type,
-            artifact.reference,
-            artifact.statuses,
-            ArtifactVersionStatus(
+            name = artifact.name,
+            type = artifact.type,
+            reference = artifact.reference,
+            statuses = artifact.statuses,
+            versions = ArtifactVersionStatus(
               current = version2,
               pending = listOf(version3, version4),
               approved = listOf(),
@@ -284,17 +284,17 @@ class ApplicationServiceTests : JUnit5Minutests {
               deploying = null,
               skipped = listOf(version1)
             ),
-            null
+            pinnedVersion = null
           ))
         )
         val expectedTest = EnvironmentSummary(
           deliveryConfig.environments.find { it.name == "test" }!!,
           setOf(ArtifactVersions(
-            artifact.name,
-            artifact.type,
-            artifact.reference,
-            artifact.statuses,
-            ArtifactVersionStatus(
+            name = artifact.name,
+            type = artifact.type,
+            reference = artifact.reference,
+            statuses = artifact.statuses,
+            versions = ArtifactVersionStatus(
               current = version3,
               pending = listOf(),
               approved = listOf(version4),
@@ -303,7 +303,7 @@ class ApplicationServiceTests : JUnit5Minutests {
               deploying = null,
               skipped = listOf(version1)
             ),
-            null
+            pinnedVersion = null
           ))
         )
         expect {
