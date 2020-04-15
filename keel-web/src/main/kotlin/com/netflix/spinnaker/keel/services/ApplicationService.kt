@@ -32,7 +32,7 @@ import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
-import com.netflix.spinnaker.keel.persistence.ArtifactReferenceNotFoundException
+import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import java.time.Instant
@@ -95,7 +95,7 @@ class ApplicationService(
   fun markAsVetoedIn(application: String, veto: EnvironmentArtifactVeto, force: Boolean) {
     val config = repository.getDeliveryConfigForApplication(application)
     val artifact = config.matchingArtifactByReference(veto.reference)
-      ?: throw ArtifactReferenceNotFoundException(config.name, veto.reference)
+      ?: throw ArtifactNotFoundException(veto.reference, config.name)
 
     repository.markAsVetoedIn(
       deliveryConfig = config,
@@ -109,7 +109,7 @@ class ApplicationService(
   fun deleteVeto(application: String, targetEnvironment: String, reference: String, version: String) {
     val config = repository.getDeliveryConfigForApplication(application)
     val artifact = config.matchingArtifactByReference(reference)
-      ?: throw ArtifactReferenceNotFoundException(config.name, reference)
+      ?: throw ArtifactNotFoundException(reference, config.name)
     repository.deleteVeto(
       deliveryConfig = config,
       artifact = artifact,
