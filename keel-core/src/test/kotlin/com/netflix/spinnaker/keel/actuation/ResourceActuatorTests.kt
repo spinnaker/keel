@@ -97,9 +97,6 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       resourceRepository.dropAll()
     }
 
-    context("resource events are ") {
-    }
-
     context("a managed resource exists") {
       val resource = artifactVersionedResource(
         kind = parseKind("plugin1/foo@v1")
@@ -201,7 +198,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
               }
             }
 
-            context("when the a actuation launched event exists in resource history, check other events before publishing ResourceDeltaResolved") {
+            context("when there is an actuation launched event in history, check other events before publishing ResourceDeltaResolved") {
               before {
                 resourceRepository.appendHistory(ResourceActuationLaunched(resource, plugin1.name, emptyList()))
                 runBlocking {
@@ -219,7 +216,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
                     subject.checkResource(resource)
                   }
                 }
-                test("a telemetry event is published") {
+                test("a resource delta resolved event is published") {
                   verify { publisher.publishEvent(ofType<ResourceDeltaResolved>()) }
                 }
               }
