@@ -228,7 +228,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
                     subject.checkResource(resource)
                   }
                 }
-                test("a telemetry event is published") {
+                test("a resource delta resolved event is published") {
                   verify { publisher.publishEvent(ofType<ResourceDeltaResolved>()) }
                 }
               }
