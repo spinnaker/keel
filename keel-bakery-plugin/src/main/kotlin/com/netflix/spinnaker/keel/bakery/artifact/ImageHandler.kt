@@ -48,7 +48,12 @@ class ImageHandler(
         val diff = DefaultResourceDiff(desired, current)
 
         if (current != null && diff.isRegionsOnly()) {
-          publisher.publishEvent(ImageRegionMismatchDetected(current, artifact.vmOptions.regions))
+          if (current.regions.containsAll(desired.regions)) {
+            log.debug("Image for ${current.appVersion} contains more regions than we need, which is fine")
+          } else {
+            log.warn("Detected a diff in the regions for ${current.appVersion}: ${diff.toDebug()}")
+            publisher.publishEvent(ImageRegionMismatchDetected(current, artifact.vmOptions.regions))
+          }
         } else if (diff.hasChanges()) {
           if (current == null) {
             log.info("No AMI found for {}", artifact.name)
@@ -60,7 +65,7 @@ class ImageHandler(
             log.warn("Artifact version {} and base AMI version {} were baked previously", latestArtifactVersion, latestBaseAmiVersion)
             publisher.publishEvent(RecurrentBakeDetected(latestArtifactVersion, latestBaseAmiVersion))
           } else {
-            launchBake(artifact, latestArtifactVersion)
+            launchBake(artifact, latestArtifactVersion, diff)
             diffFingerprintRepository.store("ami:${artifact.name}", diff)
           }
         } else {
@@ -112,7 +117,8 @@ class ImageHandler(
 
   private suspend fun launchBake(
     artifact: DebianArtifact,
-    desiredVersion: String
+    desiredVersion: String,
+    diff: DefaultResourceDiff<Image>
   ): List<Task> {
     val appVersion = AppVersion.parseName(desiredVersion)
     val packageName = appVersion.packageName
@@ -130,7 +136,8 @@ class ImageHandler(
     )
 
     log.info("baking new image for {}", artifact.name)
-    val description = "Bake $desiredVersion"
+    val subject = "Bake $desiredVersion"
+    val description = diff.toDebug()
 
     val (serviceAccount, application) = artifact.taskAuthenticationDetails
 
@@ -139,7 +146,7 @@ class ImageHandler(
         user = serviceAccount,
         application = application,
         notifications = emptySet(),
-        subject = description,
+        subject = subject,
         description = description,
         correlationId = artifact.correlationId,
         stages = listOf(

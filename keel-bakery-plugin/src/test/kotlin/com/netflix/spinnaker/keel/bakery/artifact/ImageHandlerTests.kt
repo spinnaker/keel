@@ -93,6 +93,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
     val bakeTaskUser = slot<String>()
     val bakeTaskApplication = slot<String>()
     val bakeTaskArtifact = slot<List<Map<String, Any?>>>()
+    val bakeDescription = slot<String>()
 
     fun runHandler(artifact: DeliveryArtifact) {
       if (artifact is DebianArtifact) {
@@ -102,7 +103,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
             capture(bakeTaskApplication),
             any(),
             any(),
-            any(),
+            capture(bakeDescription),
             artifact.correlationId,
             capture(bakeTask),
             capture(bakeTaskArtifact)
@@ -315,6 +316,13 @@ internal class ImageHandlerTests : JUnit5Minutests {
                     }
                 }
 
+                test("the bake task has a description of the diff") {
+                  expectThat(bakeDescription)
+                    .isCaptured()
+                    .captured
+                    .isEqualTo("/appVersion : changed from [ keel-0.160.0-h62.24d0843 ] to [ ${image.appVersion} ]\n")
+                }
+
                 test("the diff fingerprint of the image is recorded") {
                   verify {
                     diffFingerprintRepository.store("ami:${artifact.name}", any())
@@ -390,6 +398,12 @@ internal class ImageHandlerTests : JUnit5Minutests {
               test("no bake is launched") {
                 verify(exactly = 0) {
                   taskLauncher.submitJob(any(), any(), any(), any(), any(), any(), any(), any<List<Map<String, Any?>>>())
+                }
+              }
+
+              test("no region mismatch event is triggered") {
+                verify(exactly = 0) {
+                  publisher.publishEvent(any<ImageRegionMismatchDetected>())
                 }
               }
             }
