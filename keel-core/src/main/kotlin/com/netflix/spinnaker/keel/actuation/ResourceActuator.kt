@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.events.ResourceCheckUnresolvable
 import com.netflix.spinnaker.keel.events.ResourceDeltaDetected
 import com.netflix.spinnaker.keel.events.ResourceDeltaResolved
 import com.netflix.spinnaker.keel.events.ResourceMissing
+import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
@@ -93,16 +94,16 @@ class ResourceActuator(
           if (response.vetoArtifact && resource.spec is VersionedArtifactProvider) {
             try {
               val versionedArtifact = when (desired) {
-                      is Map<*, *> -> {
-                        if (desired.size > 0) {
-                          (desired as Map<String, VersionedArtifactProvider>).values.first()
-                        } else {
-                          null
-                        }
-                      }
-                      is VersionedArtifactProvider -> desired
-                      else -> null
-                    }?.completeVersionedArtifactOrNull()
+                is Map<*, *> -> {
+                  if (desired.size > 0) {
+                    (desired as Map<String, VersionedArtifactProvider>).values.first()
+                  } else {
+                    null
+                  }
+                }
+                is VersionedArtifactProvider -> desired
+                else -> null
+              }?.completeVersionedArtifactOrNull()
 
               if (versionedArtifact != null) {
                 with(versionedArtifact) {
@@ -155,14 +156,16 @@ class ResourceActuator(
               }
           }
           else -> {
+            log.info("Resource {} is valid [$coid]", id)
             val lastEvent = resourceRepository.lastEvent(id)
-            if (lastEvent is ResourceDeltaDetected || lastEvent is ResourceActuationLaunched ||
-              lastEvent is ResourceTaskSucceeded) {
-              log.info("Resource {} delta resolved [$coid]", id)
-              publisher.publishEvent(ResourceDeltaResolved(resource, clock))
-            } else {
-              log.info("Resource {} is valid [$coid]", id)
-              publisher.publishEvent(ResourceValid(resource, clock))
+            when (lastEvent) {
+              is ResourceActuationLaunched -> log.debug("waiting for actuating task to be completed") // do nothing and wait
+              is ResourceDeltaDetected, is ResourceTaskSucceeded, is ResourceTaskFailed -> {
+                // if a delta was detected and a task wasn't launched, the delta is resolved
+                // if a task was launched and it completed, either successfully or not, the delta is resolved
+                publisher.publishEvent(ResourceDeltaResolved(resource, clock))
+              }
+              else -> publisher.publishEvent(ResourceValid(resource, clock))
             }
           }
         }
