@@ -55,7 +55,9 @@ import java.time.Instant
   Type(value = ResourceTaskFailed::class, name = "ResourceTaskFailed"),
   Type(value = ResourceTaskSucceeded::class, name = "ResourceTaskSucceeded")
 )
-abstract class ResourceEvent : PersistentEvent() {
+abstract class ResourceEvent(
+  open val message: String? = null
+) : PersistentEvent() {
   override val scope = Scope.RESOURCE
   abstract val kind: ResourceKind
   abstract val id: String
@@ -118,7 +120,9 @@ data class ResourceDeleted(
   )
 }
 
-sealed class ResourceCheckResult : ResourceEvent() {
+sealed class ResourceCheckResult(
+  override val message: String? = null
+) : ResourceEvent(message = message) {
   abstract val state: ResourceState
 
   @JsonIgnore
@@ -225,7 +229,7 @@ data class ResourceActuationVetoed(
   override val application: String,
   val reason: String?,
   override val timestamp: Instant
-) : ResourceEvent() {
+) : ResourceEvent(message = reason) {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
@@ -349,8 +353,8 @@ data class ResourceCheckUnresolvable(
   override val id: String,
   override val application: String,
   override val timestamp: Instant,
-  val message: String?
-) : ResourceCheckResult() {
+  override val message: String?
+) : ResourceCheckResult(message = message) {
   @JsonIgnore
   override val state = Diff
 
@@ -374,7 +378,7 @@ data class ResourceCheckError(
   override val timestamp: Instant,
   val exceptionType: Class<out Throwable>,
   val exceptionMessage: String?
-) : ResourceCheckResult() {
+) : ResourceCheckResult(message = exceptionMessage) {
   @JsonIgnore
   override val state = Error
 
