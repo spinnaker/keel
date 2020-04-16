@@ -18,8 +18,6 @@ package com.netflix.spinnaker.keel.orca
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
-import java.time.Instant
-import java.util.HashMap
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -27,6 +25,9 @@ import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
+import java.time.Instant
+import java.util.*
 
 interface OrcaService {
 
@@ -50,6 +51,13 @@ interface OrcaService {
     @Path("id") id: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
   ): ExecutionDetailResponse
+
+  @GET("/pipelines")
+  suspend fun getPipelineExecutions(
+    @Query("pipelineConfigIds") pipelineConfigId: String,
+    @Query("limit") limit: Int = 1,
+    @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
+  ): List<ExecutionDetailResponse>
 
   @GET("/tasks/{id}")
   suspend fun getOrchestrationExecution(

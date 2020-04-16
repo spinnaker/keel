@@ -15,7 +15,6 @@ import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.StoreType
 import com.netflix.spinnaker.keel.api.artifacts.StoreType.EBS
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import java.lang.IllegalArgumentException
 
 @JsonTypeInfo(
   use = Id.NAME,
@@ -84,14 +83,6 @@ data class DeployStage(
   val clusters: Set<Cluster>
 ) : Stage(type, name, refId, requisiteStageRefIds, restrictExecutionDuringTimeWindow)
 
-data class ClusterMoniker(
-  val app: String,
-  val stack: String? = null,
-  val cluster: String = app + if (stack == null) "" else "-$stack"
-) {
-  override fun toString() = cluster
-}
-
 enum class SelectionStrategy {
   LARGEST,
   NEWEST,
@@ -105,7 +96,6 @@ data class FindImageStage(
   override val refId: String,
   override val requisiteStageRefIds: List<String> = emptyList(),
   override val restrictExecutionDuringTimeWindow: Boolean = false,
-  val moniker: ClusterMoniker,
   val cluster: String,
   val credentials: String, // account
   val onlyEnabled: Boolean,

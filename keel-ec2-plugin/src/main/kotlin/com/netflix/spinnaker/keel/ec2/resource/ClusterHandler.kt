@@ -62,6 +62,7 @@ import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.front50.model.DeployStage
+import com.netflix.spinnaker.keel.front50.model.Ec2Cluster
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -69,7 +70,6 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import java.lang.IllegalArgumentException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -404,12 +404,12 @@ class ClusterHandler(
       log.warn("Deploy stage ${pipelineStage.name} has more than 1 cluster. Exporting only the first.")
     }
 
-    val cluster = pipelineStage.clusters.first()
+    val cluster = pipelineStage.clusters.first() as Ec2Cluster
 
     return ClusterSpec(
       moniker = Moniker(
         app = cluster.application,
-        stack = if (cluster.stack.isEmpty()) cluster.account else cluster.stack
+        stack = cluster.stack
       ),
       imageProvider = ReferenceArtifactImageProvider(reference = artifact.reference),
       locations = SubnetAwareLocations(

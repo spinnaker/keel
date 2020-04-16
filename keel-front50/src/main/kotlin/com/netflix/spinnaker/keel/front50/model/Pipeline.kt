@@ -1,17 +1,20 @@
 package com.netflix.spinnaker.keel.front50.model
 
+import com.fasterxml.jackson.annotation.JsonAlias
+
 class Pipeline(
   val name: String,
   val id: String,
   val disabled: Boolean = false,
   val fromTemplate: Boolean = false,
   val triggers: List<Trigger> = emptyList(),
-  stages: List<Stage> = emptyList(),
+  @JsonAlias("stages")
+  private val _stages: List<Stage> = emptyList(),
   val lastModifiedBy: String? = null,
   val updateTs: Long? = null
 ) {
-  val stages: List<Stage> = stages
-    get() = field.sortedBy { if (it.requisiteStageRefIds.isEmpty()) "" else it.requisiteStageRefIds.first() }
+  val stages: List<Stage>
+    get() = _stages.sortedBy { if (it.requisiteStageRefIds.isEmpty()) "" else it.requisiteStageRefIds.first() }
 
   val hasParallelStages: Boolean
     get() = stages.any { it.requisiteStageRefIds.size > 1 }
@@ -32,7 +35,7 @@ class Pipeline(
       .find { deploy ->
         deploy.clusters.any { cluster ->
           findImageStage.cloudProvider == cluster.cloudProvider &&
-            findImageStage.moniker == cluster.moniker &&
+            findImageStage.cluster == cluster.name &&
             findImageStage.credentials == cluster.account &&
             cluster.region in findImageStage.regions
         }

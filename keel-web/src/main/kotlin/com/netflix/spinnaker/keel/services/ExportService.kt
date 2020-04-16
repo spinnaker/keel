@@ -17,14 +17,18 @@ import com.netflix.spinnaker.keel.front50.model.FindImageStage
 import com.netflix.spinnaker.keel.front50.model.Pipeline
 import com.netflix.spinnaker.keel.front50.model.Stage
 import com.netflix.spinnaker.keel.front50.model.findPipelineWithDeployForCluster
+import com.netflix.spinnaker.keel.orca.OrcaService
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.time.Duration
+import java.time.Instant
 
 @Component
 class ExportService(
   private val handlers: List<ResourceHandler<*, *>>,
-  private val front50Service: Front50Service
+  private val front50Service: Front50Service,
+  private val orcaService: OrcaService
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -55,18 +59,24 @@ class ExportService(
     val pipelines = runBlocking {
       front50Service.pipelinesByApplication(application, serviceAccount)
     }
+
+    val exportablePipelines = pipelines
       .filter { pipeline ->
         val shape = pipeline.stages.map { stage -> stage.type }
+        val lastExecution = runBlocking {
+          orcaService.getPipelineExecutions(pipeline.id).firstOrNull()
+        }
 
         !pipeline.disabled &&
           !pipeline.fromTemplate &&
           !pipeline.hasParallelStages &&
-          shape in EXPORTABLE_PIPELINE_PATTERNS
-        // TODO: filter out pipelines that have zero executions or haven't run in the last year.
+          shape in EXPORTABLE_PIPELINE_PATTERNS &&
+          // exclude pipelines that haven't run in the last ~6 months
+          (lastExecution == null || lastExecution.buildTime.isAfter(Instant.now() - Duration.ofDays(6 * 30)))
       }
 
     // Map pipelines to bake or findImage stages and the artifacts they represent
-    val pipelinesToStagesToArtifacts: Map<Pipeline, Pair<Stage, DebianArtifact>> = pipelines
+    val pipelinesToStagesToArtifacts: Map<Pipeline, Pair<Stage, DebianArtifact>> = exportablePipelines
       .filter { pipeline ->
         pipeline.stages.any { stage ->
           stage is BakeStage || stage is FindImageStage
@@ -75,7 +85,7 @@ class ExportService(
       .associateWith { pipeline ->
         val stage = pipeline.stages.filterIsInstance<BakeStage>().firstOrNull()
           ?: pipeline.stages.filterIsInstance<FindImageStage>().first()
-        val artifact = stageToArtifact(stage, pipelines)
+        val artifact = stageToArtifact(stage, exportablePipelines)
         stage to artifact
       }
 
@@ -147,11 +157,11 @@ class ExportService(
         // TODO: implement the case for the other pipeline also having a findImage, not a bake.
         val (otherPipeline, deploy) = pipelines.findPipelineWithDeployForCluster(stage)
           ?: error("Deploy stage with cluster definition matching find image stage '${stage.name}' not found.")
-        log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+        log.debug("Found other pipeline with deploy stage for cluster ${stage.cluster}")
 
         val bake = otherPipeline.findUpstreamBake(deploy)
           ?: error("Upstream bake stage from deploy stage '${deploy.name}' not found.")
-        log.debug("Found other pipeline with deploy stage for cluster ${stage.moniker}")
+        log.debug("Found other pipeline with deploy stage for cluster ${stage.cluster}")
         bake.artifact
       }
       else -> error("Unsupported artifact-provider stage of type ${stage.type}. Can only use bake or findImage.")
@@ -180,7 +190,7 @@ class ExportService(
 
         // TODO: handle load balancers
         val cluster = deploy.clusters.first()
-        log.debug("Attempting to build environment for cluster ${cluster.moniker}")
+        log.debug("Attempting to build environment for cluster ${cluster.name}")
 
         val provider = cluster.cloudProvider
         val kind = PROVIDERS_TO_CLUSTER_KINDS[provider] ?: error("Unsupported cluster cloud provider '$provider'")
