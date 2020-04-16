@@ -33,6 +33,9 @@ import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
 import com.netflix.spinnaker.keel.veto.VetoEnforcer
 import com.netflix.spinnaker.keel.veto.VetoResponse
+import com.netflix.spinnaker.kork.exceptions.SpinnakerException
+import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Clock
 import java.util.UUID
 import kotlinx.coroutines.async
@@ -174,7 +177,11 @@ class ResourceActuator(
         publisher.publishEvent(ResourceCheckUnresolvable(resource, e, clock))
       } catch (e: Exception) {
         log.error("Resource check for $id failed [$coid]", e)
-        publisher.publishEvent(ResourceCheckError(resource, e, clock))
+        val normalizedException = when (e) {
+          is UserException, is SystemException -> e
+          else -> SystemException(e)
+        } as SpinnakerException
+        publisher.publishEvent(ResourceCheckError(resource, normalizedException, clock))
       }
     }
   }

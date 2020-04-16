@@ -31,6 +31,9 @@ import com.netflix.spinnaker.keel.events.ResourceState.Diff
 import com.netflix.spinnaker.keel.events.ResourceState.Error
 import com.netflix.spinnaker.keel.events.ResourceState.Missing
 import com.netflix.spinnaker.keel.events.ResourceState.Ok
+import com.netflix.spinnaker.kork.exceptions.SpinnakerException
+import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Clock
 import java.time.Instant
 
@@ -371,23 +374,37 @@ data class ResourceCheckUnresolvable(
     )
 }
 
+enum class ResourceCheckErrorOrigin {
+  USER, SYSTEM;
+  companion object {
+    fun fromException(e: SpinnakerException) =
+      when (e) {
+        is UserException -> USER
+        is SystemException -> SYSTEM
+        else -> throw SystemException("All keel exceptions should inherit from UserException or SystemException. This is a bug.")
+      }
+  }
+}
+
 data class ResourceCheckError(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
   override val timestamp: Instant,
-  val exceptionType: Class<out Throwable>,
-  val exceptionMessage: String?
+  val exceptionType: Class<out SpinnakerException>,
+  val exceptionMessage: String?,
+  val origin: ResourceCheckErrorOrigin
 ) : ResourceCheckResult(message = exceptionMessage) {
   @JsonIgnore
   override val state = Error
 
-  constructor(resource: Resource<*>, exception: Throwable, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, exception: SpinnakerException, clock: Clock = Companion.clock) : this(
     resource.kind,
     resource.id,
     resource.application,
     clock.instant(),
     exception.javaClass,
-    exception.message
+    exception.message,
+    ResourceCheckErrorOrigin.fromException(exception)
   )
 }
