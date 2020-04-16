@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
+import com.netflix.spinnaker.kork.exceptions.SystemException
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -39,7 +40,7 @@ class InteractiveNotificationCallbackController(
     @RequestBody callback: EchoNotification.InteractiveActionCallback
   ) {
     val currentState = repository.getConstraintStateById(parseUID(callback.messageId))
-      ?: throw InvalidConstraintException("constraint@callbackId=${callback.messageId}", "constraint not found")
+      ?: throw SystemException("constraint@callbackId=${callback.messageId}", "constraint not found")
 
     authorizationSupport.checkApplicationPermission(
       Action.WRITE, TargetEntity.DELIVERY_CONFIG, currentState.deliveryConfigName)

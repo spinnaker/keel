@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.json.PropertyNamePolymorphicDeserializer
-import com.netflix.spinnaker.kork.exceptions.UserException
+import com.netflix.spinnaker.kork.exceptions.SystemException
 
 internal class ImageProviderDeserializer :
   PropertyNamePolymorphicDeserializer<ImageProvider>(ImageProvider::class.java) {
@@ -35,4 +35,4 @@ internal class ImageProviderDeserializer :
     }
 }
 
-class InvalidPayload(strategy: String) : UserException("Payload is not valid for $strategy")
+class InvalidPayload(strategy: String) : SystemException("Payload is not valid for $strategy")
