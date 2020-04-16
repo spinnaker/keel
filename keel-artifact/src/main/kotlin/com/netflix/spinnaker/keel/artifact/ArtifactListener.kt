@@ -20,12 +20,14 @@ import com.netflix.spinnaker.kork.artifacts.model.Artifact
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 @Component
+@ConditionalOnProperty("igor.enabled", "clouddriver.enabled")
 class ArtifactListener(
   private val repository: KeelRepository,
   private val artifactService: ArtifactService,

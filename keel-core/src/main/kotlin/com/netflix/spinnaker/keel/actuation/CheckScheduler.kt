@@ -23,12 +23,14 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 @Component
+@ConditionalOnProperty("keel.scheduler.enabled:true")
 class CheckScheduler(
   private val repository: KeelRepository,
   private val resourceActuator: ResourceActuator,

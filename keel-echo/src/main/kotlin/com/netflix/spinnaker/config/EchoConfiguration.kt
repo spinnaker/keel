@@ -7,12 +7,14 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
 
 @Configuration
+@ConditionalOnProperty("echo.enabled")
 class EchoConfiguration {
   @Bean
   fun echoEndpoint(@Value("\${echo.base-url}") echoBaseUrl: String): HttpUrl =
