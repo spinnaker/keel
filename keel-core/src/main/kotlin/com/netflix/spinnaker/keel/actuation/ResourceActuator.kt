@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
+import com.netflix.spinnaker.keel.plugin.ResourceResolutionException
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
 import com.netflix.spinnaker.keel.veto.VetoEnforcer
 import com.netflix.spinnaker.keel.veto.VetoResponse
@@ -178,6 +179,10 @@ class ResourceActuator(
       } catch (e: Exception) {
         log.error("Resource check for $id failed [$coid]", e)
         val normalizedException = when (e) {
+          is ResourceResolutionException -> when (e.cause) {
+            is UserException, is SystemException -> e.cause
+            else -> e
+          }
           is UserException, is SystemException -> e
           else -> SystemException(e)
         } as SpinnakerException
