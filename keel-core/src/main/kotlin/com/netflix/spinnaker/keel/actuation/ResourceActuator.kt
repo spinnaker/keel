@@ -178,18 +178,20 @@ class ResourceActuator(
         publisher.publishEvent(ResourceCheckUnresolvable(resource, e, clock))
       } catch (e: Exception) {
         log.error("Resource check for $id failed [$coid]", e)
-        val normalizedException = when (e) {
-          is ResourceResolutionException -> when (e.cause) {
-            is UserException, is SystemException -> e.cause
-            else -> e
-          }
-          is UserException, is SystemException -> e
-          else -> SystemException(e)
-        } as SpinnakerException
-        publisher.publishEvent(ResourceCheckError(resource, normalizedException, clock))
+        publisher.publishEvent(ResourceCheckError(resource, e.toSpinnakerException(), clock))
       }
     }
   }
+
+  private fun Exception.toSpinnakerException(): SpinnakerException =
+    when (this) {
+      is ResourceResolutionException -> when (cause) {
+        is UserException, is SystemException -> cause
+        else -> this
+      }
+      is UserException, is SystemException -> this
+      else -> SystemException(this)
+    } as SpinnakerException
 
   private suspend fun <T : Any> ResourceHandler<*, T>.resolve(resource: Resource<out ResourceSpec>, coid: String): Pair<T, T?> =
     supervisorScope {
