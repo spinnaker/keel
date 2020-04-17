@@ -10,7 +10,7 @@ plugins {
  * dependencies along for the ride -- ideally nothing at all.
  */
 dependencies {
-  api("com.netflix.spinnaker.kork:kork-core")
+  api("com.netflix.spinnaker.kork:kork-exceptions")
   testImplementation("io.strikt:strikt-core")
   testImplementation("dev.minutest:minutest")
 }
