@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
+import com.netflix.spinnaker.keel.events.ResourceCheckErrorOrigin.ResourceCheckError
 import com.netflix.spinnaker.keel.events.ResourceState.Diff
 import com.netflix.spinnaker.keel.events.ResourceState.Error
 import com.netflix.spinnaker.keel.events.ResourceState.Missing
@@ -38,6 +39,8 @@ import com.netflix.spinnaker.kork.exceptions.SystemException
 import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Clock
 import java.time.Instant
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 @JsonTypeInfo(
   use = Id.NAME,
@@ -378,14 +381,19 @@ data class ResourceCheckUnresolvable(
 
 enum class ResourceCheckErrorOrigin {
   @JsonProperty("user") USER,
-  @JsonProperty("system") SYSTEM;
+  @JsonProperty("system") SYSTEM,
+  @JsonProperty("unknown") UNKNOWN;
 
   companion object {
+    val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
     fun fromException(exceptionType: Class<out SpinnakerException>) =
       when {
         UserException::class.java.isAssignableFrom(exceptionType) -> USER
         SystemException::class.java.isAssignableFrom(exceptionType) -> SYSTEM
-        else -> throw SystemException("All keel exceptions should inherit from UserException or SystemException. This is a bug.")
+        else -> UNKNOWN.also {
+          log.error("All keel exceptions should inherit from UserException or SystemException (got ${exceptionType.name}). " +
+            "This is a bug.")
+        }
       }
   }
 }
