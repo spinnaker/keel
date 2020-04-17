@@ -16,6 +16,8 @@
 package com.netflix.spinnaker.keel.events
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonProperty.Access
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -375,12 +377,14 @@ data class ResourceCheckUnresolvable(
 }
 
 enum class ResourceCheckErrorOrigin {
-  USER, SYSTEM;
+  @JsonProperty("user") USER,
+  @JsonProperty("system") SYSTEM;
+
   companion object {
-    fun fromException(e: SpinnakerException) =
-      when (e) {
-        is UserException -> USER
-        is SystemException -> SYSTEM
+    fun fromException(exceptionType: Class<out SpinnakerException>) =
+      when {
+        UserException::class.java.isAssignableFrom(exceptionType) -> USER
+        SystemException::class.java.isAssignableFrom(exceptionType) -> SYSTEM
         else -> throw SystemException("All keel exceptions should inherit from UserException or SystemException. This is a bug.")
       }
   }
@@ -392,11 +396,13 @@ data class ResourceCheckError(
   override val application: String,
   override val timestamp: Instant,
   val exceptionType: Class<out SpinnakerException>,
-  val exceptionMessage: String?,
-  val origin: ResourceCheckErrorOrigin
+  val exceptionMessage: String?
 ) : ResourceCheckResult(message = exceptionMessage) {
   @JsonIgnore
   override val state = Error
+
+  @JsonProperty(access = Access.READ_ONLY)
+  val origin: ResourceCheckErrorOrigin = ResourceCheckErrorOrigin.fromException(exceptionType)
 
   constructor(resource: Resource<*>, exception: SpinnakerException, clock: Clock = Companion.clock) : this(
     resource.kind,
@@ -404,7 +410,6 @@ data class ResourceCheckError(
     resource.application,
     clock.instant(),
     exception.javaClass,
-    exception.message,
-    ResourceCheckErrorOrigin.fromException(exception)
+    exception.message
   )
 }
