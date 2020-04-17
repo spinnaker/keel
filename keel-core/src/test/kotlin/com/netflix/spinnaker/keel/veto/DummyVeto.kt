@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.api.Resource
 class DummyVeto(
   private val allowAll: Boolean
 ) : Veto {
-  override fun check(resource: Resource<*>): VetoResponse =
+  override suspend fun check(resource: Resource<*>): VetoResponse =
     if (allowAll) {
       allowedResponse()
     } else {

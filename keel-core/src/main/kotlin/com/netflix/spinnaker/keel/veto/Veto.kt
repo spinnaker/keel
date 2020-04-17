@@ -28,32 +28,32 @@ import com.netflix.spinnaker.keel.api.Resource
 interface Veto {
 
   /**
-   * The name of the veto
+   * The name of the veto.
    */
   fun name(): String = javaClass.simpleName
 
   /**
-   * Check whether the resource can be checked according to this veto
+   * Check whether the resource can be checked according to this veto.
    */
-  fun check(resource: Resource<*>): VetoResponse
+  suspend fun check(resource: Resource<*>): VetoResponse
 
   /**
-   * The message format a veto accepts
+   * The message format a veto accepts.
    */
   fun messageFormat(): Map<String, Any>
 
   /**
-   * Pass a message to a veto
+   * Pass a message to a veto.
    */
   fun passMessage(message: Map<String, Any>)
 
   /**
-   * What's currently being vetoed
+   * What's currently being vetoed.
    */
   fun currentRejections(): List<String>
 
   /**
-   * What's currently being vetoed for an app
+   * What's currently being vetoed for an app.
    */
   fun currentRejectionsByApp(application: String): List<String>
 

@@ -49,7 +49,7 @@ class UnhappyVeto(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun check(resource: Resource<*>): VetoResponse {
+  override suspend fun check(resource: Resource<*>): VetoResponse {
     val resourceId = resource.id
     val application = resource.application
 
