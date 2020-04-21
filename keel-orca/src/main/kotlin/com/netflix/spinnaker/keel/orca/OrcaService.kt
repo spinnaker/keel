@@ -84,7 +84,8 @@ data class ExecutionDetailResponse(
   val startTime: Instant?,
   val endTime: Instant?,
   val status: OrcaExecutionStatus,
-  val execution: OrcaExecutionStages = OrcaExecutionStages(emptyList())
+  val execution: OrcaExecutionStages = OrcaExecutionStages(emptyList()),
+  val stages: List<Map<String, Any>>? = emptyList() // for pipelines, stages are not encapsulated in `execution`
 )
 
 data class OrcaExecutionStages(

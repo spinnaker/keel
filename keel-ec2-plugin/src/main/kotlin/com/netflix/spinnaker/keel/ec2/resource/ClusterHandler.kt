@@ -374,7 +374,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      deployWith = base.getDeploymentStrategy() ?: RedBlack(),
+      deployWith = base.discoverDeploymentStrategy() ?: RedBlack(),
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )
@@ -389,7 +389,24 @@ class ClusterHandler(
     return spec
   }
 
-  private fun ServerGroup.getDeploymentStrategy(): ClusterDeployStrategy? {
+  override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
+    resource
+      .spec
+      .locations
+      .regions
+      .map { it.name }
+      .any { region ->
+        orcaService
+          .getCorrelatedExecutions("${resource.id}:$region")
+          .isNotEmpty()
+      }
+
+  /**
+   * Retrieve server group entity tags from clouddriver to identity the "source" of the server group (pipeline or
+   * orchestration), then retrieve execution details from orca to determine the deployment strategy used for that
+   * server group.
+   */
+  private fun ServerGroup.discoverDeploymentStrategy(): ClusterDeployStrategy? {
     val entityTags = runBlocking {
       log.debug("Looking for entity tags on server group $name in application ${moniker.app}, " +
         "account ${location.account} in search of pipeline/task correlation.")
@@ -408,7 +425,8 @@ class ClusterHandler(
       return null
     }
 
-    val spinnakerMetadata = entityTags.first().tags.find { it.name == "spinnaker:metadata" }
+    val spinnakerMetadata = entityTags.first().tags
+      .find { it.name == "spinnaker:metadata" }
       ?.let {
         if (it.value !is Map<*, *>) {
           null
@@ -435,31 +453,41 @@ class ClusterHandler(
         else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
       }
     }
-    val strategy = execution.execution.stages
-      ?.find { stage -> stage["type"] == "createServerGroup" }
+
+    // get context from the appropriate execution stage for the execution type, drilling down into the data as needed
+    val context = if (executionType == "pipeline") {
+      // TODO: or clone?
+      execution.stages?.find { stage -> stage["type"] == "deploy" }
+    } else { // orchestration (i.e. a task)
+      // TODO: or cloneServerGroup?
+      execution.execution.stages?.find { stage -> stage["type"] == "createServerGroup" }
+    }
       ?.let { stage -> stage["context"] }
       ?.let { context ->
         if (context is Map<*, *>) {
-          context["strategy"]
+          context as Map<String, Any>
         } else {
           null
         }
       }
+      ?.let { context ->
+        if (executionType == "pipeline") {
+          (context["clusters"] as List<Map<String, Any>>?)?.first()
+        } else {
+          context
+        }
+      }
 
-    return when (strategy) {
-      // TODO: fill in details
-      "redblack" -> RedBlack()
+    return when (val strategy = context?.get("strategy")) {
+      "redblack" -> RedBlack.fromOrcaStageContext(context)
       "highlander" -> Highlander
+      null -> throw InvalidRequestException("Deployment strategy information not found for server group $name " +
+        "in application ${moniker.app}, account ${location.account}")
       else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $name " +
-        "application ${moniker.app}, account ${location.account} is not supported. " +
+        "in application ${moniker.app}, account ${location.account} is not supported. " +
         "Only redblack and highlander are supported at this time.")
     }
   }
-
-  private fun List<ResourceDiff<ServerGroup>>.createsNewServerGroups() =
-    any {
-      !it.isCapacityOrAutoScalingOnly()
-    }
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
@@ -473,18 +501,6 @@ class ClusterHandler(
         (overrides as MutableMap)[region] = override
       }
     }
-
-  override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
-    resource
-      .spec
-      .locations
-      .regions
-      .map { it.name }
-      .any { region ->
-        orcaService
-          .getCorrelatedExecutions("${resource.id}:$region")
-          .isNotEmpty()
-      }
 
   /**
    * @return `true` if the only changes in the diff are to capacity.

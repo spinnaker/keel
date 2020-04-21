@@ -41,6 +41,20 @@ data class RedBlack(
   @JsonInclude(NON_EMPTY)
   override val stagger: List<StaggeredRegion> = emptyList()
 ) : ClusterDeployStrategy() {
+
+  companion object {
+    fun fromOrcaStageContext(context: Map<String, Any?>) =
+      RedBlack(
+        rollbackOnFailure = context["rollback"]
+          ?.let { it as Map<String, Any> }
+          ?.get("onFailure") as Boolean,
+        resizePreviousToZero = context["scaleDown"] as Boolean,
+        maxServerGroups = context["maxRemainingAsgs"] as Int,
+        delayBeforeDisable = Duration.ofSeconds((context["delayBeforeDisableSec"] as Int).toLong()),
+        delayBeforeScaleDown = Duration.ofSeconds((context["delayBeforeScaleDownSec"] as Int).toLong())
+      )
+  }
+
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "redblack",
     "maxRemainingAsgs" to maxServerGroups,
