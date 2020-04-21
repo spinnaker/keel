@@ -31,10 +31,16 @@ import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.ec2.resource.ClusterHandler
 import com.netflix.spinnaker.keel.ec2.resource.toCloudDriverResponse
+import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
+import com.netflix.spinnaker.keel.orca.OrcaExecutionStages
+import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.SUCCEEDED
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
+import com.netflix.spinnaker.keel.tags.EntityRef
+import com.netflix.spinnaker.keel.tags.EntityTag
+import com.netflix.spinnaker.keel.tags.EntityTags
 import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
@@ -45,6 +51,7 @@ import io.mockk.every
 import io.mockk.mockk
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
@@ -52,6 +59,7 @@ import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
@@ -161,6 +169,102 @@ internal class ClusterExportTests : JUnit5Minutests {
     kind = SPINNAKER_EC2_API_V1.qualify("cluster")
   )
 
+  private val taskEntityTags = EntityTags(
+    id = "aws:servergroup:${serverGroupEast.name}:1234567890123:${vpcEast.region}",
+    idPattern = "{{cloudProvider}}:{{entityType}}:{{entityId}}:{{account}}:{{region}}",
+    tags = listOf(
+      EntityTag(
+        name = "spinnaker:metadata",
+        namespace = "spinnaker",
+        valueType = "object",
+        value = mapOf(
+          "executionId" to "01E609548XWA7ZBP5M5FGMZ964",
+          "executionType" to "orchestration"
+        )
+      )
+    ),
+    tagsMetadata = emptyList(),
+    entityRef = EntityRef(
+      cloudProvider = "aws",
+      application = "keel",
+      accountId = "1234567890123",
+      account = vpcEast.account,
+      region = vpcEast.region,
+      entityType = "servergroup",
+      entityId = serverGroupEast.name
+    )
+  )
+
+  private val pipelineEntityTags = taskEntityTags.copy(
+    tags = listOf(
+      EntityTag(
+        name = "spinnaker:metadata",
+        namespace = "spinnaker",
+        valueType = "object",
+        value = mapOf(
+          "executionId" to "01E609548XWA7ZBP5M5FGMZ964",
+          "executionType" to "pipeline"
+        )
+      )
+    )
+  )
+
+  private val orcaTaskExecution = ExecutionDetailResponse(
+    id = "01E609548XWA7ZBP5M5FGMZ964",
+    name = "A keel deployment task",
+    application = "keel",
+    buildTime = Instant.now() - Duration.ofHours(1),
+    startTime = Instant.now() - Duration.ofHours(1),
+    endTime = Instant.now() - Duration.ofMinutes(30),
+    status = SUCCEEDED,
+    execution = OrcaExecutionStages(
+      stages = listOf(
+        mapOf(
+          "type" to "createServerGroup",
+          "context" to mapOf(
+            "strategy" to "redblack",
+            "rollback" to mapOf(
+              "onFailure" to true
+            ),
+            "scaleDown" to false,
+            "maxRemainingAsgs" to 3,
+            "delayBeforeDisableSec" to 10,
+            "delayBeforeScaleDownSec" to 10
+          )
+        )
+      )
+    )
+  )
+
+  private val orcaPipelineExecution = ExecutionDetailResponse(
+    id = "01E609548XWA7ZBP5M5FGMZ964",
+    name = "A user's deployment pipeline",
+    application = "keel",
+    buildTime = Instant.now() - Duration.ofHours(1),
+    startTime = Instant.now() - Duration.ofHours(1),
+    endTime = Instant.now() - Duration.ofMinutes(30),
+    status = SUCCEEDED,
+    stages = listOf(
+      mapOf(
+        "type" to "deploy",
+        "context" to mapOf(
+          "clusters" to listOf(
+            mapOf(
+              "strategy" to "redblack",
+              "rollback" to mapOf(
+                "onFailure" to true
+              ),
+              "scaleDown" to false,
+              "maxRemainingAsgs" to 1,
+              "delayBeforeDisableSec" to 5,
+              "delayBeforeScaleDownSec" to 5
+            )
+          )
+        )
+      )
+    )
+  )
+
   fun tests() = rootContext<ClusterHandler> {
     fixture {
       ClusterHandler(
@@ -205,10 +309,89 @@ internal class ClusterExportTests : JUnit5Minutests {
 
       coEvery { orcaService.orchestrate(resource.serviceAccount, any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
       every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
+
+      coEvery {
+        cloudDriverService.getEntityTags("aws", "test", "keel", "servergroup", any())
+      } returns emptyList()
     }
 
     after {
       clearAllMocks()
+    }
+
+    context("basic export behavior") {
+      before {
+        coEvery { cloudDriverService.activeServerGroup(any(), "us-east-1") } returns activeServerGroupResponseEast
+      }
+
+      context("entity tags indicate deployment done by orchestration task") {
+        before {
+          coEvery {
+            cloudDriverService.getEntityTags("aws", "test", "keel", "servergroup", any())
+          } returns listOf(taskEntityTags)
+          coEvery {
+            orcaService.getOrchestrationExecution("01E609548XWA7ZBP5M5FGMZ964", any())
+          } returns orcaTaskExecution
+        }
+
+        test("retrieves current deployment strategy from task execution") {
+          val cluster = runBlocking {
+            export(exportable.copy(regions = setOf("us-east-1")))
+          }
+
+          expectThat(cluster) {
+            get { locations.regions }.hasSize(1)
+            get { deployWith }.isA<RedBlack>().and {
+              get { maxServerGroups }.isEqualTo(3)
+              get { delayBeforeDisable }.isEqualTo(Duration.ofSeconds(10))
+              get { delayBeforeScaleDown }.isEqualTo(Duration.ofSeconds(10))
+            }
+          }
+        }
+      }
+
+      context("entity tags indicate deployment done by pipeline") {
+        before {
+          coEvery {
+            cloudDriverService.getEntityTags("aws", "test", "keel", "servergroup", any())
+          } returns listOf(pipelineEntityTags)
+          coEvery {
+            orcaService.getPipelineExecution("01E609548XWA7ZBP5M5FGMZ964", any())
+          } returns orcaPipelineExecution
+        }
+
+        test("retrieves current deployment strategy from pipeline execution") {
+          val cluster = runBlocking {
+            export(exportable.copy(regions = setOf("us-east-1")))
+          }
+
+          expectThat(cluster) {
+            get { locations.regions }.hasSize(1)
+            get { deployWith }.isA<RedBlack>().and {
+              get { maxServerGroups }.isEqualTo(1)
+              get { delayBeforeDisable }.isEqualTo(Duration.ofSeconds(5))
+              get { delayBeforeScaleDown }.isEqualTo(Duration.ofSeconds(5))
+            }
+          }
+        }
+      }
+
+      test("deployment strategy defaults are omitted") {
+        val cluster = runBlocking {
+          export(exportable.copy(regions = setOf("us-east-1")))
+        }
+
+        expectThat(cluster.deployWith) {
+          isA<RedBlack>().and {
+            get { maxServerGroups }.isNull()
+            get { delayBeforeDisable }.isNull()
+            get { resizePreviousToZero }.isNull()
+            get { delayBeforeScaleDown }.isNull()
+            get { rollbackOnFailure }.isNull()
+            get { stagger }.isEmpty()
+          }
+        }
+      }
     }
 
     context("exporting same clusters different regions") {

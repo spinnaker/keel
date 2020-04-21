@@ -65,7 +65,6 @@ import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
 import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
-import com.netflix.spinnaker.keel.plugin.emptyShell
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -489,9 +488,6 @@ class ClusterHandler(
         "Only redblack and highlander are supported at this time.")
     }
   }
-
-  private fun ClusterDeployStrategy.withDefaultsOmitted(): ClusterDeployStrategy =
-    buildSpecFromDiff(defaults, this) ?: emptyShell(defaults::class)
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->

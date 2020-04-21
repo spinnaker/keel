@@ -23,13 +23,12 @@ import java.time.Duration.ZERO
   Type(Highlander::class)
 )
 sealed class ClusterDeployStrategy {
-  abstract fun toOrcaJobProperties(): Map<String, Any?>
   @get:JsonIgnore
   open val isStaggered: Boolean = false
   @get:JsonInclude(NON_EMPTY)
   open val stagger: List<StaggeredRegion> = emptyList()
-  @get:JsonIgnore
-  abstract val defaults: ClusterDeployStrategy
+  abstract fun toOrcaJobProperties(): Map<String, Any?>
+  abstract fun withDefaultsOmitted(): ClusterDeployStrategy
 }
 
 @JsonTypeName("red-black")
@@ -59,9 +58,6 @@ data class RedBlack(
     val DEFAULTS = RedBlack()
   }
 
-  override val defaults: RedBlack
-    get() = DEFAULTS
-
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "redblack",
     "maxRemainingAsgs" to maxServerGroups,
@@ -73,6 +69,35 @@ data class RedBlack(
 
   override val isStaggered: Boolean
     get() = stagger?.isNotEmpty() ?: false
+
+  override fun withDefaultsOmitted() =
+    RedBlack(
+      maxServerGroups = if (maxServerGroups == DEFAULTS.maxServerGroups) {
+        null
+      } else {
+        maxServerGroups
+      },
+      delayBeforeDisable = if (delayBeforeDisable == DEFAULTS.delayBeforeDisable) {
+        null
+      } else {
+        delayBeforeDisable
+      },
+      delayBeforeScaleDown = if (delayBeforeScaleDown == DEFAULTS.delayBeforeScaleDown) {
+        null
+      } else {
+        delayBeforeScaleDown
+      },
+      resizePreviousToZero = if (resizePreviousToZero == DEFAULTS.resizePreviousToZero) {
+        null
+      } else {
+        resizePreviousToZero
+      },
+      rollbackOnFailure = if (rollbackOnFailure == DEFAULTS.rollbackOnFailure) {
+        null
+      } else {
+        rollbackOnFailure
+      }
+    )
 }
 
 @JsonTypeName("highlander")
@@ -81,8 +106,7 @@ object Highlander : ClusterDeployStrategy() {
     "strategy" to "highlander"
   )
 
-  override val defaults: Highlander
-    get() = this
+  override fun withDefaultsOmitted() = this
 }
 
 /**
