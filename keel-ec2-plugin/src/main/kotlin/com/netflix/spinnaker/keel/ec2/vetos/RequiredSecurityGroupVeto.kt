@@ -2,8 +2,9 @@ package com.netflix.spinnaker.keel.ec2.vetos
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec
+import com.netflix.spinnaker.keel.api.ec2.OverrideableClusterDependencyContainer
+import com.netflix.spinnaker.keel.api.ec2.securityGroupsByRegion
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
@@ -113,31 +114,9 @@ class RequiredSecurityGroupVeto(
           account = locations.account,
           subnet = locations.subnet
         )
-      is ClusterSpec -> {
-        val regions = locations.regions.map { it.name }
-        val defaultSecurityGroups = (defaults.dependencies?.securityGroupNames ?: emptySet())
-          .associateWith { regions }
-        val overrideSecurityGroups = overrides
-          .map { (region, spec) ->
-            spec.dependencies?.securityGroupNames?.associateWith { listOf(region) } ?: emptyMap()
-          }
-          .reduce { acc, map ->
-            val result = mutableMapOf<String, List<String>>()
-            (acc.keys + map.keys).forEach {
-              result[it] = (acc[it] ?: emptyList()) + (map[it] ?: emptyList())
-            }
-            result
-          }
-        val allSecurityGroups = listOf(defaultSecurityGroups, overrideSecurityGroups)
-          .reduce { acc, map ->
-            val result = mutableMapOf<String, List<String>>()
-            (acc.keys + map.keys).forEach {
-              result[it] = (acc[it] ?: emptyList()) + (map[it] ?: emptyList())
-            }
-            result
-          }
+      is OverrideableClusterDependencyContainer<*> -> {
         SecurityGroupDependencies(
-          securityGroupsInRegions = allSecurityGroups,
+          securityGroupsInRegions = securityGroupsByRegion,
           account = locations.account,
           subnet = locations.subnet
         )
