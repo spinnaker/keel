@@ -65,6 +65,7 @@ import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
 import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
+import com.netflix.spinnaker.keel.plugin.emptyShell
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -316,7 +317,7 @@ class ClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): ClusterSpec {
-    // Get existing infrastructure
+    // Get existing infrastructure -- this is a very costly call
     val serverGroups = cloudDriverService.getServerGroups(
       account = exportable.account,
       moniker = exportable.moniker,
@@ -374,7 +375,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      deployWith = base.discoverDeploymentStrategy() ?: RedBlack(),
+      deployWith = (base.discoverDeploymentStrategy() ?: RedBlack()).let { it.withDefaultsOmitted() },
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )
@@ -488,6 +489,9 @@ class ClusterHandler(
         "Only redblack and highlander are supported at this time.")
     }
   }
+
+  private fun ClusterDeployStrategy.withDefaultsOmitted(): ClusterDeployStrategy =
+    buildSpecFromDiff(defaults, this) ?: emptyShell(defaults::class)
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->

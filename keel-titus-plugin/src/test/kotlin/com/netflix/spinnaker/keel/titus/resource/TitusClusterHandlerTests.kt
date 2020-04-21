@@ -369,8 +369,8 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
           expectThat(slot.captured.job.first()) {
             get("strategy").isEqualTo("redblack")
-            get("delayBeforeDisableSec").isEqualTo(deployWith.delayBeforeDisable.seconds)
-            get("delayBeforeScaleDownSec").isEqualTo(deployWith.delayBeforeScaleDown.seconds)
+            get("delayBeforeDisableSec").isEqualTo(deployWith.delayBeforeDisable?.seconds)
+            get("delayBeforeScaleDownSec").isEqualTo(deployWith.delayBeforeScaleDown?.seconds)
             get("rollback").isA<Map<String, Any?>>().get("onFailure").isEqualTo(deployWith.rollbackOnFailure)
             get("scaleDown").isEqualTo(deployWith.resizePreviousToZero)
             get("maxRemainingAsgs").isEqualTo(deployWith.maxServerGroups)
@@ -393,8 +393,8 @@ class TitusClusterHandlerTests : JUnit5Minutests {
 
           expectThat(slot.captured.job.first()) {
             get("strategy").isEqualTo("redblack")
-            get("delayBeforeDisableSec").isEqualTo(deployWith.delayBeforeDisable.seconds)
-            get("delayBeforeScaleDownSec").isEqualTo(deployWith.delayBeforeScaleDown.seconds)
+            get("delayBeforeDisableSec").isEqualTo(deployWith.delayBeforeDisable?.seconds)
+            get("delayBeforeScaleDownSec").isEqualTo(deployWith.delayBeforeScaleDown?.seconds)
             get("rollback").isA<Map<String, Any?>>().get("onFailure").isEqualTo(deployWith.rollbackOnFailure)
             get("scaleDown").isEqualTo(deployWith.resizePreviousToZero)
             get("maxRemainingAsgs").isEqualTo(deployWith.maxServerGroups)

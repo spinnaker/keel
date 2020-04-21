@@ -28,15 +28,17 @@ sealed class ClusterDeployStrategy {
   open val isStaggered: Boolean = false
   @get:JsonInclude(NON_EMPTY)
   open val stagger: List<StaggeredRegion> = emptyList()
+  @get:JsonIgnore
+  abstract val defaults: ClusterDeployStrategy
 }
 
 @JsonTypeName("red-black")
 data class RedBlack(
-  val rollbackOnFailure: Boolean = true,
-  val resizePreviousToZero: Boolean = false,
-  val maxServerGroups: Int = 2,
-  val delayBeforeDisable: Duration = ZERO,
-  val delayBeforeScaleDown: Duration = ZERO,
+  val rollbackOnFailure: Boolean? = true,
+  val resizePreviousToZero: Boolean? = false,
+  val maxServerGroups: Int? = 2,
+  val delayBeforeDisable: Duration? = ZERO,
+  val delayBeforeScaleDown: Duration? = ZERO,
   // The order of this list is important for pauseTime based staggers
   @JsonInclude(NON_EMPTY)
   override val stagger: List<StaggeredRegion> = emptyList()
@@ -53,19 +55,24 @@ data class RedBlack(
         delayBeforeDisable = Duration.ofSeconds((context["delayBeforeDisableSec"] as Int).toLong()),
         delayBeforeScaleDown = Duration.ofSeconds((context["delayBeforeScaleDownSec"] as Int).toLong())
       )
+
+    val DEFAULTS = RedBlack()
   }
+
+  override val defaults: RedBlack
+    get() = DEFAULTS
 
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "redblack",
     "maxRemainingAsgs" to maxServerGroups,
-    "delayBeforeDisableSec" to delayBeforeDisable.seconds,
-    "delayBeforeScaleDownSec" to delayBeforeScaleDown.seconds,
+    "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
+    "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
     "scaleDown" to resizePreviousToZero,
     "rollback" to mapOf("onFailure" to rollbackOnFailure)
   )
 
   override val isStaggered: Boolean
-    get() = stagger.isNotEmpty()
+    get() = stagger?.isNotEmpty() ?: false
 }
 
 @JsonTypeName("highlander")
@@ -73,6 +80,9 @@ object Highlander : ClusterDeployStrategy() {
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "highlander"
   )
+
+  override val defaults: Highlander
+    get() = this
 }
 
 /**

@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.plugin
 
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
+import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
@@ -59,4 +60,14 @@ inline fun <reified T : Any, reified S : Any> buildSpecFromDiff(
   } else {
     ctor.callBy(params)
   }
+}
+
+/**
+ * Helper function to return an instance of any type with all nullable constructor parameters set to null.
+ * Note that this call will fail if any remaining parameters to the primary constructor are not optional.
+ */
+fun <T : Any> emptyShell(klass: KClass<T>): T {
+  val ctor = klass.primaryConstructor!!
+  val params = ctor.parameters.filter { it.type.isMarkedNullable }.associateWith { null }
+  return ctor.callBy(params)
 }
