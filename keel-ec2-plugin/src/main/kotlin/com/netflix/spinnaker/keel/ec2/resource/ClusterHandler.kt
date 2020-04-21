@@ -48,6 +48,9 @@ import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
+import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
+import com.netflix.spinnaker.keel.core.api.Highlander
+import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
@@ -64,6 +67,8 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -72,6 +77,7 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
 
@@ -368,6 +374,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
+      deployWith = base.getDeploymentStrategy() ?: RedBlack(),
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )
@@ -380,6 +387,73 @@ class ClusterHandler(
     )
 
     return spec
+  }
+
+  private fun ServerGroup.getDeploymentStrategy(): ClusterDeployStrategy? {
+    val entityTags = runBlocking {
+      log.debug("Looking for entity tags on server group $name in application ${moniker.app}, " +
+        "account ${location.account} in search of pipeline/task correlation.")
+      cloudDriverService.getEntityTags(
+        cloudProvider = "aws",
+        account = location.account,
+        application = moniker.app,
+        entityType = "servergroup",
+        entityId = name
+      )
+    }
+
+    if (entityTags.isEmpty()) {
+      log.warn("Unable to find entity tags for server group $name in application ${moniker.app}, " +
+        "account ${location.account}.")
+      return null
+    }
+
+    val spinnakerMetadata = entityTags.first().tags.find { it.name == "spinnaker:metadata" }
+      ?.let {
+        if (it.value !is Map<*, *>) {
+          null
+        } else {
+          it.value as Map<*, *>
+        }
+      }
+
+    if (spinnakerMetadata == null ||
+      spinnakerMetadata["executionType"] == null ||
+      spinnakerMetadata["executionId"] == null
+    ) {
+      log.warn("Unable to find Spinnaker metadata for server group $name in application ${moniker.app}, " +
+        "account ${location.account} in entity tags.")
+      return null
+    }
+
+    val executionType = spinnakerMetadata["executionType"]!!.toString()
+    val executionId = spinnakerMetadata["executionId"]!!.toString()
+    val execution = runBlocking {
+      when (executionType) {
+        "orchestration" -> orcaService.getOrchestrationExecution(executionId)
+        "pipeline" -> orcaService.getPipelineExecution(executionId)
+        else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
+      }
+    }
+    val strategy = execution.execution.stages
+      ?.find { stage -> stage["type"] == "createServerGroup" }
+      ?.let { stage -> stage["context"] }
+      ?.let { context ->
+        if (context is Map<*, *>) {
+          context["strategy"]
+        } else {
+          null
+        }
+      }
+
+    return when (strategy) {
+      // TODO: fill in details
+      "redblack" -> RedBlack()
+      "highlander" -> Highlander
+      else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $name " +
+        "application ${moniker.app}, account ${location.account} is not supported. " +
+        "Only redblack and highlander are supported at this time.")
+    }
   }
 
   private fun List<ResourceDiff<ServerGroup>>.createsNewServerGroups() =
