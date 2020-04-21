@@ -77,7 +77,6 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
 
@@ -406,86 +405,88 @@ class ClusterHandler(
    * orchestration), then retrieve execution details from orca to determine the deployment strategy used for that
    * server group.
    */
-  private fun ServerGroup.discoverDeploymentStrategy(): ClusterDeployStrategy? {
-    val entityTags = runBlocking {
-      log.debug("Looking for entity tags on server group $name in application ${moniker.app}, " +
-        "account ${location.account} in search of pipeline/task correlation.")
-      cloudDriverService.getEntityTags(
-        cloudProvider = "aws",
-        account = location.account,
-        application = moniker.app,
-        entityType = "servergroup",
-        entityId = name
-      )
-    }
+  private suspend fun ServerGroup.discoverDeploymentStrategy(): ClusterDeployStrategy? {
+    return coroutineScope {
+      val entityTags = async {
+        log.debug("Looking for entity tags on server group $name in application ${moniker.app}, " +
+          "account ${location.account} in search of pipeline/task correlation.")
+        cloudDriverService.getEntityTags(
+          cloudProvider = "aws",
+          account = location.account,
+          application = moniker.app,
+          entityType = "servergroup",
+          entityId = name
+        )
+      }.await()
 
-    if (entityTags.isEmpty()) {
-      log.warn("Unable to find entity tags for server group $name in application ${moniker.app}, " +
-        "account ${location.account}.")
-      return null
-    }
+      if (entityTags.isEmpty()) {
+        log.warn("Unable to find entity tags for server group $name in application ${moniker.app}, " +
+          "account ${location.account}.")
+        return@coroutineScope null
+      }
 
-    val spinnakerMetadata = entityTags.first().tags
-      .find { it.name == "spinnaker:metadata" }
-      ?.let {
-        if (it.value !is Map<*, *>) {
-          null
-        } else {
-          it.value as Map<*, *>
+      val spinnakerMetadata = entityTags.first().tags
+        .find { it.name == "spinnaker:metadata" }
+        ?.let {
+          if (it.value !is Map<*, *>) {
+            null
+          } else {
+            it.value as Map<*, *>
+          }
         }
+
+      if (spinnakerMetadata == null ||
+        spinnakerMetadata["executionType"] == null ||
+        spinnakerMetadata["executionId"] == null
+      ) {
+        log.warn("Unable to find Spinnaker metadata for server group $name in application ${moniker.app}, " +
+          "account ${location.account} in entity tags.")
+        return@coroutineScope null
       }
 
-    if (spinnakerMetadata == null ||
-      spinnakerMetadata["executionType"] == null ||
-      spinnakerMetadata["executionId"] == null
-    ) {
-      log.warn("Unable to find Spinnaker metadata for server group $name in application ${moniker.app}, " +
-        "account ${location.account} in entity tags.")
-      return null
-    }
-
-    val executionType = spinnakerMetadata["executionType"]!!.toString()
-    val executionId = spinnakerMetadata["executionId"]!!.toString()
-    val execution = runBlocking {
-      when (executionType) {
-        "orchestration" -> orcaService.getOrchestrationExecution(executionId)
-        "pipeline" -> orcaService.getPipelineExecution(executionId)
-        else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
-      }
-    }
-
-    // get context from the appropriate execution stage for the execution type, drilling down into the data as needed
-    val context = if (executionType == "pipeline") {
-      // TODO: or clone?
-      execution.stages?.find { stage -> stage["type"] == "deploy" }
-    } else { // orchestration (i.e. a task)
-      // TODO: or cloneServerGroup?
-      execution.execution.stages?.find { stage -> stage["type"] == "createServerGroup" }
-    }
-      ?.let { stage -> stage["context"] }
-      ?.let { context ->
-        if (context is Map<*, *>) {
-          context as Map<String, Any>
-        } else {
-          null
+      val executionType = spinnakerMetadata["executionType"]!!.toString()
+      val executionId = spinnakerMetadata["executionId"]!!.toString()
+      val execution = async {
+        when (executionType) {
+          "orchestration" -> orcaService.getOrchestrationExecution(executionId)
+          "pipeline" -> orcaService.getPipelineExecution(executionId)
+          else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
         }
-      }
-      ?.let { context ->
-        if (executionType == "pipeline") {
-          (context["clusters"] as List<Map<String, Any>>?)?.first()
-        } else {
-          context
-        }
-      }
+      }.await()
 
-    return when (val strategy = context?.get("strategy")) {
-      "redblack" -> RedBlack.fromOrcaStageContext(context)
-      "highlander" -> Highlander
-      null -> throw InvalidRequestException("Deployment strategy information not found for server group $name " +
-        "in application ${moniker.app}, account ${location.account}")
-      else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $name " +
-        "in application ${moniker.app}, account ${location.account} is not supported. " +
-        "Only redblack and highlander are supported at this time.")
+      // get context from the appropriate execution stage for the execution type, drilling down into the data as needed
+      val context = if (executionType == "pipeline") {
+        // TODO: or clone?
+        execution.stages?.find { stage -> stage["type"] == "deploy" }
+      } else { // orchestration (i.e. a task)
+        // TODO: or cloneServerGroup?
+        execution.execution.stages?.find { stage -> stage["type"] == "createServerGroup" }
+      }
+        ?.let { stage -> stage["context"] }
+        ?.let { context ->
+          if (context is Map<*, *>) {
+            context as Map<String, Any>
+          } else {
+            null
+          }
+        }
+        ?.let { context ->
+          if (executionType == "pipeline") {
+            (context["clusters"] as List<Map<String, Any>>?)?.first()
+          } else {
+            context
+          }
+        }
+
+      return@coroutineScope when (val strategy = context?.get("strategy")) {
+        "redblack" -> RedBlack.fromOrcaStageContext(context)
+        "highlander" -> Highlander
+        null -> throw InvalidRequestException("Deployment strategy information not found for server group $name " +
+          "in application ${moniker.app}, account ${location.account}")
+        else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $name " +
+          "in application ${moniker.app}, account ${location.account} is not supported. " +
+          "Only redblack and highlander are supported at this time.")
+      }
     }
   }
 
