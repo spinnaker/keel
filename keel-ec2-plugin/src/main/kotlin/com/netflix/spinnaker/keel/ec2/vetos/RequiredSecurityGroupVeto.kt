@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import org.slf4j.LoggerFactory
@@ -38,11 +39,11 @@ class RequiredSecurityGroupVeto(
       } ?: VetoResponse(true, name())
 
   private suspend fun checkSecurityGroups(spec: SecurityGroupDependencies): Map<String, List<String>> {
+    val jobs = mutableListOf<Job>()
     val securityGroupMissingRegions = mutableMapOf<String, MutableList<String>>()
-    // TODO: need to await the completion of coroutines
-    spec.securityGroupsInRegions.forEach { (securityGroupName, regions) ->
-      regions.forEach { region ->
-        supervisorScope {
+    supervisorScope {
+      spec.securityGroupsInRegions.forEach { (securityGroupName, regions) ->
+        regions.forEach { region ->
           launch {
             if (!securityGroupExists(spec.account, spec.subnet, region, securityGroupName)) {
               with(securityGroupMissingRegions) {
@@ -51,9 +52,13 @@ class RequiredSecurityGroupVeto(
               }
             }
           }
+            .also { jobs.add(it) }
         }
       }
     }
+
+    jobs.forEach { it.join() }
+
     return securityGroupMissingRegions
   }
 
