@@ -68,35 +68,15 @@ data class RedBlack(
   )
 
   override val isStaggered: Boolean
-    get() = stagger?.isNotEmpty() ?: false
+    get() = stagger.isNotEmpty() ?: false
 
   override fun withDefaultsOmitted() =
     RedBlack(
-      maxServerGroups = if (maxServerGroups == DEFAULTS.maxServerGroups) {
-        null
-      } else {
-        maxServerGroups
-      },
-      delayBeforeDisable = if (delayBeforeDisable == DEFAULTS.delayBeforeDisable) {
-        null
-      } else {
-        delayBeforeDisable
-      },
-      delayBeforeScaleDown = if (delayBeforeScaleDown == DEFAULTS.delayBeforeScaleDown) {
-        null
-      } else {
-        delayBeforeScaleDown
-      },
-      resizePreviousToZero = if (resizePreviousToZero == DEFAULTS.resizePreviousToZero) {
-        null
-      } else {
-        resizePreviousToZero
-      },
-      rollbackOnFailure = if (rollbackOnFailure == DEFAULTS.rollbackOnFailure) {
-        null
-      } else {
-        rollbackOnFailure
-      }
+      maxServerGroups = nullIfDefault(maxServerGroups, DEFAULTS.maxServerGroups),
+      delayBeforeDisable = nullIfDefault(delayBeforeDisable, DEFAULTS.delayBeforeDisable),
+      delayBeforeScaleDown = nullIfDefault(delayBeforeScaleDown, DEFAULTS.delayBeforeScaleDown),
+      resizePreviousToZero = nullIfDefault(resizePreviousToZero, DEFAULTS.resizePreviousToZero),
+      rollbackOnFailure = nullIfDefault(rollbackOnFailure, DEFAULTS.rollbackOnFailure)
     )
 }
 
@@ -144,3 +124,6 @@ data class StaggeredRegion(
   val allowedHours: Set<Int>
     get() = AllowedTimesConstraintEvaluator.parseHours(hours)
 }
+
+private fun <T> nullIfDefault(value: T, default: T): T? =
+  if (value == default) null else value

@@ -60,6 +60,8 @@ import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
+import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
+import com.netflix.spinnaker.keel.orca.OrcaExecutionStage
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -427,13 +429,7 @@ class ClusterHandler(
 
       val spinnakerMetadata = entityTags.first().tags
         .find { it.name == "spinnaker:metadata" }
-        ?.let {
-          if (it.value !is Map<*, *>) {
-            null
-          } else {
-            it.value as Map<*, *>
-          }
-        }
+        ?.let { it.value as? Map<*, *> }
 
       if (spinnakerMetadata == null ||
         spinnakerMetadata["executionType"] == null ||
@@ -454,31 +450,15 @@ class ClusterHandler(
         }
       }.await()
 
-      // get context from the appropriate execution stage for the execution type, drilling down into the data as needed
       val context = if (executionType == "pipeline") {
         // TODO: or clone?
-        execution.stages?.find { stage -> stage["type"] == "deploy" }
+        execution.getDeployStageContext()
       } else { // orchestration (i.e. a task)
         // TODO: or cloneServerGroup?
-        execution.execution.stages?.find { stage -> stage["type"] == "createServerGroup" }
+        execution.getTaskContext("createServerGroup")
       }
-        ?.let { stage -> stage["context"] }
-        ?.let { context ->
-          if (context is Map<*, *>) {
-            context as Map<String, Any>
-          } else {
-            null
-          }
-        }
-        ?.let { context ->
-          if (executionType == "pipeline") {
-            (context["clusters"] as List<Map<String, Any>>?)?.first()
-          } else {
-            context
-          }
-        }
 
-      return@coroutineScope when (val strategy = context?.get("strategy")) {
+      when (val strategy = context?.get("strategy")) {
         "redblack" -> RedBlack.fromOrcaStageContext(context)
         "highlander" -> Highlander
         null -> throw InvalidRequestException("Deployment strategy information not found for server group $name " +
@@ -489,6 +469,21 @@ class ClusterHandler(
       }
     }
   }
+
+  private fun ExecutionDetailResponse.getDeployStageContext() =
+    stages
+      ?.find { stage -> stage["type"] == "deploy" }
+      ?.let { stage -> stage["context"] }
+      ?.let { context -> context as? OrcaExecutionStage }
+      ?.let { context ->
+        (context["clusters"] as? List<OrcaExecutionStage>)?.first()
+      }
+
+  private fun ExecutionDetailResponse.getTaskContext(taskType: String) =
+    execution.stages
+      ?.find { stage -> stage["type"] == taskType }
+      ?.let { stage -> stage["context"] }
+      ?.let { context -> context as? Map<String, Any> }
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
