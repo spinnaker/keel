@@ -2,8 +2,10 @@ package com.netflix.spinnaker.keel.ec2.vetos
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.OverrideableClusterDependencyContainer
+import com.netflix.spinnaker.keel.api.ec2.RegionalDependency
 import com.netflix.spinnaker.keel.api.ec2.securityGroupsByRegion
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -70,12 +72,12 @@ class RequiredSecurityGroupVeto(
   ): Boolean =
     runCatching {
       cloudDriver.getSecurityGroup(
-        DEFAULT_SERVICE_ACCOUNT,
-        account,
-        CLOUD_PROVIDER,
-        name,
-        region,
-        if (vpcName == null) null else cloudDriverCache.networkBy(vpcName, account, region).id
+        user = DEFAULT_SERVICE_ACCOUNT,
+        account = account,
+        type = CLOUD_PROVIDER,
+        securityGroupName = name,
+        region = region,
+        vpcId = if (vpcName == null) null else cloudDriverCache.networkBy(vpcName, account, region).id
       )
     }
       .onFailure { ex ->
@@ -87,8 +89,8 @@ class RequiredSecurityGroupVeto(
       }
       .isSuccess
 
-  data class SecurityGroupDependencies(
-    val securityGroupsInRegions: Map<String, Collection<String>>,
+  internal data class SecurityGroupDependencies(
+    val securityGroupsInRegions: Collection<RegionalDependency>,
     val account: String,
     val subnet: String?
   )
@@ -97,8 +99,8 @@ class RequiredSecurityGroupVeto(
     when (this) {
       is LoadBalancerSpec ->
         SecurityGroupDependencies(
-          securityGroupsInRegions = dependencies.securityGroupNames.associateWith {
-            locations.regions.map { it.name }
+          securityGroupsInRegions = dependencies.securityGroupNames.map {
+            RegionalDependency(it, locations.regions.map(SubnetAwareRegionSpec::name).toSet())
           },
           account = locations.account,
           subnet = locations.subnet
