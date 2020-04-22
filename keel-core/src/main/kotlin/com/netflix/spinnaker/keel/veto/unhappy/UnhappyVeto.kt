@@ -72,14 +72,6 @@ class UnhappyVeto(
     return allowedResponse()
   }
 
-  override fun messageFormat(): Map<String, Any> {
-    TODO("not implemented")
-  }
-
-  override fun passMessage(message: Map<String, Any>) {
-    TODO("not implemented")
-  }
-
   override fun currentRejections(): List<String> =
     unhappyVetoRepository.getAll().toList()
 

@@ -82,22 +82,6 @@ class RequiredSecurityGroupVeto(
       }
       .isSuccess
 
-  override fun messageFormat(): Map<String, Any> {
-    TODO("not implemented")
-  }
-
-  override fun passMessage(message: Map<String, Any>) {
-    TODO("not implemented")
-  }
-
-  override fun currentRejections(): List<String> {
-    TODO("not implemented")
-  }
-
-  override fun currentRejectionsByApp(application: String): List<String> {
-    TODO("not implemented")
-  }
-
   data class SecurityGroupDependencies(
     val securityGroupsInRegions: Map<String, Collection<String>>,
     val account: String,

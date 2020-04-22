@@ -40,22 +40,22 @@ interface Veto {
   /**
    * The message format a veto accepts.
    */
-  fun messageFormat(): Map<String, Any>
+  fun messageFormat(): Map<String, Any> = TODO("not implemented")
 
   /**
    * Pass a message to a veto.
    */
-  fun passMessage(message: Map<String, Any>)
+  fun passMessage(message: Map<String, Any>) { TODO("not implemented") }
 
   /**
    * What's currently being vetoed.
    */
-  fun currentRejections(): List<String>
+  fun currentRejections(): List<String> = TODO("not implemented")
 
   /**
    * What's currently being vetoed for an app.
    */
-  fun currentRejectionsByApp(application: String): List<String>
+  fun currentRejectionsByApp(application: String): List<String> = TODO("not implemented")
 
   fun allowedResponse(): VetoResponse =
     VetoResponse(allowed = true, vetoName = name())

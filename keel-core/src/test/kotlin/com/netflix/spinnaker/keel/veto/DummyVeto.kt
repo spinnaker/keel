@@ -28,20 +28,4 @@ class DummyVeto(
     } else {
       deniedResponse("None shall pass")
     }
-
-  override fun messageFormat(): Map<String, Any> {
-    TODO("not implemented")
-  }
-
-  override fun passMessage(message: Map<String, Any>) {
-    TODO("not implemented")
-  }
-
-  override fun currentRejections(): List<String> {
-    TODO("not implemented")
-  }
-
-  override fun currentRejectionsByApp(application: String): List<String> {
-    TODO("not implemented")
-  }
 }
