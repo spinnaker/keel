@@ -270,7 +270,7 @@ class SqlArtifactRepository(
   private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>): List<String> =
     versions.filter { version ->
       try {
-        TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+        version != "latest" && TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
       } catch (e: InvalidRegexException) {
         log.warn("Version $version produced more than one capture group based on artifact $artifact, excluding")
         false
@@ -759,7 +759,7 @@ class SqlArtifactRepository(
               }
               is DockerArtifact -> {
                 // filter out invalid docker tags
-                TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+                version != "latest" && TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
               }
             }
           }

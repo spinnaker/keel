@@ -176,7 +176,7 @@ class InMemoryArtifactRepository(
           // we only want to give valid versions, so this will filter out tags like "latest"
           // and others that don't fit the chosen versioning strategy.
           try {
-            TagComparator.parseWithRegex(it.version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+            it.version != "latest" && TagComparator.parseWithRegex(it.version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
           } catch (e: InvalidRegexException) {
             false
           }
@@ -424,7 +424,7 @@ class InMemoryArtifactRepository(
                     artifact.statuses.isEmpty() || it.status in artifact.statuses
                   }
                   is DockerArtifact -> {
-                    TagComparator.parseWithRegex(it.version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+                    it.version != "latest" && TagComparator.parseWithRegex(it.version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
                   }
                 }
               }
