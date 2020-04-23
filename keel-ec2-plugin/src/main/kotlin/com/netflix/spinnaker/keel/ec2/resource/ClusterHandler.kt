@@ -368,9 +368,7 @@ class ClusterHandler(
       account = exportable.account,
       application = exportable.moniker.app,
       serverGroupName = base.name
-    )
-      ?.withDefaultsOmitted()
-      ?: RedBlack().withDefaultsOmitted()
+    ) ?: RedBlack()
 
     val spec = ClusterSpec(
       moniker = exportable.moniker,
@@ -380,7 +378,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      deployWith = deployStrategy,
+      deployWith = deployStrategy.withDefaultsOmitted(),
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )

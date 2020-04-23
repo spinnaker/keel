@@ -4,8 +4,6 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.Highlander
 import com.netflix.spinnaker.keel.core.api.RedBlack
-import com.netflix.spinnaker.kork.exceptions.SystemException
-import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import kotlinx.coroutines.async
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -63,15 +61,21 @@ class ClusterExportHelper(
         return@coroutineScope null
       }
 
-      val executionType = spinnakerMetadata["executionType"]!!.toString()
-      val executionId = spinnakerMetadata["executionId"]!!.toString()
+      val executionType = spinnakerMetadata["executionType"].toString()
+      val executionId = spinnakerMetadata["executionId"].toString()
       val execution = async {
         when (executionType) {
           "orchestration" -> orcaService.getOrchestrationExecution(executionId)
           "pipeline" -> orcaService.getPipelineExecution(executionId)
-          else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
+          else -> null
         }
       }.await()
+
+      if (execution == null) {
+        log.error("Unsupported execution type $executionType in Spinnaker metadata. Unable to determine deployment " +
+          "strategy for server group $serverGroupName in application $application, account $account.")
+        return@coroutineScope null
+      }
 
       val context = if (executionType == "pipeline") {
         // TODO: or clone?
@@ -84,11 +88,15 @@ class ClusterExportHelper(
       when (val strategy = context?.get("strategy")) {
         "redblack" -> RedBlack.fromOrcaStageContext(context)
         "highlander" -> Highlander
-        null -> throw InvalidRequestException("Deployment strategy information not found for server group $serverGroupName " +
-          "in application $application, account $account")
-        else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $serverGroupName " +
-          "in application $application, account $account is not supported. " +
-          "Only redblack and highlander are supported at this time.")
+        null -> null.also {
+          log.error("Deployment strategy information not found for server group $serverGroupName " +
+            "in application $application, account $account")
+        }
+        else -> null.also {
+          log.error("Deployment strategy $strategy associated with server group $serverGroupName " +
+            "in application $application, account $account is not supported. " +
+            "Only redblack and highlander are supported at this time.")
+        }
       }
     }
   }

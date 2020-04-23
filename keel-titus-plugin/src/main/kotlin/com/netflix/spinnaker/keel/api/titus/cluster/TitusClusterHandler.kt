@@ -200,9 +200,7 @@ class TitusClusterHandler(
       account = exportable.account,
       application = exportable.moniker.app,
       serverGroupName = base.name
-    )
-      ?.withDefaultsOmitted()
-      ?: RedBlack().withDefaultsOmitted()
+    ) ?: RedBlack()
 
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
@@ -210,7 +208,7 @@ class TitusClusterHandler(
       _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf(),
       containerProvider = base.container,
-      deployWith = deployStrategy
+      deployWith = deployStrategy.withDefaultsOmitted()
     )
 
     spec.generateOverrides(
