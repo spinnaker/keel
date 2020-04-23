@@ -61,7 +61,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
     publisher
   )
   val clock = Clock.systemUTC()
-  val deploymentStrategyExporter = mockk<ClusterExportHelper>(relaxed = true)
+  val clusterExportHelper = mockk<ClusterExportHelper>(relaxed = true)
 
   val sg1West = SecurityGroupSummary("keel", "sg-325234532", "vpc-1")
   val sg2West = SecurityGroupSummary("keel-elb", "sg-235425234", "vpc-1")
@@ -140,7 +140,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
         taskLauncher,
         publisher,
         resolvers,
-        deploymentStrategyExporter
+        clusterExportHelper
       )
     }
 
@@ -164,7 +164,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
       coEvery { orcaService.orchestrate(resource.serviceAccount, any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
       every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
       coEvery {
-        deploymentStrategyExporter.discoverDeploymentStrategy("titus", "titustest", "keel", any())
+        clusterExportHelper.discoverDeploymentStrategy("titus", "titustest", "keel", any())
       } returns RedBlack()
     }
 

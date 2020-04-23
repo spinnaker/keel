@@ -74,10 +74,10 @@ internal class ClusterExportTests : JUnit5Minutests {
     combinedRepository,
     publisher
   )
-  val deploymentStrategyExporter = mockk<ClusterExportHelper>(relaxed = true)
+  val clusterExportHelper = mockk<ClusterExportHelper>(relaxed = true)
 
   val vpcWest = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")
-    val vpcEast = Network(CLOUD_PROVIDER, "vpc-4342589", "vpc0", "test", "us-east-1")
+  val vpcEast = Network(CLOUD_PROVIDER, "vpc-4342589", "vpc0", "test", "us-east-1")
   val sg1West = SecurityGroupSummary("keel", "sg-325234532", "vpc-1")
   val sg2West = SecurityGroupSummary("keel-elb", "sg-235425234", "vpc-1")
   val sg1East = SecurityGroupSummary("keel", "sg-279585936", "vpc-1")
@@ -174,7 +174,7 @@ internal class ClusterExportTests : JUnit5Minutests {
         clock,
         publisher,
         normalizers,
-        deploymentStrategyExporter
+        clusterExportHelper
       )
     }
 
@@ -210,7 +210,7 @@ internal class ClusterExportTests : JUnit5Minutests {
       coEvery { orcaService.orchestrate(resource.serviceAccount, any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
       every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
       coEvery {
-        deploymentStrategyExporter.discoverDeploymentStrategy("aws", "test", "keel", any())
+        clusterExportHelper.discoverDeploymentStrategy("aws", "test", "keel", any())
       } returns RedBlack()
     }
 

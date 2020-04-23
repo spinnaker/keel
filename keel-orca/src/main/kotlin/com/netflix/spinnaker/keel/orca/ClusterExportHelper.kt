@@ -2,6 +2,10 @@ package com.netflix.spinnaker.keel.orca
 
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
+import com.netflix.spinnaker.keel.core.api.Highlander
+import com.netflix.spinnaker.keel.core.api.RedBlack
+import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import kotlinx.coroutines.async
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -65,7 +69,7 @@ class ClusterExportHelper(
         when (executionType) {
           "orchestration" -> orcaService.getOrchestrationExecution(executionId)
           "pipeline" -> orcaService.getPipelineExecution(executionId)
-          else -> throw com.netflix.spinnaker.kork.exceptions.SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
+          else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
         }
       }.await()
 
@@ -78,11 +82,11 @@ class ClusterExportHelper(
       }
 
       when (val strategy = context?.get("strategy")) {
-        "redblack" -> com.netflix.spinnaker.keel.core.api.RedBlack.fromOrcaStageContext(context)
-        "highlander" -> com.netflix.spinnaker.keel.core.api.Highlander
-        null -> throw com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException("Deployment strategy information not found for server group $serverGroupName " +
+        "redblack" -> RedBlack.fromOrcaStageContext(context)
+        "highlander" -> Highlander
+        null -> throw InvalidRequestException("Deployment strategy information not found for server group $serverGroupName " +
           "in application $application, account $account")
-        else -> throw com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException("Deployment strategy $strategy associated with server group $serverGroupName " +
+        else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $serverGroupName " +
           "in application $application, account $account is not supported. " +
           "Only redblack and highlander are supported at this time.")
       }
