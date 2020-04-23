@@ -363,6 +363,15 @@ class ClusterHandler(
       regions = subnetAwareRegionSpecs
     ).withDefaultsOmitted()
 
+    val deployStrategy = clusterExportHelper.discoverDeploymentStrategy(
+      cloudProvider = "aws",
+      account = exportable.account,
+      application = exportable.moniker.app,
+      serverGroupName = base.name
+    )
+      ?.withDefaultsOmitted()
+      ?: RedBlack().withDefaultsOmitted()
+
     val spec = ClusterSpec(
       moniker = exportable.moniker,
       imageProvider = if (base.buildInfo?.packageName != null) {
@@ -371,13 +380,7 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      deployWith = clusterExportHelper.discoverDeploymentStrategy(
-        cloudProvider = "aws",
-        account = exportable.account,
-        application = exportable.moniker.app,
-        serverGroupName = base.name
-      ) ?: RedBlack()
-        .let { it.withDefaultsOmitted() },
+      deployWith = deployStrategy,
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )

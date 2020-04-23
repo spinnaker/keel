@@ -195,19 +195,22 @@ class TitusClusterHandler(
       }.toSet()
     )
 
+    val deployStrategy = clusterExportHelper.discoverDeploymentStrategy(
+      cloudProvider = "titus",
+      account = exportable.account,
+      application = exportable.moniker.app,
+      serverGroupName = base.name
+    )
+      ?.withDefaultsOmitted()
+      ?: RedBlack().withDefaultsOmitted()
+
     val spec = TitusClusterSpec(
       moniker = exportable.moniker,
       locations = locations,
       _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf(),
       containerProvider = base.container,
-      deployWith = clusterExportHelper.discoverDeploymentStrategy(
-        cloudProvider = "titus",
-        account = exportable.account,
-        application = exportable.moniker.app,
-        serverGroupName = base.name
-      ) ?: RedBlack()
-        .let { it.withDefaultsOmitted() }
+      deployWith = deployStrategy
     )
 
     spec.generateOverrides(
