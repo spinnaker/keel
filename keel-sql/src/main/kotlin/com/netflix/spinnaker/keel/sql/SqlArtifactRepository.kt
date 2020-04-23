@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.core.TagComparator
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
@@ -26,6 +27,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.comparator
+import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
@@ -247,10 +249,33 @@ class SqlArtifactRepository(
           .getValues(ARTIFACT_VERSIONS.VERSION)
       }
         .sortedWith(artifact.versioningStrategy.comparator)
+        .also { versions ->
+          return if (artifact is DockerArtifact) {
+            filterDockerVersions(artifact, versions)
+          } else {
+            versions
+          }
+        }
     } else {
       throw NoSuchArtifactException(artifact)
     }
   }
+
+  /**
+   * Given a docker artifact and a list of docker tags, filters out all tags that don't produce exactly one capture
+   * group with the provided regex.
+   *
+   * This means that this will filter out tags like "latest" from the list.
+   */
+  private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>): List<String> =
+    versions.filter { version ->
+      try {
+        TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+      } catch (e: InvalidRegexException) {
+        log.warn("Version $version produced more than one capture group based on artifact $artifact, excluding")
+        false
+      }
+    }
 
   override fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
@@ -726,8 +751,17 @@ class SqlArtifactRepository(
               Triple(version, releaseStatus, PromotionStatus.valueOf(promotionStatus))
             }
         }
-          .filter { (_, releaseStatus, _) ->
-            artifact !is DebianArtifact || artifact.statuses.isEmpty() || ArtifactStatus.valueOf(releaseStatus) in artifact.statuses
+          .filter { (version, releaseStatus, _) ->
+            when (artifact) {
+              is DebianArtifact -> {
+                // filter out invalid debian statuses
+                artifact.statuses.isEmpty() || ArtifactStatus.valueOf(releaseStatus) in artifact.statuses
+              }
+              is DockerArtifact -> {
+                // filter out invalid docker tags
+                TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+              }
+            }
           }
         val releaseStatuses: Set<ArtifactStatus> = unionedVersions
           .filter { (_, releaseStatus, _) ->
