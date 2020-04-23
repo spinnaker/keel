@@ -48,8 +48,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
-import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
-import com.netflix.spinnaker.keel.core.api.Highlander
 import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
@@ -60,8 +58,7 @@ import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
-import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
-import com.netflix.spinnaker.keel.orca.OrcaExecutionStage
+import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -69,8 +66,6 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import com.netflix.spinnaker.kork.exceptions.SystemException
-import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -89,7 +84,8 @@ class ClusterHandler(
   private val taskLauncher: TaskLauncher,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
-  resolvers: List<Resolver<*>>
+  resolvers: List<Resolver<*>>,
+  private val clusterExportHelper: ClusterExportHelper
 ) : ResourceHandler<ClusterSpec, Map<String, ServerGroup>>(resolvers) {
 
   private val mapper = configuredObjectMapper()
@@ -375,7 +371,13 @@ class ClusterHandler(
         null
       },
       locations = locations,
-      deployWith = (base.discoverDeploymentStrategy() ?: RedBlack()).let { it.withDefaultsOmitted() },
+      deployWith = clusterExportHelper.discoverDeploymentStrategy(
+        cloudProvider = "aws",
+        account = exportable.account,
+        application = exportable.moniker.app,
+        serverGroupName = base.name
+      ) ?: RedBlack()
+        .let { it.withDefaultsOmitted() },
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
       overrides = mutableMapOf()
     )
@@ -401,89 +403,6 @@ class ClusterHandler(
           .getCorrelatedExecutions("${resource.id}:$region")
           .isNotEmpty()
       }
-
-  /**
-   * Retrieve server group entity tags from clouddriver to identity the "source" of the server group (pipeline or
-   * orchestration), then retrieve execution details from orca to determine the deployment strategy used for that
-   * server group.
-   */
-  private suspend fun ServerGroup.discoverDeploymentStrategy(): ClusterDeployStrategy? {
-    return coroutineScope {
-      val entityTags = async {
-        log.debug("Looking for entity tags on server group $name in application ${moniker.app}, " +
-          "account ${location.account} in search of pipeline/task correlation.")
-        cloudDriverService.getEntityTags(
-          cloudProvider = "aws",
-          account = location.account,
-          application = moniker.app,
-          entityType = "servergroup",
-          entityId = name
-        )
-      }.await()
-
-      if (entityTags.isEmpty()) {
-        log.warn("Unable to find entity tags for server group $name in application ${moniker.app}, " +
-          "account ${location.account}.")
-        return@coroutineScope null
-      }
-
-      val spinnakerMetadata = entityTags.first().tags
-        .find { it.name == "spinnaker:metadata" }
-        ?.let { it.value as? Map<*, *> }
-
-      if (spinnakerMetadata == null ||
-        spinnakerMetadata["executionType"] == null ||
-        spinnakerMetadata["executionId"] == null
-      ) {
-        log.warn("Unable to find Spinnaker metadata for server group $name in application ${moniker.app}, " +
-          "account ${location.account} in entity tags.")
-        return@coroutineScope null
-      }
-
-      val executionType = spinnakerMetadata["executionType"]!!.toString()
-      val executionId = spinnakerMetadata["executionId"]!!.toString()
-      val execution = async {
-        when (executionType) {
-          "orchestration" -> orcaService.getOrchestrationExecution(executionId)
-          "pipeline" -> orcaService.getPipelineExecution(executionId)
-          else -> throw SystemException("Unsupported execution type $executionType in Spinnaker metadata.")
-        }
-      }.await()
-
-      val context = if (executionType == "pipeline") {
-        // TODO: or clone?
-        execution.getDeployStageContext()
-      } else { // orchestration (i.e. a task)
-        // TODO: or cloneServerGroup?
-        execution.getTaskContext("createServerGroup")
-      }
-
-      when (val strategy = context?.get("strategy")) {
-        "redblack" -> RedBlack.fromOrcaStageContext(context)
-        "highlander" -> Highlander
-        null -> throw InvalidRequestException("Deployment strategy information not found for server group $name " +
-          "in application ${moniker.app}, account ${location.account}")
-        else -> throw InvalidRequestException("Deployment strategy $strategy associated with server group $name " +
-          "in application ${moniker.app}, account ${location.account} is not supported. " +
-          "Only redblack and highlander are supported at this time.")
-      }
-    }
-  }
-
-  private fun ExecutionDetailResponse.getDeployStageContext() =
-    stages
-      ?.find { stage -> stage["type"] == "deploy" }
-      ?.let { stage -> stage["context"] }
-      ?.let { context -> context as? OrcaExecutionStage }
-      ?.let { context ->
-        (context["clusters"] as? List<OrcaExecutionStage>)?.first()
-      }
-
-  private fun ExecutionDetailResponse.getTaskContext(taskType: String) =
-    execution.stages
-      ?.find { stage -> stage["type"] == taskType }
-      ?.let { stage -> stage["context"] }
-      ?.let { context -> context as? Map<String, Any> }
 
   private fun ClusterSpec.generateOverrides(account: String, application: String, serverGroups: Map<String, ServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->

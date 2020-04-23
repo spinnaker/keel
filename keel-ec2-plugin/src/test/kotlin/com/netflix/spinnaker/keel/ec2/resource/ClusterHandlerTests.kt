@@ -42,6 +42,7 @@ import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
+import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
@@ -94,6 +95,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
     combinedRepository,
     publisher
   )
+  val deploymentStrategyExporter = mockk<ClusterExportHelper>(relaxed = true)
 
   val vpcWest = Network(CLOUD_PROVIDER, "vpc-1452353", "vpc0", "test", "us-west-2")
   val vpcEast = Network(CLOUD_PROVIDER, "vpc-4342589", "vpc0", "test", "us-east-1")
@@ -192,7 +194,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         taskLauncher,
         clock,
         publisher,
-        normalizers
+        normalizers,
+        deploymentStrategyExporter
       )
     }
 
@@ -227,6 +230,9 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
       coEvery { orcaService.orchestrate(resource.serviceAccount, any()) } returns TaskRefResponse("/tasks/${randomUUID()}")
       every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
+      coEvery {
+        deploymentStrategyExporter.discoverDeploymentStrategy("aws", "test", "keel", any())
+      } returns RedBlack()
     }
 
     after {
