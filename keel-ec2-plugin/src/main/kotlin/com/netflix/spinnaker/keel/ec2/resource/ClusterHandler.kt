@@ -313,7 +313,7 @@ class ClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): ClusterSpec {
-    // Get existing infrastructure -- this is a very costly call
+    // Get existing infrastructure
     val serverGroups = cloudDriverService.getServerGroups(
       account = exportable.account,
       moniker = exportable.moniker,
