@@ -27,13 +27,13 @@ import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.tags.EntityTags
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface CloudDriverService {
-
   @GET("/securityGroups/{account}/{type}/{region}/{securityGroupName}")
   suspend fun getSecurityGroup(
     @Header("X-SPINNAKER-USER") user: String,
@@ -44,13 +44,23 @@ interface CloudDriverService {
     @Query("vpcId") vpcId: String? = null
   ): SecurityGroupModel
 
-  @GET("/securityGroups/{account}/{provider}")
-  suspend fun getSecurityGroupSummaries(
+  @GET("/securityGroups/{account}/{provider}/{region}/{id}?getById=true")
+  suspend fun getSecurityGroupSummaryById(
     @Path("account") account: String,
     @Path("provider") provider: String,
-    @Query("region") region: String,
+    @Path("region") region: String,
+    @Path("id") id: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): Collection<SecurityGroupSummary>
+  ): SecurityGroupSummary?
+
+  @GET("/securityGroups/{account}/{provider}/{region}/{name}")
+  suspend fun getSecurityGroupSummaryByName(
+    @Path("account") account: String,
+    @Path("provider") provider: String,
+    @Path("region") region: String,
+    @Path("name") name: String,
+    @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
+  ): SecurityGroupSummary?
 
   @GET("/networks")
   suspend fun listNetworks(
@@ -145,4 +155,14 @@ interface CloudDriverService {
     @Path("account") account: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
   ): Map<String, Any?>
+
+  @GET("/tags")
+  suspend fun getEntityTags(
+    @Query("cloudProvider") cloudProvider: String,
+    @Query("account") account: String,
+    @Query("application") application: String,
+    @Query("entityType") entityType: String,
+    @Query("entityId") entityId: String,
+    @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
+  ): List<EntityTags>
 }
