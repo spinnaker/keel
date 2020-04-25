@@ -1,16 +1,10 @@
-package com.netflix.spinnaker.keel
+package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.Moniker
-import com.netflix.spinnaker.keel.api.SubnetAwareLocations
-import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
-import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.OVERRIDE_PASS
@@ -30,16 +24,14 @@ import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
-import com.netflix.spinnaker.keel.ec2.SPINNAKER_EC2_API_V1
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
-import com.netflix.spinnaker.keel.services.ApplicationService
+import com.netflix.spinnaker.keel.test.artifactReferenceResource
 import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
-import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.keel.test.versionedArtifactResource
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -50,7 +42,6 @@ import java.time.Instant
 import java.time.ZoneId
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
@@ -84,15 +75,6 @@ class ApplicationServiceTests : JUnit5Minutests {
       )
     )
 
-    val clusterDefaults = ClusterSpec.ServerGroupSpec(
-      launchConfiguration = ClusterSpec.LaunchConfigurationSpec(
-        instanceType = "m4.2xlarge",
-        ebsOptimized = true,
-        iamRole = "fnordInstanceProfile",
-        keyPair = "fnordKeyPair"
-      )
-    )
-
     val environments = listOf("test", "staging", "production").associateWith { name ->
       Environment(
         name = name,
@@ -106,46 +88,10 @@ class ApplicationServiceTests : JUnit5Minutests {
           emptySet()
         },
         resources = setOf(
-          // cluster with new-style artifact reference
-          resource(
-            kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
-            spec = ClusterSpec(
-              moniker = Moniker(application, "$name"),
-              imageProvider = ReferenceArtifactImageProvider(reference = "fnord"),
-              locations = SubnetAwareLocations(
-                account = "test",
-                vpc = "vpc0",
-                subnet = "internal (vpc0)",
-                regions = setOf(
-                  SubnetAwareRegionSpec(
-                    name = "us-west-2",
-                    availabilityZones = setOf("us-west-2a", "us-west-2b", "us-west-2c")
-                  )
-                )
-              ),
-              _defaults = clusterDefaults
-            )
-          ),
-          // cluster with old-style image provider
-          resource(
-            kind = SPINNAKER_EC2_API_V1.qualify("cluster"),
-            spec = ClusterSpec(
-              moniker = Moniker(application, "$name-east"),
-              imageProvider = ArtifactImageProvider(deliveryArtifact = artifact),
-              locations = SubnetAwareLocations(
-                account = "test",
-                vpc = "vpc0",
-                subnet = "internal (vpc0)",
-                regions = setOf(
-                  SubnetAwareRegionSpec(
-                    name = "us-east-1",
-                    availabilityZones = setOf("us-east-1a", "us-east-1b", "us-east-1c")
-                  )
-                )
-              ),
-              _defaults = clusterDefaults
-            )
-          )
+          // resource with new-style artifact reference
+          artifactReferenceResource(),
+          // resource with old-style image provider
+          versionedArtifactResource()
         )
       )
     }
@@ -191,7 +137,7 @@ class ApplicationServiceTests : JUnit5Minutests {
         repository.upsertDeliveryConfig(deliveryConfig)
         // these events are required because Resource.toResourceSummary() relies on events to determine resource status
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
-          repository.resourceAppendHistory(ResourceValid(resource))
+          repository.appendResourceHistory(ResourceValid(resource))
         }
         repository.storeArtifact(artifact, version0, ArtifactStatus.RELEASE)
         repository.storeArtifact(artifact, version1, ArtifactStatus.RELEASE)
@@ -230,16 +176,6 @@ class ApplicationServiceTests : JUnit5Minutests {
             comment = "Aye!"
           )
         )
-      }
-
-      test("can get resource summary by application") {
-        val summaries = applicationService.getResourceSummariesFor(application)
-
-        expect {
-          that(summaries.size).isEqualTo(6)
-          that(summaries.map { it.status }.filter { it == HAPPY }.size).isEqualTo(6)
-          that(summaries.map { it.moniker?.stack }).containsExactlyInAnyOrder("test", "staging", "production", "test-east", "staging-east", "production-east")
-        }
       }
 
       test("can get environment summaries by application") {

@@ -15,14 +15,16 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
-import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ApplicationEvent
+import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
+import com.netflix.spinnaker.keel.pause.ActuationPauser
+import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -37,6 +39,8 @@ import org.springframework.transaction.annotation.Transactional
 interface KeelRepository {
   val clock: Clock
   val publisher: ApplicationEventPublisher
+  val actuationPauser: ActuationPauser
+  val resourceRepository: ResourceRepository
   val log: Logger
 
   @Transactional(propagation = Propagation.REQUIRED)
@@ -62,6 +66,13 @@ interface KeelRepository {
       log.debug("Creating $resource")
       storeResource(resource)
       publisher.publishEvent(ResourceCreated(resource, clock))
+
+      // Account for the case where a resource was paused, then deleted (i.e. removed from management), then
+      // resubmitted, where we don't want to inadvertently resume actuation without the user knowing and giving
+      // explicit consent. Application paused events are injected in the resource event history dynamically.
+      if (actuationPauser.resourceIsPaused(resource.id)) {
+        publisher.publishEvent(ResourceActuationPaused(resource, clock))
+      }
     }
   }
 
@@ -132,27 +143,26 @@ interface KeelRepository {
 
   fun getResourcesByApplication(application: String): List<Resource<*>>
 
-  fun getResourceSummaries(deliveryConfig: DeliveryConfig): List<ResourceSummary>
-
   fun storeResource(resource: Resource<*>)
 
   fun deleteResource(id: String)
 
-  fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent>
+  fun applicationEventHistory(application: String, limit: Int = DEFAULT_MAX_EVENTS): List<ApplicationEvent>
 
   fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent>
 
-  fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent>
+  fun resourceEventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent> =
+    resourceRepository.eventHistory(id, limit)
 
   fun resourceLastEvent(id: String): ResourceEvent?
 
-  fun resourceAppendHistory(event: ResourceEvent)
+  fun appendResourceHistory(event: ResourceEvent)
+
+  fun appendApplicationHistory(event: ApplicationEvent)
 
   fun resourcesDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>>
 
   fun artifactsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact>
-
-  fun getResourceStatus(id: String): ResourceStatus
   // END ResourceRepository methods
 
   // START ArtifactRepository methods

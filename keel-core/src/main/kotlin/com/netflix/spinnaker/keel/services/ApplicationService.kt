@@ -27,7 +27,6 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
-import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
@@ -120,19 +119,6 @@ class ApplicationService(
       version = version,
       targetEnvironment = targetEnvironment)
   }
-
-  /**
-   * Returns a list of [ResourceSummary] for the specified application.
-   *
-   * This function assumes there's a single delivery config associated with the application.
-   */
-  fun getResourceSummariesFor(application: String): List<ResourceSummary> =
-    try {
-      val config = repository.getDeliveryConfigForApplication(application)
-      repository.getResourceSummaries(config)
-    } catch (e: NoSuchDeliveryConfigException) {
-      emptyList()
-    }
 
   /**
    * Returns a list of [EnvironmentSummary] for the specific application.

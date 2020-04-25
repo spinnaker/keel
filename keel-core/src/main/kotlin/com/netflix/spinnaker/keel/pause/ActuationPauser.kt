@@ -25,11 +25,11 @@ import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
+import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
+import com.netflix.spinnaker.keel.pause.PauseScope.RESOURCE
 import com.netflix.spinnaker.keel.persistence.PausedRepository
-import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope
-import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.APPLICATION
-import com.netflix.spinnaker.keel.persistence.PausedRepository.Scope.RESOURCE
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import java.time.Clock
 import org.slf4j.LoggerFactory
@@ -38,6 +38,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class ActuationPauser(
+  // TODO: replace use of individual repos with KeelRepository
   val resourceRepository: ResourceRepository,
   val pausedRepository: PausedRepository,
   val publisher: ApplicationEventPublisher,
@@ -53,7 +54,7 @@ class ActuationPauser(
     return isPaused(resource)
   }
 
-  fun getPauseScope(resource: Resource<*>): Scope? =
+  fun getPauseScope(resource: Resource<*>): PauseScope? =
     when {
       applicationIsPaused(resource.application) -> APPLICATION
       resourceIsPaused(resource.id) -> RESOURCE
@@ -66,9 +67,9 @@ class ActuationPauser(
   fun resourceIsPaused(id: String): Boolean =
     pausedRepository.resourcePaused(id)
 
-  fun pauseApplication(application: String) {
+  fun pauseApplication(application: String, user: String) {
     log.info("Pausing application $application")
-    pausedRepository.pauseApplication(application)
+    pausedRepository.pauseApplication(application, user)
     publisher.publishEvent(ApplicationActuationPaused(application, clock))
   }
 
@@ -78,16 +79,15 @@ class ActuationPauser(
     publisher.publishEvent(ApplicationActuationResumed(application, clock))
   }
 
-  fun pauseResource(id: String) {
+  fun pauseResource(id: String, user: String) {
     log.info("Pausing resource $id")
-    pausedRepository.pauseResource(id)
+    pausedRepository.pauseResource(id, user)
     publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), clock))
   }
 
   fun resumeResource(id: String) {
     log.info("Resuming resource $id")
     pausedRepository.resumeResource(id)
-    // helps a user not be confused by an out of date status from before a pause
     publisher.publishEvent(ResourceActuationResumed(resourceRepository.get(id), clock))
   }
 
@@ -102,10 +102,35 @@ class ActuationPauser(
     mutableListOf<PersistentEvent>()
       .let { events ->
         events.addAll(originalEvents)
-        val relevantAppEvents = resourceRepository
-          .applicationEventHistory(resource.application, events.last().timestamp)
+
+        val oldestResourceEvent = events.last()
+
+        if (oldestResourceEvent is ResourceCreated) {
+          val appPause = pausedRepository.getPause(APPLICATION, resource.application)
+          val resourcePause = pausedRepository.getPause(RESOURCE, resource.id)
+
+          // If the app was paused before the resource was created, and hasn't yet been resumed,
+          // we add that event to the history so the resource event history makes sense against its status
+          if (appPause != null && appPause.pausedAt.isBefore(oldestResourceEvent.timestamp)) {
+            events.add(ApplicationActuationPaused(resource.application, appPause.pausedAt))
+          }
+
+          // Similarly, if the resource itself had been paused, then was deleted and recreated,
+          // we add a corresponding event to the history
+          if (resourcePause != null && resourcePause.pausedAt.isBefore(oldestResourceEvent.timestamp)) {
+            events.add(ResourceActuationPaused(resource, resourcePause.pausedAt))
+          }
+        }
+
+        // Add all other app paused/resumed events from after the oldest resource event
+        resourceRepository
+          .applicationEventHistory(resource.application, oldestResourceEvent.timestamp)
           .filter { it is ApplicationActuationPaused || it is ApplicationActuationResumed }
-        events.addAll(relevantAppEvents)
+          .also { relevantAppEvents ->
+            events.addAll(relevantAppEvents)
+          }
+
+        // Always sort by timestamp to put events in the right positions
         events.sortedByDescending { it.timestamp }
       }
 }

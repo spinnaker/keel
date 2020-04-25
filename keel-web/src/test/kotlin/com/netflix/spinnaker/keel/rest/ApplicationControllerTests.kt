@@ -218,7 +218,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
 
       context("with paused application") {
         before {
-          actuationPauser.pauseApplication(application)
+          actuationPauser.pauseApplication(application, "keel@keel.io")
         }
 
         after {
