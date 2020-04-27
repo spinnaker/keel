@@ -268,13 +268,17 @@ class SqlArtifactRepository(
    * This means that this will filter out tags like "latest" from the list.
    */
   private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>): List<String> =
-    versions.filter { version ->
-      try {
-        version != "latest" && TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
-      } catch (e: InvalidRegexException) {
-        log.warn("Version $version produced more than one capture group based on artifact $artifact, excluding")
-        false
-      }
+    versions.filter { shouldInclude(it, artifact) }
+
+  /**
+   * Returns true if a docker tag is not latest and the regex produces exactly one capture group on the tag, false otherwise.
+   */
+  private fun shouldInclude(tag: String, artifact: DockerArtifact) =
+    try {
+      tag != "latest" && TagComparator.parseWithRegex(tag, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
+    } catch (e: InvalidRegexException) {
+      log.warn("Version $tag produced more than one capture group based on artifact $artifact, excluding")
+      false
     }
 
   override fun latestVersionApprovedIn(
@@ -716,6 +720,7 @@ class SqlArtifactRepository(
           .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
           .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
           .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
+          .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
         val pendingVersions = jooq
           .select(
             ARTIFACT_VERSIONS.VERSION,
@@ -737,6 +742,7 @@ class SqlArtifactRepository(
           .and(ENVIRONMENT.NAME.eq(environment.name))
           .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
           .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
+          .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
           .andNotExists(
             selectOne()
               .from(ENVIRONMENT_ARTIFACT_VERSIONS)
@@ -751,18 +757,15 @@ class SqlArtifactRepository(
               Triple(version, releaseStatus, PromotionStatus.valueOf(promotionStatus))
             }
         }
-          .filter { (version, releaseStatus, _) ->
-            when (artifact) {
-              is DebianArtifact -> {
-                // filter out invalid debian statuses
-                artifact.statuses.isEmpty() || ArtifactStatus.valueOf(releaseStatus) in artifact.statuses
-              }
-              is DockerArtifact -> {
-                // filter out invalid docker tags
-                version != "latest" && TagComparator.parseWithRegex(version, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
-              }
+          .filter { (version, _, _) ->
+            if (artifact is DockerArtifact) {
+              // filter out invalid docker tags
+              shouldInclude(version, artifact)
+            } else {
+              true
             }
           }
+
         val releaseStatuses: Set<ArtifactStatus> = unionedVersions
           .filter { (_, releaseStatus, _) ->
             releaseStatus != null
