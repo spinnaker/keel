@@ -116,6 +116,8 @@ interface KeelRepository {
   fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
 
   fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig>
+
+  fun getAll(): Collection<DeliveryConfig>
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods

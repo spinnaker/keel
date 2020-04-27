@@ -221,6 +221,9 @@ class InMemoryDeliveryConfigRepository(
       .map { name -> configs[name] ?: error("No delivery config named $name") }
   }
 
+  override fun getAll(): Collection<DeliveryConfig> =
+    configs.values.toList()
+
   private val Environment.resourceIds: Iterable<String>
     get() = resources.map { it.id }
 

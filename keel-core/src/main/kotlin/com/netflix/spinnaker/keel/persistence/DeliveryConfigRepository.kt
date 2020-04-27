@@ -141,6 +141,8 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String): Set<String>
   fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String)
   fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
+
+  fun getAll(): Collection<DeliveryConfig>
 }
 
 abstract class NoSuchDeliveryConfigException(message: String) :

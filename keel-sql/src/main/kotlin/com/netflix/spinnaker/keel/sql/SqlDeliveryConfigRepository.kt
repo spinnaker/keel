@@ -987,6 +987,16 @@ class SqlDeliveryConfigRepository(
     }
       ?: throw NoSuchDeliveryConfigName(name)
 
+  override fun getAll(): Collection<DeliveryConfig> =
+    sqlRetry.withRetry(READ) {
+      jooq
+        .select(DELIVERY_CONFIG.NAME, DELIVERY_CONFIG.APPLICATION, DELIVERY_CONFIG.SERVICE_ACCOUNT, DELIVERY_CONFIG.API_VERSION)
+        .from(DELIVERY_CONFIG)
+        .fetch { (name, application, serviceAccount, apiVersion) ->
+          DeliveryConfig(name = name, application = application, serviceAccount = serviceAccount, apiVersion = apiVersion)
+        }
+    }
+
   private fun Instant.toLocal() = atZone(clock.zone).toLocalDateTime()
 
   companion object {

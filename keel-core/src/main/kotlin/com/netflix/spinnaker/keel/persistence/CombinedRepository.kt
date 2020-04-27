@@ -294,6 +294,9 @@ class CombinedRepository(
 
   override fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
     deliveryConfigRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
+
+  override fun getAll(): Collection<DeliveryConfig> =
+    deliveryConfigRepository.getAll()
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods

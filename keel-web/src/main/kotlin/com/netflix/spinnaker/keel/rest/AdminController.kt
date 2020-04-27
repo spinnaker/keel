@@ -1,9 +1,12 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.HttpStatus.NO_CONTENT
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -36,4 +39,14 @@ class AdminController(
   )
   fun getPausedApplications() =
     actuationPauser.pausedApplications()
+
+  @GetMapping(
+    path = ["/applications"],
+    produces = [MediaType.APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  fun getManagedApplications() =
+    repository.getAll().map {
+      ApplicationSummary(config = it,
+        isPaused = actuationPauser.applicationIsPaused(it.application))
+    }
 }
