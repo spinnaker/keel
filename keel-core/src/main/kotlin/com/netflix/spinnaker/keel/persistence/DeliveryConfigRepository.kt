@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.kork.exceptions.ConfigurationException
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -142,7 +143,7 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String)
   fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
 
-  fun getAll(): Collection<DeliveryConfig>
+  fun getApplicationSummaries(): Collection<ApplicationSummary>
 }
 
 abstract class NoSuchDeliveryConfigException(message: String) :

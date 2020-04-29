@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
@@ -295,8 +296,8 @@ class CombinedRepository(
   override fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
     deliveryConfigRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
 
-  override fun getAll(): Collection<DeliveryConfig> =
-    deliveryConfigRepository.getAll()
+  override fun getApplicationSummaries(): Collection<ApplicationSummary> =
+    deliveryConfigRepository.getApplicationSummaries()
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods

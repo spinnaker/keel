@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -117,7 +118,7 @@ interface KeelRepository {
 
   fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig>
 
-  fun getAll(): Collection<DeliveryConfig>
+  fun getApplicationSummaries(): Collection<ApplicationSummary>
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods

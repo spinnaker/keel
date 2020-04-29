@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -221,8 +222,14 @@ class InMemoryDeliveryConfigRepository(
       .map { name -> configs[name] ?: error("No delivery config named $name") }
   }
 
-  override fun getAll(): Collection<DeliveryConfig> =
-    configs.values.toList()
+  // TODO[GY]: this does not take into account puased applications, as we can't wire it here.
+  // Will add it once we'll refactor the db structure
+  override fun getApplicationSummaries(): Collection<ApplicationSummary> =
+    configs.values.map {
+      ApplicationSummary(name = it.name, application = it.application, apiVersion = it.apiVersion,
+        serviceAccount = it.serviceAccount)
+      // should also have something like isPaused = paused.contains(InMemoryPausedRepository.Record(APPLICATION, it.application))
+    }
 
   private val Environment.resourceIds: Iterable<String>
     get() = resources.map { it.id }

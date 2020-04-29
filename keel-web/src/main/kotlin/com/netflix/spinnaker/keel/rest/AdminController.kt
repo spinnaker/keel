@@ -1,8 +1,6 @@
 package com.netflix.spinnaker.keel.rest
 
-import com.netflix.spinnaker.keel.core.api.ApplicationSummary
-import com.netflix.spinnaker.keel.pause.ActuationPauser
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.AdminService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.HttpStatus.NO_CONTENT
@@ -17,8 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/admin"])
 class AdminController(
-  private val repository: KeelRepository,
-  private val actuationPauser: ActuationPauser
+  private val adminService: AdminService
 ) {
   private val log by lazy { getLogger(javaClass) }
 
@@ -29,24 +26,19 @@ class AdminController(
   fun deleteApplicationData(
     @PathVariable("application") application: String
   ) {
-    log.debug("Deleting all data for application: $application")
-    val config = repository.getDeliveryConfigForApplication(application)
-    repository.deleteDeliveryConfig(config.name)
+    adminService.deleteApplicationData(application)
   }
 
   @GetMapping(
     path = ["/applications/paused"]
   )
   fun getPausedApplications() =
-    actuationPauser.pausedApplications()
+    adminService.getPausedApplications()
 
   @GetMapping(
     path = ["/applications"],
     produces = [MediaType.APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   fun getManagedApplications() =
-    repository.getAll().map {
-      ApplicationSummary(config = it,
-        isPaused = actuationPauser.applicationIsPaused(it.application))
-    }
+    adminService.getManagedApplications()
 }

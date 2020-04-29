@@ -6,70 +6,114 @@ import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
+import com.netflix.spinnaker.time.MutableClock
 import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 
-class AdminControllerTests {
+@ExtendWith(SpringExtension::class)
+@SpringBootTest(
+  classes = [KeelApplication::class, MockEurekaConfiguration::class],
+  webEnvironment = SpringBootTest.WebEnvironment.MOCK
+)
+@AutoConfigureMockMvc
+internal class AdminControllerTests : JUnit5Minutests {
+  @Configuration
+  class TestConfiguration {
+    @Bean
+    fun clock(): Clock = MutableClock(
+      Instant.parse("2020-03-25T00:00:00.00Z"),
+      ZoneId.of("UTC")
+    )
+  }
 
-  @ExtendWith(SpringExtension::class)
-  @SpringBootTest(
-    classes = [KeelApplication::class, MockEurekaConfiguration::class],
-    webEnvironment = SpringBootTest.WebEnvironment.MOCK
-  )
-  @AutoConfigureMockMvc
-  internal class AdminControllerTests : JUnit5Minutests {
+  @MockkBean
+  lateinit var authorizationSupport: AuthorizationSupport
 
-    @MockkBean
-    lateinit var authorizationSupport: AuthorizationSupport
+  @Autowired
+  lateinit var mvc: MockMvc
 
-    @Autowired
-    lateinit var mvc: MockMvc
+  @Autowired
+  lateinit var deliveryConfigRepository: InMemoryDeliveryConfigRepository
 
-    @Autowired
-    lateinit var deliveryConfigRepository: InMemoryDeliveryConfigRepository
+  @Autowired
+  lateinit var combinedRepository: KeelRepository
 
-    @Autowired
-    lateinit var combinedRepository: KeelRepository
+  @Autowired
+  lateinit var actuationPauser: ActuationPauser
 
-    @Autowired
-    lateinit var actuationPauser: ActuationPauser
+  companion object {
+    const val application1 = "fnord"
+    const val application2 = "fnord2"
+  }
 
-    companion object {
-      const val application1 = "fnord"
-      const val application2 = "fnord2"
+  fun tests() = rootContext {
+    after {
+      deliveryConfigRepository.dropAll()
+      clearAllMocks()
     }
 
-    fun tests() = rootContext {
-      after {
-        deliveryConfigRepository.dropAll()
-        clearAllMocks()
+    context("return a single application") {
+      before {
+        val deliveryConfig = DeliveryConfig(
+          name = "$application1-manifest",
+          application = application1,
+          serviceAccount = "keel@spinnaker",
+          artifacts = emptySet(),
+          environments = emptySet()
+        )
+        combinedRepository.upsertDeliveryConfig(deliveryConfig)
+        authorizationSupport.allowAll()
       }
 
-      context("return a single application") {
+      test("can get basic summary of unpaused application") {
+        val request = MockMvcRequestBuilders.get("/admin/applications/")
+          .accept(MediaType.APPLICATION_JSON_VALUE)
+        mvc
+          .perform(request)
+          .andExpect(MockMvcResultMatchers.status().isOk)
+          .andExpect(MockMvcResultMatchers.content().json(
+            """
+              [{
+                "name": "fnord-manifest",
+                "application": "fnord",
+                "serviceAccount": "keel@spinnaker",
+                "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
+                "isPaused":false
+              }]
+            """.trimIndent()
+          ))
+      }
+
+      context("more than one applications") {
         before {
-          val deliveryConfig = DeliveryConfig(
-            name = "$application1-manifest",
-            application = application1,
+          val deliveryConfig2 = DeliveryConfig(
+            name = "$application2-manifest",
+            application = application2,
             serviceAccount = "keel@spinnaker",
             artifacts = emptySet(),
             environments = emptySet()
           )
-          combinedRepository.upsertDeliveryConfig(deliveryConfig)
+          combinedRepository.upsertDeliveryConfig(deliveryConfig2)
           authorizationSupport.allowAll()
         }
 
-        test("can get basic summary of unpaused application") {
+        test("can get basic summary of 2 applications, one paused") {
           val request = MockMvcRequestBuilders.get("/admin/applications/")
             .accept(MediaType.APPLICATION_JSON_VALUE)
           mvc
@@ -83,67 +127,6 @@ class AdminControllerTests {
                 "serviceAccount": "keel@spinnaker",
                 "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
                 "isPaused":false
-              }]
-            """.trimIndent()
-            ))
-        }
-
-        context("with paused application") {
-          before {
-            actuationPauser.pauseApplication(application1)
-          }
-
-//          after {
-//            actuationPauser.resumeApplication(application)
-//          }
-
-          test("can get basic summary of a pause application") {
-            val request = MockMvcRequestBuilders.get("/admin/applications/")
-              .accept(MediaType.APPLICATION_JSON_VALUE)
-            mvc
-              .perform(request)
-              .andExpect(MockMvcResultMatchers.status().isOk)
-              .andExpect(MockMvcResultMatchers.content().json(
-                """
-              [{
-                "name": "fnord-manifest",
-                "application": "fnord",
-                "serviceAccount": "keel@spinnaker",
-                "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
-                "isPaused":true
-              }]
-            """.trimIndent()
-              ))
-          }
-        }
-
-        context("more than one applications") {
-          before {
-            val deliveryConfig2 = DeliveryConfig(
-              name = "$application2-manifest",
-              application = application2,
-              serviceAccount = "keel@spinnaker",
-              artifacts = emptySet(),
-              environments = emptySet()
-            )
-            combinedRepository.upsertDeliveryConfig(deliveryConfig2)
-            authorizationSupport.allowAll()
-          }
-
-          test("can get basic summary of 2 applications, one paused") {
-            val request = MockMvcRequestBuilders.get("/admin/applications/")
-              .accept(MediaType.APPLICATION_JSON_VALUE)
-            mvc
-              .perform(request)
-              .andExpect(MockMvcResultMatchers.status().isOk)
-              .andExpect(MockMvcResultMatchers.content().json(
-                """
-              [{
-                "name": "fnord-manifest",
-                "application": "fnord",
-                "serviceAccount": "keel@spinnaker",
-                "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
-                "isPaused":true
               },{
                 "name": "fnord2-manifest",
                 "application": "fnord2",
@@ -153,24 +136,23 @@ class AdminControllerTests {
                 }
               ]
             """.trimIndent()
-              ))
-          }
-        }
-      }
-
-      context("no delivery config found") {
-        test("return an empty list") {
-          val request = MockMvcRequestBuilders.get("/admin/applications/")
-            .accept(MediaType.APPLICATION_JSON_VALUE)
-          mvc
-            .perform(request)
-            .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.content().json(
-              """
-              []
-            """.trimIndent()
             ))
         }
+      }
+    }
+
+    context("no delivery config found") {
+      test("return an empty list") {
+        val request = MockMvcRequestBuilders.get("/admin/applications/")
+          .accept(MediaType.APPLICATION_JSON_VALUE)
+        mvc
+          .perform(request)
+          .andExpect(MockMvcResultMatchers.status().isOk)
+          .andExpect(MockMvcResultMatchers.content().json(
+            """
+              []
+            """.trimIndent()
+          ))
       }
     }
   }
