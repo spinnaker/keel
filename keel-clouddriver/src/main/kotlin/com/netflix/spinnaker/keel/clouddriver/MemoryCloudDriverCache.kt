@@ -73,9 +73,9 @@ class MemoryCloudDriverCache(
       "Security group with id $id not found in the $account account and $region region"
     ) {
       val credential = credentialBy(account)
-
-      // TODO-AJ should be able to swap this out for a call to `/search`
       cloudDriver.getSecurityGroupSummaryById(account, credential.type, region, id, DEFAULT_SERVICE_ACCOUNT)
+    }.also {
+      securityGroupSummariesByIdOrName.put("$account:$region:${it.name}", it)
     }
 
   override fun securityGroupByName(account: String, region: String, name: String): SecurityGroupSummary =
@@ -84,9 +84,9 @@ class MemoryCloudDriverCache(
       "Security group with name $name not found in the $account account and $region region"
     ) {
       val credential = credentialBy(account)
-
-      // TODO-AJ should be able to swap this out for a call to `/search`
       cloudDriver.getSecurityGroupSummaryByName(account, credential.type, region, name, DEFAULT_SERVICE_ACCOUNT)
+    }.also {
+      securityGroupSummariesByIdOrName.put("$account:$region:${it.id}", it)
     }
 
   override fun networkBy(id: String): Network =

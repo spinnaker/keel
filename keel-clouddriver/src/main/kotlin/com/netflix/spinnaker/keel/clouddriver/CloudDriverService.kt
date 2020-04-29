@@ -52,7 +52,7 @@ interface CloudDriverService {
     @Path("region") region: String,
     @Path("id") id: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): SecurityGroupSummary?
+  ): SecurityGroupSummary
 
   @GET("/securityGroups/{account}/{provider}/{region}/{name}")
   suspend fun getSecurityGroupSummaryByName(
@@ -61,7 +61,7 @@ interface CloudDriverService {
     @Path("region") region: String,
     @Path("name") name: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): SecurityGroupSummary?
+  ): SecurityGroupSummary
 
   @GET("/networks")
   suspend fun listNetworks(
