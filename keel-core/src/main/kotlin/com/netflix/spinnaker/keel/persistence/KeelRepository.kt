@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -71,7 +72,7 @@ interface KeelRepository {
       // resubmitted, where we don't want to inadvertently resume actuation without the user knowing and giving
       // explicit consent. Application paused events are injected in the resource event history dynamically.
       if (actuationPauser.resourceIsPaused(resource.id)) {
-        publisher.publishEvent(ResourceActuationPaused(resource, clock))
+        publisher.publishEvent(ResourceActuationPaused(resource, resource.serviceAccount, clock))
       }
     }
   }

@@ -70,7 +70,7 @@ class ActuationPauser(
   fun pauseApplication(application: String, user: String) {
     log.info("Pausing application $application")
     pausedRepository.pauseApplication(application, user)
-    publisher.publishEvent(ApplicationActuationPaused(application, clock))
+    publisher.publishEvent(ApplicationActuationPaused(application, user, clock))
   }
 
   fun resumeApplication(application: String) {
@@ -82,7 +82,7 @@ class ActuationPauser(
   fun pauseResource(id: String, user: String) {
     log.info("Pausing resource $id")
     pausedRepository.pauseResource(id, user)
-    publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), clock))
+    publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), user, clock))
   }
 
   fun resumeResource(id: String) {
@@ -112,13 +112,13 @@ class ActuationPauser(
           // If the app was paused before the resource was created, and hasn't yet been resumed,
           // we add that event to the history so the resource event history makes sense against its status
           if (appPause != null && appPause.pausedAt.isBefore(oldestResourceEvent.timestamp)) {
-            events.add(ApplicationActuationPaused(resource.application, appPause.pausedAt))
+            events.add(ApplicationActuationPaused(resource.application, appPause.pausedAt, appPause.pausedBy))
           }
 
           // Similarly, if the resource itself had been paused, then was deleted and recreated,
           // we add a corresponding event to the history
           if (resourcePause != null && resourcePause.pausedAt.isBefore(oldestResourceEvent.timestamp)) {
-            events.add(ResourceActuationPaused(resource, resourcePause.pausedAt))
+            events.add(ResourceActuationPaused(resource, resourcePause.pausedAt, resourcePause.pausedBy))
           }
         }
 

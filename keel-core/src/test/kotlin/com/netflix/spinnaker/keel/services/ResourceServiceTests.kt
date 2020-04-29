@@ -24,6 +24,7 @@ import java.time.Duration
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.map
 
@@ -123,6 +124,14 @@ class ResourceServiceTests : JUnit5Minutests {
               ApplicationActuationPaused::class.java
             )
         }
+
+        test("paused event specifies who paused the application") {
+          val events = resourceService.getEnrichedEventHistory(resource.id)
+          expectThat(events.last())
+            .isA<ApplicationActuationPaused>()
+            .get { triggeredBy }
+            .isEqualTo("keel@keel.io")
+        }
       }
 
       context("with previous event history wiped and a new resource created after the application is paused") {
@@ -170,6 +179,14 @@ class ResourceServiceTests : JUnit5Minutests {
               ResourceCreated::class.java,
               ResourceActuationPaused::class.java
             )
+        }
+
+        test("paused event specifies who paused the resource") {
+          val events = resourceService.getEnrichedEventHistory(resource.id)
+          expectThat(events.last())
+            .isA<ResourceActuationPaused>()
+            .get { triggeredBy }
+            .isEqualTo("keel@keel.io")
         }
       }
     }
