@@ -16,6 +16,7 @@
 package com.netflix.spinnaker.keel.clouddriver
 
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
+import com.netflix.spinnaker.keel.clouddriver.model.AmazonLoadBalancer
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
 import com.netflix.spinnaker.keel.clouddriver.model.ClassicLoadBalancerModel
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
@@ -44,23 +45,13 @@ interface CloudDriverService {
     @Query("vpcId") vpcId: String? = null
   ): SecurityGroupModel
 
-  @GET("/securityGroups/{account}/{provider}/{region}/{id}?getById=true")
-  suspend fun getSecurityGroupSummaryById(
+  @GET("/securityGroups/{account}/{provider}")
+  suspend fun getSecurityGroupSummaries(
     @Path("account") account: String,
     @Path("provider") provider: String,
-    @Path("region") region: String,
-    @Path("id") id: String,
+    @Query("region") region: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): SecurityGroupSummary?
-
-  @GET("/securityGroups/{account}/{provider}/{region}/{name}")
-  suspend fun getSecurityGroupSummaryByName(
-    @Path("account") account: String,
-    @Path("provider") provider: String,
-    @Path("region") region: String,
-    @Path("name") name: String,
-    @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): SecurityGroupSummary?
+  ): Collection<SecurityGroupSummary>
 
   @GET("/networks")
   suspend fun listNetworks(
@@ -78,6 +69,12 @@ interface CloudDriverService {
     @Path("account") account: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
   ): Credential
+
+  @GET("/applications/{application}/loadBalancers")
+  suspend fun loadBalancersForApplication(
+    @Header("X-SPINNAKER-USER") user: String,
+    @Path("application") application: String
+  ): List<AmazonLoadBalancer>
 
   @GET("/{provider}/loadBalancers/{account}/{region}/{name}")
   suspend fun getClassicLoadBalancer(
