@@ -84,20 +84,9 @@ object MemoryCloudDriverCacheTest {
   }
 
   @Test
-  fun `an invalid security group id throws an exception`() {
-    every {
-      cloudDriver.getSecurityGroupSummaryById("prod", "aws", "us-east-1", "sg-4")
-    } returns null
-
-    expectThrows<ResourceNotFound> {
-      subject.securityGroupById("prod", "us-east-1", "sg-4")
-    }
-  }
-
-  @Test
   fun `a 404 from CloudDriver is translated into a ResourceNotFound exception`() {
     every {
-      cloudDriver.getSecurityGroupSummaries("prod", "aws", "us-east-1")
+      cloudDriver.getSecurityGroupSummaryById("prod", "aws", "us-east-1", "sg-4")
     } throws RETROFIT_NOT_FOUND
 
     expectThrows<ResourceNotFound> {
@@ -108,11 +97,11 @@ object MemoryCloudDriverCacheTest {
   @Test
   fun `any other exception is propagated`() {
     every {
-      cloudDriver.getSecurityGroupSummaries("prod", "aws", "us-east-1")
+      cloudDriver.getSecurityGroupSummaryById("prod", "aws", "us-east-1", "sg-1")
     } throws RETROFIT_SERVICE_UNAVAILABLE
 
     expectThrows<CacheLoadingException> {
-      subject.securityGroupById("prod", "us-east-1", "sg-4")
+      subject.securityGroupById("prod", "us-east-1", "sg-1")
     }
   }
 
