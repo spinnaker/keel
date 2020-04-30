@@ -96,7 +96,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
   )
 
   private fun SubmittedDeliveryConfig.toDeliveryConfig(): DeliveryConfig = DeliveryConfig(
-    name = name,
+    name = safeName,
     application = application,
     serviceAccount = serviceAccount,
     artifacts = artifacts,
@@ -125,7 +125,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
 
     context("getting a delivery config manifest") {
       before {
-        every { repository.getDeliveryConfig(deliveryConfig.name) } returns deliveryConfig.toDeliveryConfig()
+        every { repository.getDeliveryConfig(deliveryConfig.safeName) } returns deliveryConfig.toDeliveryConfig()
       }
 
       setOf(APPLICATION_YAML, APPLICATION_JSON).forEach { contentType ->
