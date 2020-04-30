@@ -226,7 +226,7 @@ class InMemoryDeliveryConfigRepository(
   // Will add it once we'll refactor the db structure
   override fun getApplicationSummaries(): Collection<ApplicationSummary> =
     configs.values.map {
-      ApplicationSummary(name = it.name, application = it.application, apiVersion = it.apiVersion,
+      ApplicationSummary(deliveryConfigName = it.name, application = it.application, apiVersion = it.apiVersion,
         serviceAccount = it.serviceAccount)
       // should also have something like isPaused = paused.contains(InMemoryPausedRepository.Record(APPLICATION, it.application))
     }

@@ -997,7 +997,7 @@ class SqlDeliveryConfigRepository(
         .from(DELIVERY_CONFIG)
         .leftOuterJoin(PAUSED).on(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION).and(PAUSED.SCOPE.eq(APPLICATION.toString())))
         .fetch { (name, application, serviceAccount, apiVersion, paused) ->
-          ApplicationSummary(name = name, application = application, serviceAccount = serviceAccount, apiVersion = apiVersion, isPaused = paused != null)
+          ApplicationSummary(deliveryConfigName = name, application = application, serviceAccount = serviceAccount, apiVersion = apiVersion, isPaused = paused != null)
         }
     }
 

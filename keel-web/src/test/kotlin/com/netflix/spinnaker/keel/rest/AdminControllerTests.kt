@@ -6,25 +6,19 @@ import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
-import com.netflix.spinnaker.time.MutableClock
-import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
@@ -33,17 +27,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 )
 @AutoConfigureMockMvc
 internal class AdminControllerTests : JUnit5Minutests {
-  @Configuration
-  class TestConfiguration {
-    @Bean
-    fun clock(): Clock = MutableClock(
-      Instant.parse("2020-03-25T00:00:00.00Z"),
-      ZoneId.of("UTC")
-    )
-  }
-
-  @MockkBean
-  lateinit var authorizationSupport: AuthorizationSupport
 
   @Autowired
   lateinit var mvc: MockMvc
@@ -78,19 +61,18 @@ internal class AdminControllerTests : JUnit5Minutests {
           environments = emptySet()
         )
         combinedRepository.upsertDeliveryConfig(deliveryConfig)
-        authorizationSupport.allowAll()
       }
 
       test("can get basic summary of unpaused application") {
-        val request = MockMvcRequestBuilders.get("/admin/applications/")
+        val request = get("/admin/applications/")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc
           .perform(request)
-          .andExpect(MockMvcResultMatchers.status().isOk)
-          .andExpect(MockMvcResultMatchers.content().json(
+          .andExpect(status().isOk)
+          .andExpect(content().json(
             """
               [{
-                "name": "fnord-manifest",
+                "deliveryConfigName": "fnord-manifest",
                 "application": "fnord",
                 "serviceAccount": "keel@spinnaker",
                 "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
@@ -110,25 +92,24 @@ internal class AdminControllerTests : JUnit5Minutests {
             environments = emptySet()
           )
           combinedRepository.upsertDeliveryConfig(deliveryConfig2)
-          authorizationSupport.allowAll()
         }
 
-        test("can get basic summary of 2 applications, one paused") {
-          val request = MockMvcRequestBuilders.get("/admin/applications/")
+        test("can get basic summary of 2 applications") {
+          val request = get("/admin/applications/")
             .accept(MediaType.APPLICATION_JSON_VALUE)
           mvc
             .perform(request)
-            .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.content().json(
+            .andExpect(status().isOk)
+            .andExpect(content().json(
               """
               [{
-                "name": "fnord-manifest",
+                "deliveryConfigName": "fnord-manifest",
                 "application": "fnord",
                 "serviceAccount": "keel@spinnaker",
                 "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
                 "isPaused":false
               },{
-                "name": "fnord2-manifest",
+                "deliveryConfigName": "fnord2-manifest",
                 "application": "fnord2",
                 "serviceAccount": "keel@spinnaker",
                 "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
@@ -143,12 +124,12 @@ internal class AdminControllerTests : JUnit5Minutests {
 
     context("no delivery config found") {
       test("return an empty list") {
-        val request = MockMvcRequestBuilders.get("/admin/applications/")
+        val request = get("/admin/applications/")
           .accept(MediaType.APPLICATION_JSON_VALUE)
         mvc
           .perform(request)
-          .andExpect(MockMvcResultMatchers.status().isOk)
-          .andExpect(MockMvcResultMatchers.content().json(
+          .andExpect(status().isOk)
+          .andExpect(content().json(
             """
               []
             """.trimIndent()
