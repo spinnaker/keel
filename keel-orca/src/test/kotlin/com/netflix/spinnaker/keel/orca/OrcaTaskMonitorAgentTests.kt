@@ -25,12 +25,6 @@ import io.mockk.verify
 import java.time.Clock
 import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
-import strikt.api.expectCatching
-import strikt.api.expectThat
-import strikt.assertions.first
-import strikt.assertions.isA
-import strikt.assertions.isEqualTo
-import strikt.assertions.isFailure
 
 internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
 
