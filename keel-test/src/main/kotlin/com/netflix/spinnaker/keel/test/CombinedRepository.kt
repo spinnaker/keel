@@ -45,12 +45,3 @@ fun combinedInMemoryRepository(
   pausedRepository: InMemoryPausedRepository = InMemoryPausedRepository(clock)
 ): InMemoryCombinedRepository =
   InMemoryCombinedRepository(clock, deliveryConfigRepository, artifactRepository, resourceRepository, pausedRepository)
-
-fun combinedMockRepository(
-  deliveryConfigRepository: DeliveryConfigRepository = mockk(relaxed = true),
-  artifactRepository: ArtifactRepository = mockk(relaxed = true),
-  resourceRepository: ResourceRepository = mockk(relaxed = true),
-  clock: Clock = Clock.systemUTC(),
-  publisher: ApplicationEventPublisher = mockk(relaxed = true)
-): CombinedRepository =
-  CombinedRepository(deliveryConfigRepository, artifactRepository, resourceRepository, clock, publisher)
