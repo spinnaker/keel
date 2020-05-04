@@ -151,8 +151,6 @@ class ResourceService(
 
   /**
    * Returns a list of [ResourceSummary] for the specified application.
-   *
-   * This function assumes there's a single delivery config associated with the application.
    */
   fun getResourceSummariesFor(application: String): List<ResourceSummary> {
     return try {
