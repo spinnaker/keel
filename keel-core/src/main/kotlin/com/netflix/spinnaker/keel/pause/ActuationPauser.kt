@@ -38,7 +38,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class ActuationPauser(
-  // TODO: replace use of individual repos with KeelRepository
   val resourceRepository: ResourceRepository,
   val pausedRepository: PausedRepository,
   val publisher: ApplicationEventPublisher,
