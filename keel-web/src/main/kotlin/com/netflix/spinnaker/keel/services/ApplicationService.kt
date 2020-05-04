@@ -55,13 +55,7 @@ class ApplicationService(
 
   fun getDeliveryConfig(application: String) = repository.getDeliveryConfigForApplication(application)
 
-  fun deleteConfigByApp(application: String) =
-    try {
-      val config = repository.getDeliveryConfigForApplication(application)
-      repository.deleteDeliveryConfig(config.name)
-    } catch (e: NoSuchDeliveryConfigException) {
-      log.debug("No delivery config exists for $application, considering it deleted")
-    }
+  fun deleteConfigByApp(application: String) = repository.deleteDeliveryConfigByApplication(application)
 
   fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
 
