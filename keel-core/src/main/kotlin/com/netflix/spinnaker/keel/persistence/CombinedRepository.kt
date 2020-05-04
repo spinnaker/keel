@@ -51,10 +51,10 @@ import org.springframework.transaction.annotation.Transactional
 class CombinedRepository(
   val deliveryConfigRepository: DeliveryConfigRepository,
   val artifactRepository: ArtifactRepository,
-  override val resourceRepository: ResourceRepository,
+  val resourceRepository: ResourceRepository,
   override val clock: Clock,
   override val publisher: ApplicationEventPublisher,
-  override val actuationPauser: ActuationPauser
+  val actuationPauser: ActuationPauser
 ) : KeelRepository {
 
   override val log by lazy { LoggerFactory.getLogger(javaClass) }

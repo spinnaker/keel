@@ -8,7 +8,6 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -20,11 +19,9 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.ApplicationEvent
-import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
-import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import java.time.Clock
 import java.time.Duration
@@ -40,8 +37,6 @@ import org.springframework.transaction.annotation.Transactional
 interface KeelRepository {
   val clock: Clock
   val publisher: ApplicationEventPublisher
-  val actuationPauser: ActuationPauser
-  val resourceRepository: ResourceRepository
   val log: Logger
 
   @Transactional(propagation = Propagation.REQUIRED)
@@ -67,13 +62,6 @@ interface KeelRepository {
       log.debug("Creating $resource")
       storeResource(resource)
       publisher.publishEvent(ResourceCreated(resource, clock))
-
-      // Account for the case where a resource was paused, then deleted (i.e. removed from management), then
-      // resubmitted, where we don't want to inadvertently resume actuation without the user knowing and giving
-      // explicit consent. Application paused events are injected in the resource event history dynamically.
-      if (actuationPauser.resourceIsPaused(resource.id)) {
-        publisher.publishEvent(ResourceActuationPaused(resource, resource.serviceAccount, clock))
-      }
     }
   }
 
@@ -152,8 +140,7 @@ interface KeelRepository {
 
   fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent>
 
-  fun resourceEventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent> =
-    resourceRepository.eventHistory(id, limit)
+  fun resourceEventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent>
 
   fun resourceLastEvent(id: String): ResourceEvent?
 
