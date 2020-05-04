@@ -239,12 +239,10 @@ class CombinedRepository(
      */
     config.environments.forEach { environment ->
       environment.constraints.forEach { constraint ->
-        when (constraint is DependsOnConstraint) {
-          true -> {
-            config.environments.find {
-              it.name == constraint.environment
-            } ?: throw MissingEnvironmentReferenceException(constraint.environment)
-          }
+        if (constraint is DependsOnConstraint) {
+          config.environments.find {
+            it.name == constraint.environment
+          } ?: throw MissingEnvironmentReferenceException(constraint.environment)
         }
       }
     }

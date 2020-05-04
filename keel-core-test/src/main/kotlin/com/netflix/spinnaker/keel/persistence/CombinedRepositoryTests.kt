@@ -420,24 +420,12 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
           environments = setOf(
             SubmittedEnvironment(
               name = "test",
-              resources = setOf(
-                SubmittedResource(
-                  metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                  kind = TEST_API_V1.qualify("whatever"),
-                  spec = DummyResourceSpec(data = "o hai")
-                )
-              ),
+              resources = emptySet(),
               constraints = emptySet()
             ),
               SubmittedEnvironment(
               name = "test",
-            resources = setOf(
-              SubmittedResource(
-                metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                kind = TEST_API_V1.qualify("whatever"),
-                spec = DummyResourceSpec(data = "o hai")
-              )
-            ),
+            resources = emptySet(),
             constraints = setOf(DependsOnConstraint(environment = "notRealEnvironment"))
           )
           )
