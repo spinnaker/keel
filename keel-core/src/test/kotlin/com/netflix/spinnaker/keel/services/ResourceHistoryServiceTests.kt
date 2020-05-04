@@ -28,12 +28,12 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.map
 
-class ResourceServiceTests : JUnit5Minutests {
+class ResourceHistoryServiceTests : JUnit5Minutests {
   companion object Fixture {
     val clock = MutableClock()
     val repository = combinedInMemoryRepository(clock)
     val actuationPauser = ActuationPauser(repository.resourceRepository, repository.pausedRepository, repository.publisher, clock)
-    val resourceService = ResourceService(repository, actuationPauser)
+    val resourceHistoryService = ResourceHistoryService(repository, actuationPauser)
     val resource = resource()
     val deliveryConfig = deliveryConfig(resource)
     val TEN_MINUTES: Duration = Duration.ofMinutes(10)
@@ -69,7 +69,7 @@ class ResourceServiceTests : JUnit5Minutests {
       }
 
       test("can get resource summary by application") {
-        val summaries = resourceService.getResourceSummariesFor(resource.application)
+        val summaries = resourceHistoryService.getResourceSummariesFor(resource.application)
 
         expect {
           that(summaries.size).isEqualTo(1)
@@ -94,7 +94,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("has application paused and resumed events injected in the right positions") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events)
             .map { it.javaClass }
             .containsExactly(
@@ -116,7 +116,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("has application paused event injected before resource creation") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events)
             .map { it.javaClass }
             .containsExactly(
@@ -126,7 +126,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("paused event specifies who paused the application") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events.last())
             .isA<ApplicationActuationPaused>()
             .get { triggeredBy }
@@ -148,7 +148,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("still has application paused event injected before resource creation") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events)
             .map { it.javaClass }
             .containsExactly(
@@ -172,7 +172,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("has resource paused event injected before resource creation") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events)
             .map { it.javaClass }
             .containsExactly(
@@ -182,7 +182,7 @@ class ResourceServiceTests : JUnit5Minutests {
         }
 
         test("paused event specifies who paused the resource") {
-          val events = resourceService.getEnrichedEventHistory(resource.id)
+          val events = resourceHistoryService.getEnrichedEventHistory(resource.id)
           expectThat(events.last())
             .isA<ResourceActuationPaused>()
             .get { triggeredBy }

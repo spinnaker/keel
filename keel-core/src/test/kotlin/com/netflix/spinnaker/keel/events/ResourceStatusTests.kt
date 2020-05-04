@@ -33,7 +33,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryPausedRepository
-import com.netflix.spinnaker.keel.services.ResourceService
+import com.netflix.spinnaker.keel.services.ResourceHistoryService
 import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
@@ -50,7 +50,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
     val repository = combinedInMemoryRepository(clock)
     val pausedRepository = InMemoryPausedRepository()
     val actuationPauser = ActuationPauser(repository.resourceRepository, pausedRepository, repository.publisher, clock)
-    val resourceService = ResourceService(repository, actuationPauser)
+    val resourceHistoryService = ResourceHistoryService(repository, actuationPauser)
     val resource = resource()
     val createdEvent = ResourceCreated(resource)
     val missingEvent = ResourceMissing(resource)
@@ -87,7 +87,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
 
     context("resource created") {
       test("returns created status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(CREATED)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(CREATED)
       }
     }
 
@@ -97,7 +97,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns diff status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(DIFF)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
 
@@ -108,7 +108,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns diff status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(DIFF)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(DIFF)
       }
     }
 
@@ -120,7 +120,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns actuating status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(ACTUATING)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(ACTUATING)
       }
     }
 
@@ -140,7 +140,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns unhappy status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(UNHAPPY)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(UNHAPPY)
       }
     }
 
@@ -161,7 +161,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns happy status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(HAPPY)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
 
@@ -174,7 +174,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns happy status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(HAPPY)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
 
@@ -184,7 +184,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns happy status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(HAPPY)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(HAPPY)
       }
     }
 
@@ -194,7 +194,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns error status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(ERROR)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(ERROR)
       }
     }
 
@@ -204,7 +204,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns paused status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(PAUSED)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(PAUSED)
       }
     }
 
@@ -216,7 +216,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns resumed status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(RESUMED)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(RESUMED)
       }
     }
 
@@ -227,7 +227,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns diff status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(CURRENTLY_UNRESOLVABLE)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(CURRENTLY_UNRESOLVABLE)
       }
     }
 
@@ -238,7 +238,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         }
 
         test("returns paused status") {
-          expectThat(resourceService.getStatus(resource.id)).isEqualTo(PAUSED)
+          expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(PAUSED)
         }
       }
 
@@ -252,7 +252,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         }
 
         test("returns paused status") {
-          expectThat(resourceService.getStatus(resource.id)).isEqualTo(PAUSED)
+          expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(PAUSED)
         }
       }
 
@@ -268,7 +268,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
         }
 
         test("returns resumed status") {
-          expectThat(resourceService.getStatus(resource.id)).isEqualTo(RESUMED)
+          expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(RESUMED)
         }
       }
     }
@@ -281,7 +281,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       }
 
       test("returns resumed status") {
-        expectThat(resourceService.getStatus(resource.id)).isEqualTo(RESUMED)
+        expectThat(resourceHistoryService.getStatus(resource.id)).isEqualTo(RESUMED)
       }
     }
   }

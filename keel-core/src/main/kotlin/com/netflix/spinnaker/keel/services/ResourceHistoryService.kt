@@ -45,10 +45,10 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.VETOED
 import org.springframework.stereotype.Component
 
 /**
- * Service object that offers high-level APIs for resource-related operations.
+ * Service object that offers high-level APIs around resource (event) history and status.
  */
 @Component
-class ResourceService(
+class ResourceHistoryService(
   private val repository: KeelRepository,
   private val actuationPauser: ActuationPauser
 ) {

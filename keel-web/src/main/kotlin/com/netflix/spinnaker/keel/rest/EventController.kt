@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
-import com.netflix.spinnaker.keel.services.ResourceService
+import com.netflix.spinnaker.keel.services.ResourceHistoryService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/resources/events"])
 class EventController(
-  private val resourceService: ResourceService
+  private val resourceHistoryService: ResourceHistoryService
 ) {
   private val log by lazy { getLogger(javaClass) }
 
@@ -33,6 +33,6 @@ class EventController(
     @RequestParam("limit") limit: Int?
   ): List<PersistentEvent> {
     log.debug("Getting state history for: $id")
-    return resourceService.getEnrichedEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
+    return resourceHistoryService.getEnrichedEventHistory(id, limit ?: DEFAULT_MAX_EVENTS)
   }
 }

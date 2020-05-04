@@ -25,7 +25,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.services.ApplicationService
-import com.netflix.spinnaker.keel.services.ResourceService
+import com.netflix.spinnaker.keel.services.ResourceHistoryService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import com.netflix.spinnaker.kork.web.exceptions.InvalidRequestException
 import org.slf4j.LoggerFactory
@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController
 class ApplicationController(
   private val actuationPauser: ActuationPauser,
   private val applicationService: ApplicationService,
-  private val resourceService: ResourceService
+  private val resourceHistoryService: ResourceHistoryService
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -75,7 +75,7 @@ class ApplicationController(
       }
       entities.forEach { entity ->
         results[entity] = when (entity) {
-          "resources" -> resourceService.getResourceSummariesFor(application)
+          "resources" -> resourceHistoryService.getResourceSummariesFor(application)
           "environments" -> applicationService.getEnvironmentSummariesFor(application)
           "artifacts" -> applicationService.getArtifactSummariesFor(application)
           else -> throw InvalidRequestException("Unknown entity type: $entity")
