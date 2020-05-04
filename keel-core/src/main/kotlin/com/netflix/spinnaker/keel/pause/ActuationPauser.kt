@@ -72,10 +72,10 @@ class ActuationPauser(
     publisher.publishEvent(ApplicationActuationPaused(application, user, clock))
   }
 
-  fun resumeApplication(application: String) {
+  fun resumeApplication(application: String, user: String) {
     log.info("Resuming application $application")
     pausedRepository.resumeApplication(application)
-    publisher.publishEvent(ApplicationActuationResumed(application, clock))
+    publisher.publishEvent(ApplicationActuationResumed(application, user, clock))
   }
 
   fun pauseResource(id: String, user: String) {
@@ -84,10 +84,10 @@ class ActuationPauser(
     publisher.publishEvent(ResourceActuationPaused(resourceRepository.get(id), user, clock))
   }
 
-  fun resumeResource(id: String) {
+  fun resumeResource(id: String, user: String) {
     log.info("Resuming resource $id")
     pausedRepository.resumeResource(id)
-    publisher.publishEvent(ResourceActuationResumed(resourceRepository.get(id), clock))
+    publisher.publishEvent(ResourceActuationResumed(resourceRepository.get(id), user, clock))
   }
 
   fun pausedApplications(): List<String> =

@@ -60,6 +60,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
     val dependencyMissingEvent = ResourceCheckUnresolvable(resource, object : ResourceCurrentlyUnresolvable("I guess I can't find the AMI or something") {})
     val errorEvent = ResourceCheckError(resource, InvalidResourceFormatException("bad resource", "who knows"))
     val resourceValidEvent = ResourceValid(resource)
+    val user = "keel@keel.io"
   }
 
   fun tests() = rootContext<Fixture> {
@@ -200,7 +201,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
 
     context("resource actuation paused") {
       before {
-        actuationPauser.pauseResource(resource.id, "keel@keel.io")
+        actuationPauser.pauseResource(resource.id, user)
       }
 
       test("returns paused status") {
@@ -210,9 +211,9 @@ internal class ResourceStatusTests : JUnit5Minutests {
 
     context("resource actuation resumed") {
       before {
-        actuationPauser.pauseResource(resource.id, "keel@keel.io")
+        actuationPauser.pauseResource(resource.id, user)
         clock.tickMinutes(10)
-        actuationPauser.resumeResource(resource.id)
+        actuationPauser.resumeResource(resource.id, user)
       }
 
       test("returns resumed status") {
@@ -234,7 +235,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
     context("application actuation paused") {
       context("after resource created") {
         before {
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
         }
 
         test("returns paused status") {
@@ -245,7 +246,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
       context("before resource created") {
         before {
           repository.deleteResource(resource.id)
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
           clock.tickMinutes(10)
           repository.storeResource(resource)
           repository.appendResourceHistory(createdEvent)
@@ -259,12 +260,12 @@ internal class ResourceStatusTests : JUnit5Minutests {
       context("before resource created, but resumed after") {
         before {
           repository.deleteResource(resource.id)
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
           clock.tickMinutes(10)
           repository.storeResource(resource)
           repository.appendResourceHistory(createdEvent)
           clock.tickMinutes(10)
-          actuationPauser.resumeApplication(resource.application)
+          actuationPauser.resumeApplication(resource.application, user)
         }
 
         test("returns resumed status") {
@@ -275,9 +276,9 @@ internal class ResourceStatusTests : JUnit5Minutests {
 
     context("application actuation paused and resumed after resource created") {
       before {
-        actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+        actuationPauser.pauseApplication(resource.application, user)
         clock.tickMinutes(10)
-        actuationPauser.resumeApplication(resource.application)
+        actuationPauser.resumeApplication(resource.application, user)
       }
 
       test("returns resumed status") {

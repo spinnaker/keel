@@ -136,7 +136,10 @@ class ApplicationController(
     path = ["/{application}/pause"]
   )
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)")
-  fun pause(@PathVariable("application") application: String, @RequestHeader("X-SPINNAKER-USER") user: String) {
+  fun pause(
+    @PathVariable("application") application: String,
+    @RequestHeader("X-SPINNAKER-USER") user: String
+  ) {
     actuationPauser.pauseApplication(application, user)
   }
 
@@ -146,8 +149,11 @@ class ApplicationController(
   @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
     and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)"""
   )
-  fun resume(@PathVariable("application") application: String) {
-    actuationPauser.resumeApplication(application)
+  fun resume(
+    @PathVariable("application") application: String,
+    @RequestHeader("X-SPINNAKER-USER") user: String
+  ) {
+    actuationPauser.resumeApplication(application, user)
   }
 
   @PostMapping(

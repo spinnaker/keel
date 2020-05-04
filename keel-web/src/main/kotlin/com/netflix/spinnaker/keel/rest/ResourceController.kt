@@ -75,7 +75,10 @@ class ResourceController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)")
-  fun pauseResource(@PathVariable("id") id: String, @RequestHeader("X-SPINNAKER-USER") user: String) {
+  fun pauseResource(
+    @PathVariable("id") id: String,
+    @RequestHeader("X-SPINNAKER-USER") user: String
+  ) {
     actuationPauser.pauseResource(id, user)
   }
 
@@ -86,8 +89,11 @@ class ResourceController(
   @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'RESOURCE', #id)
     and @authorizationSupport.hasServiceAccountAccess('RESOURCE', #id)"""
   )
-  fun resumeResource(@PathVariable("id") id: String) {
-    actuationPauser.resumeResource(id)
+  fun resumeResource(
+    @PathVariable("id") id: String,
+    @RequestHeader("X-SPINNAKER-USER") user: String
+  ) {
+    actuationPauser.resumeResource(id, user)
   }
 
   @PostMapping(

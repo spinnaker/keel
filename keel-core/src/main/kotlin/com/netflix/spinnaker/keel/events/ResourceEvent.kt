@@ -267,15 +267,17 @@ data class ResourceActuationResumed(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
+  override val triggeredBy: String,
   override val timestamp: Instant
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, triggeredBy: String, clock: Clock = Companion.clock) : this(
     resource.kind,
     resource.id,
     resource.application,
+    triggeredBy,
     clock.instant()
   )
 }

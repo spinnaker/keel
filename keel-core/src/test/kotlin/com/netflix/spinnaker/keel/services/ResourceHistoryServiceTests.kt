@@ -36,6 +36,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
     val resourceHistoryService = ResourceHistoryService(repository, actuationPauser)
     val resource = resource()
     val deliveryConfig = deliveryConfig(resource)
+    val user = "keel@keel.io"
     val TEN_MINUTES: Duration = Duration.ofMinutes(10)
   }
 
@@ -86,11 +87,11 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
           clock.incrementBy(TEN_MINUTES)
           repository.appendResourceHistory(ResourceValid(resource, clock))
           clock.incrementBy(TEN_MINUTES)
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
           clock.incrementBy(TEN_MINUTES)
-          actuationPauser.resumeApplication(resource.application)
+          actuationPauser.resumeApplication(resource.application, user)
           clock.incrementBy(TEN_MINUTES)
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
         }
 
         test("has application paused and resumed events injected in the right positions") {
@@ -109,7 +110,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
 
       context("with a new resource created after the application is paused") {
         before {
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
           clock.incrementBy(TEN_MINUTES)
           repository.storeResource(resource)
           repository.appendResourceHistory(ResourceCreated(resource, clock))
@@ -130,7 +131,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
           expectThat(events.last())
             .isA<ApplicationActuationPaused>()
             .get { triggeredBy }
-            .isEqualTo("keel@keel.io")
+            .isEqualTo(user)
         }
       }
 
@@ -139,7 +140,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
           repository.storeResource(resource)
           repository.appendResourceHistory(ResourceCreated(resource, clock))
           repository.deleteResource(resource.id)
-          actuationPauser.pauseApplication(resource.application, "keel@keel.io")
+          actuationPauser.pauseApplication(resource.application, user)
           clock.incrementBy(TEN_MINUTES)
           repository.resourceRepository.clearResourceEvents(resource.id)
           repository.resourceRepository.clearApplicationEvents(resource.application)
@@ -163,7 +164,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
           repository.storeResource(resource)
           repository.appendResourceHistory(ResourceCreated(resource, clock))
           clock.incrementBy(TEN_MINUTES)
-          actuationPauser.pauseResource(resource.id, "keel@keel.io")
+          actuationPauser.pauseResource(resource.id, user)
           clock.incrementBy(TEN_MINUTES)
           repository.deleteResource(resource.id)
           clock.incrementBy(TEN_MINUTES)
@@ -186,7 +187,7 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
           expectThat(events.last())
             .isA<ResourceActuationPaused>()
             .get { triggeredBy }
-            .isEqualTo("keel@keel.io")
+            .isEqualTo(user)
         }
       }
     }
