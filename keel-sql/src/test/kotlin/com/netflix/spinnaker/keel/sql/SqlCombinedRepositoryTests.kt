@@ -9,7 +9,7 @@ import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
 import java.time.Clock
 import org.junit.jupiter.api.AfterAll
 
-internal object SqlCombinedRepositoryTests : CombinedRepositoryTests<SqlDeliveryConfigRepository, SqlResourceRepository, SqlArtifactRepository, SqlPausedRepository>() {
+internal object SqlCombinedRepositoryTests : CombinedRepositoryTests<SqlDeliveryConfigRepository, SqlResourceRepository, SqlArtifactRepository>() {
   private val testDatabase = initTestDatabase()
   private val jooq = testDatabase.context
   private val objectMapper = configuredObjectMapper()
@@ -25,9 +25,6 @@ internal object SqlCombinedRepositoryTests : CombinedRepositoryTests<SqlDelivery
 
   override fun createArtifactRepository(): SqlArtifactRepository =
     SqlArtifactRepository(jooq, clock, objectMapper, sqlRetry)
-
-  override fun createPausedRepository(): SqlPausedRepository =
-    SqlPausedRepository(jooq, sqlRetry, clock)
 
   override fun flush() {
     SqlTestUtil.cleanupDb(jooq)

@@ -84,6 +84,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
 
     after {
       repository.dropAll()
+      pausedRepository.flush()
     }
 
     context("resource created") {

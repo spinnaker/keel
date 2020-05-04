@@ -26,7 +26,6 @@ import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import com.netflix.spinnaker.keel.exceptions.MissingEnvironmentReferenceException
-import com.netflix.spinnaker.keel.pause.ActuationPauser
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -53,8 +52,7 @@ class CombinedRepository(
   val artifactRepository: ArtifactRepository,
   val resourceRepository: ResourceRepository,
   override val clock: Clock,
-  override val publisher: ApplicationEventPublisher,
-  val actuationPauser: ActuationPauser
+  override val publisher: ApplicationEventPublisher
 ) : KeelRepository {
 
   override val log by lazy { LoggerFactory.getLogger(javaClass) }

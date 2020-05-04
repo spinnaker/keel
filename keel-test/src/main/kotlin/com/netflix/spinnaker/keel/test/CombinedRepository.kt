@@ -1,10 +1,8 @@
 package com.netflix.spinnaker.keel.test
 
-import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryArtifactRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
@@ -20,15 +18,13 @@ class InMemoryCombinedRepository(
   override val artifactRepository: InMemoryArtifactRepository = InMemoryArtifactRepository(clock),
   override val resourceRepository: InMemoryResourceRepository = InMemoryResourceRepository(clock),
   val pausedRepository: InMemoryPausedRepository = InMemoryPausedRepository(clock),
-  private val eventPublisher: ApplicationEventPublisher = mockk(relaxed = true),
-  override val actuationPauser: ActuationPauser = ActuationPauser(resourceRepository, pausedRepository, eventPublisher, clock)
+  eventPublisher: ApplicationEventPublisher = mockk(relaxed = true)
 ) : CombinedRepository(
   deliveryConfigRepository,
   artifactRepository,
   resourceRepository,
   clock,
-  eventPublisher,
-  actuationPauser
+  eventPublisher
 ) {
   fun dropAll() {
     deliveryConfigRepository.dropAll()
@@ -54,9 +50,7 @@ fun combinedMockRepository(
   deliveryConfigRepository: DeliveryConfigRepository = mockk(relaxed = true),
   artifactRepository: ArtifactRepository = mockk(relaxed = true),
   resourceRepository: ResourceRepository = mockk(relaxed = true),
-  pausedRepository: PausedRepository = mockk(relaxed = true),
   clock: Clock = Clock.systemUTC(),
-  publisher: ApplicationEventPublisher = mockk(relaxed = true),
-  actuationPauser: ActuationPauser = ActuationPauser(resourceRepository, pausedRepository, publisher, clock)
+  publisher: ApplicationEventPublisher = mockk(relaxed = true)
 ): CombinedRepository =
-  CombinedRepository(deliveryConfigRepository, artifactRepository, resourceRepository, clock, publisher, actuationPauser)
+  CombinedRepository(deliveryConfigRepository, artifactRepository, resourceRepository, clock, publisher)

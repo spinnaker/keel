@@ -48,13 +48,12 @@ import strikt.assertions.isTrue
  *
  * Tests that only apply to one repository should live in the repository-specific test classes.
  */
-abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository, P : PausedRepository> :
+abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository> :
   JUnit5Minutests {
 
   abstract fun createDeliveryConfigRepository(resourceSpecIdentifier: ResourceSpecIdentifier): D
   abstract fun createResourceRepository(resourceSpecIdentifier: ResourceSpecIdentifier): R
   abstract fun createArtifactRepository(): A
-  abstract fun createPausedRepository(): P
 
   open fun flush() {}
 
@@ -73,11 +72,10 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
     environments = setOf(firstEnv)
   )
 
-  data class Fixture<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository, P : PausedRepository>(
+  data class Fixture<D : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository>(
     val deliveryConfigRepositoryProvider: (ResourceSpecIdentifier) -> D,
     val resourceRepositoryProvider: (ResourceSpecIdentifier) -> R,
-    val artifactRepositoryProvider: () -> A,
-    val pausedRepositoryProvider: () -> P
+    val artifactRepositoryProvider: () -> A
   ) {
     internal val clock = MutableClock()
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
@@ -85,15 +83,13 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
     internal val deliveryConfigRepository: D = deliveryConfigRepositoryProvider(DummyResourceSpecIdentifier)
     internal val resourceRepository: R = resourceRepositoryProvider(DummyResourceSpecIdentifier)
     internal val artifactRepository: A = artifactRepositoryProvider()
-    internal val pausedRepository: P = pausedRepositoryProvider()
 
     val subject = CombinedRepository(
       deliveryConfigRepository,
       artifactRepository,
       resourceRepository,
       clock,
-      publisher,
-      ActuationPauser(resourceRepository, pausedRepository, publisher, clock)
+      publisher
     )
 
     fun resourcesDueForCheck() =
@@ -106,13 +102,12 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
         }
   }
 
-  fun tests() = rootContext<Fixture<D, R, A, P>> {
+  fun tests() = rootContext<Fixture<D, R, A>> {
     fixture {
       Fixture(
         deliveryConfigRepositoryProvider = this@CombinedRepositoryTests::createDeliveryConfigRepository,
         resourceRepositoryProvider = this@CombinedRepositoryTests::createResourceRepository,
-        artifactRepositoryProvider = this@CombinedRepositoryTests::createArtifactRepository,
-        pausedRepositoryProvider = this@CombinedRepositoryTests::createPausedRepository
+        artifactRepositoryProvider = this@CombinedRepositoryTests::createArtifactRepository
       )
     }
 
