@@ -17,7 +17,6 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryDiffFingerprintRepo
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.persistence.memory.InMemoryUnhappyVetoRepository
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
-import com.netflix.spinnaker.keel.test.deliveryConfig
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.veto.VetoEnforcer
 import com.netflix.spinnaker.keel.veto.unhappy.UnhappyVeto
@@ -53,8 +52,14 @@ class IntermittentFailureTests : JUnit5Minutests {
       coEvery { isPaused(any<String>()) } returns false
       coEvery { isPaused(any<Resource<*>>()) } returns false
     }
-    val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true)
-    val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true)
+    val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true) {
+      every { name } returns "plugin1"
+      every { supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyResourceSpec::class.java)
+    }
+    val plugin2 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true) {
+      every { name } returns "plugin2"
+      every { supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyResourceSpec::class.java)
+    }
     val publisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
     val clock = MutableClock()
     val vetoRepository = InMemoryUnhappyVetoRepository(clock)
@@ -97,13 +102,6 @@ class IntermittentFailureTests : JUnit5Minutests {
 
     fixture { Fixture() }
 
-    before {
-      every { plugin1.name } returns "plugin1"
-      every { plugin1.supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyResourceSpec::class.java)
-      every { plugin2.name } returns "plugin2"
-      every { plugin2.supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyResourceSpec::class.java)
-    }
-
     after {
       resourceRepository.dropAll()
     }
@@ -112,7 +110,6 @@ class IntermittentFailureTests : JUnit5Minutests {
       val resource: Resource<DummyResourceSpec> = resource(
         kind = parseKind("plugin1/foo@v1")
       )
-      val deliveryConfig = deliveryConfig(resource)
 
       before {
         resourceRepository.store(resource)
