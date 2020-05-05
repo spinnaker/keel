@@ -437,7 +437,10 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
           }.failed()
             .isA<MissingEnvironmentReferenceException>()
 
-          expectThat(subject.allResourceNames().size).isEqualTo(0)
+          expectCatching {
+            subject.getDeliveryConfig(configName)
+          }.failed()
+            .isA<NoSuchDeliveryConfigException>()
         }
       }
     }
