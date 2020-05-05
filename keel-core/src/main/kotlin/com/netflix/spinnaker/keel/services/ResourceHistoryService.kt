@@ -28,7 +28,6 @@ import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
@@ -152,14 +151,9 @@ class ResourceHistoryService(
   /**
    * Returns a list of [ResourceSummary] for the specified application.
    */
-  fun getResourceSummariesFor(application: String): List<ResourceSummary> {
-    return try {
-      val deliveryConfig = repository.getDeliveryConfigForApplication(application)
-      deliveryConfig.resources.map { resource ->
-        resource.toResourceSummary(deliveryConfig)
-      }
-    } catch (e: NoSuchDeliveryConfigException) {
-      emptyList()
+  fun getResourceSummariesFor(deliveryConfig: DeliveryConfig): List<ResourceSummary> {
+    return deliveryConfig.resources.map { resource ->
+      resource.toResourceSummary(deliveryConfig)
     }
   }
 

@@ -69,8 +69,8 @@ class ResourceHistoryServiceTests : JUnit5Minutests {
         repository.appendResourceHistory(ResourceCreated(resource, clock))
       }
 
-      test("can get resource summary by application") {
-        val summaries = resourceHistoryService.getResourceSummariesFor(resource.application)
+      test("can get resource summary by delivery config") {
+        val summaries = resourceHistoryService.getResourceSummariesFor(deliveryConfig)
 
         expect {
           that(summaries.size).isEqualTo(1)

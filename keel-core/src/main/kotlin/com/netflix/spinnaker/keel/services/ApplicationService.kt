@@ -27,6 +27,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.GitMetadata
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
+import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
@@ -44,6 +45,7 @@ import org.springframework.stereotype.Component
 @Component
 class ApplicationService(
   private val repository: KeelRepository,
+  private val resourceHistoryService: ResourceHistoryService,
   constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -118,6 +120,18 @@ class ApplicationService(
       artifact = artifact,
       version = version,
       targetEnvironment = targetEnvironment)
+  }
+
+  /**
+   * Returns a list of [ResourceSummary] for the specified application.
+   */
+  fun getResourceSummariesFor(application: String): List<ResourceSummary> {
+    return try {
+      val deliveryConfig = repository.getDeliveryConfigForApplication(application)
+      resourceHistoryService.getResourceSummariesFor(deliveryConfig)
+    } catch (e: NoSuchDeliveryConfigException) {
+      emptyList()
+    }
   }
 
   /**

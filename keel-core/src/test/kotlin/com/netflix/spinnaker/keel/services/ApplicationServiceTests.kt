@@ -62,6 +62,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       resourceRepository = resourceRepository,
       clock = clock
     )
+    val resourceHistoryService = ResourceHistoryService(repository, mockk(relaxed = true))
 
     val application = "fnord"
     val artifact = DebianArtifact(
@@ -113,7 +114,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     val dependsOnEvaluator = DependsOnConstraintEvaluator(artifactRepository, mockk())
 
     // subject
-    val applicationService = ApplicationService(repository, listOf(dependsOnEvaluator))
+    val applicationService = ApplicationService(repository, resourceHistoryService, listOf(dependsOnEvaluator))
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {
