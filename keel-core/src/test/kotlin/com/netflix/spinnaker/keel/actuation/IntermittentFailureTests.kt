@@ -134,7 +134,7 @@ class IntermittentFailureTests : JUnit5Minutests {
           // diff has happened twice
           diffFingerprintRepository.store(resource.id, diff)
         }
-        test("marked unhappy, so no actuation") {
+        test("vetoed because diff seen 3 times, so no actuation") {
           runBlocking { subject.checkResource(resource) }
           coVerify(exactly = 0) { plugin1.update(resource, any()) }
         }
@@ -146,7 +146,7 @@ class IntermittentFailureTests : JUnit5Minutests {
             runBlocking { subject.checkResource(resource) }
           }
 
-          test("happy resource means nothing happens") {
+          test("no diff means nothing happens") {
             coVerify(exactly = 0) { plugin1.update(resource, any()) }
           }
 
