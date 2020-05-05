@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
@@ -111,7 +112,7 @@ class CombinedRepository(
     storeDeliveryConfig(deliveryConfig)
 
     if (old != null) {
-      removeResources(old, deliveryConfig)
+      removeDependents(old, deliveryConfig)
     }
     return deliveryConfig
   }
@@ -145,10 +146,16 @@ class CombinedRepository(
    * Removes artifacts, environments, and resources that were present in the [old]
    * delivery config and are not present in the [new] delivery config
    */
-  override fun removeResources(old: DeliveryConfig, new: DeliveryConfig) {
+  override fun removeDependents(old: DeliveryConfig, new: DeliveryConfig) {
     val newResources = new.resources.map { it.id }
+
     old.artifacts.forEach { artifact ->
-      if (artifact !in new.artifacts) {
+      val stillPresent = new.artifacts.any {
+        it.name == artifact.name &&
+          it.type == artifact.type &&
+          it.reference == artifact.reference
+      }
+      if (!stillPresent) {
         log.debug("Updating config ${new.name}: removing artifact $artifact")
         artifactRepository.delete(artifact)
       }
@@ -294,6 +301,9 @@ class CombinedRepository(
 
   override fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
     deliveryConfigRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
+
+  override fun getApplicationSummaries(): Collection<ApplicationSummary> =
+    deliveryConfigRepository.getApplicationSummaries()
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods

@@ -24,9 +24,11 @@ import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import java.time.Clock
+import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
+import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
 
 abstract class DiffFingerprintRepositoryTests<T : DiffFingerprintRepository> : JUnit5Minutests {
@@ -91,6 +93,18 @@ abstract class DiffFingerprintRepositoryTests<T : DiffFingerprintRepository> : J
     context("querying when nothing exists") {
       test("returns 0") {
         expectThat(subject.diffCount(r.id)).isEqualTo(0)
+      }
+    }
+
+    context("deleting hash") {
+      test("deletes successfully when present") {
+        val diff = DefaultResourceDiff(mapOf("spec" to "hi"), mapOf("spec" to "bye"))
+        subject.store(r.id, diff)
+        subject.clear(r.id)
+        expectThat(subject.diffCount(r.id)).isEqualTo(0)
+      }
+      test("deletes successfully when not present") {
+        expectCatching { subject.clear(r.id) }.isSuccess()
       }
     }
   }

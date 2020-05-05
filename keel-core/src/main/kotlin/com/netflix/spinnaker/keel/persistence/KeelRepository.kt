@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -74,7 +75,7 @@ interface KeelRepository {
    * Removes artifacts, environments, and resources that were present in the [old]
    * delivery config and are not present in the [new] delivery config
    */
-  fun removeResources(old: DeliveryConfig, new: DeliveryConfig)
+  fun removeDependents(old: DeliveryConfig, new: DeliveryConfig)
 
   // START Delivery config methods
   fun storeDeliveryConfig(deliveryConfig: DeliveryConfig)
@@ -116,6 +117,8 @@ interface KeelRepository {
   fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
 
   fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig>
+
+  fun getApplicationSummaries(): Collection<ApplicationSummary>
   // END DeliveryConfigRepository methods
 
   // START ResourceRepository methods
