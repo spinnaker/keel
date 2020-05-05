@@ -426,7 +426,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
               SubmittedEnvironment(
               name = "test",
             resources = emptySet(),
-            constraints = setOf(DependsOnConstraint(environment = "notRealEnvironment"))
+            constraints = setOf(DependsOnConstraint(environment = "notARealEnvironment"))
           )
           )
         )
@@ -434,12 +434,12 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
         test("an error is thrown and config is not persisted") {
           expectCatching {
             subject.upsertDeliveryConfig(submittedConfig)
-          }.failed()
+          }.isFailure()
             .isA<MissingEnvironmentReferenceException>()
 
           expectCatching {
             subject.getDeliveryConfig(configName)
-          }.failed()
+          }.isFailure()
             .isA<NoSuchDeliveryConfigException>()
         }
       }
