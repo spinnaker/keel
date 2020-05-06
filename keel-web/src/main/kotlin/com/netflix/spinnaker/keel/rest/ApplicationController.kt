@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
+import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.services.ApplicationService
@@ -228,4 +229,14 @@ class ApplicationController(
   ) {
     applicationService.deleteVeto(application, targetEnvironment, reference, version)
   }
+
+  @GetMapping(
+    path = ["/{application}/events"],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #application)""")
+  fun getEvents(
+    @PathVariable("application") application: String,
+    @RequestParam("limit") limit: Int?
+  ): List<ApplicationEvent> = applicationService.getApplicationEventHistory(application, limit ?: DEFAULT_MAX_EVENTS)
 }

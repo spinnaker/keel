@@ -337,6 +337,9 @@ class ApplicationService(
       }
     }
 
+  fun getApplicationEventHistory(application: String, limit: Int) =
+    repository.applicationEventHistory(application, limit)
+
   private val ArtifactVersions.key: String
     get() = "${type.name}:$name"
 
