@@ -27,6 +27,10 @@ import com.netflix.spinnaker.time.MutableClock
 import com.ninjasquad.springmockk.MockkBean
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.coEvery as every
+import java.net.URI
+import java.time.Clock
+import java.time.Duration
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -49,10 +53,6 @@ import strikt.assertions.hasSize
 import strikt.assertions.map
 import strikt.jackson.hasSize
 import strikt.jackson.isArray
-import java.net.URI
-import java.time.Clock
-import java.time.Duration
-import io.mockk.coEvery as every
 
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
