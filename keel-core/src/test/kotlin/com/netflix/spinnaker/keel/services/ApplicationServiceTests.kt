@@ -3,13 +3,20 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
+import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
+import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
+import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
+import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
-import com.netflix.spinnaker.keel.constraints.DependsOnConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
@@ -32,10 +39,14 @@ import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.test.artifactReferenceResource
 import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import com.netflix.spinnaker.keel.test.versionedArtifactResource
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
+import com.netflix.spinnaker.keel.services.ApplicationService
+import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
+import io.mockk.every
 import io.mockk.mockk
 import java.time.Duration
 import java.time.Instant
@@ -53,23 +64,14 @@ class ApplicationServiceTests : JUnit5Minutests {
       Instant.parse("2020-03-25T00:00:00.00Z"),
       ZoneId.of("UTC")
     )
-    val deliveryConfigRepository = InMemoryDeliveryConfigRepository(clock)
-    val artifactRepository = InMemoryArtifactRepository(clock)
-    val resourceRepository = InMemoryResourceRepository(clock)
-    val repository: KeelRepository = combinedInMemoryRepository(
-      deliveryConfigRepository = deliveryConfigRepository,
-      artifactRepository = artifactRepository,
-      resourceRepository = resourceRepository,
-      clock = clock
-    )
-    val resourceHistoryService = ResourceHistoryService(repository, mockk(relaxed = true))
+    val repository: KeelRepository = mockk()
 
     val application = "fnord"
     val artifact = DebianArtifact(
       name = application,
       deliveryConfigName = "manifest",
       reference = "fnord",
-      statuses = setOf(ArtifactStatus.RELEASE),
+      statuses = setOf(RELEASE),
       vmOptions = VirtualMachineOptions(
         baseOs = "xenial",
         regions = setOf("us-west-2", "us-east-1")
@@ -111,7 +113,9 @@ class ApplicationServiceTests : JUnit5Minutests {
     val version3 = "fnord-1.0.3-h3.d3d3d3d"
     val version4 = "fnord-1.0.4-h4.e4e4e4e"
 
-    val dependsOnEvaluator = DependsOnConstraintEvaluator(artifactRepository, mockk())
+    val dependsOnEvaluator = mockk<ConstraintEvaluator<DependsOnConstraint>>() {
+      every { isImplicit() } returns false
+    }
 
     // subject
     val applicationService = ApplicationService(repository, resourceHistoryService, listOf(dependsOnEvaluator))
@@ -127,24 +131,21 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     after {
-      deliveryConfigRepository.dropAll()
-      artifactRepository.dropAll()
-      resourceRepository.dropAll()
       clearAllMocks()
     }
 
     context("delivery config exists and there has been activity") {
       before {
-        repository.upsertDeliveryConfig(deliveryConfig)
+        every { repository.getDeliveryConfigForApplication(application) } returns deliveryConfig
         // these events are required because Resource.toResourceSummary() relies on events to determine resource status
         deliveryConfig.environments.flatMap { it.resources }.forEach { resource ->
           repository.appendResourceHistory(ResourceValid(resource))
         }
-        repository.storeArtifact(artifact, version0, ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, version1, ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, version2, ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, version3, ArtifactStatus.RELEASE)
-        repository.storeArtifact(artifact, version4, ArtifactStatus.RELEASE)
+        repository.storeArtifact(artifact, version0, RELEASE)
+        repository.storeArtifact(artifact, version1, RELEASE)
+        repository.storeArtifact(artifact, version2, RELEASE)
+        repository.storeArtifact(artifact, version3, RELEASE)
+        repository.storeArtifact(artifact, version4, RELEASE)
 
         // with our fake clock moving forward, simulate artifact approvals and deployments
         // v0
