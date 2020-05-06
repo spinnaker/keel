@@ -174,7 +174,7 @@ open class SqlResourceRepository(
         .from(EVENT)
         .where(EVENT.SCOPE.eq(Scope.APPLICATION.name))
         .and(EVENT.UID.eq(application))
-        .and(EVENT.TIMESTAMP.lessOrEqual(LocalDateTime.ofInstant(after, ZoneOffset.UTC)))
+        .and(EVENT.TIMESTAMP.greaterOrEqual(LocalDateTime.ofInstant(after, ZoneOffset.UTC)))
         .orderBy(EVENT.TIMESTAMP.desc())
         .fetch()
         .map { (json) ->
