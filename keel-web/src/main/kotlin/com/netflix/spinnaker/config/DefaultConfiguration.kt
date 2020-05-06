@@ -54,7 +54,7 @@ class DefaultConfiguration(
     /**
      * Path variables that will be added as tags to the metrics
      *
-     * Lorin chose these particular variables arbitrary as potentially useful. Once we start consuming
+     * Lorin chose these particular variables arbitrarily as potentially useful. Once we start consuming
      * these metrics, we should revisit whether to change these based on usefulness & cardinality
      */
     val pathVarsToTag = listOf("name", "application")
