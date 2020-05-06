@@ -22,7 +22,6 @@ import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceUpdated
-import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -136,11 +135,11 @@ interface KeelRepository {
 
   fun deleteResource(id: String)
 
-  fun applicationEventHistory(application: String, limit: Int = DEFAULT_MAX_EVENTS): List<ApplicationEvent>
+  fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent>
 
   fun applicationEventHistory(application: String, downTo: Instant): List<ApplicationEvent>
 
-  fun resourceEventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent>
+  fun resourceEventHistory(id: String, limit: Int): List<ResourceEvent>
 
   fun resourceLastEvent(id: String): ResourceEvent?
 
