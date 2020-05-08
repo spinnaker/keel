@@ -239,13 +239,14 @@ open class SqlResourceRepository(
     jooq.transaction { config ->
       val txn = DSL.using(config)
 
+      val resourceUid = txn.select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(event.id)).fetchOne(RESOURCE.UID)
+
       if (event.ignoreRepeatedInHistory) {
         val previousEvent = txn
           .select(EVENT.JSON)
-          .from(EVENT, RESOURCE)
+          .from(EVENT)
           .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
-          .and(RESOURCE.ID.eq(event.id))
-          .and(RESOURCE.UID.eq(EVENT.UID))
+          .and(EVENT.UID.eq(resourceUid))
           .orderBy(EVENT.TIMESTAMP.desc())
           .limit(1)
           .fetchOne()
@@ -253,7 +254,18 @@ open class SqlResourceRepository(
             objectMapper.readValue<ResourceEvent>(json)
           }
 
-        if (event.javaClass == previousEvent?.javaClass) return@transaction
+        // If an equivalent event is already the latest in history, just update the timestamp
+        if (event.javaClass == previousEvent?.javaClass) {
+          txn
+            .update(EVENT)
+            .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+            .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
+            .and(EVENT.UID.eq(resourceUid))
+            .orderBy(EVENT.TIMESTAMP.desc())
+            .limit(1)
+            .execute()
+          return@transaction
+        }
       }
 
       txn

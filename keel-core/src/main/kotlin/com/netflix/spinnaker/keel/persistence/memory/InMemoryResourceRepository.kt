@@ -120,13 +120,19 @@ class InMemoryResourceRepository(
     appendHistory(applicationEvents, event)
   }
 
-  private fun <T : PersistentEvent> appendHistory(eventList: MutableMap<String, MutableList<T>>, event: T) {
+  private fun <T : PersistentEvent> appendHistory(
+    eventList: MutableMap<String, MutableList<T>>,
+    event: T
+  ) {
     eventList.computeIfAbsent(event.uid) {
       mutableListOf()
     }
       .let {
         val mostRecentEvent = it.firstOrNull() // we get the first because the list is in descending order
-        if (!event.ignoreRepeatedInHistory || event.javaClass != mostRecentEvent?.javaClass) {
+        if (event.javaClass == mostRecentEvent?.javaClass && event.ignoreRepeatedInHistory) {
+          it.removeAt(0)
+          it.add(0, event)
+        } else {
           it.add(0, event)
         }
       }

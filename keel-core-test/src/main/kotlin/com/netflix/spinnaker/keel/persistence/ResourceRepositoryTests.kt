@@ -205,23 +205,24 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
                 .isA<ResourceValid>()
             }
 
-            context("a subsequent identical event that should be ignored") {
+            context("a subsequent identical event with duplicates disallowed") {
               before {
                 tick()
                 subject.appendHistory(ResourceValid(resource, clock))
               }
 
-              test("the event is not included in the history") {
+              test("the existing event's timestamp is updated") {
                 expectThat(subject.eventHistory(resource.id))
                   .and {
                     first().isA<ResourceValid>()
+                      .and { get { timestamp }.isEqualTo(clock.instant()) }
                     second().not().isA<ResourceValid>()
                   }
               }
             }
           }
 
-          context("a subsequent identical event") {
+          context("a subsequent identical event with duplicates allowed") {
             before {
               tick()
               subject.appendHistory(ResourceUpdated(resource, emptyMap(), clock))
