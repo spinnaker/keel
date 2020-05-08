@@ -6,6 +6,9 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
+import com.netflix.spinnaker.keel.constraints.ConstraintState
+import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
+import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
@@ -25,7 +28,6 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.test.artifactReferenceResource
 import com.netflix.spinnaker.keel.test.versionedArtifactResource
 import com.netflix.spinnaker.time.MutableClock
-import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.every
@@ -38,6 +40,8 @@ import strikt.assertions.all
 import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
+import strikt.assertions.isTrue
 
 class ApplicationServiceTests : JUnit5Minutests {
   class Fixture {
@@ -121,45 +125,41 @@ class ApplicationServiceTests : JUnit5Minutests {
         every { repository.artifactVersions(artifact) } returns versions
       }
 
-      context("no constraints are preventing promotion of anything") {
+      context("all versions are pending in all environments") {
         before {
+          every {
+            repository.getEnvironmentSummaries(deliveryConfig)
+          } returns deliveryConfig.environments.map { env ->
+            toEnvironmentSummary(env) {
+              ArtifactVersionStatus(
+                pending = versions
+              )
+            }
+          }
+
           every {
             repository.constraintStateFor(deliveryConfig.name, any(), any<String>())
           } returns emptyList()
 
           every {
-            dependsOnEvaluator.canPromote(artifact, any(), deliveryConfig, any())
-          } returns true
+            dependsOnEvaluator.canPromote(artifact, any(), deliveryConfig, environments.getValue("production"))
+          } returns false
         }
 
-        context("all versions are pending in all environments") {
-          before {
-            every {
-              repository.getEnvironmentSummaries(deliveryConfig)
-            } returns deliveryConfig.environments.map { env ->
-              toEnvironmentSummary(env) {
-                ArtifactVersionStatus(
-                  pending = versions
-                )
-              }
-            }
-          }
+        test("artifact summary shows all versions pending in all environments") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
 
-          test("artifact summary shows all versions pending in all environments") {
-            val summaries = applicationService.getArtifactSummariesFor(application)
-
-            expectThat(summaries) {
-              hasSize(1)
-              first().and { // TODO: replace with withFirst when Strikt > 0.26.0 hits
-                get { name }.isEqualTo(artifact.name)
-                with(ArtifactSummary::versions) {
-                  hasSize(versions.size)
-                  all {
-                    with(ArtifactVersionSummary::environments) {
-                      hasSize(environments.size)
-                      all {
-                        state.isEqualTo(PENDING.name.toLowerCase())
-                      }
+          expectThat(summaries) {
+            hasSize(1)
+            first().and { // TODO: replace with withFirst when Strikt > 0.26.0 hits
+              get { name }.isEqualTo(artifact.name)
+              with(ArtifactSummary::versions) {
+                hasSize(versions.size)
+                all {
+                  with(ArtifactVersionSummary::environments) {
+                    hasSize(environments.size)
+                    all {
+                      state.isEqualTo(PENDING.name.toLowerCase())
                     }
                   }
                 }
@@ -167,237 +167,318 @@ class ApplicationServiceTests : JUnit5Minutests {
             }
           }
         }
+      }
 
-        context("each environment has a current version") {
-          before {
-            every {
-              repository.getEnvironmentSummaries(deliveryConfig)
-            } returns deliveryConfig.environments.map { env ->
-              toEnvironmentSummary(env) {
-                when (env.name) {
-                  "test" -> ArtifactVersionStatus(
-                    previous = listOf(version0, version1, version2),
-                    current = version3,
-                    pending = listOf(version4)
-                  )
-                  "staging" -> ArtifactVersionStatus(
-                    previous = listOf(version0, version1),
-                    current = version2,
-                    pending = listOf(version3, version4)
-                  )
-                  "production" -> ArtifactVersionStatus(
-                    previous = listOf(version0),
-                    current = version1,
-                    pending = listOf(version2, version3, version4)
-                  )
-                  else -> error("Unexpected environment ${env.name}")
-                }
+      context("each environment has a current version, and previous versions") {
+        before {
+          every {
+            repository.getEnvironmentSummaries(deliveryConfig)
+          } returns deliveryConfig.environments.map { env ->
+            toEnvironmentSummary(env) {
+              when (env.name) {
+                "test" -> ArtifactVersionStatus(
+                  previous = listOf(version0, version1, version2),
+                  current = version3,
+                  pending = listOf(version4)
+                )
+                "staging" -> ArtifactVersionStatus(
+                  previous = listOf(version0, version1),
+                  current = version2,
+                  pending = listOf(version3, version4)
+                )
+                "production" -> ArtifactVersionStatus(
+                  previous = listOf(version0),
+                  current = version1,
+                  pending = listOf(version2, version3, version4)
+                )
+                else -> error("Unexpected environment ${env.name}")
               }
             }
+          }
 
+          // for statuses other than PENDING, we go look for the artifact summary in environment
+          every {
+            repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
+          } answers {
+            when (val environment = arg<String>(1)) {
+              "test" -> when (val version = arg<String>(3)) {
+                version0,
+                version1,
+                version2 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                version3 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
+              }
+              "staging" -> when (val version = arg<String>(3)) {
+                version0,
+                version1 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
+              }
+              "production" -> when (val version = arg<String>(3)) {
+                version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                version1 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
+              }
+              else -> null
+            }
+          }
+
+          every {
+            repository.constraintStateFor(deliveryConfig.name, any(), any<String>())
+          } answers {
+            when (val environment = arg<String>(1)) {
+              "production" -> {
+                val version = arg<String>(2)
+                listOf(
+                  ConstraintState(
+                    deliveryConfig.name,
+                    environment,
+                    version,
+                    "pipeline",
+                    if (version in listOf(version0, version1)) PASS else PENDING
+                  )
+                )
+              }
+              else -> emptyList()
+            }
+          }
+
+          every {
+            dependsOnEvaluator.canPromote(artifact, any(), deliveryConfig, environments.getValue("production"))
+          } answers {
+            arg(1) in listOf(version0, version1)
+          }
+        }
+
+        test("artifact summary shows correct current version in each environment") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+          expectThat(summaries) {
+            first()
+              .withVersionInEnvironment(version3, "test") {
+                state.isEqualTo(CURRENT.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version2, "staging") {
+                state.isEqualTo(CURRENT.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version1, "production") {
+                state.isEqualTo(CURRENT.name.toLowerCase())
+              }
+          }
+        }
+
+        test("artifact summary shows correct previous versions in each environment") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+          expectThat(summaries) {
+            first()
+              .withVersionInEnvironment(version2, "test") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version1, "test") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version0, "test") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version1, "staging") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version0, "staging") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version0, "production") {
+                state.isEqualTo(PREVIOUS.name.toLowerCase())
+              }
+          }
+        }
+
+        test("artifact summary shows correct pending versions in each environment") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+          expectThat(summaries) {
+            first()
+              .withVersionInEnvironment(version4, "test") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version4, "staging") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version3, "staging") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version4, "production") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version3, "production") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+              .withVersionInEnvironment(version2, "production") {
+                state.isEqualTo(PENDING.name.toLowerCase())
+              }
+          }
+        }
+
+        test("stateless constraint details are included in the summary") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+
+          expectThat(summaries.first { it.name == artifact.name })
+            .withVersionInEnvironment(version1, "production") {
+              get { statelessConstraints }
+                .hasSize(1)
+                .first().and {
+                  get { type }.isEqualTo("depends-on")
+                  get { currentlyPassing }.isTrue()
+                }
+            }
+            .withVersionInEnvironment(version2, "production") {
+              get { statelessConstraints }
+                .hasSize(1)
+                .first().and {
+                  get { type }.isEqualTo("depends-on")
+                  get { currentlyPassing }.isFalse()
+                }
+            }
+        }
+
+        test("stateful constraint details are included in the summary") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+
+          expectThat(summaries.first { it.name == artifact.name })
+            .withVersionInEnvironment(version1, "production") {
+              get { statefulConstraints }
+                .first { it.type == "pipeline" }
+                .get { status }.isEqualTo(PASS)
+            }
+            .withVersionInEnvironment(version2, "production") {
+              get { statefulConstraints }
+                .first { it.type == "pipeline" }
+                .get { status }.isEqualTo(PENDING)
+            }
+        }
+
+        test("non-evaluated stateful constraint details are included in the summary") {
+          val summaries = applicationService.getArtifactSummariesFor(application)
+
+          expectThat(summaries.first { it.name == artifact.name })
+            .withVersionInEnvironment(version1, "production") {
+              get { statefulConstraints }
+                .first { it.type == "manual-judgement" }
+                .get { status }.isEqualTo(NOT_EVALUATED)
+            }
+        }
+      }
+
+      context("there is a skipped version in an environment") {
+        before {
+          every {
+            repository.getEnvironmentSummaries(deliveryConfig)
+          } returns deliveryConfig.environments.map { env ->
+            toEnvironmentSummary(env) {
+              when (env.name) {
+                "test" -> ArtifactVersionStatus(
+                  previous = listOf(version0),
+                  skipped = listOf(version1),
+                  current = version2,
+                  pending = listOf(version3, version4)
+                )
+                else -> ArtifactVersionStatus(
+                  pending = versions
+                )
+              }
+            }
+          }
+
+          every {
+            repository.constraintStateFor(deliveryConfig.name, any(), any<String>())
+          } returns emptyList()
+
+          every {
+            dependsOnEvaluator.canPromote(artifact, any(), deliveryConfig, environments.getValue("production"))
+          } returns false
+        }
+
+        context("the skipped version has an artifact summary for the environment with a status other than 'pending'") {
+          before {
             // for statuses other than PENDING, we go look for the artifact summary in environment
             every {
               repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
             } answers {
-              when (val environment = arg<String>(1)) {
-                "test" -> when (val version = arg<String>(3)) {
-                  version0,
-                  version1,
-                  version2 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  version3 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
-                }
-                "staging" -> when (val version = arg<String>(3)) {
-                  version0,
-                  version1 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
-                }
-                "production" -> when (val version = arg<String>(3)) {
-                  version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  version1 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
-                }
-                else -> null
+              val environment = arg<String>(1)
+              when (val version = arg<String>(3)) {
+                version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                version1 -> ArtifactSummaryInEnvironment(environment, version, "vetoed")
+                version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
               }
             }
           }
 
-          test("artifact summary shows correct current version in each environment") {
+          test("we use the summary we found for the skipped version") {
             val summaries = applicationService.getArtifactSummariesFor(application)
-            expectThat(summaries) {
-              first()
-                .withVersionInEnvironment(version3, "test") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version2, "staging") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version1, "production") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                }
-            }
-          }
 
-          test("artifact summary shows correct previous versions in each environment") {
-            val summaries = applicationService.getArtifactSummariesFor(application)
             expectThat(summaries) {
               first()
-                .withVersionInEnvironment(version2, "test") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
                 .withVersionInEnvironment(version1, "test") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version0, "test") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version1, "staging") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version0, "staging") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version0, "production") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                }
-            }
-          }
-
-          test("artifact summary shows correct pending versions in each environment") {
-            val summaries = applicationService.getArtifactSummariesFor(application)
-            expectThat(summaries) {
-              first()
-                .withVersionInEnvironment(version4, "test") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version4, "staging") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version3, "staging") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version4, "production") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version3, "production") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                }
-                .withVersionInEnvironment(version2, "production") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
+                  state.isEqualTo(VETOED.name.toLowerCase())
                 }
             }
           }
         }
 
-        context("there is a skipped version in an environment") {
+        context("the skipped version has an artifact summary for the environment with a status of 'pending'") {
           before {
+            // for statuses other than PENDING, we go look for the artifact summary in environment
             every {
-              repository.getEnvironmentSummaries(deliveryConfig)
-            } returns deliveryConfig.environments.map { env ->
-              toEnvironmentSummary(env) {
-                when (env.name) {
-                  "test" -> ArtifactVersionStatus(
-                    previous = listOf(version0),
-                    skipped = listOf(version1),
-                    current = version2,
-                    pending = listOf(version3, version4)
-                  )
-                  else -> ArtifactVersionStatus(
-                    pending = versions
-                  )
-                }
+              repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
+            } answers {
+              val environment = arg<String>(1)
+              when (val version = arg<String>(3)) {
+                version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                version1 -> ArtifactSummaryInEnvironment(environment, version, "pending")
+                version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
               }
             }
           }
 
-          context("the skipped version has an artifact summary for the environment with a status other than 'pending'") {
-            before {
-              // for statuses other than PENDING, we go look for the artifact summary in environment
-              every {
-                repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
-              } answers {
-                val environment = arg<String>(1)
-                when (val version = arg<String>(3)) {
-                  version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  version1 -> ArtifactSummaryInEnvironment(environment, version, "vetoed")
-                  version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
+          test("we ignore the summary we found for the skipped version") {
+            val summaries = applicationService.getArtifactSummariesFor(application)
+
+            expectThat(summaries) {
+              first()
+                .withVersionInEnvironment(version1, "test") {
+                  state.isEqualTo(SKIPPED.name.toLowerCase())
                 }
-              }
             }
+          }
+        }
 
-            test("we use the summary we found for the skipped version") {
-              val summaries = applicationService.getArtifactSummariesFor(application)
-
-              expectThat(summaries) {
-                first()
-                  .withVersionInEnvironment(version1, "test") {
-                    state.isEqualTo(VETOED.name.toLowerCase())
-                  }
+        context("the skipped version has no artifact summary for the environment") {
+          before {
+            // for statuses other than PENDING, we go look for the artifact summary in environment
+            every {
+              repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
+            } answers {
+              val environment = arg<String>(1)
+              when (val version = arg<String>(3)) {
+                version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
+                version1 -> null
+                version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
+                else -> ArtifactSummaryInEnvironment(environment, version, "pending")
               }
             }
           }
 
-          context("the skipped version has an artifact summary for the environment with a status of 'pending'") {
-            before {
-              // for statuses other than PENDING, we go look for the artifact summary in environment
-              every {
-                repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
-              } answers {
-                val environment = arg<String>(1)
-                when (val version = arg<String>(3)) {
-                  version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  version1 -> ArtifactSummaryInEnvironment(environment, version, "pending")
-                  version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
+          test("we synthesize a summary for the skipped version") {
+            val summaries = applicationService.getArtifactSummariesFor(application)
+
+            expectThat(summaries) {
+              first()
+                .withVersionInEnvironment(version1, "test") {
+                  state.isEqualTo(SKIPPED.name.toLowerCase())
                 }
-              }
-            }
-
-            test("we ignore the summary we found for the skipped version") {
-              val summaries = applicationService.getArtifactSummariesFor(application)
-
-              expectThat(summaries) {
-                first()
-                  .withVersionInEnvironment(version1, "test") {
-                    state.isEqualTo(SKIPPED.name.toLowerCase())
-                  }
-              }
-            }
-          }
-
-          context("the skipped version has no artifact summary for the environment") {
-            before {
-              // for statuses other than PENDING, we go look for the artifact summary in environment
-              every {
-                repository.getArtifactSummaryInEnvironment(deliveryConfig, any(), any(), any())
-              } answers {
-                val environment = arg<String>(1)
-                when (val version = arg<String>(3)) {
-                  version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
-                  version1 -> null
-                  version0 -> ArtifactSummaryInEnvironment(environment, version, "previous")
-                  else -> ArtifactSummaryInEnvironment(environment, version, "pending")
-                }
-              }
-            }
-
-            test("we synthesize a summary for the skipped version") {
-              val summaries = applicationService.getArtifactSummariesFor(application)
-
-              expectThat(summaries) {
-                first()
-                  .withVersionInEnvironment(version1, "test") {
-                    state.isEqualTo(SKIPPED.name.toLowerCase())
-                  }
-              }
             }
           }
         }
       }
-
-      // after all that we add stateless, and stateful constraint summaries
     }
   }
 
