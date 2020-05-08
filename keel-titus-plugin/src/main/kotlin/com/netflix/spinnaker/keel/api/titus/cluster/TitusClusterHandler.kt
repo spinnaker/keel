@@ -265,7 +265,7 @@ class TitusClusterHandler(
     val versioningStrategies = mutableSetOf<TagVersionStrategy>()
 
     images.forEach { image ->
-      val versionStrategy = calculateVersioningStrategyFrom(image.tag)
+      val versionStrategy = deriveVersioningStrategy(image.tag)
       if (versionStrategy != null) {
         versioningStrategies.add(versionStrategy)
       }
@@ -280,7 +280,7 @@ class TitusClusterHandler(
     }
   }
 
-  fun calculateVersioningStrategyFrom(tag: String): TagVersionStrategy? {
+  fun deriveVersioningStrategy(tag: String): TagVersionStrategy? {
     if (tag.toIntOrNull() != null) {
       return INCREASING_TAG
     }
