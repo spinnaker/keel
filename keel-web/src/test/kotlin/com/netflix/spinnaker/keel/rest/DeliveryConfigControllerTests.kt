@@ -271,8 +271,8 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
             andExpect(status().isOk)
           }
 
-          test("the manifest is persisted with a default name") {
-            verify { repository.upsertDeliveryConfig(match<SubmittedDeliveryConfig> { it.name == "keel-manifest" }) }
+          test("the manifest is persisted") {
+            verify { repository.upsertDeliveryConfig(match<SubmittedDeliveryConfig> { it.application == "keel" }) }
           }
         }
 
