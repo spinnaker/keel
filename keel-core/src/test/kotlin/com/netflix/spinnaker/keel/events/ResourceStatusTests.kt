@@ -50,7 +50,7 @@ internal class ResourceStatusTests : JUnit5Minutests {
     val repository = combinedInMemoryRepository(clock)
     val pausedRepository = InMemoryPausedRepository()
     val actuationPauser = ActuationPauser(repository.resourceRepository, pausedRepository, repository.publisher, clock)
-    val resourceHistoryService = ResourceHistoryService(repository, actuationPauser)
+    val resourceHistoryService = ResourceHistoryService(repository.resourceRepository, actuationPauser)
     val resource = resource()
     val createdEvent = ResourceCreated(resource)
     val missingEvent = ResourceMissing(resource)
