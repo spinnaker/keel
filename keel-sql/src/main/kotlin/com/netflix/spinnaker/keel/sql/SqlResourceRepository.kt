@@ -259,6 +259,8 @@ open class SqlResourceRepository(
           txn
             .update(EVENT)
             .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
+            // we udpate the JSON as well because it also contains a timestamp
+            .set(EVENT.JSON, objectMapper.writeValueAsString(event))
             .where(EVENT.SCOPE.eq(Scope.RESOURCE.name))
             .and(EVENT.UID.eq(resourceUid))
             .orderBy(EVENT.TIMESTAMP.desc())
