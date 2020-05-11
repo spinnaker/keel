@@ -15,16 +15,23 @@
  */
 package com.netflix.spinnaker.keel.clouddriver
 
-import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.AsyncCache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.HOURS
 import java.util.concurrent.TimeUnit.MINUTES
+import java.util.function.BiFunction
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
 
@@ -35,37 +42,50 @@ class MemoryCloudDriverCache(
   private val securityGroupSummariesByIdOrName = Caffeine.newBuilder()
     .maximumSize(1000)
     .expireAfterWrite(1, MINUTES)
-    .build<String, SecurityGroupSummary>()
+    .buildAsync<String, SecurityGroupSummary>()
 
   private val networks = Caffeine.newBuilder()
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
-    .build<String, Network>()
+    .buildAsync<String, Network>()
 
   private val availabilityZones = Caffeine.newBuilder()
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
-    .build<String, Set<String>>()
+    .buildAsync<String, Set<String>>()
 
   private val credentials = Caffeine.newBuilder()
     .maximumSize(100)
     .expireAfterWrite(1, HOURS)
-    .build<String, Credential>()
+    .buildAsync<String, Credential>()
 
   private val subnetsById = Caffeine.newBuilder()
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
-    .build<String, Subnet>()
+    .buildAsync<String, Subnet>()
 
   private val subnetsByPurpose = Caffeine.newBuilder()
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
-    .build<String, Subnet>()
+    .buildAsync<String, Subnet>()
 
   override fun credentialBy(name: String): Credential =
     credentials.getOrNotFound(name, "Credentials with name $name not found") {
       cloudDriver.getCredential(name, DEFAULT_SERVICE_ACCOUNT)
     }
+
+  /**
+   * Convert a value to a [CompletableFuture] so it can be passed to [AsyncCache.put]
+   */
+  private fun <T> futurify(x: T?): CompletableFuture<T?> = CoroutineScope(EmptyCoroutineContext).future { x }
+
+  /**
+   * Convert a suspending function to a [BiFunction] that [AsyncCache.get] expects as its second argument
+   *
+   * Uses [Dispatchers.IO] because it assumes that [block] makes I/O calls
+   */
+  private fun <T> asyncify(block: suspend CoroutineScope.() -> T?): BiFunction<String, Executor, CompletableFuture<T?>> =
+    BiFunction { _: String, _: Executor -> CoroutineScope(Dispatchers.IO).future(block=block) }
 
   override fun securityGroupById(account: String, region: String, id: String): SecurityGroupSummary =
     securityGroupSummariesByIdOrName.getOrNotFound(
@@ -75,7 +95,7 @@ class MemoryCloudDriverCache(
       val credential = credentialBy(account)
       cloudDriver.getSecurityGroupSummaryById(account, credential.type, region, id, DEFAULT_SERVICE_ACCOUNT)
     }.also {
-      securityGroupSummariesByIdOrName.put("$account:$region:${it.name}", it)
+      securityGroupSummariesByIdOrName.put("$account:$region:${it.name}", futurify(it))
     }
 
   override fun securityGroupByName(account: String, region: String, name: String): SecurityGroupSummary =
@@ -86,7 +106,7 @@ class MemoryCloudDriverCache(
       val credential = credentialBy(account)
       cloudDriver.getSecurityGroupSummaryByName(account, credential.type, region, name, DEFAULT_SERVICE_ACCOUNT)
     }.also {
-      securityGroupSummariesByIdOrName.put("$account:$region:${it.id}", it)
+      securityGroupSummariesByIdOrName.put("$account:$region:${it.id}", futurify(it))
     }
 
   override fun networkBy(id: String): Network =
@@ -105,15 +125,17 @@ class MemoryCloudDriverCache(
     }
 
   override fun availabilityZonesBy(account: String, vpcId: String, purpose: String, region: String): Set<String> =
-    availabilityZones.get("$account:$vpcId:$purpose:$region") {
-      runBlocking {
-        cloudDriver
-          .listSubnets("aws", DEFAULT_SERVICE_ACCOUNT)
-          .filter { it.account == account && it.vpcId == vpcId && it.purpose == purpose && it.region == region }
-          .map { it.availabilityZone }
-          .toSet()
-      }
-    }!!
+    runBlocking {
+      availabilityZones.get("$account:$vpcId:$purpose:$region",
+        asyncify {
+          cloudDriver
+            .listSubnets("aws", DEFAULT_SERVICE_ACCOUNT)
+            .filter { it.account == account && it.vpcId == vpcId && it.purpose == purpose && it.region == region }
+            .map { it.availabilityZone }
+            .toSet()
+        }
+      ).await()
+    }
 
   override fun subnetBy(subnetId: String): Subnet =
     subnetsById.getOrNotFound(subnetId, "Subnet with id $subnetId not found") {
@@ -129,20 +151,19 @@ class MemoryCloudDriverCache(
         .find { it.account == account && it.region == region && it.purpose == purpose }
     }
 
-  private fun <T> Cache<String, T>.getOrNotFound(
+  private fun <T> AsyncCache<String, T>.getOrNotFound(
     key: String,
     notFoundMessage: String,
     loader: suspend CoroutineScope.() -> T?
-  ): T = get(key) {
-    runCatching {
-      runBlocking(block = loader)
+  ): T = runCatching {
+    runBlocking {
+      get(key, asyncify(loader)).await()
     }
-      .getOrElse { ex ->
-        if (ex is HttpException && ex.code() == 404) {
-          null
-        } else {
-          throw CacheLoadingException("Error loading cache for $key", ex)
-        }
-      }
+  }.getOrElse { ex ->
+    if (ex is HttpException && ex.code() == 404) {
+      null
+    } else {
+      throw CacheLoadingException("Error loading cache for $key", ex)
+    }
   } ?: throw ResourceNotFound(notFoundMessage)
 }
