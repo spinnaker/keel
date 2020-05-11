@@ -48,7 +48,6 @@ import org.springframework.stereotype.Component
 class ApplicationService(
   private val repository: KeelRepository,
   private val resourceHistoryService: ResourceHistoryService,
-  private val publisher: ApplicationEventPublisher,
   constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -85,13 +84,13 @@ class ApplicationService(
         judgedBy = user))
   }
 
-  fun pin(application: String, pin: EnvironmentArtifactPin, user: String) {
+  fun pin(user: String, application: String, pin: EnvironmentArtifactPin) {
     val config = repository.getDeliveryConfigForApplication(application)
     repository.pinEnvironment(config, pin.copy(pinnedBy = user))
     // TODO: publish ArtifactPinnedEvent
   }
 
-  fun deletePin(application: String, targetEnvironment: String, reference: String?, user: String) {
+  fun deletePin(user: String, application: String, targetEnvironment: String, reference: String? = null) {
     val config = repository.getDeliveryConfigForApplication(application)
     repository.deletePin(config, targetEnvironment, reference)
     // TODO: publish ArtifactUnpinnedEvent

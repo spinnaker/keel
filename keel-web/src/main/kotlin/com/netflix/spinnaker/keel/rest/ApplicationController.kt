@@ -167,7 +167,7 @@ class ApplicationController(
     @PathVariable("application") application: String,
     @RequestBody pin: EnvironmentArtifactPin
   ) {
-    applicationService.pin(application, pin, user)
+    applicationService.pin(user, application, pin)
   }
 
   @DeleteMapping(
@@ -184,7 +184,7 @@ class ApplicationController(
     @RequestParam reference: String? = null,
     @RequestParam comment: String? = null
   ) {
-    applicationService.deletePin(application, targetEnvironment, reference, user)
+    applicationService.deletePin(user, application, targetEnvironment, reference)
   }
 
   @PostMapping(

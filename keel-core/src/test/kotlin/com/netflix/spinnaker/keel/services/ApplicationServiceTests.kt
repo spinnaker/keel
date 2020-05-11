@@ -33,10 +33,9 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import java.time.Instant
-import java.time.ZoneId
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.all
@@ -45,6 +44,8 @@ import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
+import java.time.Instant
+import java.time.ZoneId
 
 class ApplicationServiceTests : JUnit5Minutests {
   class Fixture {
@@ -486,9 +487,13 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
     }
 
+
     context("pinning an artifact version in an environment") {
       before {
-        applicationService.pin(application, pin "keel@keel.io")
+        every {
+          repository.pinEnvironment(deliveryConfig, pin)
+        } just Runs
+        applicationService.pin("keel@keel.io", application, pin)
       }
 
       test("causes the pin to be persisted") {
@@ -498,14 +503,32 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
     }
 
-    context("unpinning an artifact in an environment") {
+    context("unpinning a specific artifact in an environment") {
       before {
-        applicationService.deletePin(application, "production", artifact.reference, "keel@keel.io")
+        every {
+          repository.deletePin(deliveryConfig, "production", artifact.reference)
+        } just Runs
+        applicationService.deletePin("keel@keel.io", application, "production", artifact.reference)
       }
 
       test("causes the pin to be deleted") {
         verify(exactly = 1) {
           repository.deletePin(deliveryConfig, "production", artifact.reference)
+        }
+      }
+    }
+
+    context("unpinning all artifacts in an environment") {
+      before {
+        every {
+          repository.deletePin(deliveryConfig, "production")
+        } just Runs
+        applicationService.deletePin("keel@keel.io", application, "production")
+      }
+
+      test("causes all pins in the environment to be deleted") {
+        verify(exactly = 1) {
+          repository.deletePin(deliveryConfig, "production")
         }
       }
     }
@@ -524,7 +547,7 @@ class ApplicationServiceTests : JUnit5Minutests {
         }
     }
 
-  val Assertion.Builder<ArtifactSummaryInEnvironment>.state: Assertion.Builder<String>
+  val strikt.api.Assertion.Builder<com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment>.state: Assertion.Builder<String>
     get() = get { state }
 
   private fun Fixture.toEnvironmentSummary(env: Environment, block: () -> ArtifactVersionStatus): EnvironmentSummary {
