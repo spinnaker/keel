@@ -38,6 +38,7 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import java.time.Instant
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 /**
@@ -47,6 +48,7 @@ import org.springframework.stereotype.Component
 class ApplicationService(
   private val repository: KeelRepository,
   private val resourceHistoryService: ResourceHistoryService,
+  private val publisher: ApplicationEventPublisher,
   constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -86,16 +88,13 @@ class ApplicationService(
   fun pin(application: String, pin: EnvironmentArtifactPin, user: String) {
     val config = repository.getDeliveryConfigForApplication(application)
     repository.pinEnvironment(config, pin.copy(pinnedBy = user))
+    // TODO: publish ArtifactPinnedEvent
   }
 
-  fun deletePin(application: String, pin: EnvironmentArtifactPin) {
+  fun deletePin(application: String, targetEnvironment: String, reference: String?, user: String) {
     val config = repository.getDeliveryConfigForApplication(application)
-    repository.deletePin(config, pin.targetEnvironment, pin.reference)
-  }
-
-  fun deletePin(application: String, targetEnvironment: String) {
-    val config = repository.getDeliveryConfigForApplication(application)
-    repository.deletePin(config, targetEnvironment)
+    repository.deletePin(config, targetEnvironment, reference)
+    // TODO: publish ArtifactUnpinnedEvent
   }
 
   fun markAsVetoedIn(application: String, veto: EnvironmentArtifactVeto, force: Boolean) {

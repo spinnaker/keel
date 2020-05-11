@@ -171,20 +171,6 @@ class ApplicationController(
   }
 
   @DeleteMapping(
-    path = ["/{application}/pin"]
-  )
-  @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
-    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)"""
-  )
-  @ResponseStatus(HttpStatus.ACCEPTED)
-  fun deletePin(
-    @PathVariable("application") application: String,
-    @RequestBody pin: EnvironmentArtifactPin
-  ) {
-    applicationService.deletePin(application, pin)
-  }
-
-  @DeleteMapping(
     path = ["/{application}/pin/{targetEnvironment}"]
   )
   @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
@@ -192,10 +178,13 @@ class ApplicationController(
   )
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun deletePin(
+    @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("application") application: String,
-    @PathVariable("targetEnvironment") targetEnvironment: String
+    @PathVariable("targetEnvironment") targetEnvironment: String,
+    @RequestParam reference: String? = null,
+    @RequestParam comment: String? = null
   ) {
-    applicationService.deletePin(application, targetEnvironment)
+    applicationService.deletePin(application, targetEnvironment, reference, user)
   }
 
   @PostMapping(
