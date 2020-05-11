@@ -47,8 +47,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class, DummyResourceConfiguration::class],
-  webEnvironment = MOCK,
-  properties = ["eureka.default-to-up=false"]
+  webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
 internal class DeliveryConfigControllerTests : JUnit5Minutests {
@@ -173,8 +172,10 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
         |    environment: test
         |  - type: allowed-times
         |    windows:
-        |      - hours: 6-18
-        |        days: mon-fri
+        |    - hours: 6-18
+        |      days: Monday-Friday
+        |      tz: America/Los_Angeles
+        |  - type: manual-judgement
         |  resources:
         |  - kind: test/whatever@v1
         |    spec:
