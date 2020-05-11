@@ -181,8 +181,7 @@ class ApplicationController(
     @RequestHeader("X-SPINNAKER-USER") user: String,
     @PathVariable("application") application: String,
     @PathVariable("targetEnvironment") targetEnvironment: String,
-    @RequestParam reference: String? = null,
-    @RequestParam comment: String? = null
+    @RequestParam reference: String? = null
   ) {
     applicationService.deletePin(user, application, targetEnvironment, reference)
   }

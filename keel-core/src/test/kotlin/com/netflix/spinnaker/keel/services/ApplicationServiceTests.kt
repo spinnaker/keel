@@ -36,6 +36,8 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Instant
+import java.time.ZoneId
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.all
@@ -44,8 +46,6 @@ import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
-import java.time.Instant
-import java.time.ZoneId
 
 class ApplicationServiceTests : JUnit5Minutests {
   class Fixture {
@@ -486,7 +486,6 @@ class ApplicationServiceTests : JUnit5Minutests {
         }
       }
     }
-
 
     context("pinning an artifact version in an environment") {
       before {
