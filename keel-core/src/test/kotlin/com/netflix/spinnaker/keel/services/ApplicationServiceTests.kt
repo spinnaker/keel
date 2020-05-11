@@ -546,7 +546,7 @@ class ApplicationServiceTests : JUnit5Minutests {
         }
     }
 
-  val strikt.api.Assertion.Builder<com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment>.state: Assertion.Builder<String>
+  val Assertion.Builder<ArtifactSummaryInEnvironment>.state: Assertion.Builder<String>
     get() = get { state }
 
   private fun Fixture.toEnvironmentSummary(env: Environment, block: () -> ArtifactVersionStatus): EnvironmentSummary {
