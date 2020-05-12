@@ -19,8 +19,8 @@ import de.huxhorn.sulky.ulid.ULID
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
-private val objectMapperInstance: ObjectMapper by lazy { ObjectMapper().configureMe() }
-private val yamlMapperInstance: YAMLMapper by lazy { YAMLMapper().configureMe() }
+private val objectMapperInstance: ObjectMapper = ObjectMapper().configureMe()
+private val yamlMapperInstance: YAMLMapper = YAMLMapper().configureMe()
 
 /**
  * Factory method for [ObjectMapper]s configured how we like 'em.
