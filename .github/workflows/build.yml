@@ -20,7 +20,7 @@ jobs:
         with:
           java-version: 8
       - name: Build
-        run: ./gradlew build --stacktrace
+        run: ./gradlew clean build --stacktrace
       - name: Codecov
         uses: codecov/codecov-action@v1.0.6
         if: github.ref == 'refs/heads/master'
