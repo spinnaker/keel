@@ -27,7 +27,6 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNKNOWN
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.VETOED
 import org.springframework.stereotype.Component
 
 /**
@@ -61,7 +60,6 @@ class ResourceStatusService(
       history.isActuating() -> ACTUATING
       history.isError() -> ERROR
       history.isCreated() -> CREATED
-      history.isVetoed() -> VETOED
       history.isResumed() -> RESUMED
       history.isCurrentlyUnresolvable() -> CURRENTLY_UNRESOLVABLE
       else -> UNKNOWN
@@ -103,9 +101,17 @@ class ResourceStatusService(
   }
 
   /**
-   * Checks last 10 events for flapping between only ResourceActuationLaunched and ResourceDeltaDetected
+   * Returns true if a resource has been vetoed, or if the last 10 events are only
+   * ResourceActuationLaunched or ResourceDeltaDetected events.
+   *
+   * Even though we could return the status of vetoed we think that unhappy is more clear to users
+   * and doesn't leak implementation terminology that might not be helpful to users.
    */
   private fun List<ResourceHistoryEvent>.isUnhappy(): Boolean {
+    if (isVetoed()) {
+      return true
+    }
+
     val recentSliceOfHistory = this.subList(0, Math.min(10, this.size))
     val filteredHistory = recentSliceOfHistory.filter { it is ResourceDeltaDetected || it is ResourceActuationLaunched }
     if (filteredHistory.size != recentSliceOfHistory.size) {
@@ -114,4 +120,12 @@ class ResourceStatusService(
     }
     return true
   }
+
+  /**
+   * Returns true if a resource has been vetoed, or if the last 10 events are only
+   * ResourceActuationLaunched or ResourceDeltaDetected events.
+   *
+   * Even though we could return the status of vetoed we think that unhappy is more clear to users
+   * and doesn't leak implementation terminology that might not be helpful to users.
+   */
 }
