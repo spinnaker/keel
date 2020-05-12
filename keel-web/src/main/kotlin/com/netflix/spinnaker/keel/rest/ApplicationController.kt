@@ -63,7 +63,7 @@ class ApplicationController(
     @RequestParam("includeDetails", required = false, defaultValue = "false") includeDetails: Boolean,
     @RequestParam("entities", required = false, defaultValue = "") entities: MutableList<String>
   ): Map<String, Any> {
-    return mutableMapOf(
+    return mutableMapOf<String, Any>(
       "applicationPaused" to actuationPauser.applicationIsPaused(application),
       "hasManagedResources" to applicationService.hasManagedResources(application),
       "currentEnvironmentConstraints" to applicationService.getConstraintStatesFor(application)

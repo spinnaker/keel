@@ -10,7 +10,9 @@ import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.events.ConstraintStateChanged
+import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -29,7 +31,8 @@ import strikt.assertions.isTrue
 internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
 
   class Fixture {
-    val repository: KeelRepository = mockk(relaxUnitFun = true)
+    val deliveryConfigRepository: DeliveryConfigRepository = mockk(relaxed = true)
+    val repository: KeelRepository = combinedMockRepository(deliveryConfigRepository = deliveryConfigRepository)
     val eventPublisher: ApplicationEventPublisher = mockk(relaxed = true)
     val fakeStatefulConstraintEvaluatorDelegate: StatefulConstraintEvaluator<FakeConstraint> = mockk(relaxed = true)
 
@@ -101,11 +104,11 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       } just Runs
 
       every {
-        repository.getConstraintState("test", "test", "v1.0.0", "fake")
+        deliveryConfigRepository.getConstraintState("test", "test", "v1.0.0", "fake")
       } returns null
 
       every {
-        repository.getConstraintState("test", "test", "v1.0.1", "fake")
+        deliveryConfigRepository.getConstraintState("test", "test", "v1.0.1", "fake")
       } returns pendingConstraintState
 
       every {
@@ -155,7 +158,7 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       subject.canPromote(artifact, "v1.0.1", manifest, environment)
 
       verify(exactly = 2) {
-        repository.getConstraintState("test", "test", any(), "fake")
+        deliveryConfigRepository.getConstraintState("test", "test", any(), "fake")
       }
 
       val event = slot<ConstraintStateChanged>()

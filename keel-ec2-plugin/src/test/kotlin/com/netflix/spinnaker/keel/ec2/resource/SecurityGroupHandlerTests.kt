@@ -50,9 +50,10 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -82,15 +83,16 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
   private val cloudDriverService: CloudDriverService = mockk()
   private val cloudDriverCache: CloudDriverCache = mockk()
   private val orcaService: OrcaService = mockk()
-  val repository = mockk<KeelRepository>() {
+  private val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk() {
     // we're just using this to get notifications
     every { environmentFor(any()) } returns Environment("test")
   }
+  val combinedRepository = combinedMockRepository(deliveryConfigRepository = deliveryConfigRepository)
 
   private val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
-    repository,
+    combinedRepository,
     publisher
   )
   private val objectMapper = configuredObjectMapper()

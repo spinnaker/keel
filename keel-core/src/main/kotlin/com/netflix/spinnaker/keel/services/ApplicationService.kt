@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ConstraintState
 import com.netflix.spinnaker.keel.constraints.ConstraintStatus
-import com.netflix.spinnaker.keel.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
@@ -237,7 +236,7 @@ class ApplicationService(
     }.map { constraint ->
       StatefulConstraintSummary(
         type = constraint.type,
-        status = NOT_EVALUATED
+        status = ConstraintStatus.NOT_EVALUATED
       )
     }
     return artifactSummaryInEnvironment.copy(

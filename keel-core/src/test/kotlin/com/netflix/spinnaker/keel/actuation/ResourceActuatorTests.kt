@@ -28,8 +28,8 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
-import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
-import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDiffFingerprintRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryResourceRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
@@ -57,10 +57,10 @@ import strikt.assertions.isEqualTo
 internal class ResourceActuatorTests : JUnit5Minutests {
 
   class Fixture {
-    val resourceRepository = mockk<ResourceRepository>()
+    val resourceRepository = InMemoryResourceRepository()
     val artifactRepository = mockk<ArtifactRepository>()
     val deliveryConfigRepository = mockk<DeliveryConfigRepository>()
-    val diffFingerprintRepository = mockk<DiffFingerprintRepository>(relaxUnitFun = true)
+    val diffFingerprintRepository = InMemoryDiffFingerprintRepository()
     val actuationPauser: ActuationPauser = mockk() {
       every { isPaused(any<String>()) } returns false
       every { isPaused(any<Resource<*>>()) } returns false
@@ -93,13 +93,18 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       every { plugin2.supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyArtifactVersionedResourceSpec::class.java)
     }
 
+    after {
+      resourceRepository.dropAll()
+    }
+
     context("a managed resource exists") {
       val resource = artifactVersionedResource(
         kind = parseKind("plugin1/foo@v1")
       )
 
       before {
-        every { resourceRepository.lastEvent(resource.id) } returns ResourceCreated(resource)
+        resourceRepository.store(resource)
+        resourceRepository.appendHistory(ResourceCreated(resource))
       }
 
       context("the resource check is not vetoed") {
@@ -109,7 +114,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
         context("management is paused for that resource") {
           before {
-            every { resourceRepository.lastEvent(resource.id) } returns ResourceActuationPaused(resource, "keel@keel.io")
+            resourceRepository.appendHistory(ResourceActuationPaused(resource, "keel@keel.io"))
             every { actuationPauser.isPaused(resource) } returns true
             runBlocking {
               subject.checkResource(resource)
@@ -170,7 +175,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
             context("the resource previously had a delta") {
               before {
-                every { resourceRepository.lastEvent(resource.id) } returns ResourceDeltaDetected(resource, emptyMap())
+                resourceRepository.appendHistory(ResourceDeltaDetected(resource, emptyMap()))
 
                 runBlocking {
                   subject.checkResource(resource)
@@ -195,7 +200,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
             context("when there is an actuation launched event in history, check other events before publishing ResourceDeltaResolved") {
               before {
-                every { resourceRepository.lastEvent(resource.id) } returns ResourceActuationLaunched(resource, plugin1.name, emptyList())
+                resourceRepository.appendHistory(ResourceActuationLaunched(resource, plugin1.name, emptyList()))
                 runBlocking {
                   subject.checkResource(resource)
                 }
@@ -206,7 +211,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
               context("the task was finished successfully") {
                 before {
-                  every { resourceRepository.lastEvent(resource.id) } returns ResourceTaskSucceeded(resource, emptyList())
+                  resourceRepository.appendHistory(ResourceTaskSucceeded(resource, emptyList()))
                   runBlocking {
                     subject.checkResource(resource)
                   }
@@ -218,7 +223,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
               context("the task was finished with an error") {
                 before {
-                  every { resourceRepository.lastEvent(resource.id) } returns ResourceTaskFailed(resource, "error", emptyList())
+                  resourceRepository.appendHistory(ResourceTaskFailed(resource, "error", emptyList()))
                   runBlocking {
                     subject.checkResource(resource)
                   }

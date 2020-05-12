@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -43,8 +45,9 @@ import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_NOT_FOUND
+import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -81,13 +84,15 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val cloudDriverService = mockk<CloudDriverService>()
   val cloudDriverCache = mockk<CloudDriverCache>()
   val orcaService = mockk<OrcaService>()
+  val objectMapper = ObjectMapper().registerKotlinModule()
   val normalizers = emptyList<Resolver<ClusterSpec>>()
   val clock = Clock.systemUTC()
   val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
-  val repository = mockk<KeelRepository>()
+  val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk()
+  val combinedRepository = combinedMockRepository(deliveryConfigRepository = deliveryConfigRepository)
   val taskLauncher = OrcaTaskLauncher(
     orcaService,
-    repository,
+    combinedRepository,
     publisher
   )
   val clusterExportHelper = mockk<ClusterExportHelper>(relaxed = true)
@@ -224,7 +229,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       }
 
       coEvery { orcaService.orchestrate(resource.serviceAccount, any()) } returns TaskRefResponse("/tasks/${randomUUID()}")
-      every { repository.environmentFor(any()) } returns Environment("test")
+      every { deliveryConfigRepository.environmentFor(any()) } returns Environment("test")
       coEvery {
         clusterExportHelper.discoverDeploymentStrategy("aws", "test", "keel", any())
       } returns RedBlack()

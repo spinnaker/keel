@@ -25,8 +25,9 @@ import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.memory.InMemoryDeliveryConfigRepository
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
+import com.netflix.spinnaker.keel.test.combinedMockRepository
 import com.netflix.spinnaker.keel.test.resource
 import de.danielbechler.diff.node.DiffNode
 import de.danielbechler.diff.node.DiffNode.State
@@ -64,15 +65,16 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
   private val cloudDriverService = mockk<CloudDriverService>()
   private val cloudDriverCache = mockk<CloudDriverCache>()
   private val orcaService = mockk<OrcaService>()
-
-  val repository = mockk<KeelRepository>() {
+  private val deliveryConfigRepository: InMemoryDeliveryConfigRepository = mockk() {
     // we're just using this to get notifications
     every { environmentFor(any()) } returns Environment("test")
   }
+
+  val combinedRepository = combinedMockRepository(deliveryConfigRepository = deliveryConfigRepository)
   private val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
-    repository,
+    combinedRepository,
     publisher
   )
   private val mapper = ObjectMapper().registerKotlinModule()

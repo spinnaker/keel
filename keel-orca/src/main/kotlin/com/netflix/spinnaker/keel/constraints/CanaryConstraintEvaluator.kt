@@ -4,9 +4,6 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
-import com.netflix.spinnaker.keel.constraints.ConstraintStatus.FAIL
-import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PASS
-import com.netflix.spinnaker.keel.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -98,7 +95,7 @@ class CanaryConstraintEvaluator(
       }
       repository.storeConstraintState(
         state.copy(
-          status = FAIL,
+          status = ConstraintStatus.FAIL,
           judgedBy = judge,
           judgedAt = clock.instant(),
           comment = "Canary failed: ${status.summary()}"))
@@ -109,7 +106,7 @@ class CanaryConstraintEvaluator(
     if (status.passed(constraint)) {
       repository.storeConstraintState(
         state.copy(
-          status = PASS,
+          status = ConstraintStatus.PASS,
           judgedBy = judge,
           judgedAt = clock.instant(),
           comment = "Canary passed: ${status.summary()}"))
@@ -122,8 +119,8 @@ class CanaryConstraintEvaluator(
       constraint.regionsWithCorrelatedExecutions(judge)
     }
     val unknownExecutions = regionsWithCorrelatedExecutions.filter {
-        regionsToTrigger.contains(it.key)
-      }
+      regionsToTrigger.contains(it.key)
+    }
       .toSortedMap()
 
     if (unknownExecutions.isNotEmpty() && attributes.executions.isEmpty()) {
@@ -141,7 +138,7 @@ class CanaryConstraintEvaluator(
       if (!status.anyRunning()) {
         repository.storeConstraintState(
           state.copy(
-            status = FAIL,
+            status = ConstraintStatus.FAIL,
             judgedBy = judge,
             judgedAt = clock.instant(),
             attributes = attributes.copy(status = status),
@@ -168,13 +165,12 @@ class CanaryConstraintEvaluator(
 
     attributes = attributes.copy(
       executions = tasks.map { (region, task) ->
-          RegionalExecutionId(region, task.id)
-        }
+        RegionalExecutionId(region, task.id)
+      }
         .toSet())
 
     repository.storeConstraintState(
       state.copy(
-        status = PENDING,
         attributes = attributes,
         comment = "Running canaries in ${attributes.launchedRegions}"))
 
@@ -259,10 +255,10 @@ class CanaryConstraintEvaluator(
   suspend fun CanaryConstraint.regionsWithCorrelatedExecutions(prefix: String): Map<String, String> =
     coroutineScope {
       regions.associateWith { region ->
-          async {
-            orcaService.getCorrelatedExecutions("$prefix:$region")
-          }
+        async {
+          orcaService.getCorrelatedExecutions("$prefix:$region")
         }
+      }
         .mapValues { it.value.await() }
         .filter { it.value.isNotEmpty() }
         .mapValues { it.value.first() }
