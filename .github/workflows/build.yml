@@ -26,7 +26,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Build
-        run: ./gradlew ":keel-web:test" --tests '*DeliveryConfigControllerTests'
+        run: ./gradlew ":keel-web:test"
       - name: Codecov
         uses: codecov/codecov-action@v1.0.6
         if: github.ref == 'refs/heads/master'
