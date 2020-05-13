@@ -43,12 +43,12 @@ import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-class ResourceHistoryServiceTests : JUnit5Minutests {
+class ResourceStatusServiceTests : JUnit5Minutests {
   companion object Fixture {
     val clock = MutableClock()
     val repository = combinedInMemoryRepository(clock)
     val actuationPauser = ActuationPauser(repository.resourceRepository, repository.pausedRepository, repository.publisher, clock)
-    val subject = ResourceHistoryService(repository.resourceRepository, actuationPauser)
+    val subject = ResourceStatusService(repository.resourceRepository, actuationPauser)
     val resource = resource()
     val deliveryConfig = deliveryConfig(resource)
     val user = "keel@keel.io"

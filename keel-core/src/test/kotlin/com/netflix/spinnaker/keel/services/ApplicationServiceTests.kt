@@ -54,7 +54,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       ZoneId.of("UTC")
     )
     val repository: KeelRepository = mockk()
-    val resourceHistoryService: ResourceHistoryService = mockk()
+    val resourceStatusService: ResourceStatusService = mockk()
 
     val application = "fnord"
     val artifact = DebianArtifact(
@@ -113,7 +113,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     // subject
-    val applicationService = ApplicationService(repository, resourceHistoryService, listOf(dependsOnEvaluator))
+    val applicationService = ApplicationService(repository, resourceStatusService, listOf(dependsOnEvaluator))
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {

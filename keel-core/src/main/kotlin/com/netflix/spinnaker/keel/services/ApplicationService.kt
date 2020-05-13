@@ -46,7 +46,7 @@ import org.springframework.stereotype.Component
 @Component
 class ApplicationService(
   private val repository: KeelRepository,
-  private val resourceHistoryService: ResourceHistoryService,
+  private val resourceStatusService: ResourceStatusService,
   constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -126,7 +126,7 @@ class ApplicationService(
   fun getResourceSummariesFor(application: String): List<ResourceSummary> {
     return try {
       val deliveryConfig = repository.getDeliveryConfigForApplication(application)
-      resourceHistoryService.getResourceSummariesFor(deliveryConfig)
+      resourceStatusService.getResourceSummariesFor(deliveryConfig)
     } catch (e: NoSuchDeliveryConfigException) {
       emptyList()
     }

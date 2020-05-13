@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component
  * Service object that offers high-level APIs around resource (event) history and status.
  */
 @Component
-class ResourceHistoryService(
+class ResourceStatusService(
   private val resourceRepository: ResourceRepository,
   private val actuationPauser: ActuationPauser
 ) {
