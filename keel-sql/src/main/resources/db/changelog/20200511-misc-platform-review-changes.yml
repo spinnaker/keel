@@ -46,6 +46,9 @@ databaseChangeLog:
     - dropIndex:
         tableName: environment_resource
         indexName: environment_resource_unique_idx
+    - dropIndex:
+        tableName: event
+        indexName: event_scope_uid_idx
 - changeSet:
     id: reposition-large-columns
     author: fletch
