@@ -85,7 +85,7 @@ class MemoryCloudDriverCache(
    * Uses [Dispatchers.IO] because it assumes that [block] makes I/O calls
    */
   private fun <T> asyncify(block: suspend CoroutineScope.() -> T?): BiFunction<String, Executor, CompletableFuture<T?>> =
-    BiFunction { _: String, _: Executor -> CoroutineScope(Dispatchers.IO).future(block=block) }
+    BiFunction { _: String, _: Executor -> CoroutineScope(Dispatchers.IO).future(block = block) }
 
   override fun securityGroupById(account: String, region: String, id: String): SecurityGroupSummary =
     securityGroupSummariesByIdOrName.getOrNotFound(
