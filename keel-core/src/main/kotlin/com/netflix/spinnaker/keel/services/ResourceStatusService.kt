@@ -1,15 +1,6 @@
 package com.netflix.spinnaker.keel.services
 
-import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Monikered
-import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SimpleLocations
-import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
-import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationResumed
@@ -123,38 +114,4 @@ class ResourceStatusService(
     }
     return true
   }
-
-  /**
-   * Returns a list of [ResourceSummary] for the specified application.
-   */
-  fun getResourceSummariesFor(deliveryConfig: DeliveryConfig): List<ResourceSummary> {
-    return deliveryConfig.resources.map { resource ->
-      resource.toResourceSummary(deliveryConfig)
-    }
-  }
-
-  private fun Resource<*>.toResourceSummary(deliveryConfig: DeliveryConfig) =
-    ResourceSummary(
-      resource = this,
-      status = getStatus(id),
-      moniker = if (spec is Monikered) {
-        (spec as Monikered).moniker
-      } else {
-        null
-      },
-      locations = if (spec is Locatable<*>) {
-        SimpleLocations(
-          account = (spec as Locatable<*>).locations.account,
-          vpc = (spec as Locatable<*>).locations.vpc,
-          regions = (spec as Locatable<*>).locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
-        )
-      } else {
-        null
-      },
-      artifact = deliveryConfig.let {
-        findAssociatedArtifact(it)?.toResourceArtifactSummary()
-      }
-    )
-
-  private fun DeliveryArtifact.toResourceArtifactSummary() = ResourceArtifactSummary(name, type, reference)
 }

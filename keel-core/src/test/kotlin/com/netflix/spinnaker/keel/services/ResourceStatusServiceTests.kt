@@ -39,7 +39,6 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.every
 import io.mockk.slot
-import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
@@ -81,15 +80,6 @@ class ResourceStatusServiceTests : JUnit5Minutests {
       before {
         repository.upsertDeliveryConfig(deliveryConfig)
         repository.appendResourceHistory(ResourceCreated(resource, clock))
-      }
-
-      test("can get resource summary by delivery config") {
-        val summaries = subject.getResourceSummariesFor(deliveryConfig)
-
-        expect {
-          that(summaries.size).isEqualTo(1)
-          that(summaries.map { it.status }.filter { it == CREATED }.size).isEqualTo(1)
-        }
       }
 
       context("resource status") {
