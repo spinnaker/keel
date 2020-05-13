@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.NoSuchEntityException
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICATION
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
@@ -100,7 +101,8 @@ class AuthorizationSupport(
     withAuthentication(target, identifier) { auth ->
       val application = when (target) {
         RESOURCE -> repository.getResource(identifier).application
-        APPLICATION, DELIVERY_CONFIG -> identifier
+        APPLICATION -> identifier
+        DELIVERY_CONFIG -> getDeliveryConfigApplication(identifier)
         else -> throw InvalidRequestException("Invalid target type ${target.name} for application permission check")
       }
       AuthenticatedRequest.allowAnonymous {
@@ -199,4 +201,15 @@ class AuthorizationSupport(
     }
 
   private fun Boolean.toAuthorization() = if (this) "ALLOWED" else "DENIED"
+
+  // For backwards compatibility, we have 2 identifier for delivery configs - we can either
+  // get the delivery config name, or the application name
+  private fun getDeliveryConfigApplication(identifier: String): String {
+    return try {
+      val deliveryConfig = repository.getDeliveryConfig(identifier)
+      deliveryConfig.application
+    } catch (ex: NoSuchDeliveryConfigName) {
+      identifier
+    }
+  }
 }
