@@ -27,7 +27,6 @@ import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.HOURS
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.function.BiFunction
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
@@ -35,6 +34,15 @@ import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
 
+/**
+ * An in-memory cache for calls against cloud driver
+ *
+ * Caching is implemented using asynchronous caches ([AsyncCache]) because
+ * it isn't safe for a kotlin coroutine to yield inside of the second argument
+ * of a synchronous cache's get method.
+ *
+ * For more details on why using async, see: https://github.com/spinnaker/keel/pull/1154
+ */
 class MemoryCloudDriverCache(
   private val cloudDriver: CloudDriverService
 ) : CloudDriverCache {
@@ -75,17 +83,12 @@ class MemoryCloudDriverCache(
     }
 
   /**
-   * Convert a value to a [CompletableFuture] so it can be passed to [AsyncCache.put]
-   */
-  private fun <T> futurify(x: T?): CompletableFuture<T?> = CoroutineScope(EmptyCoroutineContext).future { x }
-
-  /**
    * Convert a suspending function to a [BiFunction] that [AsyncCache.get] expects as its second argument
    *
    * Uses [Dispatchers.IO] because it assumes that [block] makes I/O calls
    */
   private fun <T> asyncify(block: suspend CoroutineScope.() -> T?): BiFunction<String, Executor, CompletableFuture<T?>> =
-    BiFunction { _: String, _: Executor -> CoroutineScope(Dispatchers.IO).future(block = block) }
+    BiFunction { _, _ -> CoroutineScope(Dispatchers.IO).future(block = block) }
 
   override fun securityGroupById(account: String, region: String, id: String): SecurityGroupSummary =
     securityGroupSummariesByIdOrName.getOrNotFound(
@@ -95,7 +98,7 @@ class MemoryCloudDriverCache(
       val credential = credentialBy(account)
       cloudDriver.getSecurityGroupSummaryById(account, credential.type, region, id, DEFAULT_SERVICE_ACCOUNT)
     }.also {
-      securityGroupSummariesByIdOrName.put("$account:$region:${it.name}", futurify(it))
+      securityGroupSummariesByIdOrName.synchronous().put("$account:$region:${it.name}", it)
     }
 
   override fun securityGroupByName(account: String, region: String, name: String): SecurityGroupSummary =
@@ -106,7 +109,7 @@ class MemoryCloudDriverCache(
       val credential = credentialBy(account)
       cloudDriver.getSecurityGroupSummaryByName(account, credential.type, region, name, DEFAULT_SERVICE_ACCOUNT)
     }.also {
-      securityGroupSummariesByIdOrName.put("$account:$region:${it.id}", futurify(it))
+      securityGroupSummariesByIdOrName.synchronous().put("$account:$region:${it.id}", it)
     }
 
   override fun networkBy(id: String): Network =
