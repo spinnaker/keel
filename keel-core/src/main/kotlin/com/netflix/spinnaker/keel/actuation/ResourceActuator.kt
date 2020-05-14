@@ -94,6 +94,7 @@ class ResourceActuator(
            * containing [resource]. This ensures that the environment will be fully restored to
            * a prior good-state.
            */
+          // todo eb: limit this to not roll back forever
           if (response.vetoArtifact && resource.spec is VersionedArtifactProvider) {
             try {
               val versionedArtifact = when (desired) {
@@ -139,6 +140,7 @@ class ResourceActuator(
               resource.id,
               resource.spec.application,
               response.message,
+              response.vetoName,
               clock.instant()))
           return@withTracingContext
         }

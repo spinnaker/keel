@@ -238,22 +238,25 @@ data class ResourceActuationPaused(
  * Actuation on the managed resource has been vetoed.
  *
  * @property reason The reason why actuation was vetoed.
+ * @property vetoer The veto that vetoed this resource
  */
 data class ResourceActuationVetoed(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
   val reason: String?,
+  val vetoer: String? = null,
   override val timestamp: Instant
 ) : ResourceEvent(message = reason) {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, reason: String?, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, reason: String?, vetoer: String? = null, clock: Clock = Companion.clock) : this(
     resource.kind,
     resource.id,
     resource.application,
     reason,
+    vetoer,
     clock.instant()
   )
 }
@@ -390,9 +393,12 @@ data class ResourceCheckUnresolvable(
 }
 
 enum class ResourceCheckErrorOrigin {
-  @JsonProperty("user") USER,
-  @JsonProperty("system") SYSTEM,
-  @JsonProperty("unknown") UNKNOWN;
+  @JsonProperty("user")
+  USER,
+  @JsonProperty("system")
+  SYSTEM,
+  @JsonProperty("unknown")
+  UNKNOWN;
 
   companion object {
     val log: Logger by lazy { LoggerFactory.getLogger(ResourceCheckErrorOrigin::class.java) }

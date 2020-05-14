@@ -20,6 +20,7 @@ import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
+import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CURRENTLY_UNRESOLVABLE
@@ -29,7 +30,6 @@ import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
-import com.netflix.spinnaker.keel.persistence.ResourceStatus.VETOED
 import com.netflix.spinnaker.keel.test.combinedInMemoryRepository
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import com.netflix.spinnaker.keel.test.resource
@@ -192,13 +192,33 @@ class ResourceStatusServiceTests : JUnit5Minutests {
           }
         }
 
-        context("when last event is ResourceActuationVetoed") {
+        context("when last event is ResourceActuationVetoed because unhappy") {
           before {
-            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", clock))
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "UnhappyVeto", clock))
           }
 
-          test("returns VETOED") {
-            expectThat(subject.getStatus(resource.id)).isEqualTo(VETOED)
+          test("returns UNHAPPY") {
+            expectThat(subject.getStatus(resource.id)).isEqualTo(UNHAPPY)
+          }
+        }
+
+        context("when last event is ResourceActuationVetoed because new veto") {
+          before {
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "oh no", "meeeee", clock))
+          }
+
+          test("returns UNHAPPY") {
+            expectThat(subject.getStatus(resource.id)).isEqualTo(UNHAPPY)
+          }
+        }
+
+        context("when last event is ResourceActuationVetoed because missing dependency") {
+          before {
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "RequiredBlahVeto", clock))
+          }
+
+          test("returns MISSING_DEPENDENCY") {
+            expectThat(subject.getStatus(resource.id)).isEqualTo(ResourceStatus.MISSING_DEPENDENCY)
           }
         }
 

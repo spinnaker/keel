@@ -20,6 +20,10 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import retrofit2.HttpException
 
+/**
+ * Note: when resources are vetoed by this veto the [ResourceStatusService] infers the
+ * correct status by string matching the name of the veto.
+ */
 @Component
 class RequiredSecurityGroupVeto(
   private val cloudDriver: CloudDriverService,
