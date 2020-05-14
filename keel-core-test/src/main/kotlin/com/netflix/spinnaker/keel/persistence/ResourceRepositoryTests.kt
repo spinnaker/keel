@@ -238,11 +238,10 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
           }
 
           test("the event is not included in the resource history") {
-            expectThat(subject.eventHistory(resource.id))
-              .and {
-                first().isA<ResourceValid>()
-                second().not().isA<ResourceValid>()
-              }
+            expectThat(subject.eventHistory(resource.id)) {
+              first().isA<ResourceValid>()
+              second().not().isA<ResourceValid>()
+            }
           }
         }
 
@@ -255,11 +254,10 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
           }
 
           test("the events are included in the resource history") {
-            expectThat(subject.eventHistory(resource.id))
-              .and {
-                first().isA<ApplicationActuationResumed>()
-                second().isA<ApplicationActuationPaused>()
-              }
+            expectThat(subject.eventHistory(resource.id)) {
+              first().isA<ApplicationActuationResumed>()
+              second().isA<ApplicationActuationPaused>()
+            }
           }
         }
 
@@ -276,13 +274,12 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
           }
 
           test("the event is included in the resource history") {
-            expectThat(subject.eventHistory(resource.id))
-              .and {
-                first().isA<ResourceValid>()
-                second().isA<ApplicationActuationResumed>()
-                third().isA<ApplicationActuationPaused>()
-                fourth().isA<ResourceValid>()
-              }
+            expectThat(subject.eventHistory(resource.id)) {
+              first().isA<ResourceValid>()
+              second().isA<ApplicationActuationResumed>()
+              third().isA<ApplicationActuationPaused>()
+              fourth().isA<ResourceValid>()
+            }
           }
         }
       }
@@ -363,7 +360,7 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         }
 
         test("event history includes relevant application events") {
-          expectThat(subject.eventHistory(resource.id)).and {
+          expectThat(subject.eventHistory(resource.id)) {
             first().isA<ApplicationActuationResumed>()
             second().isA<ApplicationActuationPaused>()
           }
