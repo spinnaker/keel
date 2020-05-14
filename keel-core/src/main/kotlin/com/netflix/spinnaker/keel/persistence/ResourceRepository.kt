@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
+import com.netflix.spinnaker.keel.events.ResourceHistoryEvent
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -35,7 +36,7 @@ data class ResourceHeader(
   )
 }
 
-interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out ResourceSpec>> {
+interface ResourceRepository : PeriodicallyCheckedRepository<Resource<ResourceSpec>> {
   val clock: Clock
     get() = Clock.systemUTC()
 
@@ -50,7 +51,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * @return The resource represented by [id] or `null` if [id] is unknown.
    * @throws NoSuchResourceException if [id] does not map to a resource in the repository.
    */
-  fun get(id: String): Resource<out ResourceSpec>
+  fun get(id: String): Resource<ResourceSpec>
 
   fun hasManagedResources(application: String): Boolean
 
@@ -93,12 +94,12 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
   fun applicationEventHistory(application: String, after: Instant): List<ApplicationEvent>
 
   /**
-   * Retrieves the history of state change events for the resource represented by [uid].
+   * Retrieves the history of state change events for the resource represented by [id].
    *
    * @param id the resource id.
    * @param limit the maximum number of events to return.
    */
-  fun eventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceEvent>
+  fun eventHistory(id: String, limit: Int = DEFAULT_MAX_EVENTS): List<ResourceHistoryEvent>
 
   /**
    * Retrieves the last event from the history of state change events for the resource represented by [id] or null if
@@ -106,7 +107,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    *
    * @param id the resource id.
    */
-  fun lastEvent(id: String): ResourceEvent? = eventHistory(id, 1).firstOrNull()
+  fun lastEvent(id: String): ResourceHistoryEvent? = eventHistory(id, 1).firstOrNull()
 
   /**
    * Records an event associated with a resource.
@@ -126,7 +127,7 @@ interface ResourceRepository : PeriodicallyCheckedRepository<Resource<out Resour
    * This method is _not_ intended to be idempotent, subsequent calls are expected to return
    * different values.
    */
-  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<out ResourceSpec>>
+  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>>
 
   companion object {
     const val DEFAULT_MAX_EVENTS: Int = 10
