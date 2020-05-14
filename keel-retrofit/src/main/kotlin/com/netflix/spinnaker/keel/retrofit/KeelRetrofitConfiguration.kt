@@ -41,8 +41,8 @@ class KeelRetrofitConfiguration {
   private val log = LoggerFactory.getLogger(javaClass)
 
   @Bean(name = ["retrofitClient", "okClient"])
-  @Primary //TODO: (SR) -- Refactor it to use the new client provider.
-   fun retrofitClient(
+  @Primary // TODO: (SR) -- Refactor it to use the new client provider.
+  fun retrofitClient(
     okHttpClientConfig: OkHttp3ClientConfiguration,
     okHttpClientProperties: OkHttpClientConfigurationProperties,
     retrofitProperties: KeelRetrofitProperties,
