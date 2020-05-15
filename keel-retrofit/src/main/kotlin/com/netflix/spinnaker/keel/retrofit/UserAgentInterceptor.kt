@@ -9,8 +9,7 @@ import okhttp3.Response
 class UserAgentInterceptor(private val keelRetrofitProperties: KeelRetrofitProperties) : Interceptor {
 
   override fun intercept(chain: Interceptor.Chain): Response {
-    val request = chain.request()
-    chain.request().newBuilder()
+    val request = chain.request().newBuilder()
       .header("User-Agent", keelRetrofitProperties.userAgent)
       .build()
 
