@@ -40,9 +40,15 @@ class KeelRetrofitConfiguration {
       level = HttpLoggingInterceptor.Level.valueOf(retrofitLogLevel)
     }
 
+  /**
+   * This bean gets highest precedence so that metrics interceptors can rely on the data supplied by this interceptor.
+   *
+   * Also, we wire up [FiatPermissionEvaluator] lazily to allow spring to wire up the OkHttpClient
+   * fully and avoid circular dependency problem.
+   */
   @Bean
   @ConditionalOnMissingBean
-  @Order(Ordered.HIGHEST_PRECEDENCE) // This gets highest precedence so that metrics interceptors can rely on the data supplied by this interceptor.
+  @Order(Ordered.HIGHEST_PRECEDENCE)
   fun spinnakerHeadersInterceptor(@Lazy fiatPermissionEvaluator: FiatPermissionEvaluator) =
     SpinnakerHeadersInterceptor(fiatPermissionEvaluator)
 
