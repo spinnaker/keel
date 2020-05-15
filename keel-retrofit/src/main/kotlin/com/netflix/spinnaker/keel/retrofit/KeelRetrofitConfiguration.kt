@@ -26,6 +26,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Lazy
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 
 @Configuration
 @Import(OkHttp3ClientConfiguration::class)
@@ -40,6 +42,7 @@ class KeelRetrofitConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  @Order(Ordered.HIGHEST_PRECEDENCE) // This gets highest precedence so that metrics interceptors can rely on the data supplied by this interceptor.
   fun spinnakerHeadersInterceptor(@Lazy fiatPermissionEvaluator: FiatPermissionEvaluator) =
     SpinnakerHeadersInterceptor(fiatPermissionEvaluator)
 
