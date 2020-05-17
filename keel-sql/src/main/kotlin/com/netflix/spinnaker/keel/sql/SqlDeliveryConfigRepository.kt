@@ -477,11 +477,12 @@ class SqlDeliveryConfigRepository(
               .onDuplicateKeyUpdate()
               .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
               .execute()
+          }
 
+          sqlRetry.withRetry(WRITE) {
             val allStates = constraintStateFor(state.deliveryConfigName, state.environmentName, state.artifactVersion)
             if (allStates.allPass && allStates.size >= environment.constraints.statefulCount) {
-              txn
-                .insertInto(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
+              jooq.insertInto(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, state.artifactVersion)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.instant().toEpochMilli())
