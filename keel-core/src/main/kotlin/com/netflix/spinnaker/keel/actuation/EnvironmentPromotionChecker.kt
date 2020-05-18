@@ -188,7 +188,7 @@ class EnvironmentPromotionChecker(
     version: String,
     targetEnvironment: String
   ) {
-    log.info("version [$version] of ${artifact.type} artifact ${artifact.name} for environment $targetEnvironment is approved")
+    log.debug("Approving version [$version] of ${artifact.type} artifact ${artifact.name} for environment $targetEnvironment")
     val isNewVersion = repository
       .approveVersionFor(deliveryConfig, artifact, version, targetEnvironment)
     if (isNewVersion) {
