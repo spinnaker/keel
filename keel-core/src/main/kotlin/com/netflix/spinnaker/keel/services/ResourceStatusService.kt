@@ -137,8 +137,7 @@ class ResourceStatusService(
 
   /**
    * Looks at the veto event and determines if it was vetoed by any of the [Required*Veto]s, which indicate a
-   * missing dependency.
-   * Looks at both the [veto] and the [reason] for backwards compatibility.
+   * missing dependency. Parses this information from the [reason]. This is used for backwards compatibility.
    */
   private fun ResourceActuationVetoed.isMissingDependency(): Boolean =
     reason?.contains("is not found in", true) ?: false

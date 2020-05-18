@@ -192,7 +192,7 @@ class ResourceStatusServiceTests : JUnit5Minutests {
           }
         }
 
-        context("when last event is ResourceActuationVetoed because unhappy") {
+        context("when last event is ResourceActuationVetoed with no status provided") {
           before {
             repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "UnhappyVeto", null, clock))
           }
@@ -202,17 +202,7 @@ class ResourceStatusServiceTests : JUnit5Minutests {
           }
         }
 
-        context("when last event is ResourceActuationVetoed because new veto that doesn't provide a status") {
-          before {
-            repository.appendResourceHistory(ResourceActuationVetoed(resource, "oh no", "meeeee", null, clock))
-          }
-
-          test("returns UNHAPPY") {
-            expectThat(subject.getStatus(resource.id)).isEqualTo(UNHAPPY)
-          }
-        }
-
-        context("when last event is ResourceActuationVetoed because missing dependency") {
+        context("when last event is ResourceActuationVetoed due to a missing dependency") {
           before {
             repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "RequiredBlahVeto", MISSING_DEPENDENCY, clock))
           }
@@ -222,7 +212,7 @@ class ResourceStatusServiceTests : JUnit5Minutests {
           }
         }
 
-        context("when last event is ResourceActuationVetoed because missing dependency, but an older version of keel saved this code") {
+        context("when last event is ResourceActuationVetoed because missing dependency, but an older version of keel saved this event") {
           before {
             repository.appendResourceHistory(ResourceActuationVetoed(resource, "Load balancer blah is not found in test / us-west-2", "RequiredBlahVeto", null, clock))
           }
