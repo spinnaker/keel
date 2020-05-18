@@ -157,7 +157,7 @@ class EnvironmentPromotionChecker(
                    * We don't need to re-invoke stateful constraint evaluators for these, but we still
                    * check stateless constraints to avoid approval outside of allowed-times.
                    */
-                  log.debug("Version $v of artifact ${artifact.name} is in queued for approval," +
+                  log.debug("Version $v of artifact ${artifact.name} is in queued for approval, " +
                     "and being evaluated for stateless constraints in environment ${environment.name}")
                   if (checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
                     approveVersion(deliveryConfig, artifact, v, environment.name)
