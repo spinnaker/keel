@@ -479,6 +479,10 @@ class SqlDeliveryConfigRepository(
               .execute()
           }
 
+          /**
+           * This section is outside the transaction as [constraintStateFor] is querying [ENVIRONMENT_ARTIFACT_CONSTRAINT]
+           * table, and we need to make sure the new state was persisted prior to checking all states for a given artifact version.
+           */
           sqlRetry.withRetry(WRITE) {
             val allStates = constraintStateFor(state.deliveryConfigName, state.environmentName, state.artifactVersion)
             if (allStates.allPass && allStates.size >= environment.constraints.statefulCount) {

@@ -98,13 +98,13 @@ class EnvironmentPromotionChecker(
                        * deployed to a required environment or outside of an allowed time.
                        */
 
-                      val passesStatelessConstraints: Boolean = checkStatelessConstraints(artifact, deliveryConfig, v, environment)
-                      val passesStatefulConstraints: Boolean = checkStatefulConstraints(artifact, deliveryConfig, v, environment)
+                      val passesStatelessConstraints = checkStatelessConstraints(artifact, deliveryConfig, v, environment)
+                      val passesStatefulConstraints = checkStatefulConstraints(artifact, deliveryConfig, v, environment)
 
-                      log.info("for version: [$v] of artifact ${artifact.name}: " +
-                        "passesStatelessConstraints: [$passesStatelessConstraints]" +
-                        ", passesStatefulConstraints [$passesStatefulConstraints] in" +
-                        "for environment ${environment.name}")
+                      log.debug("Version $v of artifact ${artifact.name}: " +
+                        "passes stateless constraints: $passesStatelessConstraints, " +
+                        "passes stateful constraints: $passesStatefulConstraints " +
+                        "in environment ${environment.name}")
 
                       val passesConstraints =
                         passesStatelessConstraints && passesStatefulConstraints
@@ -128,13 +128,13 @@ class EnvironmentPromotionChecker(
              */
             var approvedPending = false
             if (!hasPin) {
-              log.info("pendingVersionsToCheck: [$pendingVersionsToCheck] of artifact ${artifact.name} for environment ${environment.name} ")
+              log.debug("pendingVersionsToCheck: [$pendingVersionsToCheck] of artifact ${artifact.name} for environment ${environment.name} ")
               pendingVersionsToCheck
                 .sortedWith(artifact.versioningStrategy.comparator.reversed()) // oldest first
                 .forEach {
 
-                  val passesStatelessConstraints: Boolean = checkStatelessConstraints(artifact, deliveryConfig, it, environment)
-                  val passesStatefulConstraints: Boolean = checkStatefulConstraints(artifact, deliveryConfig, it, environment)
+                  val passesStatelessConstraints = checkStatelessConstraints(artifact, deliveryConfig, it, environment)
+                  val passesStatefulConstraints = checkStatefulConstraints(artifact, deliveryConfig, it, environment)
 
                   log.debug("Version $it of artifact ${artifact.name}: " +
                     "passes stateless constraints: $passesStatelessConstraints, " +
@@ -157,7 +157,8 @@ class EnvironmentPromotionChecker(
                    * We don't need to re-invoke stateful constraint evaluators for these, but we still
                    * check stateless constraints to avoid approval outside of allowed-times.
                    */
-                  log.info("version: [$v] of artifact ${artifact.name} is in queuedForApproval for environment ${environment.name}")
+                  log.debug("Version $v of artifact ${artifact.name} is in queued for approval," +
+                    "and being evaluated for stateless constraints in environment ${environment.name}")
                   if (checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
                     approveVersion(deliveryConfig, artifact, v, environment.name)
                     repository.deleteQueuedConstraintApproval(deliveryConfig.name, environment.name, v)
@@ -167,8 +168,9 @@ class EnvironmentPromotionChecker(
             if (!approvedPending && versionIsPending || version == null) {
               if (version != null) {
                 val approvedVersion = repository.latestVersionApprovedIn(deliveryConfig, artifact, environment.name)
-                approvedVersion != null
-                  ?: log.info("version: [$approvedVersion] of artifact ${artifact.name} is currently approved for environment ${environment.name}")
+                if (approvedVersion != null) {
+                  log.debug("Version: $approvedVersion of artifact ${artifact.name} is currently approved in environment ${environment.name}")
+                }
               } else {
                 log.warn("No version of {} passes constraints for environment {}", artifact.name, environment.name)
               }
@@ -188,7 +190,7 @@ class EnvironmentPromotionChecker(
     version: String,
     targetEnvironment: String
   ) {
-    log.debug("Approving version [$version] of ${artifact.type} artifact ${artifact.name} for environment $targetEnvironment")
+    log.debug("Approving version $version of ${artifact.type} artifact ${artifact.name} in environment $targetEnvironment")
     val isNewVersion = repository
       .approveVersionFor(deliveryConfig, artifact, version, targetEnvironment)
     if (isNewVersion) {
