@@ -34,6 +34,7 @@ import com.netflix.spinnaker.keel.events.ResourceState.Error
 import com.netflix.spinnaker.keel.events.ResourceState.Missing
 import com.netflix.spinnaker.keel.events.ResourceState.Ok
 import com.netflix.spinnaker.keel.events.ResourceState.Unresolvable
+import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.kork.exceptions.SpinnakerException
 import com.netflix.spinnaker.kork.exceptions.SystemException
 import com.netflix.spinnaker.kork.exceptions.UserException
@@ -238,25 +239,27 @@ data class ResourceActuationPaused(
  * Actuation on the managed resource has been vetoed.
  *
  * @property reason The reason why actuation was vetoed.
- * @property vetoer The veto that vetoed this resource
+ * @property veto The veto that vetoed this resource
  */
 data class ResourceActuationVetoed(
   override val kind: ResourceKind,
   override val id: String,
   override val application: String,
   val reason: String?,
-  val vetoer: String? = null,
+  val veto: String? = null,
+  val suggestedStatus: ResourceStatus? = null,
   override val timestamp: Instant
 ) : ResourceEvent(message = reason) {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, reason: String?, vetoer: String? = null, clock: Clock = Companion.clock) : this(
+  constructor(resource: Resource<*>, reason: String?, veto: String? = null, suggestedStatus: ResourceStatus? = null, clock: Clock = Companion.clock) : this(
     resource.kind,
     resource.id,
     resource.application,
     reason,
-    vetoer,
+    veto,
+    suggestedStatus,
     clock.instant()
   )
 }
@@ -395,8 +398,10 @@ data class ResourceCheckUnresolvable(
 enum class ResourceCheckErrorOrigin {
   @JsonProperty("user")
   USER,
+
   @JsonProperty("system")
   SYSTEM,
+
   @JsonProperty("unknown")
   UNKNOWN;
 

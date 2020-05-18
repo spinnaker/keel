@@ -90,10 +90,6 @@ class ResourceStatusService(
     return first() is ResourceDeltaDetected || first() is ResourceMissing
   }
 
-  private fun List<ResourceHistoryEvent>.isVetoed(): Boolean {
-    return first() is ResourceActuationVetoed
-  }
-
   private fun List<ResourceHistoryEvent>.isResumed(): Boolean {
     return first() is ResourceActuationResumed || first() is ApplicationActuationResumed
   }
@@ -108,7 +104,7 @@ class ResourceStatusService(
    * or if the resource has been vetoed by an unspecified veto that we don't have an explicit status mapping for.
    */
   private fun List<ResourceHistoryEvent>.isUnhappy(): Boolean {
-    if (first() is ResourceActuationVetoed && (first() as ResourceActuationVetoed).isUnhappy()) {
+    if (first() is ResourceActuationVetoed && (first() as ResourceActuationVetoed).getStatus() == UNHAPPY) {
       return true
     }
 
@@ -117,32 +113,33 @@ class ResourceStatusService(
     if (filteredHistory.size == recentSliceOfHistory.size) {
       return true
     }
-
-    // a catch all for vetoes that don't have an explicit status so they don't get unknown status.
-    return first() is ResourceActuationVetoed
+    return false
   }
-
-  /**
-   * Looks at the veto event and determines if it was vetoed by the UnhappyVeto.
-   * Looks at both the [vetoer] and the [reason] for backwards compatibility.
-   */
-  private fun ResourceActuationVetoed.isUnhappy(): Boolean =
-    vetoer?.contains("unhappy", true) ?: false || reason?.contains("unhappy", true) ?: false
 
   /**
    * Determines if last event was a veto because of a missing dependency
    */
   private fun List<ResourceHistoryEvent>.isMissingDependency(): Boolean =
-    first() is ResourceActuationVetoed && (first() as ResourceActuationVetoed).isMissingDependency()
+    first() is ResourceActuationVetoed && (first() as ResourceActuationVetoed).getStatus() == MISSING_DEPENDENCY
+
+  /**
+   * Determines the correct status to show for veto events
+   */
+  private fun ResourceActuationVetoed.getStatus(): ResourceStatus =
+    when {
+      // new style veto, gives us the status the resource should be
+      suggestedStatus != null -> suggestedStatus
+      // we can determine missing dependency by parsing the message
+      isMissingDependency() -> MISSING_DEPENDENCY
+      // all vetos get unhappy status if not specified
+      else -> UNHAPPY
+    }
 
   /**
    * Looks at the veto event and determines if it was vetoed by any of the [Required*Veto]s, which indicate a
    * missing dependency.
-   * Looks at both the [vetoer] and the [reason] for backwards compatibility.
+   * Looks at both the [veto] and the [reason] for backwards compatibility.
    */
-  private fun ResourceActuationVetoed.isMissingDependency(): Boolean {
-    val isVetoNew = vetoer?.startsWith("Required", true) ?: false && vetoer?.endsWith("Veto", true) ?: false
-    val isVetoOld = reason?.contains("is not found in", true) ?: false
-    return isVetoNew || isVetoOld
-  }
+  private fun ResourceActuationVetoed.isMissingDependency(): Boolean =
+    reason?.contains("is not found in", true) ?: false
 }

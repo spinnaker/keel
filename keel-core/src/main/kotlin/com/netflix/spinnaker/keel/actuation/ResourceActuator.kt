@@ -141,6 +141,7 @@ class ResourceActuator(
               resource.spec.application,
               response.message,
               response.vetoName,
+              response.suggestedStatus,
               clock.instant()))
           return@withTracingContext
         }

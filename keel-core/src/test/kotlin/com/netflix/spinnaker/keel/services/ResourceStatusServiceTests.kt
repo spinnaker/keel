@@ -20,13 +20,13 @@ import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
-import com.netflix.spinnaker.keel.persistence.ResourceStatus
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ACTUATING
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CURRENTLY_UNRESOLVABLE
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.DIFF
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.ERROR
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.HAPPY
+import com.netflix.spinnaker.keel.persistence.ResourceStatus.MISSING_DEPENDENCY
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.PAUSED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.RESUMED
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.UNHAPPY
@@ -194,7 +194,7 @@ class ResourceStatusServiceTests : JUnit5Minutests {
 
         context("when last event is ResourceActuationVetoed because unhappy") {
           before {
-            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "UnhappyVeto", clock))
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "UnhappyVeto", null, clock))
           }
 
           test("returns UNHAPPY") {
@@ -202,9 +202,9 @@ class ResourceStatusServiceTests : JUnit5Minutests {
           }
         }
 
-        context("when last event is ResourceActuationVetoed because new veto") {
+        context("when last event is ResourceActuationVetoed because new veto that doesn't provide a status") {
           before {
-            repository.appendResourceHistory(ResourceActuationVetoed(resource, "oh no", "meeeee", clock))
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "oh no", "meeeee", null, clock))
           }
 
           test("returns UNHAPPY") {
@@ -214,11 +214,21 @@ class ResourceStatusServiceTests : JUnit5Minutests {
 
         context("when last event is ResourceActuationVetoed because missing dependency") {
           before {
-            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "RequiredBlahVeto", clock))
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "vetoed", "RequiredBlahVeto", MISSING_DEPENDENCY, clock))
           }
 
           test("returns MISSING_DEPENDENCY") {
-            expectThat(subject.getStatus(resource.id)).isEqualTo(ResourceStatus.MISSING_DEPENDENCY)
+            expectThat(subject.getStatus(resource.id)).isEqualTo(MISSING_DEPENDENCY)
+          }
+        }
+
+        context("when last event is ResourceActuationVetoed because missing dependency, but an older version of keel saved this code") {
+          before {
+            repository.appendResourceHistory(ResourceActuationVetoed(resource, "Load balancer blah is not found in test / us-west-2", "RequiredBlahVeto", null, clock))
+          }
+
+          test("returns MISSING_DEPENDENCY") {
+            expectThat(subject.getStatus(resource.id)).isEqualTo(MISSING_DEPENDENCY)
           }
         }
 
