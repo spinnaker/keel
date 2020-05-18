@@ -477,14 +477,12 @@ class SqlDeliveryConfigRepository(
               .onDuplicateKeyUpdate()
               .set(CURRENT_CONSTRAINT.CONSTRAINT_UID, MySQLDSL.values(CURRENT_CONSTRAINT.CONSTRAINT_UID))
               .execute()
-          }
 
-          /**
-           * This section is outside the transaction as [constraintStateFor] is querying [ENVIRONMENT_ARTIFACT_CONSTRAINT]
-           * table, and we need to make sure the new state was persisted prior to checking all states for a given artifact version.
-           */
-          sqlRetry.withRetry(WRITE) {
-            val allStates = constraintStateFor(state.deliveryConfigName, state.environmentName, state.artifactVersion)
+            /**
+             * Passing the transaction here since [constraintStateForWithTransaction] is querying [ENVIRONMENT_ARTIFACT_CONSTRAINT]
+             * table, and we need to make sure the new state was persisted prior to checking all states for a given artifact version.
+             */
+            val allStates = constraintStateForWithTransaction(state.deliveryConfigName, state.environmentName, state.artifactVersion, txn)
             if (allStates.allPass && allStates.size >= environment.constraints.statefulCount) {
               jooq.insertInto(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
@@ -494,9 +492,9 @@ class SqlDeliveryConfigRepository(
                 .execute()
             }
           }
+          // Store generated UID in constraint state object so it can be used by caller
+          state.uid = parseUID(uid)
         }
-        // Store generated UID in constraint state object so it can be used by caller
-        state.uid = parseUID(uid)
       }
   }
 
@@ -781,11 +779,21 @@ class SqlDeliveryConfigRepository(
     environmentName: String,
     artifactVersion: String
   ): List<ConstraintState> {
+    return constraintStateForWithTransaction(deliveryConfigName, environmentName, artifactVersion)
+  }
+
+  private fun constraintStateForWithTransaction(
+    deliveryConfigName: String,
+    environmentName: String,
+    artifactVersion: String,
+    txn: DSLContext? = null
+  ): List<ConstraintState> {
+    val ctx = txn ?: jooq
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptyList()
 
     return sqlRetry.withRetry(READ) {
-      jooq
+      ctx
         .select(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
