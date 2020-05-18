@@ -786,14 +786,13 @@ class SqlDeliveryConfigRepository(
     deliveryConfigName: String,
     environmentName: String,
     artifactVersion: String,
-    txn: DSLContext? = null
+    txn: DSLContext = jooq
   ): List<ConstraintState> {
-    val ctx = txn ?: jooq
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptyList()
 
     return sqlRetry.withRetry(READ) {
-      ctx
+      txn
         .select(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
