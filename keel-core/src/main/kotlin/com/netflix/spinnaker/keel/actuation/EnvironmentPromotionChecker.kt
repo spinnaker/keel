@@ -136,10 +136,10 @@ class EnvironmentPromotionChecker(
                   val passesStatelessConstraints: Boolean = checkStatelessConstraints(artifact, deliveryConfig, it, environment)
                   val passesStatefulConstraints: Boolean = checkStatefulConstraints(artifact, deliveryConfig, it, environment)
 
-                  log.info("for version: [$it] of artifact ${artifact.name}: " +
-                    "passesStatelessConstraints: [$passesStatelessConstraints]" +
-                    ", passesStatefulConstraints [$passesStatefulConstraints] in" +
-                    "for environment ${environment.name}")
+                  log.debug("Version $it of artifact ${artifact.name}: " +
+                    "passes stateless constraints: $passesStatelessConstraints, " +
+                    "passes stateful constraints: $passesStatefulConstraints " +
+                    "in environment ${environment.name}")
 
                   val passesConstraints =
                     passesStatelessConstraints && passesStatefulConstraints
