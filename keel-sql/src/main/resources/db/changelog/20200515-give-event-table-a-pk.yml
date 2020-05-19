@@ -1,0 +1,16 @@
+databaseChangeLog:
+- changeSet:
+    id: give-event-table-a-pk
+    author: fletch
+    changes:
+    - addColumn:
+        tableName: event
+        columns:
+        - name: uid
+          type: varchar(255)
+          constraints:
+            nullable: true
+    - modifySql:
+        dbms: mysql
+        append:
+          value: " first"

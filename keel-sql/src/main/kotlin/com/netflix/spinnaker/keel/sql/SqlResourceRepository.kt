@@ -262,6 +262,7 @@ open class SqlResourceRepository(
 
       txn
         .insertInto(EVENT)
+        .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
         .set(EVENT.SCOPE, event.scope.name)
         .set(EVENT.REF, ref)
         .set(EVENT.TIMESTAMP, event.timestamp.atZone(clock.zone).toLocalDateTime())
