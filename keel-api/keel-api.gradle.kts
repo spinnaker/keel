@@ -11,6 +11,7 @@ plugins {
  */
 dependencies {
   api("com.netflix.spinnaker.kork:kork-exceptions:${property("korkVersion")}")
+  api("de.huxhorn.sulky:de.huxhorn.sulky.ulid")
   testImplementation("io.strikt:strikt-core")
   testImplementation("dev.minutest:minutest")
 }
