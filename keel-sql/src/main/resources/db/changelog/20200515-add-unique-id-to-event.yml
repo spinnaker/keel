@@ -7,7 +7,7 @@ databaseChangeLog:
         tableName: event
         columns:
         - name: uid
-          type: varchar(255)
+          type: char(26)
           constraints:
             nullable: true
     - modifySql:
