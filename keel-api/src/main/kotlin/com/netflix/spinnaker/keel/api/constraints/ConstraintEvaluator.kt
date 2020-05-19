@@ -20,12 +20,12 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import org.pf4j.ExtensionPoint
+import com.netflix.spinnaker.kork.plugins.api.internal.SpinnakerExtensionPoint
 
 /**
  * TODO: Docs
  */
-interface ConstraintEvaluator<T : Constraint> : ExtensionPoint {
+interface ConstraintEvaluator<T : Constraint> : SpinnakerExtensionPoint {
 
   companion object {
     /**
