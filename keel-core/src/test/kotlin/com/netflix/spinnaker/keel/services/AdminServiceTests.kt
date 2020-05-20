@@ -56,9 +56,9 @@ class AdminServiceTests : JUnit5Minutests {
       every { repository.getDeliveryConfigForApplication(application) } returns deliveryConfig
     }
 
-    context("redoing environment constraints") {
+    context("reevaluating environment constraints") {
       test("clears state only for stateful constraints") {
-        subject.redoConstraints(application, environment.name)
+        subject.reevaluateConstraints(application, environment.name)
 
         verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "manual-judgement") }
         verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "pipeline") }
@@ -66,7 +66,7 @@ class AdminServiceTests : JUnit5Minutests {
       }
 
       test("clears a specific constraint type when asked to") {
-        subject.redoConstraints(application, environment.name, "pipeline")
+        subject.reevaluateConstraints(application, environment.name, "pipeline")
 
         verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "manual-judgement") }
         verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "pipeline") }

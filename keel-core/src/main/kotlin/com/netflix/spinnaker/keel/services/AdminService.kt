@@ -39,8 +39,8 @@ class AdminService(
    * Removes the stored state we have for any stateful constraints for an environment
    * so they will evaluate again
    */
-  fun redoConstraints(application: String, environment: String, type: String? = null) {
-    log.info("[app=$application, env=$environment] Triggering a redo of stateful constraints.")
+  fun reevaluateConstraints(application: String, environment: String, type: String? = null) {
+    log.info("[app=$application, env=$environment] Triggering reevaluation of stateful constraints.")
     if (type != null) {
       log.info("[app=$application, env=$environment] Triggering only type $type")
     }

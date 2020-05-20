@@ -52,13 +52,13 @@ class AdminController(
   }
 
   @PostMapping(
-    path = ["/application/{application}/environment/{environment}/redo"]
+    path = ["/application/{application}/environment/{environment}/reevaluate"]
   )
-  fun redoConstraints(
+  fun reevaluateConstraints(
     @PathVariable("application") application: String,
     @PathVariable("environment") environment: String,
     @RequestParam("type", required = false) type: String? = null
   ) {
-    adminService.redoConstraints(application, environment, type)
+    adminService.reevaluateConstraints(application, environment, type)
   }
 }
