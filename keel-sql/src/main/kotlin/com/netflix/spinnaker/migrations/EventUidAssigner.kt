@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jooq.DSLContext
 import org.jooq.Record1
+import org.jooq.Result
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
@@ -22,50 +23,51 @@ class EventUidAssigner(private val jooq: DSLContext) : CoroutineScope {
   @EventListener(ApplicationReadyEvent::class)
   fun onApplicationReady() {
     launch {
-      while (countEventsWithNoUID() > 0) {
+      var done = false
+      while (!done) {
         var count = 0
-        jooq.inTransaction {
-          select(EVENT.TIMESTAMP)
-            .from(EVENT)
-            .where(EVENT.UID.isNull)
-            .limit(25)
-            .forShare()
-            .fetch()
-            .forEach { ts ->
-              runCatching {
-                update(EVENT)
-                  .set(EVENT.UID, ts.nextULID())
-                  // this might actually not update the same row, but 🤷‍
-                  .where(EVENT.TIMESTAMP.eq(ts.value1()))
-                  .and(EVENT.UID.isNull)
-                  .limit(1)
-                  .execute()
+        runCatching {
+          jooq.inTransaction {
+            fetchEventBatch()
+              .also {
+                done = it.isEmpty()
               }
-                .onSuccess { count += it }
-                .onFailure { ex ->
-                  log.error("Error assigning uid to event with timestamp ${ts.value1()}", ex)
-                }
-            }
+              .forEach { (ts) ->
+                runCatching { assignUID(ts) }
+                  .onSuccess { count += it }
+                  .onFailure { ex ->
+                    log.error("Error assigning uid to event with timestamp $ts", ex)
+                  }
+              }
+          }
         }
+          .onFailure { ex ->
+            log.error("Error selecting event batch to assign uids", ex)
+          }
         log.info("Assigned uids to $count events...")
       }
+      log.info("All events have uids assigned")
     }
   }
 
-  private fun countEventsWithNoUID(): Int =
-    jooq
-      .selectCount()
+  private fun DSLContext.fetchEventBatch(batchSize: Int = 100): Result<Record1<LocalDateTime>> =
+    select(EVENT.TIMESTAMP)
       .from(EVENT)
       .where(EVENT.UID.isNull)
-      .fetchOne()
-      .value1()
-      .also {
-        log.info("$it events still need uids...")
-      }
+      .limit(batchSize)
+      .fetch()
 
-  private fun Record1<LocalDateTime>.nextULID(): String =
-    value1()
-      .toInstant(UTC)
+  private fun DSLContext.assignUID(timestamp: LocalDateTime): Int =
+    update(EVENT)
+      .set(EVENT.UID, timestamp.nextULID())
+      // this might actually not update the same row, but 🤷‍
+      .where(EVENT.TIMESTAMP.eq(timestamp))
+      .and(EVENT.UID.isNull)
+      .limit(1)
+      .execute()
+
+  private fun LocalDateTime.nextULID(): String =
+    toInstant(UTC)
       .toEpochMilli()
       .let { idGenerator.nextULID(it) }
 
