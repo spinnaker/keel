@@ -54,11 +54,11 @@ class AdminController(
   @PostMapping(
     path = ["/application/{application}/environment/{environment}/reevaluate"]
   )
-  fun reevaluateConstraints(
+  fun forceConstraintReevaluation(
     @PathVariable("application") application: String,
     @PathVariable("environment") environment: String,
     @RequestParam("type", required = false) type: String? = null
   ) {
-    adminService.reevaluateConstraints(application, environment, type)
+    adminService.forceConstraintReevaluation(application, environment, type)
   }
 }
