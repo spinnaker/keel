@@ -28,7 +28,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
       DeliveryConfigValidator()
     }
 
-    context("a delivery config with non-unique resource ids errors while persisting") {
+    context("a delivery config with non-unique resource ids fails validation") {
       val submittedConfig = SubmittedDeliveryConfig(
         name = configName,
         application = "keel",
@@ -58,7 +58,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         )
       )
 
-      test("an error is thrown and config is deleted") {
+      test("an error is thrown") {
         expectCatching {
           subject.validate(submittedConfig)
         }.isFailure()
@@ -66,7 +66,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
       }
     }
 
-    context("a delivery config with non-unique artifact references errors while persisting") {
+    context("a delivery config with non-unique artifact references errors fails validation") {
       // Two different artifacts with the same reference
       val artifacts = setOf(
         DockerArtifact(name = "org/thing-1", deliveryConfigName = configName, reference = "thing"),
@@ -92,45 +92,12 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
           )
         )
       )
-      test("an error is thrown and config is deleted") {
+      test("an error is thrown") {
         expectCatching {
           subject.validate(submittedConfig)
         }.isFailure()
           .isA<DuplicateArtifactReferenceException>()
       }
-    }
-
-    context("a second delivery config for an app fails to persist") {
-      val submittedConfig1 = SubmittedDeliveryConfig(
-        name = configName,
-        application = "keel",
-        serviceAccount = "keel@spinnaker",
-        artifacts = setOf(DockerArtifact(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
-        environments = setOf(
-          SubmittedEnvironment(
-            name = "test",
-            resources = setOf(
-              SubmittedResource(
-                metadata = mapOf("serviceAccount" to "keel@spinnaker"),
-                kind = TEST_API_V1.qualify("whatever"),
-                spec = DummyResourceSpec(data = "o hai")
-              )
-            ),
-            constraints = emptySet()
-          )
-        )
-      )
-
-      val submittedConfig2 = submittedConfig1.copy(name = "double-trouble")
-//      test("an error is thrown and config is not persisted") {
-//        subject.validate(submittedConfig1)
-//        expectCatching {
-//          subject.validate(submittedConfig2)
-//        }.isFailure()
-//          .isA<TooManyDeliveryConfigsException>()
-//
-//        //expectThat(subject.getDeliveryConfigForApplication("keel").name).isEqualTo(configName)
-//      }
     }
 
     context("submitting delivery config with invalid environment name as a constraint") {
@@ -153,7 +120,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         )
       )
 
-      test("an error is thrown and config is not persisted") {
+      test("an error is thrown") {
         expectCatching {
           subject.validate(submittedConfig)
         }.isFailure()

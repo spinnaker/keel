@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.parameters.RequestBody as SwaggerRequestBody
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -89,12 +91,10 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
+  @ResponseStatus(value = HttpStatus.NO_CONTENT)
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #deliveryConfig.application)")
   fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) {
-    // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
-    //  in [ExceptionHandler])
     validator.validate(deliveryConfig)
-    // mapOf("status" to "valid")
   }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }

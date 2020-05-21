@@ -9,19 +9,22 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * Run validation checks against delivery config to ensure:
- *
- * - resources have unique ids
- * - artifacts have unique references
- * - depends on environments are unique
- *
- * Throws an exception if config fails any checks
+ * Provides delivery config validation functions
  */
 @Component
 class DeliveryConfigValidator {
 
   val log by lazy { LoggerFactory.getLogger(javaClass) }
 
+  /**
+   * Run validation checks against delivery config to ensure:
+   *
+   * - resources have unique ids
+   * - artifacts have unique references
+   * - depends on environments are unique
+   *
+   * Throws an exception if config fails any checks
+   */
   fun validate(config: SubmittedDeliveryConfig) {
 
     // helper function to get duplicates in a list
@@ -35,7 +38,6 @@ class DeliveryConfigValidator {
     /**
      * check: resources have unique ids
      */
-
     val resources = config.environments.map { it.resources }.flatten().map { it.spec.id }
     val duplicateResources = duplicates(resources)
 
