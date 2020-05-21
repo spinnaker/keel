@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.EnvironmentDiff
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.validators.DeliveryConfigValidator
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.parameters.RequestBody as SwaggerRequestBody
@@ -23,7 +24,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/delivery-configs"])
 class DeliveryConfigController(
   private val repository: KeelRepository,
-  private val adHocDiffer: AdHocDiffer
+  private val adHocDiffer: AdHocDiffer,
+  private val validator: DeliveryConfigValidator
 ) {
   @Operation(
     description = "Registers or updates a delivery config manifest."
@@ -41,8 +43,10 @@ class DeliveryConfigController(
       description = "The delivery config. If its `name` matches an existing delivery config the operation is an update, otherwise a new delivery config is created."
     )
     deliveryConfig: SubmittedDeliveryConfig
-  ): DeliveryConfig =
-    repository.upsertDeliveryConfig(deliveryConfig)
+  ): DeliveryConfig {
+    validator.validate(deliveryConfig)
+    return repository.upsertDeliveryConfig(deliveryConfig)
+  }
 
   @GetMapping(
     path = ["/{name}"],
@@ -75,8 +79,10 @@ class DeliveryConfigController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #deliveryConfig.application)")
-  fun diff(@RequestBody deliveryConfig: SubmittedDeliveryConfig): List<EnvironmentDiff> =
-    adHocDiffer.calculate(deliveryConfig)
+  fun diff(@RequestBody deliveryConfig: SubmittedDeliveryConfig): List<EnvironmentDiff> {
+    validator.validate(deliveryConfig)
+    return adHocDiffer.calculate(deliveryConfig)
+  }
 
   @PostMapping(
     path = ["/validate"],
@@ -84,10 +90,12 @@ class DeliveryConfigController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #deliveryConfig.application)")
-  fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) =
-  // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
+  fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) {
+    // TODO: replace with JSON schema/OpenAPI spec validation when ready (for now, leveraging parsing error handling
     //  in [ExceptionHandler])
-    mapOf("status" to "valid")
+    validator.validate(deliveryConfig)
+    // mapOf("status" to "valid")
+  }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
