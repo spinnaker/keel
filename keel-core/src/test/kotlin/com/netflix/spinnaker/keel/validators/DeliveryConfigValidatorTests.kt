@@ -1,7 +1,5 @@
 package com.netflix.spinnaker.keel.validators
 
-import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
@@ -12,36 +10,18 @@ import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
 import com.netflix.spinnaker.keel.exceptions.MissingEnvironmentReferenceException
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1
-import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 
-/**
- * Tests that involve creating, updating, or deleting things from two or more of the three repositories present.
- *
- * Tests that only apply to one repository should live in the repository-specific test classes.
- */
 internal class DeliveryConfigValidatorTests : JUnit5Minutests {
 
-    val configName = "my-config"
-    val artifact = DockerArtifact(name = "org/image", deliveryConfigName = configName)
-    val newArtifact = artifact.copy(reference = "myart")
-    val firstResource = resource()
-    val secondResource = resource()
-    val firstEnv = Environment(name = "env1", resources = setOf(firstResource))
-    val secondEnv = Environment(name = "env2", resources = setOf(secondResource))
-    val deliveryConfig = DeliveryConfig(
-      name = configName,
-      application = "fnord",
-      serviceAccount = "keel@spinnaker",
-      artifacts = setOf(artifact),
-      environments = setOf(firstEnv)
-    )
-    val subject = DeliveryConfigValidator()
+  private val configName = "my-config"
+  val artifact = DockerArtifact(name = "org/image", deliveryConfigName = configName)
 
+  val subject = DeliveryConfigValidator()
 
   fun deliveryConfigValidatorTests() = rootContext<DeliveryConfigValidator> {
     fixture {
@@ -83,8 +63,6 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
           subject.validate(submittedConfig)
         }.isFailure()
           .isA<DuplicateResourceIdException>()
-
-       // expectThat(subject.allResourceNames().size).isEqualTo(0)
       }
     }
 
@@ -119,8 +97,6 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
           subject.validate(submittedConfig)
         }.isFailure()
           .isA<DuplicateArtifactReferenceException>()
-
-       // expectThat(subject.allResourceNames().size).isEqualTo(0)
       }
     }
 
@@ -182,13 +158,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
           subject.validate(submittedConfig)
         }.isFailure()
           .isA<MissingEnvironmentReferenceException>()
-
-//        expectCatching {
-//          subject.getDeliveryConfig(configName)
-//        }.isFailure()
-//          .isA<NoSuchDeliveryConfigException>()
       }
     }
   }
 }
-
