@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @ConditionalOnProperty("tests.passthru", matchIfMissing = false)
-@RequestMapping(path=["/test"])
+@RequestMapping(path = ["/test"])
 class PassThruController(
   private val cloudDriverService: CloudDriverService
 ) {
