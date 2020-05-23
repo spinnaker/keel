@@ -43,20 +43,20 @@ class InMemoryUnhappyVetoRepository(
       return UnhappyVetoStatus(shouldSkip = true, shouldRecheck = false)
     }
     return UnhappyVetoStatus(
-      shouldSkip = record.recheckTime == null || record.recheckTime > clock.instant(),
-      shouldRecheck = record.recheckTime != null && record.recheckTime < clock.instant()
+      shouldSkip = record.recheckTime.shouldSkip(),
+      shouldRecheck = record.recheckTime.shouldRecheck()
     )
   }
 
   override fun getAll(): Set<String> {
     val now = clock.instant()
-    return resources.filter { it.value.recheckTime.let { it == null || it > now } }.keys.toSet()
+    return resources.filter { it.value.recheckTime.shouldSkip(now) }.keys.toSet()
   }
 
   override fun getAllForApp(application: String): Set<String> {
     val now = clock.instant()
     return resources.filter { (_, record) ->
-      (record.recheckTime == null || record.recheckTime > now) && record.application == application
+      record.recheckTime.shouldSkip(now) && record.application == application
     }.keys.toSet()
   }
 
@@ -66,4 +66,7 @@ class InMemoryUnhappyVetoRepository(
     val application: String,
     val recheckTime: Instant?
   )
+
+  private fun Instant?.shouldSkip(now: Instant = clock.instant()) = this == null || this > now
+  private fun Instant?.shouldRecheck(now: Instant = clock.instant()) = this != null && this < now
 }
