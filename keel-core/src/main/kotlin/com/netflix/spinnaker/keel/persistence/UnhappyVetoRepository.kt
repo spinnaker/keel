@@ -40,7 +40,7 @@ abstract class UnhappyVetoRepository(
   abstract fun markUnhappyForWaitingTime(
     resourceId: String,
     application: String,
-    wait: Duration = Duration.parse(waitingTime)
+    wait: Duration? = Duration.parse(waitingTime)
   )
 
   /**
@@ -54,7 +54,7 @@ abstract class UnhappyVetoRepository(
   abstract fun getOrCreateVetoStatus(
     resourceId: String,
     application: String,
-    wait: Duration = Duration.parse(waitingTime)
+    wait: Duration? = Duration.parse(waitingTime)
   ): UnhappyVetoStatus
 
   /**
@@ -67,9 +67,9 @@ abstract class UnhappyVetoRepository(
    */
   abstract fun getAllForApp(application: String): Set<String>
 
-  fun calculateExpirationTime(wait: Duration): Instant =
+  fun calculateExpirationTime(wait: Duration?): Instant? =
     when (wait) {
-      Duration.ZERO -> Instant.ofEpochMilli(Long.MAX_VALUE)
+      null -> null
       else -> clock.instant().plus(wait)
     }
 

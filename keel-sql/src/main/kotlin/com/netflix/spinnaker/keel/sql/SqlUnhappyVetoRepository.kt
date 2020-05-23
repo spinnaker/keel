@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import java.time.Clock
 import java.time.Duration
+import java.time.LocalDateTime
 import org.jooq.DSLContext
 
 class SqlUnhappyVetoRepository(
@@ -31,14 +32,30 @@ class SqlUnhappyVetoRepository(
   private val sqlRetry: SqlRetry
 ) : UnhappyVetoRepository(clock) {
 
-  override fun markUnhappyForWaitingTime(resourceId: String, application: String, wait: Duration) {
+  override fun markUnhappyForWaitingTime(resourceId: String, application: String, wait: Duration?) {
     sqlRetry.withRetry(WRITE) {
       jooq.insertInto(UNHAPPY_VETO)
         .set(UNHAPPY_VETO.RESOURCE_ID, resourceId)
         .set(UNHAPPY_VETO.APPLICATION, application)
-        .set(UNHAPPY_VETO.RECHECK_TIME, calculateExpirationTime(wait).toTimestamp())
+        .run {
+          calculateExpirationTime(wait)?.toTimestamp().let { expiryTime ->
+            if (expiryTime == null) {
+              setNull(UNHAPPY_VETO.RECHECK_TIME)
+            } else {
+              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime)
+            }
+          }
+        }
         .onDuplicateKeyUpdate()
-        .set(UNHAPPY_VETO.RECHECK_TIME, calculateExpirationTime(wait).toTimestamp())
+        .run {
+          calculateExpirationTime(wait)?.toTimestamp().let { expiryTime ->
+            if (expiryTime == null) {
+              setNull(UNHAPPY_VETO.RECHECK_TIME)
+            } else {
+              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime)
+            }
+          }
+        }
         .execute()
     }
   }
@@ -51,18 +68,18 @@ class SqlUnhappyVetoRepository(
     }
   }
 
-  override fun getOrCreateVetoStatus(resourceId: String, application: String, wait: Duration): UnhappyVetoStatus {
+  override fun getOrCreateVetoStatus(resourceId: String, application: String, wait: Duration?): UnhappyVetoStatus {
     sqlRetry.withRetry(READ) {
-      jooq
-        .select(UNHAPPY_VETO.RECHECK_TIME)
-        .from(UNHAPPY_VETO)
-        .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId))
-        .fetchOne()
-    }
-      ?.let { (recheckTime) ->
+        jooq
+          .select(UNHAPPY_VETO.RECHECK_TIME)
+          .from(UNHAPPY_VETO)
+          .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId))
+          .fetchOne()
+      }
+      ?.let { (recheckTime: LocalDateTime?) ->
         return UnhappyVetoStatus(
-          shouldSkip = recheckTime > clock.timestamp(),
-          shouldRecheck = recheckTime < clock.timestamp()
+          shouldSkip = recheckTime == null || recheckTime > clock.timestamp(),
+          shouldRecheck = recheckTime != null && recheckTime < clock.timestamp()
         )
       }
 
@@ -75,7 +92,7 @@ class SqlUnhappyVetoRepository(
     return sqlRetry.withRetry(READ) {
       jooq.select(UNHAPPY_VETO.RESOURCE_ID)
         .from(UNHAPPY_VETO)
-        .where(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now))
+        .where(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now)))
         .fetch(UNHAPPY_VETO.RESOURCE_ID)
         .toSet()
     }
@@ -87,7 +104,7 @@ class SqlUnhappyVetoRepository(
       jooq.select(UNHAPPY_VETO.RESOURCE_ID)
         .from(UNHAPPY_VETO)
         .where(UNHAPPY_VETO.APPLICATION.eq(application))
-        .and(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now))
+        .and(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now)))
         .fetch(UNHAPPY_VETO.RESOURCE_ID)
         .toSet()
     }
