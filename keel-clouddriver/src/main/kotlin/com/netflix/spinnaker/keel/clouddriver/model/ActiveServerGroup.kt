@@ -13,7 +13,7 @@ data class ServerGroupCollection(
 )
 
 /**
- * Objects that are returned when querying for all fo the server groups associated with a cluster.
+ * Objects that are returned when querying for all of the server groups associated with a cluster.
  *
  * Two differences from [ActiveServerGroup]:
  *   - disabled flag
