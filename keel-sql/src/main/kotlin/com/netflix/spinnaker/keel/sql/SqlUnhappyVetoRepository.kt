@@ -38,27 +38,18 @@ class SqlUnhappyVetoRepository(
         .set(UNHAPPY_VETO.RESOURCE_ID, resourceId)
         .set(UNHAPPY_VETO.APPLICATION, application)
         .run {
-          calculateExpirationTime(wait).let { expiryTime ->
-            if (expiryTime == null) {
-              setNull(UNHAPPY_VETO.RECHECK_TIME)
-            } else {
-              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp())
-            }
-          }
+          calculateExpirationTime(wait)
+            ?.let { expiryTime -> set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp()) }
+            ?: setNull(UNHAPPY_VETO.RECHECK_TIME)
         }
         .onDuplicateKeyUpdate()
         .run {
-          calculateExpirationTime(wait).let { expiryTime ->
-            if (expiryTime == null) {
-              setNull(UNHAPPY_VETO.RECHECK_TIME)
-            } else {
-              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp())
-            }
-          }
+          calculateExpirationTime(wait)
+            ?.let { expiryTime -> set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp()) }
+            ?: setNull(UNHAPPY_VETO.RECHECK_TIME)
         }
         .execute()
     }
-    println("executed")
   }
 
   override fun delete(resourceId: String) {
