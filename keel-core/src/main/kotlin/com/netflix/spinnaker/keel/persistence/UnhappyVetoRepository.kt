@@ -68,10 +68,7 @@ abstract class UnhappyVetoRepository(
   abstract fun getAllForApp(application: String): Set<String>
 
   fun calculateExpirationTime(wait: Duration?): Instant? =
-    when (wait) {
-      null -> null
-      else -> clock.instant().plus(wait)
-    }
+    wait?.let { clock.instant().plus(it) }
 
   data class UnhappyVetoStatus(
     val shouldSkip: Boolean = false,

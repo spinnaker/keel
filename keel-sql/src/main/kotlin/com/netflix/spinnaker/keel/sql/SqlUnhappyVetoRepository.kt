@@ -38,26 +38,27 @@ class SqlUnhappyVetoRepository(
         .set(UNHAPPY_VETO.RESOURCE_ID, resourceId)
         .set(UNHAPPY_VETO.APPLICATION, application)
         .run {
-          calculateExpirationTime(wait)?.toTimestamp().let { expiryTime ->
+          calculateExpirationTime(wait).let { expiryTime ->
             if (expiryTime == null) {
               setNull(UNHAPPY_VETO.RECHECK_TIME)
             } else {
-              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime)
+              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp())
             }
           }
         }
         .onDuplicateKeyUpdate()
         .run {
-          calculateExpirationTime(wait)?.toTimestamp().let { expiryTime ->
+          calculateExpirationTime(wait).let { expiryTime ->
             if (expiryTime == null) {
               setNull(UNHAPPY_VETO.RECHECK_TIME)
             } else {
-              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime)
+              set(UNHAPPY_VETO.RECHECK_TIME, expiryTime.toTimestamp())
             }
           }
         }
         .execute()
     }
+    println("executed")
   }
 
   override fun delete(resourceId: String) {
@@ -69,22 +70,21 @@ class SqlUnhappyVetoRepository(
   }
 
   override fun getOrCreateVetoStatus(resourceId: String, application: String, wait: Duration?): UnhappyVetoStatus {
-    sqlRetry.withRetry(READ) {
-        jooq
-          .select(UNHAPPY_VETO.RECHECK_TIME)
-          .from(UNHAPPY_VETO)
-          .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId))
-          .fetchOne()
-      }
-      ?.let { (recheckTime: LocalDateTime?) ->
-        return UnhappyVetoStatus(
-          shouldSkip = recheckTime == null || recheckTime > clock.timestamp(),
-          shouldRecheck = recheckTime != null && recheckTime < clock.timestamp()
-        )
-      }
+    val recheckTime: LocalDateTime? = sqlRetry.withRetry(READ) {
+      jooq
+        .select(UNHAPPY_VETO.RECHECK_TIME)
+        .from(UNHAPPY_VETO)
+        .where(UNHAPPY_VETO.RESOURCE_ID.eq(resourceId))
+        .fetchOne()
+        .value1()
+    }
 
-    markUnhappyForWaitingTime(resourceId, application, wait)
-    return UnhappyVetoStatus(shouldSkip = true, shouldRecheck = false)
+    return if (recheckTime == null || recheckTime > clock.timestamp()) {
+      markUnhappyForWaitingTime(resourceId, application, wait)
+      UnhappyVetoStatus(shouldSkip = true, shouldRecheck = false)
+    } else {
+      UnhappyVetoStatus(shouldSkip = false, shouldRecheck = true)
+    }
   }
 
   override fun getAll(): Set<String> {
@@ -92,7 +92,7 @@ class SqlUnhappyVetoRepository(
     return sqlRetry.withRetry(READ) {
       jooq.select(UNHAPPY_VETO.RESOURCE_ID)
         .from(UNHAPPY_VETO)
-        .where(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now)))
+        .where(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterThan(now)))
         .fetch(UNHAPPY_VETO.RESOURCE_ID)
         .toSet()
     }
@@ -104,7 +104,7 @@ class SqlUnhappyVetoRepository(
       jooq.select(UNHAPPY_VETO.RESOURCE_ID)
         .from(UNHAPPY_VETO)
         .where(UNHAPPY_VETO.APPLICATION.eq(application))
-        .and(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterOrEqual(now)))
+        .and(UNHAPPY_VETO.RECHECK_TIME.isNull.or(UNHAPPY_VETO.RECHECK_TIME.greaterThan(now)))
         .fetch(UNHAPPY_VETO.RESOURCE_ID)
         .toSet()
     }
