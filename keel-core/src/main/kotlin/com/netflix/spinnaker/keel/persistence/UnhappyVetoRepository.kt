@@ -36,6 +36,8 @@ abstract class UnhappyVetoRepository(
 
   /**
    * Marks [resourceId] as unhappy for [waitingTime]
+   *
+   * @param wait the time to wait before re-checking the resource, `null` means "never re-check".
    */
   abstract fun markUnhappyForWaitingTime(
     resourceId: String,
@@ -50,6 +52,8 @@ abstract class UnhappyVetoRepository(
 
   /**
    * Calculates whether a resource should be skipped or rechecked at this instant
+   *
+   * @param wait the time to wait before re-checking the resource, `null` means "never re-check".
    */
   abstract fun getOrCreateVetoStatus(
     resourceId: String,
