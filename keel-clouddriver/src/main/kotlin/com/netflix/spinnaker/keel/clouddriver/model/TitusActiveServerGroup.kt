@@ -20,6 +20,55 @@ package com.netflix.spinnaker.keel.clouddriver.model
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.core.api.Capacity
 
+data class TitusServerGroup(
+  val name: String,
+  val awsAccount: String,
+  val placement: Placement,
+  val region: String,
+  val image: TitusActiveServerGroupImage,
+  val iamProfile: String,
+  val entryPoint: String,
+  val targetGroups: Set<String>,
+  val loadBalancers: Set<String>,
+  val securityGroups: Set<String>,
+  val capacity: Capacity,
+  val cloudProvider: String,
+  val moniker: Moniker,
+  val env: Map<String, String>,
+  val containerAttributes: Map<String, String> = emptyMap(),
+  val migrationPolicy: MigrationPolicy,
+  val serviceJobProcesses: ServiceJobProcesses,
+  val constraints: Constraints,
+  val tags: Map<String, String>,
+  val resources: Resources,
+  val capacityGroup: String,
+  val disabled: Boolean
+)
+
+fun TitusServerGroup.toActive() =
+  TitusActiveServerGroup(
+    name,
+    awsAccount,
+    placement,
+    region,
+    image,
+    iamProfile,
+    entryPoint,
+    targetGroups,
+    loadBalancers,
+    securityGroups,
+    capacity,
+    cloudProvider,
+    moniker,
+    env,
+    containerAttributes,
+    migrationPolicy,
+    serviceJobProcesses,
+    constraints,
+    tags,
+    resources,
+    capacityGroup)
+
 data class TitusActiveServerGroup(
   val name: String,
   val awsAccount: String,

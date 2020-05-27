@@ -7,9 +7,9 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.kork.exceptions.SystemException
 
-data class ServerGroupCollection(
+data class ServerGroupCollection<T> (
   val accountName: String,
-  val serverGroups: Set<ServerGroup>
+  val serverGroups: Set<T>
 )
 
 /**
