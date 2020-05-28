@@ -99,7 +99,7 @@ class CombinedRepository(
 
     deliveryConfig.resources.forEach { resource ->
 
-      upsertResource<ResourceSpec>(resource = resource, deliveryConfigName = deliveryConfig.name)
+      upsertResource(resource, deliveryConfig.name)
     }
 
     deliveryConfig.artifacts.forEach { artifact ->

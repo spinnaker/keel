@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
@@ -259,7 +258,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
           context("after an update") {
             before {
               resourcesDueForCheck()
-              subject.upsertResource<ResourceSpec>(resource.copy(spec = DummyResourceSpec(id = resource.spec.id, data = "kthxbye")), deliveryConfig.name)
+              subject.upsertResource(resource.copy(spec = DummyResourceSpec(id = resource.spec.id, data = "kthxbye")), deliveryConfig.name)
             }
 
             test("stores the updated resource") {
@@ -287,7 +286,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
           context("after a no-op update") {
             before {
               resourcesDueForCheck()
-              subject.upsertResource<ResourceSpec>(resource, deliveryConfig.name)
+              subject.upsertResource(resource, deliveryConfig.name)
             }
 
             test("does not record that the resource was updated") {

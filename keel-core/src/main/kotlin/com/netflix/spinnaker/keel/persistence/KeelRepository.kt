@@ -47,7 +47,7 @@ interface KeelRepository {
   @Transactional(propagation = Propagation.REQUIRED)
   fun upsertDeliveryConfig(deliveryConfig: DeliveryConfig): DeliveryConfig
 
-  fun <T : ResourceSpec> upsertResource(resource: Resource<*>, deliveryConfigName: String) {
+  fun <T : ResourceSpec> upsertResource(resource: Resource<T>, deliveryConfigName: String) {
     val existingResource = try {
       getResource(resource.id)
     } catch (e: NoSuchResourceException) {
