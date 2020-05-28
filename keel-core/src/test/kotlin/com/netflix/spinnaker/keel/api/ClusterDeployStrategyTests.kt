@@ -5,7 +5,6 @@ import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy.Companion.DEFAULT_WAIT_FOR_INSTANCES_UP
 import com.netflix.spinnaker.keel.core.api.Highlander
 import com.netflix.spinnaker.keel.core.api.RedBlack
-import com.netflix.spinnaker.keel.core.api.RedBlack.Companion.ORCA_STAGE_TIMEOUT_MARGIN
 import com.netflix.spinnaker.keel.core.api.StaggeredRegion
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import dev.minutest.junit.JUnit5Minutests
@@ -100,7 +99,7 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
                 "delayBeforeScaleDownSec" to strategy.delayBeforeScaleDown?.seconds,
                 "scaleDown" to strategy.resizePreviousToZero,
                 "rollback" to mapOf("onFailure" to strategy.rollbackOnFailure),
-                "stageTimeoutMs" to (DEFAULT_WAIT_FOR_INSTANCES_UP + ORCA_STAGE_TIMEOUT_MARGIN).toMillis()
+                "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis()
               )
             )
           }
@@ -127,7 +126,6 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
                 "scaleDown" to strategy.resizePreviousToZero,
                 "rollback" to mapOf("onFailure" to strategy.rollbackOnFailure),
                 "stageTimeoutMs" to (
-                  ORCA_STAGE_TIMEOUT_MARGIN +
                   strategy.delayBeforeDisable!! +
                   strategy.delayBeforeScaleDown!! +
                   strategy.waitForInstancesUp!!

@@ -50,8 +50,6 @@ data class RedBlack(
 ) : ClusterDeployStrategy() {
 
   companion object {
-    val ORCA_STAGE_TIMEOUT_MARGIN: Duration = Duration.ofMinutes(5)
-
     fun fromOrcaStageContext(context: Map<String, Any?>) =
       RedBlack(
         rollbackOnFailure = context["rollback"]
@@ -79,8 +77,7 @@ data class RedBlack(
     "stageTimeoutMs" to (
       (waitForInstancesUp ?: DEFAULT_WAIT_FOR_INSTANCES_UP) +
       (delayBeforeDisable ?: ZERO) +
-      (delayBeforeScaleDown ?: ZERO) +
-      ORCA_STAGE_TIMEOUT_MARGIN
+      (delayBeforeScaleDown ?: ZERO)
     ).toMillis()
   )
 
@@ -101,7 +98,7 @@ data class RedBlack(
 object Highlander : ClusterDeployStrategy() {
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "highlander",
-    "stageTimeoutMs" to (DEFAULT_WAIT_FOR_INSTANCES_UP + RedBlack.ORCA_STAGE_TIMEOUT_MARGIN).toMillis()
+    "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis()
   )
 
   override fun withDefaultsOmitted() = this
