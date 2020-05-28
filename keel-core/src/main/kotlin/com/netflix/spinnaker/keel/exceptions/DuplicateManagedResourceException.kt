@@ -6,5 +6,5 @@ class DuplicateManagedResourceException(
   newConfig: String
 ) : ValidationException(
   "Resource with id $id exist in a delivery config named ($existingConfig). " +
-    "Please ensure to remove reousrce $id from config named $existingConfig, if you wish this resource to be managed in a $newConfig."
+    "Please ensure to remove reousrce $id from config named $existingConfig, if you wish this resource to be managed in $newConfig."
 )
