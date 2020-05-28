@@ -316,26 +316,6 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
         expectThrows<NoSuchDeliveryConfigException> { deliveryConfigRepository.get(secondConfigName) }
         expectCatching { resourceRepository.get(firstResource.id) }.isSuccess()
       }
-
-      context("delete the resource from the first config, and try to persist again") {
-        before {
-          val updatedConfig = deliveryConfig.copy(
-            environments = setOf(firstEnv.copy(resources = setOf(secondResource)))
-          )
-          subject.upsertDeliveryConfig(updatedConfig)
-        }
-        test("try to persist the second config") {
-          expectCatching {
-            subject.upsertDeliveryConfig(secondDeliveryConfig)
-          }.isSuccess()
-
-          expectCatching {
-            deliveryConfigRepository.get(secondConfigName)
-          }.isSuccess()
-
-          expectCatching { resourceRepository.get(firstResource.id) }.isSuccess()
-        }
-      }
     }
   }
 }
