@@ -2,9 +2,9 @@ package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
+import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy.Companion.DEFAULT_WAIT_FOR_INSTANCES_UP
 import com.netflix.spinnaker.keel.core.api.Highlander
 import com.netflix.spinnaker.keel.core.api.RedBlack
-import com.netflix.spinnaker.keel.core.api.RedBlack.Companion.DEFAULT_WAIT_FOR_INSTANCES_UP
 import com.netflix.spinnaker.keel.core.api.RedBlack.Companion.ORCA_STAGE_TIMEOUT_MARGIN
 import com.netflix.spinnaker.keel.core.api.StaggeredRegion
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper

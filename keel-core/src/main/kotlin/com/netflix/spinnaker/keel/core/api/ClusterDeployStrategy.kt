@@ -30,6 +30,10 @@ sealed class ClusterDeployStrategy {
   open val stagger: List<StaggeredRegion> = emptyList()
   abstract fun toOrcaJobProperties(): Map<String, Any?>
   abstract fun withDefaultsOmitted(): ClusterDeployStrategy
+
+  companion object {
+    val DEFAULT_WAIT_FOR_INSTANCES_UP: Duration = Duration.ofMinutes(30)
+  }
 }
 
 @JsonTypeName("red-black")
@@ -46,7 +50,6 @@ data class RedBlack(
 ) : ClusterDeployStrategy() {
 
   companion object {
-    val DEFAULT_WAIT_FOR_INSTANCES_UP: Duration = Duration.ofMinutes(30)
     val ORCA_STAGE_TIMEOUT_MARGIN: Duration = Duration.ofMinutes(5)
 
     fun fromOrcaStageContext(context: Map<String, Any?>) =
@@ -98,7 +101,7 @@ data class RedBlack(
 object Highlander : ClusterDeployStrategy() {
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "highlander",
-    "stageTimeoutMs" to Duration.ofMinutes(30).toMillis()
+    "stageTimeoutMs" to (DEFAULT_WAIT_FOR_INSTANCES_UP + RedBlack.ORCA_STAGE_TIMEOUT_MARGIN).toMillis()
   )
 
   override fun withDefaultsOmitted() = this
