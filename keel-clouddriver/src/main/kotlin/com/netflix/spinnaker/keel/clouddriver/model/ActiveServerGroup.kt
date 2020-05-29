@@ -40,22 +40,22 @@ data class ServerGroup(
 
 fun ServerGroup.toActive(accountName: String) =
   ActiveServerGroup(
-    name,
-    region,
-    zones,
-    image,
-    launchConfig,
-    asg,
-    scalingPolicies,
-    vpcId,
-    targetGroups,
-    loadBalancers,
-    capacity,
-    cloudProvider,
-    securityGroups,
-    accountName,
-    moniker,
-    buildInfo
+    name = name,
+    region = region,
+    zones = zones,
+    image = image,
+    launchConfig = launchConfig,
+    asg = asg,
+    scalingPolicies = scalingPolicies,
+    vpcId = vpcId,
+    targetGroups = targetGroups,
+    loadBalancers = loadBalancers,
+    capacity = capacity,
+    cloudProvider = cloudProvider,
+    securityGroups = securityGroups,
+    accountName = accountName,
+    moniker = moniker,
+    buildInfo = buildInfo
   )
 
 // todo eb: this should be more general so that it works for all server groups, not just ec2
