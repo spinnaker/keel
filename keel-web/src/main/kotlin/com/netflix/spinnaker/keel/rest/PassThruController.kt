@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.clouddriver.model.BaseServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.toActive
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.kork.exceptions.UserException
@@ -32,7 +33,7 @@ class PassThruController(
     @PathVariable("cluster") cluster: String,
     @PathVariable("cloudProvider") cloudProvider: String,
     @PathVariable("region") region: String
-  ): List<Any> =
+  ): List<BaseServerGroup> =
     runBlocking {
       when (cloudProvider) {
         "aws" -> getActiveAwsServerGroups(app, account, cluster, region)
