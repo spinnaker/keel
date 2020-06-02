@@ -20,30 +20,55 @@ package com.netflix.spinnaker.keel.clouddriver.model
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.core.api.Capacity
 
+/**
+ * Fields common to classes that model Titus server groups
+ */
+interface BaseTitusServerGroup : BaseServerGroup {
+  val awsAccount: String
+  val placement: Placement
+  val image: TitusActiveServerGroupImage
+  val iamProfile: String
+  val entryPoint: String
+  val env: Map<String, String>
+  val containerAttributes: Map<String, String>
+  val migrationPolicy: MigrationPolicy
+  val serviceJobProcesses: ServiceJobProcesses
+  val constraints: Constraints
+  val tags: Map<String, String>
+  val resources: Resources
+  val capacityGroup: String
+}
+
+/**
+ * Objects that are returned when querying for all of the titus server groups associated with a cluster.
+ *
+ * The only difference between this class and [TitusActiveServerGroup] is that this class allows you to set the
+ * [disabled] flag.
+ */
 data class TitusServerGroup(
   override val name: String,
-  val awsAccount: String,
-  val placement: Placement,
+  override val awsAccount: String,
+  override val placement: Placement,
   override val region: String,
-  val image: TitusActiveServerGroupImage,
-  val iamProfile: String,
-  val entryPoint: String,
+  override val image: TitusActiveServerGroupImage,
+  override val iamProfile: String,
+  override val entryPoint: String,
   override val targetGroups: Set<String>,
   override val loadBalancers: Set<String>,
   override val securityGroups: Set<String>,
   override val capacity: Capacity,
   override val cloudProvider: String,
   override val moniker: Moniker,
-  val env: Map<String, String>,
-  val containerAttributes: Map<String, String> = emptyMap(),
-  val migrationPolicy: MigrationPolicy,
-  val serviceJobProcesses: ServiceJobProcesses,
-  val constraints: Constraints,
-  val tags: Map<String, String>,
-  val resources: Resources,
-  val capacityGroup: String,
+  override val env: Map<String, String>,
+  override val containerAttributes: Map<String, String> = emptyMap(),
+  override val migrationPolicy: MigrationPolicy,
+  override val serviceJobProcesses: ServiceJobProcesses,
+  override val constraints: Constraints,
+  override val tags: Map<String, String>,
+  override val resources: Resources,
+  override val capacityGroup: String,
   override val disabled: Boolean
-) : BaseServerGroup
+) : BaseTitusServerGroup
 
 fun TitusServerGroup.toActive() =
   TitusActiveServerGroup(
@@ -69,29 +94,35 @@ fun TitusServerGroup.toActive() =
     resources = resources,
     capacityGroup = capacityGroup)
 
+/**
+ * Object returned when querying for the active titus server groups associated with a cluster.
+ *
+ * The only difference between this class and [TitusServerGroup] is that this class does not support setting the
+ * [disabled] flag, since the returned object always corresponds to an active server group.
+ */
 data class TitusActiveServerGroup(
   override val name: String,
-  val awsAccount: String,
-  val placement: Placement,
+  override val awsAccount: String,
+  override val placement: Placement,
   override val region: String,
-  val image: TitusActiveServerGroupImage,
-  val iamProfile: String,
-  val entryPoint: String,
+  override val image: TitusActiveServerGroupImage,
+  override val iamProfile: String,
+  override val entryPoint: String,
   override val targetGroups: Set<String>,
   override val loadBalancers: Set<String>,
   override val securityGroups: Set<String>,
   override val capacity: Capacity,
   override val cloudProvider: String,
   override val moniker: Moniker,
-  val env: Map<String, String>,
-  val containerAttributes: Map<String, String> = emptyMap(),
-  val migrationPolicy: MigrationPolicy,
-  val serviceJobProcesses: ServiceJobProcesses,
-  val constraints: Constraints,
-  val tags: Map<String, String>,
-  val resources: Resources,
-  val capacityGroup: String
-) : BaseServerGroup
+  override val env: Map<String, String>,
+  override val containerAttributes: Map<String, String> = emptyMap(),
+  override val migrationPolicy: MigrationPolicy,
+  override val serviceJobProcesses: ServiceJobProcesses,
+  override val constraints: Constraints,
+  override val tags: Map<String, String>,
+  override val resources: Resources,
+  override val capacityGroup: String
+) : BaseTitusServerGroup
 
 data class Placement(
   val account: String,
