@@ -1004,9 +1004,7 @@ class SqlArtifactRepository(
             deployedAt = deployedAt?.toInstant(UTC),
             replacedAt = replacedAt?.toInstant(UTC),
             replacedBy = replacedBy,
-            isPinned = pinned != null,
             pinned = pinned,
-            isVetoed = vetoed != null,
             vetoed = vetoed
           )
         }

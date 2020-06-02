@@ -23,7 +23,6 @@ import com.netflix.spinnaker.keel.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.events.ApplicationEvent
-import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import com.netflix.spinnaker.keel.services.ApplicationService
@@ -199,10 +198,7 @@ class ApplicationController(
     @PathVariable("application") application: String,
     @RequestBody veto: EnvironmentArtifactVeto
   ) {
-    val succeeded = applicationService.markAsVetoedIn(user, application, veto, true)
-    if (!succeeded) {
-      throw InvalidVetoException(application, veto.targetEnvironment, veto.reference, veto.version)
-    }
+    applicationService.markAsVetoedIn(user, application, veto, true)
   }
 
   @DeleteMapping(

@@ -57,10 +57,10 @@ data class ArtifactSummaryInEnvironment(
   val deployedAt: Instant? = null,
   val replacedAt: Instant? = null,
   val replacedBy: String? = null,
-  val isPinned: Boolean = false,
   val pinned: ActionMetadata? = null,
-  val isVetoed: Boolean = false,
+  val isPinned: Boolean = pinned != null,
   val vetoed: ActionMetadata? = null,
+  val isVetoed: Boolean = vetoed != null,
   val statefulConstraints: List<StatefulConstraintSummary> = emptyList(),
   val statelessConstraints: List<StatelessConstraintSummary> = emptyList()
 )
