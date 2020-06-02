@@ -60,7 +60,7 @@ class CombinedRepository(
     val new = DeliveryConfig(
       name = submittedDeliveryConfig.safeName,
       application = submittedDeliveryConfig.application,
-      serviceAccount = submittedDeliveryConfig.serviceAccount,
+      serviceAccount = submittedDeliveryConfig.serviceAccount!!,
       artifacts = submittedDeliveryConfig.artifacts.transform(submittedDeliveryConfig.safeName),
       environments = submittedDeliveryConfig.environments.mapTo(mutableSetOf()) { env ->
         Environment(
