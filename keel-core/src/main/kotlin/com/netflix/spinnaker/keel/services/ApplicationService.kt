@@ -102,18 +102,14 @@ class ApplicationService(
     // TODO: publish ArtifactUnpinnedEvent
   }
 
-  fun markAsVetoedIn(application: String, veto: EnvironmentArtifactVeto, force: Boolean) {
+  fun markAsVetoedIn(user: String, application: String, veto: EnvironmentArtifactVeto, force: Boolean): Boolean {
     val config = repository.getDeliveryConfigForApplication(application)
-    val artifact = config.matchingArtifactByReference(veto.reference)
-      ?: throw ArtifactNotFoundException(veto.reference, config.name)
-
-    repository.markAsVetoedIn(
+    return repository.markAsVetoedIn(
       deliveryConfig = config,
-      artifact = artifact,
-      version = veto.version,
-      targetEnvironment = veto.targetEnvironment,
+      veto = veto.copy(vetoedBy = user),
       force = force
     )
+    // TODO: publish ArtifactVetoedEvent
   }
 
   fun deleteVeto(application: String, targetEnvironment: String, reference: String, version: String) {
