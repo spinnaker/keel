@@ -34,7 +34,7 @@ interface ConstraintEvaluator<T : Constraint> : SpinnakerExtensionPoint {
     fun <T> getConstraintForEnvironment(
       deliveryConfig: DeliveryConfig,
       targetEnvironment: String,
-      klass: Class<T>
+      constraintType: Class<T>
     ): T {
       val target = deliveryConfig.environments.firstOrNull { it.name == targetEnvironment }
       requireNotNull(target) {
@@ -43,7 +43,7 @@ interface ConstraintEvaluator<T : Constraint> : SpinnakerExtensionPoint {
 
       return target
         .constraints
-        .filterIsInstance(klass)
+        .filterIsInstance(constraintType)
         .first()
     }
   }
