@@ -46,7 +46,7 @@ class DeliveryConfigImporterTests : JUnit5Minutests {
           } returns jsonMapper.convertValue(submittedDeliveryConfig)
         }
 
-        test("succeeds") {
+        test("succeeds and includes import metadata") {
           val result = importer.import(
             repoType = "stash",
             projectKey = "proj",
@@ -54,7 +54,19 @@ class DeliveryConfigImporterTests : JUnit5Minutests {
             manifestPath = "spinnaker.yml",
             ref = "refs/heads/master"
           )
-          expectThat(result).isEqualTo(submittedDeliveryConfig)
+          expectThat(result).isEqualTo(
+            submittedDeliveryConfig.copy(
+              metadata = mapOf("importedFrom" to
+                mapOf(
+                  "repoType" to "stash",
+                  "projectKey" to "proj",
+                  "repoSlug" to "repo",
+                  "manifestPath" to "spinnaker.yml",
+                  "ref" to "refs/heads/master"
+                )
+              )
+            )
+          )
         }
       }
 
