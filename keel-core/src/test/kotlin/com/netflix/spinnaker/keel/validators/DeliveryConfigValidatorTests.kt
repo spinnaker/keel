@@ -143,7 +143,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
             resources = setOf(
               SubmittedResource(
                 kind = TEST_API_V1.qualify("whatever"),
-                spec = DummyArtifactReferenceResourceSpec(artifactReference="does-not-exist")
+                spec = DummyArtifactReferenceResourceSpec(artifactReference = "does-not-exist")
               )
 
             ),

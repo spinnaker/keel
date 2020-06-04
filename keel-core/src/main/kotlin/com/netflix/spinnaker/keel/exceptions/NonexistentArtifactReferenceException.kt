@@ -5,4 +5,3 @@ class NonexistentArtifactReferenceException(
 ) : ValidationException(
   "Config uses an artifact reference that does not correspond to any artifacts: $reference."
 )
-

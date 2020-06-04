@@ -95,7 +95,7 @@ class DeliveryConfigValidator {
         (resource.spec as? ArtifactReferenceProvider)
           ?.artifactReference
           ?.also {
-            if(!refs.contains(it)) {
+            if (!refs.contains(it)) {
               throw NonexistentArtifactReferenceException(it)
             }
           }
