@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.exceptions
 
-class NonexistentArtifactReferenceException(
+class InvalidArtifactReferenceException(
   invalidReference: String,
   validReferences: List<String>
 ) : ValidationException(

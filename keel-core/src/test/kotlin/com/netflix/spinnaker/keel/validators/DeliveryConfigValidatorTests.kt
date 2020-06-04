@@ -7,8 +7,8 @@ import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
+import com.netflix.spinnaker.keel.exceptions.InvalidArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.MissingEnvironmentReferenceException
-import com.netflix.spinnaker.keel.exceptions.NonexistentArtifactReferenceException
 import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1
@@ -155,7 +155,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         expectCatching {
           subject.validate(submittedConfig)
         }.isFailure()
-          .isA<NonexistentArtifactReferenceException>()
+          .isA<InvalidArtifactReferenceException>()
       }
     }
   }

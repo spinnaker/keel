@@ -6,8 +6,8 @@ import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.id
 import com.netflix.spinnaker.keel.exceptions.DuplicateArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.DuplicateResourceIdException
+import com.netflix.spinnaker.keel.exceptions.InvalidArtifactReferenceException
 import com.netflix.spinnaker.keel.exceptions.MissingEnvironmentReferenceException
-import com.netflix.spinnaker.keel.exceptions.NonexistentArtifactReferenceException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -96,7 +96,7 @@ class DeliveryConfigValidator {
           ?.artifactReference
           ?.also {
             if (!refs.contains(it)) {
-              throw NonexistentArtifactReferenceException(it, refs)
+              throw InvalidArtifactReferenceException(it, refs)
             }
           }
       }
