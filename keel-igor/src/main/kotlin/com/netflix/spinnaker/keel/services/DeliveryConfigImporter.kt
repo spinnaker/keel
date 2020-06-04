@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.services
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.igor.ScmService
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import kotlinx.coroutines.runBlocking
@@ -33,9 +32,6 @@ class DeliveryConfigImporter(
     log.debug("Retrieving delivery config from $manifestLocation")
     val submittedDeliveryConfig = runBlocking {
       scmService.getDeliveryConfigManifest(repoType, projectKey, repoSlug, manifestPath, ref)
-        .let {
-          jsonMapper.convertValue<SubmittedDeliveryConfig>(it)
-        }
     }
 
     log.debug("Successfully retrieved delivery config from $manifestLocation.")

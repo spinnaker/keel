@@ -17,7 +17,6 @@ import retrofit.RetrofitError
 import retrofit.client.Response
 import strikt.api.expectCatching
 import strikt.api.expectThat
-import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 
@@ -67,28 +66,6 @@ class DeliveryConfigImporterTests : JUnit5Minutests {
               )
             )
           )
-        }
-      }
-
-      context("with an invalid delivery config in source control") {
-        before {
-          every {
-            scmService.getDeliveryConfigManifest("stash", "proj", "repo", "spinnaker.yml", any())
-          } returns mapOf("foo" to "bar")
-        }
-
-        test("throws an exception") {
-          expectCatching {
-            importer.import(
-              repoType = "stash",
-              projectKey = "proj",
-              repoSlug = "repo",
-              manifestPath = "spinnaker.yml",
-              ref = "refs/heads/master"
-            )
-          }
-            .isFailure()
-            .isA<IllegalArgumentException>()
         }
       }
 
