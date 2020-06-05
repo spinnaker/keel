@@ -3,11 +3,14 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.constraints.CanaryConstraintAttributes
+import com.netflix.spinnaker.keel.api.constraints.CanaryStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintRepository
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.FAIL
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
+import com.netflix.spinnaker.keel.api.constraints.RegionalExecutionId
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -125,8 +128,8 @@ class CanaryConstraintEvaluator(
       constraint.regionsWithCorrelatedExecutions(judge)
     }
     val unknownExecutions = regionsWithCorrelatedExecutions.filter {
-        regionsToTrigger.contains(it.key)
-      }
+      regionsToTrigger.contains(it.key)
+    }
       .toSortedMap()
 
     if (unknownExecutions.isNotEmpty() && attributes.executions.isEmpty()) {
@@ -171,8 +174,8 @@ class CanaryConstraintEvaluator(
 
     attributes = attributes.copy(
       executions = tasks.map { (region, task) ->
-          RegionalExecutionId(region, task.id)
-        }
+        RegionalExecutionId(region, task.id)
+      }
         .toSet())
 
     repository.storeConstraintState(
@@ -262,10 +265,10 @@ class CanaryConstraintEvaluator(
   suspend fun CanaryConstraint.regionsWithCorrelatedExecutions(prefix: String): Map<String, String> =
     coroutineScope {
       regions.associateWith { region ->
-          async {
-            orcaService.getCorrelatedExecutions("$prefix:$region")
-          }
+        async {
+          orcaService.getCorrelatedExecutions("$prefix:$region")
         }
+      }
         .mapValues { it.value.await() }
         .filter { it.value.isNotEmpty() }
         .mapValues { it.value.first() }

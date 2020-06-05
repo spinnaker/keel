@@ -53,12 +53,12 @@ class KeelConfigurationFinalizer(
   @PostConstruct
   fun initialStatus() {
     sequenceOf(
-        BaseImageCache::class to baseImageCache?.javaClass,
-        InstanceIdSupplier::class to instanceIdSupplier.javaClass
+      BaseImageCache::class to baseImageCache?.javaClass,
+      InstanceIdSupplier::class to instanceIdSupplier.javaClass
     )
-        .forEach { (type, implementation) ->
-          log.info("{} implementation: {}", type.simpleName, implementation?.simpleName)
-        }
+      .forEach { (type, implementation) ->
+        log.info("{} implementation: {}", type.simpleName, implementation?.simpleName)
+      }
 
     log.info("Supporting resource kinds: {}", kinds.joinToString { it.kind.toString() })
     log.info("Using resource handlers: {}", resourceHandlers.joinToString { it.name })

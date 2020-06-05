@@ -31,8 +31,10 @@ import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
+import com.netflix.spinnaker.keel.api.constraints.CanaryConstraintAttributes
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
+import com.netflix.spinnaker.keel.api.constraints.PipelineConstraintStateAttributes
 import com.netflix.spinnaker.keel.json.mixins.ConstraintStateMixin
 import com.netflix.spinnaker.keel.json.mixins.DeliveryArtifactMixin
 import com.netflix.spinnaker.keel.json.mixins.LocatableMixin
@@ -60,7 +62,9 @@ object KeelApiModule : SimpleModule("Keel API") {
         NamedType<DebianArtifact>(ArtifactType.deb.name),
         NamedType<DockerArtifact>(ArtifactType.docker.name),
         NamedType<DockerVersioningStrategy>(ArtifactType.docker.name),
-        NamedType<DebianSemVerVersioningStrategy>(ArtifactType.deb.name)
+        NamedType<DebianSemVerVersioningStrategy>(ArtifactType.deb.name),
+        NamedType<PipelineConstraintStateAttributes>("pipeline"),
+        NamedType<CanaryConstraintAttributes>("canary")
       )
     }
   }
@@ -80,7 +84,7 @@ object KeelApiModule : SimpleModule("Keel API") {
  * can instead be added to this and not need to use the annotation.
  *
  * Sub-types need to be registered with Jackson (see how `ResourceSpec` implementations are
- * registered, for example).
+ * registered in [KeelConfigurationFinalizer] for example).
  */
 internal object KeelApiAnnotationIntrospector : NopAnnotationIntrospector() {
   private val types = setOf(
