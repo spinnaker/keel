@@ -52,9 +52,14 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
       every { isImplicit() } returns true
       every { canPromote(any(), any(), any(), any()) } returns true
     }
-    val subject = EnvironmentPromotionChecker(
+    val environmentConstraintRunner = EnvironmentConstraintRunner(
       repository,
       listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator),
+      publisher
+    )
+    val subject = EnvironmentPromotionChecker(
+      repository,
+      environmentConstraintRunner,
       publisher
     )
 
@@ -123,6 +128,10 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
         } returns listOf("2.0", "1.2", "1.1", "1.0")
 
         every {
+          repository.latestVersionApprovedIn(deliveryConfig, artifact, environment.name)
+        } returns "1.2"
+
+        every {
           repository.approveVersionFor(deliveryConfig, artifact, "2.0", environment.name)
         } returns true
 
@@ -141,18 +150,28 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
 
       context("there are no constraints on the environment") {
         before {
-          runBlocking {
-            subject.checkEnvironments(deliveryConfig)
-          }
-
           every {
             repository.vetoedEnvironmentVersions(any())
           } returns emptyList()
+
+          every {
+            repository.getQueuedConstraintApprovals(deliveryConfig.name, environment.name)
+          } returns setOf("2.0")
+
+          runBlocking {
+            subject.checkEnvironments(deliveryConfig)
+          }
         }
 
         test("the implicit constraint is checked") {
           verify {
             implicitStatelessEvaluator.canPromote(artifact, "2.0", deliveryConfig, environment)
+          }
+        }
+
+        test("the version is queued for approval") {
+          verify {
+            repository.queueAllConstraintsApproved(deliveryConfig.name, environment.name, "2.0")
           }
         }
 
@@ -178,13 +197,18 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
 
       context("the latest version of the artifact was already approved for this environment") {
         before {
-          every {
-            repository.approveVersionFor(deliveryConfig, artifact, "2.0", environment.name)
-          } returns false
 
           every {
             repository.vetoedEnvironmentVersions(any())
           } returns emptyList()
+
+          every {
+            repository.latestVersionApprovedIn(deliveryConfig, artifact, environment.name)
+          } returns "2.0"
+
+          every {
+            repository.getQueuedConstraintApprovals(deliveryConfig.name, environment.name)
+          } returns setOf()
 
           runBlocking {
             subject.checkEnvironments(deliveryConfig)
@@ -468,7 +492,7 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
 
           every { repository.pendingConstraintVersionsFor(any(), any()) } returns listOf("1.2", "1.1")
 
-          every { repository.getQueuedConstraintApprovals(any(), any()) } returns setOf("1.0")
+          every { repository.getQueuedConstraintApprovals(any(), any()) } returns setOf("1.2", "1.0")
 
           every { statefulEvaluator.canPromote(any(), "2.0", any(), any()) } returns false
           every { statefulEvaluator.canPromote(any(), "1.2", any(), any()) } returns true
