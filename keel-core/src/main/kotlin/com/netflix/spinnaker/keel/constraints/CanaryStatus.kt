@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api.constraints
+package com.netflix.spinnaker.keel.constraints
 
 data class CanaryStatus(
   val executionId: String,

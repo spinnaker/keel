@@ -1,4 +1,6 @@
-package com.netflix.spinnaker.keel.api.constraints
+package com.netflix.spinnaker.keel.constraints
+
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
 
 data class CanaryConstraintAttributes(
   val executions: Set<RegionalExecutionId> = emptySet(),

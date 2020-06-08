@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.netflix.spinnaker.keel.actuation.ArtifactHandler
 import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
+import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
@@ -46,6 +47,18 @@ class KeelConfigurationFinalizer(
       .forEach { constraintType ->
         log.info("Registering Constraint sub-type {}: {}", constraintType.name, constraintType.type.simpleName)
         val namedType = NamedType(constraintType.type, constraintType.name)
+        objectMappers.forEach { it.registerSubtypes(namedType) }
+      }
+  }
+
+  @PostConstruct
+  fun resisterStatefulConstraintAttributeSubtypes() {
+    constraintEvaluators
+      .filterIsInstance<StatefulConstraintEvaluator<*, *>>()
+      .map { it.attributeType }
+      .forEach { attributeType ->
+        log.info("Registering Constraint Attributes sub-type {}: {}", attributeType.name, attributeType.type.simpleName)
+        val namedType = NamedType(attributeType.type, attributeType.name)
         objectMappers.forEach { it.registerSubtypes(namedType) }
       }
   }

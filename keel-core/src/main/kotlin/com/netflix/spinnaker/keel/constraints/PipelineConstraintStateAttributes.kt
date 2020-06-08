@@ -1,5 +1,6 @@
-package com.netflix.spinnaker.keel.api.constraints
+package com.netflix.spinnaker.keel.constraints
 
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
 import java.time.Instant
 
 data class PipelineConstraintStateAttributes(

@@ -31,10 +31,8 @@ import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
-import com.netflix.spinnaker.keel.api.constraints.CanaryConstraintAttributes
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
-import com.netflix.spinnaker.keel.api.constraints.PipelineConstraintStateAttributes
 import com.netflix.spinnaker.keel.json.mixins.ConstraintStateMixin
 import com.netflix.spinnaker.keel.json.mixins.DeliveryArtifactMixin
 import com.netflix.spinnaker.keel.json.mixins.LocatableMixin
@@ -62,9 +60,7 @@ object KeelApiModule : SimpleModule("Keel API") {
         NamedType<DebianArtifact>(ArtifactType.deb.name),
         NamedType<DockerArtifact>(ArtifactType.docker.name),
         NamedType<DockerVersioningStrategy>(ArtifactType.docker.name),
-        NamedType<DebianSemVerVersioningStrategy>(ArtifactType.deb.name),
-        NamedType<PipelineConstraintStateAttributes>("pipeline"),
-        NamedType<CanaryConstraintAttributes>("canary")
+        NamedType<DebianSemVerVersioningStrategy>(ArtifactType.deb.name)
       )
     }
   }
