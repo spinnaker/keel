@@ -489,6 +489,7 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
           every { repository.pinnedEnvironments(any()) } returns emptyList()
 
           every { repository.vetoedEnvironmentVersions(any()) } returns emptyList()
+          every { repository.latestVersionApprovedIn(deliveryConfig, artifact, environment.name) } returns "1.1"
 
           every { repository.pendingConstraintVersionsFor(any(), any()) } returns listOf("1.2", "1.1")
 
@@ -516,6 +517,10 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
           verify(exactly = 1) {
             statefulEvaluator.canPromote(artifact, "1.2", deliveryConfig, environment)
             statefulEvaluator.canPromote(artifact, "1.1", deliveryConfig, environment)
+          }
+
+          verify(exactly = 1) {
+            repository.queueAllConstraintsApproved(deliveryConfig.name, environment.name, "1.2")
           }
 
           verify(exactly = 1) {

@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.actuation
 
-import com.netflix.spinnaker.keel.actuation.EnvironmentConstraintRunner.EnvironmentInfo
+import com.netflix.spinnaker.keel.actuation.EnvironmentConstraintRunner.EnvironmentContext
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -50,9 +50,8 @@ class EnvironmentPromotionChecker(
             return@forEach
           }
 
-          // todo eb: should this be in another loop?
           constraintRunner.checkEnvironment(
-            EnvironmentInfo(deliveryConfig, environment, artifact, versions, vetoedArtifacts)
+            EnvironmentContext(deliveryConfig, environment, artifact, versions, vetoedArtifacts)
           )
 
           // everything the constraint runner has already approved
@@ -63,7 +62,6 @@ class EnvironmentPromotionChecker(
           /**
            * Approve all constraints starting with oldest first so that the ordering is
            * maintained.
-           * todo eb: understand ^ comment and figure out if it's needed
            */
           queuedForApproval
             .sortedWith(artifact.versioningStrategy.comparator.reversed())
@@ -72,7 +70,7 @@ class EnvironmentPromotionChecker(
                * We don't need to re-invoke stateful constraint evaluators for these, but we still
                * check stateless constraints to avoid approval outside of allowed-times.
                */
-              log.debug("Version $v of artifact ${artifact.name} is in queued for approval, " +
+              log.debug("Version $v of artifact ${artifact.name} is queued for approval, " +
                 "and being evaluated for stateless constraints in environment ${environment.name}")
               if (constraintRunner.checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
                 approveVersion(deliveryConfig, artifact, v, environment.name)
