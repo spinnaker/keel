@@ -78,7 +78,9 @@ class EnvironmentPromotionChecker(
               }
             }
 
-          val versionSelected = queuedForApproval.lastOrNull()
+          val versionSelected = queuedForApproval
+            .sortedWith(artifact.versioningStrategy.comparator.reversed())
+            .lastOrNull()
           if (versionSelected == null) {
             log.warn("No version of {} passes constraints for environment {}", artifact.name, environment.name)
           }
