@@ -5,13 +5,11 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.anyStateful
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
-import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
-import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.comparator
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import org.slf4j.LoggerFactory
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 /**
@@ -21,8 +19,7 @@ import org.springframework.stereotype.Component
 @Component
 class EnvironmentConstraintRunner(
   private val repository: KeelRepository,
-  private val constraints: List<ConstraintEvaluator<*>>,
-  private val publisher: ApplicationEventPublisher
+  private val constraints: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -83,40 +80,32 @@ class EnvironmentConstraintRunner(
   ) {
     var version: String? = null
     var versionIsPending = false
-    val vetoedVersions: Set<String> = envContext.vetoedVersions()
+    val vetoedVersions: Set<String> = envContext.vetoedVersions
 
-    if (envContext.hasNoConstraints() && implicitConstraints.isEmpty()) {
-      version = envContext.versions.firstOrNull { v ->
-        !vetoedVersions.contains(v)
-      }
-    } else {
-      version = envContext.versions
-        .firstOrNull { v ->
-          pendingVersionsToCheck.remove(v) // remove to indicate we are rechecking this version
-          if (vetoedVersions.contains(v)) {
-            false
-          } else {
-            /**
-             * Only check stateful evaluators if all stateless evaluators pass. We don't
-             * want to request judgement or deploy a canary for artifacts that aren't
-             * deployed to a required environment or outside of an allowed time.
-             */
-            val passesConstraints =
-              checkStatelessConstraints(envContext.artifact, envContext.deliveryConfig, v, envContext.environment) &&
-                checkStatefulConstraints(envContext.artifact, envContext.deliveryConfig, v, envContext.environment)
+    version = envContext.versions
+      .filterNot { vetoedVersions.contains(it) }
+      .firstOrNull { v ->
+        pendingVersionsToCheck.remove(v) // remove to indicate we are rechecking this version
+        /**
+         * Only check stateful evaluators if all stateless evaluators pass. We don't
+         * want to request judgement or deploy a canary for artifacts that aren't
+         * deployed to a required environment or outside of an allowed time.
+         */
+        val passesConstraints =
+          checkStatelessConstraints(envContext.artifact, envContext.deliveryConfig, v, envContext.environment) &&
+            checkStatefulConstraints(envContext.artifact, envContext.deliveryConfig, v, envContext.environment)
 
-            if (envContext.environment.constraints.anyStateful) {
-              versionIsPending = repository
-                .constraintStateFor(envContext.deliveryConfig.name, envContext.environment.name, v)
-                .any { it.status == PENDING }
-            }
-
-            // select either the first version that passes all constraints,
-            // or the first version where stateful constraints are pending.
-            passesConstraints || versionIsPending
-          }
+        if (envContext.environment.constraints.anyStateful) {
+          versionIsPending = repository
+            .constraintStateFor(envContext.deliveryConfig.name, envContext.environment.name, v)
+            .any { it.status == ConstraintStatus.PENDING }
         }
-    }
+
+        // select either the first version that passes all constraints,
+        // or the first version where stateful constraints are pending.
+        // so that we don't roll back while constraints are evaluating for a version
+        passesConstraints || versionIsPending
+      }
     if (version != null && !versionIsPending) {
       // we've selected a version that passes all constraints, queue it for approval
       queueForApproval(envContext.deliveryConfig, envContext.artifact, version, envContext.environment.name)
@@ -153,17 +142,10 @@ class EnvironmentConstraintRunner(
     val environment: Environment,
     val artifact: DeliveryArtifact,
     val versions: List<String>,
-    val vetoedArtifacts: Map<String, EnvironmentArtifactVetoes>
+    val vetoedVersions: Set<String>
   ) {
     fun hasNoConstraints(): Boolean =
       environment.constraints.isEmpty()
-
-    fun vetoedVersions(): Set<String> =
-      (vetoedArtifacts[envPinKey()]?.versions)
-        ?: emptySet()
-
-    private fun envPinKey(): String =
-      "${environment.name}:${artifact.name}:${artifact.type.name.toLowerCase()}"
   }
 
   /**
@@ -190,8 +172,8 @@ class EnvironmentConstraintRunner(
     version: String,
     environment: Environment
   ): Boolean =
-    checkImplicitConstraints(implicitStatelessEvaluators, artifact, deliveryConfig, version, environment) &&
-      checkConstraints(statelessEvaluators, artifact, deliveryConfig, version, environment)
+    checkConstraintForEveryEnvironment(implicitStatelessEvaluators, artifact, deliveryConfig, version, environment) &&
+      checkConstraintWhenSpecified(statelessEvaluators, artifact, deliveryConfig, version, environment)
 
   fun checkStatefulConstraints(
     artifact: DeliveryArtifact,
@@ -199,51 +181,41 @@ class EnvironmentConstraintRunner(
     version: String,
     environment: Environment
   ): Boolean =
-    checkImplicitConstraints(implicitStatefulEvaluators, artifact, deliveryConfig, version, environment) &&
-      checkConstraints(statefulEvaluators, artifact, deliveryConfig, version, environment)
+    checkConstraintForEveryEnvironment(implicitStatefulEvaluators, artifact, deliveryConfig, version, environment) &&
+      checkConstraintWhenSpecified(statefulEvaluators, artifact, deliveryConfig, version, environment)
 
   /**
    * Checks constraints for a list of evaluators.
    * Evaluates the constraint for every environment passed in.
    * @return true if all constraints pass
    */
-  private fun checkImplicitConstraints(
+  private fun checkConstraintForEveryEnvironment(
     evaluators: List<ConstraintEvaluator<*>>,
     artifact: DeliveryArtifact,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment
-  ): Boolean {
-    return if (evaluators.isEmpty()) {
-      true
-    } else {
-      evaluators.all { evaluator ->
-        evaluator.canPromote(artifact, version, deliveryConfig, environment)
-      }
+  ): Boolean =
+    evaluators.all { evaluator ->
+      evaluator.canPromote(artifact, version, deliveryConfig, environment)
     }
-  }
 
   /**
    * Checks constraints for a list of evaluators.
    * Evaluates the constraint only if it's defined on the environment.
    * @return true if all constraints pass
    */
-  private fun checkConstraints(
+  private fun checkConstraintWhenSpecified(
     evaluators: List<ConstraintEvaluator<*>>,
     artifact: DeliveryArtifact,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment
-  ): Boolean {
-    return if (evaluators.isEmpty()) {
-      true
-    } else {
-      evaluators.all { evaluator ->
-        !environment.hasSupportedConstraint(evaluator) ||
-          evaluator.canPromote(artifact, version, deliveryConfig, environment)
-      }
+  ): Boolean =
+    evaluators.all { evaluator ->
+      !environment.hasSupportedConstraint(evaluator) ||
+        evaluator.canPromote(artifact, version, deliveryConfig, environment)
     }
-  }
 
   private fun Environment.hasSupportedConstraint(constraintEvaluator: ConstraintEvaluator<*>) =
     constraints.any { it.javaClass.isAssignableFrom(constraintEvaluator.supportedType.type) }

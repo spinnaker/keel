@@ -27,6 +27,7 @@ class EnvironmentPromotionChecker(
     val pinnedEnvs: Map<String, PinnedEnvironment> = repository
       .pinnedEnvironments(deliveryConfig)
       .associateBy { envPinKey(it.targetEnvironment, it.artifact) }
+
     val vetoedArtifacts: Map<String, EnvironmentArtifactVetoes> = repository
       .vetoedEnvironmentVersions(deliveryConfig)
       .associateBy { envPinKey(it.targetEnvironment, it.artifact) }
@@ -37,52 +38,58 @@ class EnvironmentPromotionChecker(
       .forEach { (artifact, versions) ->
         if (versions.isEmpty()) {
           log.warn("No versions for ${artifact.type} artifact ${artifact.name} are known")
-          return@forEach
-        }
-        deliveryConfig.environments.forEach { environment ->
-          // if pinned, we approve that version right away without doing anything else
-          // to fast track that deployment
-          if (pinnedEnvs.hasPinFor(environment.name, artifact)) {
-            // todo: https://github.com/spinnaker/keel/issues/1254
-            val pinnedVersion: String = pinnedEnvs.versionFor(environment.name, artifact) ?: return@forEach
-            // todo eb: this shouldn't be null, we just checked if a pin exists in the map above.
-            approveVersion(deliveryConfig, artifact, pinnedVersion, environment.name)
-            return@forEach
-          }
+        } else {
+          deliveryConfig.environments.forEach { environment ->
+            // if pinned, we approve that version right away without doing anything else
+            // to fast track that deployment
+            if (pinnedEnvs.hasPinFor(environment.name, artifact)) {
+              // todo: https://github.com/spinnaker/keel/issues/1254
+              val pinnedVersion: String = pinnedEnvs.versionFor(environment.name, artifact) ?: return@forEach
+              // todo eb: this shouldn't be null, we just checked if a pin exists in the map above.
+              approveVersion(deliveryConfig, artifact, pinnedVersion, environment.name)
+            } else {
 
-          constraintRunner.checkEnvironment(
-            EnvironmentContext(deliveryConfig, environment, artifact, versions, vetoedArtifacts)
-          )
+              constraintRunner.checkEnvironment(
+                EnvironmentContext(
+                  deliveryConfig = deliveryConfig,
+                  environment = environment,
+                  artifact = artifact,
+                  versions = versions,
+                  vetoedVersions = (vetoedArtifacts[envPinKey(environment.name, artifact)]?.versions) ?: emptySet()
+                )
+              )
 
-          // everything the constraint runner has already approved
-          val queuedForApproval: MutableSet<String> = repository
-            .getQueuedConstraintApprovals(deliveryConfig.name, environment.name)
-            .toMutableSet()
+              // everything the constraint runner has already approved
+              val queuedForApproval: MutableSet<String> = repository
+                .getQueuedConstraintApprovals(deliveryConfig.name, environment.name)
+                .toMutableSet()
 
-          /**
-           * Approve all constraints starting with oldest first so that the ordering is
-           * maintained.
-           */
-          queuedForApproval
-            .sortedWith(artifact.versioningStrategy.comparator.reversed())
-            .forEach { v ->
               /**
-               * We don't need to re-invoke stateful constraint evaluators for these, but we still
-               * check stateless constraints to avoid approval outside of allowed-times.
+               * Approve all constraints starting with oldest first so that the ordering is
+               * maintained.
                */
-              log.debug("Version $v of artifact ${artifact.name} is queued for approval, " +
-                "and being evaluated for stateless constraints in environment ${environment.name}")
-              if (constraintRunner.checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
-                approveVersion(deliveryConfig, artifact, v, environment.name)
-                repository.deleteQueuedConstraintApproval(deliveryConfig.name, environment.name, v)
+              queuedForApproval
+                .sortedWith(artifact.versioningStrategy.comparator.reversed())
+                .forEach { v ->
+                  /**
+                   * We don't need to re-invoke stateful constraint evaluators for these, but we still
+                   * check stateless constraints to avoid approval outside of allowed-times.
+                   */
+                  log.debug("Version $v of artifact ${artifact.name} is queued for approval, " +
+                    "and being evaluated for stateless constraints in environment ${environment.name}")
+                  if (constraintRunner.checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
+                    approveVersion(deliveryConfig, artifact, v, environment.name)
+                    repository.deleteQueuedConstraintApproval(deliveryConfig.name, environment.name, v)
+                  }
+                }
+
+              val versionSelected = queuedForApproval
+                .sortedWith(artifact.versioningStrategy.comparator.reversed())
+                .lastOrNull()
+              if (versionSelected == null) {
+                log.warn("No version of {} passes constraints for environment {}", artifact.name, environment.name)
               }
             }
-
-          val versionSelected = queuedForApproval
-            .sortedWith(artifact.versioningStrategy.comparator.reversed())
-            .lastOrNull()
-          if (versionSelected == null) {
-            log.warn("No version of {} passes constraints for environment {}", artifact.name, environment.name)
           }
         }
       }
@@ -136,6 +143,6 @@ class EnvironmentPromotionChecker(
   ): String? =
     get(envPinKey(environmentName, artifact))?.version
 
-  private fun envPinKey(environmentName: String, artifact: DeliveryArtifact): String =
-    "$environmentName:${artifact.name}:${artifact.type.name.toLowerCase()}"
+  fun envPinKey(environmentName: String, artifact: DeliveryArtifact): String =
+    "$environmentName:${artifact.reference}"
 }

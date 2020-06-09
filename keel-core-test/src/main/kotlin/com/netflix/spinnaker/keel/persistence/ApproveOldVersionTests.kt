@@ -80,8 +80,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
     }
     val environmentConstraintRunner = EnvironmentConstraintRunner(
       repository,
-      listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator),
-      publisher
+      listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator)
     )
 
     val subject = EnvironmentPromotionChecker(

@@ -54,8 +54,7 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
     }
     val environmentConstraintRunner = EnvironmentConstraintRunner(
       repository,
-      listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator),
-      publisher
+      listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator)
     )
     val subject = EnvironmentPromotionChecker(
       repository,
@@ -93,6 +92,7 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
     )
   }
 
+  // todo eb: remove these tests (in favor of EnvironmentConstraintRunnerTests and NewEnvironmentPromotionCheckerTests)
   fun tests() = rootContext<Fixture> {
     fixture {
       Fixture()
