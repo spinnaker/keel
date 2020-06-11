@@ -10,12 +10,12 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.api.events.ArtifactEvent
+import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
+import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.comparator
-import com.netflix.spinnaker.keel.events.ArtifactEvent
-import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.events.ArtifactSyncEvent
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
 import com.netflix.spinnaker.kork.artifacts.model.Artifact

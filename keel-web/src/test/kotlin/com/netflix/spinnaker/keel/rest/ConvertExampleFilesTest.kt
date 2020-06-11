@@ -19,6 +19,8 @@ package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -36,6 +38,12 @@ import strikt.assertions.isSuccess
 
 class ConvertExampleFilesTest : JUnit5Minutests {
   private val mapper = configuredYamlMapper()
+    .also {
+      it.registerSubtypes(
+        NamedType(DebianArtifact::class.java, "deb"),
+        NamedType(DockerArtifact::class.java, "docker")
+      )
+    }
 
   fun tests() = rootContext<Unit> {
     before {

@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.api
 
+import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
@@ -83,4 +84,10 @@ private data class Fixture(
   val json: String
 ) {
   val mapper = configuredObjectMapper()
+    .also {
+      it.registerSubtypes(
+        NamedType(DebianArtifact::class.java, "deb"),
+        NamedType(DockerArtifact::class.java, "docker")
+      )
+    }
 }

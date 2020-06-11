@@ -23,12 +23,7 @@ import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DebianSemVerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
@@ -55,13 +50,6 @@ object KeelApiModule : SimpleModule("Keel API") {
       setMixInAnnotations<Monikered, MonikeredMixin>()
       setMixInAnnotations<SubnetAwareRegionSpec, SubnetAwareRegionSpecMixin>()
       setMixInAnnotations<ConstraintState, ConstraintStateMixin>()
-
-      registerSubtypes(
-        NamedType<DebianArtifact>(ArtifactType.deb.name),
-        NamedType<DockerArtifact>(ArtifactType.docker.name),
-        NamedType<DockerVersioningStrategy>(ArtifactType.docker.name),
-        NamedType<DebianSemVerVersioningStrategy>(ArtifactType.deb.name)
-      )
     }
   }
 }

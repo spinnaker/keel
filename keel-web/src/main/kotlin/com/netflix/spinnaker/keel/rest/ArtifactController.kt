@@ -3,10 +3,10 @@ package com.netflix.spinnaker.keel.rest
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.events.ArtifactEvent
-import com.netflix.spinnaker.keel.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.events.ArtifactSyncEvent
+import com.netflix.spinnaker.keel.api.events.ArtifactEvent
+import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
+import com.netflix.spinnaker.keel.artifact.DebianArtifactPublisher
+import com.netflix.spinnaker.keel.artifact.DockerArtifactPublisher
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import com.netflix.spinnaker.kork.artifacts.model.Artifact
@@ -25,8 +25,10 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/artifacts"])
 class ArtifactController(
-  private val publisher: ApplicationEventPublisher,
-  private val repository: KeelRepository
+  private val eventPublisher: ApplicationEventPublisher,
+  private val repository: KeelRepository,
+  private val debianArtifactSupplier: DebianArtifactPublisher,
+  private val dockerArtifactSupplier: DockerArtifactPublisher
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -38,9 +40,9 @@ class ArtifactController(
   fun submitArtifact(@RequestBody echoArtifactEvent: EchoArtifactEvent) {
     echoArtifactEvent.payload.artifacts.forEach { artifact ->
       if (artifact.type.equals(deb.toString(), true) && artifact.isFromArtifactEvent()) {
-        publisher.publishEvent(ArtifactEvent(listOf(artifact), emptyMap()))
+        debianArtifactSupplier.publishArtifact(ArtifactEvent(listOf(artifact), emptyMap()))
       } else if (artifact.type.equals(docker.toString(), true)) {
-        publisher.publishEvent(ArtifactEvent(listOf(artifact), emptyMap()))
+        dockerArtifactSupplier.publishArtifact(ArtifactEvent(listOf(artifact), emptyMap()))
       } else {
         log.debug("Ignoring artifact event with type {}: {}", artifact.type, artifact)
       }
@@ -48,21 +50,11 @@ class ArtifactController(
   }
 
   @PostMapping(
-    path = ["/register"],
-    consumes = [APPLICATION_JSON_VALUE]
-  )
-  @ResponseStatus(ACCEPTED)
-  fun register(@RequestBody artifact: DeliveryArtifact) {
-    repository.register(artifact)
-    publisher.publishEvent(ArtifactRegisteredEvent(artifact))
-  }
-
-  @PostMapping(
     path = ["/sync"]
   )
   @ResponseStatus(ACCEPTED)
   fun sync() {
-    publisher.publishEvent(ArtifactSyncEvent(true))
+    eventPublisher.publishEvent(ArtifactSyncEvent(true))
   }
 
   @GetMapping(
