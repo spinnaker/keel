@@ -216,6 +216,11 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
           test("queued constraints aren't looked at") {
             verify(exactly = 0) {
               environmentConstraintRunner.checkStatelessConstraints(any(), any(), any(), any())
+            }
+          }
+
+          test("stateless constraints for queued versions aren't rechecked") {
+            verify(exactly = 0) {
               repository.getQueuedConstraintApprovals(any(), any())
             }
           }
