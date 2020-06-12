@@ -1,12 +1,11 @@
 package com.netflix.spinnaker.keel.api
 
-import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
@@ -83,11 +82,5 @@ internal class DeliveryArtifactTests : JUnit5Minutests {
 private data class Fixture(
   val json: String
 ) {
-  val mapper = configuredObjectMapper()
-    .also {
-      it.registerSubtypes(
-        NamedType(DebianArtifact::class.java, "deb"),
-        NamedType(DockerArtifact::class.java, "docker")
-      )
-    }
+  val mapper = configuredTestObjectMapper()
 }

@@ -1,12 +1,10 @@
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.LaunchConfigurationSpec
@@ -15,8 +13,8 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType.ELB
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
+import com.netflix.spinnaker.keel.test.configuredTestYamlMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import java.time.Duration
@@ -35,13 +33,9 @@ internal class ClusterSpecTests : JUnit5Minutests {
       fixture { Fixture }
 
       mapOf(
-        "YAML" to configuredYamlMapper(),
-        "JSON" to configuredObjectMapper()
+        "YAML" to configuredTestYamlMapper(),
+        "JSON" to configuredTestObjectMapper()
       ).forEach { (format, mapper) ->
-        mapper.registerSubtypes(
-          NamedType(DebianArtifact::class.java, "deb"),
-          NamedType(DockerArtifact::class.java, "docker")
-        )
         test("can serialize and deserialize as $format") {
           val text = mapper.writeValueAsString(spec)
           val tree = mapper.readValue<ClusterSpec>(text)

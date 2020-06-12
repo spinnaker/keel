@@ -5,11 +5,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.igor.ScmService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -24,12 +22,10 @@ import strikt.assertions.isFailure
 
 class DeliveryConfigImporterTests : JUnit5Minutests {
   object Fixture {
-    val jsonMapper: ObjectMapper = configuredObjectMapper()
-      .also {
-        it.registerSubtypes(
-          NamedType(DummyResourceSpec::class.java, "test/whatever@v1"),
-          NamedType(DebianArtifact::class.java, "deb"),
-          NamedType(DockerArtifact::class.java, "docker")
+    val jsonMapper: ObjectMapper = configuredTestObjectMapper()
+      .apply {
+        registerSubtypes(
+          NamedType(DummyResourceSpec::class.java, "test/whatever@v1")
         )
       }
     val scmService: ScmService = mockk()
