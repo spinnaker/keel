@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.artifact.DEB
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.BuildInfo
 import com.netflix.spinnaker.keel.core.api.Capacity
@@ -58,7 +59,7 @@ data class ServerGroup(
   override val artifactName: String? = null,
   @JsonIgnore
   @get:ObjectDiffProperty(inclusion = EXCLUDED)
-  override val artifactType: ArtifactType? = ArtifactType.deb,
+  override val artifactType: ArtifactType? = DEB,
   @JsonIgnore
   @get:ObjectDiffProperty(inclusion = EXCLUDED)
   override val artifactVersion: String? = null

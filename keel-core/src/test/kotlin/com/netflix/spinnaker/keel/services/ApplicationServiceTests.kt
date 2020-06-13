@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -11,6 +11,10 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
+import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
+import com.netflix.spinnaker.keel.artifact.DEB
+import com.netflix.spinnaker.keel.artifact.DebianArtifact
+import com.netflix.spinnaker.keel.artifact.DebianArtifactPublisher
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
@@ -28,6 +32,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.test.artifactReferenceResource
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.versionedArtifactResource
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
@@ -36,6 +41,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import java.time.Instant
 import java.time.ZoneId
@@ -113,8 +119,26 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
     }
 
+    private val korkArtifact = slot<KorkArtifact>()
+    private val debianArtifactPublisher = mockk<DebianArtifactPublisher>(relaxUnitFun = true) {
+      every { supportedArtifact } returns SupportedArtifact(DEB, DebianArtifact::class.java)
+      every {
+        getVersionDisplayName(capture(korkArtifact))
+      } answers {
+        korkArtifact.captured.version.removePrefix("${korkArtifact.captured.name}-")
+      }
+      every { getBuildMetadata(any(), any()) } returns null
+      every { getGitMetadata(any(), any()) } returns null
+    }
+
     // subject
-    val applicationService = ApplicationService(repository, resourceStatusService, listOf(dependsOnEvaluator))
+    val applicationService = ApplicationService(
+      repository,
+      resourceStatusService,
+      listOf(dependsOnEvaluator),
+      listOf(debianArtifactPublisher),
+      configuredTestObjectMapper()
+    )
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {

@@ -3,11 +3,11 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.id
+import com.netflix.spinnaker.keel.artifact.DOCKER
+import com.netflix.spinnaker.keel.artifact.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.events.ResourceCreated
@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.exceptions.DuplicateManagedResourceException
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
@@ -90,7 +91,8 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
       artifactRepository,
       resourceRepository,
       clock,
-      publisher
+      publisher,
+      configuredTestObjectMapper()
     )
 
     fun resourcesDueForCheck() =
@@ -128,7 +130,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
         }
 
         test("artifacts are persisted") {
-          expectThat(subject.isRegistered("org/image", ArtifactType.docker)).isTrue()
+          expectThat(subject.isRegistered("org/image", DOCKER)).isTrue()
           verify { publisher.publishEvent(ArtifactRegisteredEvent(DockerArtifact(name = "org/image", deliveryConfigName = configName))) }
         }
 

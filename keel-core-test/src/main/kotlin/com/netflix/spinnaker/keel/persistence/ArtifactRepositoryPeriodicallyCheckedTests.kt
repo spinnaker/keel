@@ -1,9 +1,9 @@
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.artifact.DEB
+import com.netflix.spinnaker.keel.artifact.DebianArtifact
 
 abstract class ArtifactRepositoryPeriodicallyCheckedTests<S : ArtifactRepository> :
   PeriodicallyCheckedRepositoryTests<DeliveryArtifact, S>() {
@@ -28,7 +28,7 @@ abstract class ArtifactRepositoryPeriodicallyCheckedTests<S : ArtifactRepository
 
   override val updateOne: Fixture<DeliveryArtifact, S>.() -> DeliveryArtifact = {
     subject
-      .get("artifact-1", ArtifactType.deb, "ref-1", "delivery-config-1")
+      .get("artifact-1", DEB, "ref-1", "delivery-config-1")
       .let { it as DebianArtifact }
       .copy(reference = "my-delightful-artifact")
       .also(subject::register)

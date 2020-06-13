@@ -1,15 +1,15 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.deb
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType.docker
+import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
 import com.netflix.spinnaker.keel.api.events.ArtifactEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
+import com.netflix.spinnaker.keel.artifact.DEB
+import com.netflix.spinnaker.keel.artifact.DOCKER
 import com.netflix.spinnaker.keel.artifact.DebianArtifactPublisher
 import com.netflix.spinnaker.keel.artifact.DockerArtifactPublisher
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
-import com.netflix.spinnaker.kork.artifacts.model.Artifact
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus.ACCEPTED
@@ -39,9 +39,9 @@ class ArtifactController(
   @ResponseStatus(ACCEPTED)
   fun submitArtifact(@RequestBody echoArtifactEvent: EchoArtifactEvent) {
     echoArtifactEvent.payload.artifacts.forEach { artifact ->
-      if (artifact.type.equals(deb.toString(), true) && artifact.isFromArtifactEvent()) {
+      if (artifact.type.equals(DEB.toString(), true) && artifact.isFromArtifactEvent()) {
         debianArtifactSupplier.publishArtifact(ArtifactEvent(listOf(artifact), emptyMap()))
-      } else if (artifact.type.equals(docker.toString(), true)) {
+      } else if (artifact.type.equals(DOCKER.toString(), true)) {
         dockerArtifactSupplier.publishArtifact(ArtifactEvent(listOf(artifact), emptyMap()))
       } else {
         log.debug("Ignoring artifact event with type {}: {}", artifact.type, artifact)
@@ -68,7 +68,7 @@ class ArtifactController(
     repository.artifactVersions(name, type)
 
   // Debian Artifacts should contain a releaseStatus in the metadata
-  private fun Artifact.isFromArtifactEvent() =
+  private fun KorkArtifact.isFromArtifactEvent() =
     this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
 }
 

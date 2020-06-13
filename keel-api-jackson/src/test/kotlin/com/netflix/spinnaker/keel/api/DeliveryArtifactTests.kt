@@ -2,9 +2,9 @@ package com.netflix.spinnaker.keel.api
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifact.DebianArtifact
+import com.netflix.spinnaker.keel.artifact.DockerArtifact
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext

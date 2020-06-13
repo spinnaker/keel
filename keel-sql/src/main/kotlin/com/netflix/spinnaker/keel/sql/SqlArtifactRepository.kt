@@ -5,9 +5,9 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifact.DebianArtifact
+import com.netflix.spinnaker.keel.artifact.DockerArtifact
 import com.netflix.spinnaker.keel.core.TagComparator
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -70,7 +70,7 @@ class SqlArtifactRepository(
         .select(DELIVERY_ARTIFACT.UID)
         .from(DELIVERY_ARTIFACT)
         .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
           .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
           .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference)))
         .fetchOne(DELIVERY_ARTIFACT.UID)
@@ -82,7 +82,7 @@ class SqlArtifactRepository(
         .set(DELIVERY_ARTIFACT.UID, id)
         .set(DELIVERY_ARTIFACT.FINGERPRINT, artifact.fingerprint())
         .set(DELIVERY_ARTIFACT.NAME, artifact.name)
-        .set(DELIVERY_ARTIFACT.TYPE, artifact.type.name)
+        .set(DELIVERY_ARTIFACT.TYPE, artifact.type)
         .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
         .set(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME, artifact.deliveryConfigName)
         .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
@@ -127,7 +127,7 @@ class SqlArtifactRepository(
         .select(DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE)
         .from(DELIVERY_ARTIFACT)
         .where(DELIVERY_ARTIFACT.NAME.eq(name))
-        .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
+        .and(DELIVERY_ARTIFACT.TYPE.eq(type))
         .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
         .fetch { (details, reference) ->
           mapToArtifact(name, type, details, reference, deliveryConfigName)
@@ -141,7 +141,7 @@ class SqlArtifactRepository(
         .select(DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE)
         .from(DELIVERY_ARTIFACT)
         .where(DELIVERY_ARTIFACT.NAME.eq(name))
-        .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
+        .and(DELIVERY_ARTIFACT.TYPE.eq(type))
         .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
         .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference))
         .fetchOne()
@@ -163,7 +163,7 @@ class SqlArtifactRepository(
         .fetchOne()
     }
       ?.let { (name, details, reference, type) ->
-        mapToArtifact(name, ArtifactType.valueOf(type), details, reference, deliveryConfigName)
+        mapToArtifact(name, type, details, reference, deliveryConfigName)
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
@@ -178,7 +178,7 @@ class SqlArtifactRepository(
     return sqlRetry.withRetry(WRITE) {
       jooq.insertInto(ARTIFACT_VERSIONS)
         .set(ARTIFACT_VERSIONS.NAME, name)
-        .set(ARTIFACT_VERSIONS.TYPE, type.name)
+        .set(ARTIFACT_VERSIONS.TYPE, type)
         .set(ARTIFACT_VERSIONS.VERSION, version)
         .set(ARTIFACT_VERSIONS.RELEASE_STATUS, status?.toString())
         .onDuplicateKeyIgnore()
@@ -210,7 +210,7 @@ class SqlArtifactRepository(
         .selectCount()
         .from(DELIVERY_ARTIFACT)
         .where(DELIVERY_ARTIFACT.NAME.eq(name))
-        .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
+        .and(DELIVERY_ARTIFACT.TYPE.eq(type))
         .fetchOne()
         .value1()
     } > 0
@@ -222,7 +222,7 @@ class SqlArtifactRepository(
         .from(DELIVERY_ARTIFACT)
         .apply { if (type != null) where(DELIVERY_ARTIFACT.TYPE.eq(type.toString())) }
         .fetch { (name, storedType, details, reference, configName) ->
-          mapToArtifact(name, ArtifactType.valueOf(storedType.toLowerCase()), details, reference, configName)
+          mapToArtifact(name, storedType.toLowerCase(), details, reference, configName)
         }
     }
 
@@ -231,7 +231,7 @@ class SqlArtifactRepository(
       jooq.select(ARTIFACT_VERSIONS.VERSION)
         .from(ARTIFACT_VERSIONS)
         .where(ARTIFACT_VERSIONS.NAME.eq(name))
-        .and(ARTIFACT_VERSIONS.TYPE.eq(type.name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
         .fetch()
         .getValues(ARTIFACT_VERSIONS.VERSION)
     }
@@ -244,7 +244,7 @@ class SqlArtifactRepository(
           .select(ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS)
           .from(ARTIFACT_VERSIONS)
           .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
+          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
           .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
           .fetch()
           .getValues(ARTIFACT_VERSIONS.VERSION)
@@ -752,7 +752,7 @@ class SqlArtifactRepository(
           )
           .where(DELIVERY_ARTIFACT.UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID))
           .and(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
           .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
           .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(ARTIFACT_VERSIONS.VERSION))
@@ -761,7 +761,7 @@ class SqlArtifactRepository(
           .and(ENVIRONMENT.NAME.eq(environment.name))
           .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
           .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
+          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
           .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
         val pendingVersions = jooq
           .select(
@@ -776,14 +776,14 @@ class SqlArtifactRepository(
             DELIVERY_CONFIG
           )
           .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
           .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
           .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
           .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
           .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
           .and(ENVIRONMENT.NAME.eq(environment.name))
           .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type.name))
+          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
           .apply { if (artifact is DebianArtifact && artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
           .andNotExists(
             selectOne()
@@ -898,7 +898,7 @@ class SqlArtifactRepository(
             targetEnvironment = environmentName,
             artifact = mapToArtifact(
               artifactName,
-              ArtifactType.valueOf(type.toLowerCase()),
+              type.toLowerCase(),
               details,
               reference,
               deliveryConfig.name),
@@ -1035,7 +1035,7 @@ class SqlArtifactRepository(
             }
           }
           .map { (_, name, type, details, reference, deliveryConfigName) ->
-            mapToArtifact(name, ArtifactType.valueOf(type), details, reference, deliveryConfigName)
+            mapToArtifact(name, type, details, reference, deliveryConfigName)
           }
       }
     }
@@ -1099,7 +1099,7 @@ class SqlArtifactRepository(
     get() = select(DELIVERY_ARTIFACT.UID)
       .from(DELIVERY_ARTIFACT)
       .where(DELIVERY_ARTIFACT.NAME.eq(name)
-        .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
+        .and(DELIVERY_ARTIFACT.TYPE.eq(type))
         .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
         .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference)))
 
@@ -1108,7 +1108,7 @@ class SqlArtifactRepository(
       jooq.select(DELIVERY_ARTIFACT.UID)
         .from(DELIVERY_ARTIFACT)
         .where(DELIVERY_ARTIFACT.NAME.eq(name)
-          .and(DELIVERY_ARTIFACT.TYPE.eq(type.name))
+          .and(DELIVERY_ARTIFACT.TYPE.eq(type))
           .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
           .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference)))
         .fetchOne(DELIVERY_ARTIFACT.UID) ?: error("artifact not found for " +
@@ -1126,7 +1126,7 @@ class SqlArtifactRepository(
 
   // Generates a unique hash for an artifact
   private fun DeliveryArtifact.fingerprint(): String {
-    return fingerprint(name, type.name, deliveryConfigName ?: "_pending", reference)
+    return fingerprint(name, type, deliveryConfigName ?: "_pending", reference)
   }
 
   private fun fingerprint(name: String, type: String, deliveryConfigName: String, reference: String): String {

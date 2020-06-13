@@ -34,6 +34,7 @@ val VersioningStrategy.comparator: Comparator<String>
   get() = when (this) {
     is DebianSemVerVersioningStrategy -> DEBIAN_VERSION_COMPARATOR
     is DockerVersioningStrategy -> TagComparator(strategy, captureGroupRegex)
+    else -> error("Unsupported versioning strategy ${this.javaClass.simpleName}")
   }
 
 /**

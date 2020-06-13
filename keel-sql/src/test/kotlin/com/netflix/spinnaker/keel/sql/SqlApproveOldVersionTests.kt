@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.persistence.ApproveOldVersionTests
 import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
+import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
@@ -27,7 +28,8 @@ class SqlApproveOldVersionTests : ApproveOldVersionTests<CombinedRepository>() {
       artifactRepository,
       resourceRepository,
       clock,
-      mockk(relaxed = true)
+      mockk(relaxed = true),
+      configuredTestObjectMapper()
     )
   }
 

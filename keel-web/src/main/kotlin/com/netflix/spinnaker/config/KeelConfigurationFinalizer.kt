@@ -25,7 +25,7 @@ class KeelConfigurationFinalizer(
   private val resourceHandlers: List<ResourceHandler<*, *>> = emptyList(),
   private val constraintEvaluators: List<ConstraintEvaluator<*>> = emptyList(),
   private val artifactHandlers: List<ArtifactHandler> = emptyList(),
-  private val artifactPublishers: List<ArtifactPublisher> = emptyList(),
+  private val artifactPublishers: List<ArtifactPublisher<*>> = emptyList(),
   private val objectMappers: List<ObjectMapper>
 ) {
 
@@ -66,9 +66,9 @@ class KeelConfigurationFinalizer(
   }
 
   @PostConstruct
-  fun registerArtifactSupplierSubtypes() {
+  fun registerArtifactPublisherSubtypes() {
     artifactPublishers
-      .flatMap { it.supportedArtifacts }
+      .map { it.supportedArtifact }
       .forEach { (name, artifactClass) ->
         log.info("Registering DeliveryArtifact sub-type {}: {}", name, artifactClass.simpleName)
         val namedType = NamedType(artifactClass, name)

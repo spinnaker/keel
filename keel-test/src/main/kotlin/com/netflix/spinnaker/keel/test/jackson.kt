@@ -2,8 +2,8 @@ package com.netflix.spinnaker.keel.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.jsontype.NamedType
-import com.netflix.spinnaker.keel.api.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.api.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifact.DebianArtifact
+import com.netflix.spinnaker.keel.artifact.DockerArtifact
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 

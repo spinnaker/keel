@@ -6,7 +6,6 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.allPass
@@ -290,7 +289,7 @@ class SqlDeliveryConfigRepository(
             .select(DELIVERY_ARTIFACT.UID)
             .from(DELIVERY_ARTIFACT)
             .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-            .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type.name))
+            .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
             .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
             .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference)))
           .onDuplicateKeyIgnore()
@@ -369,7 +368,7 @@ class SqlDeliveryConfigRepository(
         .where(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
         .and(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(uid))
         .fetch { (name, type, details, reference, configName) ->
-          mapToArtifact(name, ArtifactType.valueOf(type.toLowerCase()), details, reference, configName)
+          mapToArtifact(name, type.toLowerCase(), details, reference, configName)
         }
     }
       .toSet()
