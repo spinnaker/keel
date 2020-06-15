@@ -2,13 +2,13 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.artifacts.DebianSemVerVersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
-import com.netflix.spinnaker.keel.artifact.DebianArtifact
 import com.netflix.spinnaker.keel.constraints.ArtifactUsedConstraintEvaluator
 import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
@@ -62,11 +62,14 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
       publisher
     )
 
-    val artifact = DebianArtifact(
-      name = "fnord",
-      deliveryConfigName = "my-manifest",
-      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
-    )
+    val artifact = object : DeliveryArtifact() {
+      override val name = "fnord"
+      override val type = "fake"
+      override val versioningStrategy = DebianSemVerVersioningStrategy
+      override val reference = name
+      override val deliveryConfigName = "my-manifest"
+    }
+
     val deliveryConfig = DeliveryConfig(
       name = "my-manifest",
       application = "fnord",
@@ -351,6 +354,22 @@ internal class EnvironmentPromotionCheckerTests : JUnit5Minutests {
           every {
             repository.getQueuedConstraintApprovals(any(), any())
           } returns emptySet()
+
+          every {
+            statelessEvaluator.canPromote(any(), any(), any(), any())
+          } returns false
+
+          every {
+            statefulEvaluator.canPromote(any(), any(), any(), any())
+          } returns false
+
+          every {
+            deliveryConfigRepository.getConstraintState(any(), any(), "1.2", "manual-judgement")
+          } returns passedManualJudgement
+
+          every {
+            repository.constraintStateFor("my-manifest", "staging", "2.0")
+          } returns listOf(pendingManualJudgement)
 
           runBlocking {
             subject.checkEnvironments(deliveryConfig)

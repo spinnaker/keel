@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.util.comparator.NullSafeComparator
 
 val VersioningStrategy.comparator: Comparator<String>
+  // TODO: this needs to support versioning strategies provided by artifact plugins
   get() = when (this) {
     is DebianSemVerVersioningStrategy -> DEBIAN_VERSION_COMPARATOR
     is DockerVersioningStrategy -> TagComparator(strategy, captureGroupRegex)
