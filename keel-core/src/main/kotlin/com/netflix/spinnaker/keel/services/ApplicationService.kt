@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -321,13 +321,13 @@ class ApplicationService(
     environments: Set<ArtifactSummaryInEnvironment>
   ): ArtifactVersionSummary {
     val artifactPublisher = artifactPublishers.supporting(artifact.type)
-    val korkArtifact = artifact.toKorkArtifact(version)
+    val spinArtifact = artifact.toSpinnakerArtifact(version)
     return ArtifactVersionSummary(
       version = version,
       environments = environments,
-      displayName = artifactPublisher.getVersionDisplayName(korkArtifact),
-      build = artifactPublisher.getBuildMetadata(korkArtifact, artifact.versioningStrategy),
-      git = artifactPublisher.getGitMetadata(korkArtifact, artifact.versioningStrategy)
+      displayName = artifactPublisher.getVersionDisplayName(spinArtifact),
+      build = artifactPublisher.getBuildMetadata(spinArtifact, artifact.versioningStrategy),
+      git = artifactPublisher.getGitMetadata(spinArtifact, artifact.versioningStrategy)
     )
   }
 
@@ -340,11 +340,11 @@ class ApplicationService(
   private fun ConstraintState.toConstraintSummary() =
     StatefulConstraintSummary(type, status, createdAt, judgedBy, judgedAt, comment, attributes)
 
-  private fun DeliveryArtifact.toKorkArtifact(version: String): KorkArtifact =
+  private fun DeliveryArtifact.toSpinnakerArtifact(version: String): SpinnakerArtifact =
     objectMapper.convertValue(this, Map::class.java)
       .toMutableMap()
       .let {
         it["version"] = version
-        objectMapper.convertValue(it, KorkArtifact::class.java)
+        objectMapper.convertValue(it, SpinnakerArtifact::class.java)
       }
 }

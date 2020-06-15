@@ -6,7 +6,7 @@ package com.netflix.spinnaker.keel.api.artifacts
  * non-nullability of a few key fields without which it doesn't make sense for an artifact to exist in
  * Managed Delivery terms.
  */
-data class KorkArtifact(
+data class SpinnakerArtifact(
   val name: String,
   val type: String,
   val reference: String,

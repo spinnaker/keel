@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.events.ArtifactEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
@@ -133,7 +133,7 @@ class ArtifactListener(
   private fun getLatestStoredVersion(artifact: DeliveryArtifact): String? =
     repository.artifactVersions(artifact).sortedWith(artifact.versioningStrategy.comparator).firstOrNull()
 
-  private val KorkArtifact.artifactType: ArtifactType
+  private val SpinnakerArtifact.artifactType: ArtifactType
     get() = artifactTypeNames.find { it == type.toLowerCase() }
       ?.let { type.toLowerCase() }
       ?: error("Unable to find registered artifact type for '$type'")

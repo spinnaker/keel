@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.DockerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
@@ -36,7 +36,7 @@ class DockerArtifactPublisher(
       SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
     )
 
-  override suspend fun getLatestArtifact(artifact: DeliveryArtifact): KorkArtifact? {
+  override suspend fun getLatestArtifact(artifact: DeliveryArtifact): SpinnakerArtifact? {
     if (artifact !is DockerArtifact) {
       throw IllegalArgumentException("Only Docker artifacts are supported by this implementation.")
     }
@@ -58,7 +58,7 @@ class DockerArtifactPublisher(
       cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = latestTag)
         .firstOrNull()
         ?.let { dockerImage ->
-          KorkArtifact(
+          SpinnakerArtifact(
             name = dockerImage.repository,
             type = DOCKER,
             reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
@@ -70,7 +70,7 @@ class DockerArtifactPublisher(
     }
   }
 
-  override fun getBuildMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun getBuildMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     if (versioningStrategy.hasBuild()) {
       // todo eb: this could be less brittle
       val regex = Regex("""^.*-h(\d+).*$""")
@@ -82,7 +82,7 @@ class DockerArtifactPublisher(
     return null
   }
 
-  override fun getGitMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun getGitMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
     if (versioningStrategy.hasCommit()) {
       // todo eb: this could be less brittle
       return GitMetadata(commit = artifact.version.substringAfterLast("."))

@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -119,7 +119,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
     }
 
-    private val korkArtifact = slot<KorkArtifact>()
+    private val korkArtifact = slot<SpinnakerArtifact>()
     private val debianArtifactPublisher = mockk<DebianArtifactPublisher>(relaxUnitFun = true) {
       every { supportedArtifact } returns SupportedArtifact(DEB, DebianArtifact::class.java)
       every {

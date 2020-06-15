@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.events.ArtifactEvent
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -32,20 +32,20 @@ interface ArtifactPublisher<T : DeliveryArtifact> : SpinnakerExtensionPoint {
 
   /**
    * Returns the latest available version for the given [DeliveryArtifact], represented
-   * as a [KorkArtifact].
+   * as a [SpinnakerArtifact].
    *
    * This function may interact with external systems to retrieve artifact information as needed.
    */
-  suspend fun getLatestArtifact(artifact: DeliveryArtifact): KorkArtifact?
+  suspend fun getLatestArtifact(artifact: DeliveryArtifact): SpinnakerArtifact?
 
   // Utility functions to help convert a kork Artifact to a DeliveryArtifact
   // Ideally these should be "static" and still overridden in sub-classes, but there's no such
   // concept in Kotlin (or any other JVM language for that matter).
-  fun getFullVersionString(artifact: KorkArtifact): String = artifact.version
-  fun getVersionDisplayName(artifact: KorkArtifact): String = artifact.version
-  fun getReleaseStatus(artifact: KorkArtifact): ArtifactStatus? = null
-  fun getBuildMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? = null
-  fun getGitMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): GitMetadata? = null
+  fun getFullVersionString(artifact: SpinnakerArtifact): String = artifact.version
+  fun getVersionDisplayName(artifact: SpinnakerArtifact): String = artifact.version
+  fun getReleaseStatus(artifact: SpinnakerArtifact): ArtifactStatus? = null
+  fun getBuildMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? = null
+  fun getGitMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): GitMetadata? = null
 }
 
 fun List<ArtifactPublisher<*>>.supporting(type: ArtifactType) =

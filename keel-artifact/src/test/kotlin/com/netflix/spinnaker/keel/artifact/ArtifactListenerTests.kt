@@ -4,7 +4,7 @@ import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.events.ArtifactEvent
@@ -24,7 +24,7 @@ import io.mockk.verify
 import org.springframework.context.ApplicationEventPublisher
 
 internal class ArtifactListenerTests : JUnit5Minutests {
-  val korkDeb = KorkArtifact(
+  val korkDeb = SpinnakerArtifact(
     type = "DEB",
     customKind = false,
     name = "fnord",
@@ -213,7 +213,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     }
   }
 
-  val newerKorkDeb = KorkArtifact(
+  val newerKorkDeb = SpinnakerArtifact(
     type = "DEB",
     customKind = false,
     name = "fnord",
@@ -304,7 +304,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           coEvery { artifactService.getVersions(debArtifact.name) } returns listOf("0.156.0-h58.f67fe09")
           coEvery {
             artifactService.getArtifact(debArtifact.name, "0.156.0-h58.f67fe09")
-          } returns KorkArtifact(name = debArtifact.name, type = DEB, reference = debArtifact.name, version = "0.156.0-h58.f67fe09")
+          } returns SpinnakerArtifact(name = debArtifact.name, type = DEB, reference = debArtifact.name, version = "0.156.0-h58.f67fe09")
           coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h5.blahblah")
           coEvery {
             clouddriverService.findDockerImages("*", dockerArtifact.name, "master-h5.blahblah", any(), any())

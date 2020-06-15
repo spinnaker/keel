@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.events.ArtifactEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
 import com.netflix.spinnaker.keel.artifact.DEB
@@ -68,7 +68,7 @@ class ArtifactController(
     repository.artifactVersions(name, type)
 
   // Debian Artifacts should contain a releaseStatus in the metadata
-  private fun KorkArtifact.isFromArtifactEvent() =
+  private fun SpinnakerArtifact.isFromArtifactEvent() =
     this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
 }
 

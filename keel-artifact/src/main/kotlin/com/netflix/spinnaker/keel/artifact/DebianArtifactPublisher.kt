@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DebianSemVerVersioningStrategy
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.KorkArtifact
+import com.netflix.spinnaker.keel.api.artifacts.SpinnakerArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
@@ -33,7 +33,7 @@ class DebianArtifactPublisher(
       SupportedVersioningStrategy("deb", DebianSemVerVersioningStrategy::class.java)
     )
 
-  override suspend fun getLatestArtifact(artifact: DeliveryArtifact): KorkArtifact? =
+  override suspend fun getLatestArtifact(artifact: DeliveryArtifact): SpinnakerArtifact? =
     artifactService
       .getVersions(artifact.name)
       .sortedWith(artifact.versioningStrategy.comparator)
@@ -47,20 +47,20 @@ class DebianArtifactPublisher(
         artifactService.getArtifact(artifact.name, normalizedVersion)
       }
 
-  override fun getFullVersionString(artifact: KorkArtifact): String =
+  override fun getFullVersionString(artifact: SpinnakerArtifact): String =
     "${artifact.name}-${artifact.version}"
 
   /**
    * Parses the status from a kork artifact, and throws an error if [releaseStatus] isn't
    * present in [metadata]
    */
-  override fun getReleaseStatus(artifact: KorkArtifact): ArtifactStatus {
+  override fun getReleaseStatus(artifact: SpinnakerArtifact): ArtifactStatus {
     val status = artifact.metadata["releaseStatus"]?.toString()
       ?: throw IntegrationException("Artifact metadata does not contain 'releaseStatus' field")
     return ArtifactStatus.valueOf(status)
   }
 
-  override fun getVersionDisplayName(artifact: KorkArtifact): String {
+  override fun getVersionDisplayName(artifact: SpinnakerArtifact): String {
     val appversion = AppVersion.parseName(artifact.version)
     return if (appversion?.version != null) {
       appversion.version
@@ -69,7 +69,7 @@ class DebianArtifactPublisher(
     }
   }
 
-  override fun getBuildMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun getBuildMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     // todo(eb): replace, this is brittle
     val appversion = AppVersion.parseName(artifact.version)
@@ -79,7 +79,7 @@ class DebianArtifactPublisher(
     return null
   }
 
-  override fun getGitMetadata(artifact: KorkArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun getGitMetadata(artifact: SpinnakerArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
     // attempt to parse helpful info from the appversion.
     // todo(eb): replace, this is brittle
     val appversion = AppVersion.parseName(artifact.version)
