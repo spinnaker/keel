@@ -26,6 +26,7 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.ec2.AllPorts
 import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
+import com.netflix.spinnaker.keel.api.ec2.IngressPorts
 import com.netflix.spinnaker.keel.api.ec2.PortRange
 import com.netflix.spinnaker.keel.api.ec2.ReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroup
@@ -275,7 +276,7 @@ class SecurityGroupHandler(
         val protocol = rule.protocol!!.clouddriverProtocolToKeel()
         when {
           ingressGroup != null -> rule.portRanges
-            ?.let { ranges -> if (ranges.isEmpty()) listOf(AllPorts) else ranges.map { PortRange(it.startPort!!, it.endPort!!) } }
+            ?.map { it.toPortRange() }
             ?.map { portRange ->
               when {
                 ingressGroup.accountName != accountName || ingressGroup.vpcId != vpcId -> CrossAccountReferenceRule(
@@ -293,7 +294,7 @@ class SecurityGroupHandler(
               }
             } ?: emptyList()
           ingressRange != null -> rule.portRanges
-            ?.let { ranges -> if (ranges.isEmpty()) listOf(AllPorts) else ranges.map { PortRange(it.startPort!!, it.endPort!!) } }
+            ?.map { it.toPortRange() }
             ?.map { portRange ->
               CidrRule(
                 protocol,
@@ -306,6 +307,11 @@ class SecurityGroupHandler(
       }
         .toSet()
     )
+
+  private fun SecurityGroupModel.SecurityGroupRulePortRange.toPortRange(): IngressPorts =
+    (startPort to endPort).let { (start, end) ->
+      if (start == null || end == null) AllPorts else PortRange(start, end)
+    }
 
   private fun String.clouddriverProtocolToKeel(): Protocol =
     if (this == "-1") Protocol.ALL else Protocol.valueOf(toUpperCase())

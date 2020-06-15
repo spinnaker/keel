@@ -361,7 +361,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
               // CIDR ingress on all protocols and ports
               SecurityGroupRule(
                 protocol = "-1",
-                portRanges = emptyList(),
+                portRanges = listOf(SecurityGroupRulePortRange(null, null)),
                 securityGroup = null,
                 range = SecurityGroupRuleCidr("100.64.0.0", "/10")
               )
