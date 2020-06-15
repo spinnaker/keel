@@ -30,6 +30,7 @@ dependencies {
   implementation("org.springdoc:springdoc-openapi-webmvc-core:1.2.32")
   implementation("org.springdoc:springdoc-openapi-kotlin:1.2.32")
   implementation("org.apache.maven:maven-artifact:3.6.3")
+  implementation("com.netflix.spinnaker.kork:kork-plugins")
 
   testImplementation("io.strikt:strikt-jackson")
   testImplementation(project(":keel-test"))
@@ -41,6 +42,7 @@ dependencies {
   testImplementation("com.squareup.okhttp3:mockwebserver")
   testImplementation("org.testcontainers:mysql")
   testImplementation("org.openapi4j:openapi-schema-validator:0.7")
+  testImplementation("com.netflix.spinnaker.kork:kork-plugins")
 }
 
 application {
