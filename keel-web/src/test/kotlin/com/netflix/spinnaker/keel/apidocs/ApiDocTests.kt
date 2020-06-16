@@ -104,7 +104,7 @@ class ApiDocTests : JUnit5Minutests {
       .let { jacksonObjectMapper().readTree(it) }
   }
 
-  fun tests() = SKIP - rootContext<Assertion.Builder<JsonNode>> {
+  fun tests() = rootContext<Assertion.Builder<JsonNode>> {
     fixture {
       expectThat(api).describedAs("API Docs response")
     }
@@ -179,7 +179,8 @@ class ApiDocTests : JUnit5Minutests {
           constructRef("ManualJudgementConstraint"),
           constructRef("PipelineConstraint"),
           constructRef("TimeWindowConstraint"),
-          constructRef("ArtifactUsedConstraint")
+          constructRef("ArtifactUsedConstraint"),
+          constructRef("ImageExistsConstraint")
         )
     }
 
@@ -334,7 +335,7 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     test("instant properties are date-time format strings") {
-      at("/components/schemas/PersistentEvent/properties/timestamp")
+      at("/components/schemas/ApplicationEvent/properties/timestamp")
         .and {
           path("type").textValue().isEqualTo("string")
           path("format").textValue().isEqualTo("date-time")
