@@ -89,7 +89,7 @@ class CombinedRepository(
 
     if (configWithSameName != null && configWithSameName.application != deliveryConfig.application) {
       // we don't allow storing 2 configs with the same name, for different applications
-      throw DuplicateDeliveryConfigsException(configWithSameName.application)
+      throw ConflictingDeliveryConfigsException(configWithSameName.application)
     }
 
     val existingApplicationConfig = try {

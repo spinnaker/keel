@@ -336,12 +336,12 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
       }
     }
 
-    context("don't allow storing delivery config with a non unique name") {
+    context("trying to persist two configs with the same name, but different application") {
       before {
         subject.upsertDeliveryConfig(deliveryConfig)
       }
-      test("trying to persist another config with the same name but different application") {
-        expectThrows<DuplicateDeliveryConfigsException> { subject.upsertDeliveryConfig(anotherDeliveryConfigWithSameName) }
+      test("second config fails with exception, first config didn't change") {
+        expectThrows<ConflictingDeliveryConfigsException> { subject.upsertDeliveryConfig(anotherDeliveryConfigWithSameName) }
         expectThat(deliveryConfigRepository.get(configName))
           .get { application }
           .isEqualTo(deliveryConfig.application)
@@ -350,11 +350,11 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
       }
     }
 
-    context("an application cannot have more than a single config") {
+    context("trying to persist another config with the same application, but different config names") {
       before {
         subject.upsertDeliveryConfig(deliveryConfig)
       }
-      test("trying to persist another config with the same application but different config names") {
+      test("second config fails with exception, first config didn't change") {
         expectThrows<TooManyDeliveryConfigsException> { subject.upsertDeliveryConfig(anotherDeliveryConfigWithSameApp) }
         expectThat(deliveryConfigRepository.get(configName))
           .get { application }
