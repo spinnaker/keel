@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.contains
+import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
 import strikt.assertions.isEqualTo
@@ -373,6 +374,18 @@ class ApiDocTests : JUnit5Minutests {
     SKIP - test("annotated property description is inherited") {
       at("/components/schemas/ClusterSpecSubmittedResource/properties/spec/description")
         .isTextual()
+    }
+
+    test("IngressPorts are either an enum or an object") {
+      at("/components/schemas/IngressPorts/oneOf")
+        .isArray()
+        .findValuesAsText("\$ref")
+        .containsExactlyInAnyOrder(constructRef("AllPorts"), constructRef("PortRange"))
+      at("/components/schemas/AllPorts")
+        .and {
+          path("type").textValue().isEqualTo("string")
+          path("enum").isArray().textValues().containsExactly("ALL")
+        }
     }
 
     resourceSpecTypes
