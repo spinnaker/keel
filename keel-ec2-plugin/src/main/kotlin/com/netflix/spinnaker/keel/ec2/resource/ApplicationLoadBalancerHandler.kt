@@ -245,7 +245,7 @@ class ApplicationLoadBalancerHandler(
                       protocol = tg.protocol,
                       port = tg.port,
                       healthCheckEnabled = tg.healthCheckEnabled,
-                      healthCheckTimeoutSeconds = Duration.ofSeconds(tg.healthCheckTimeoutSeconds.toLong()),
+                      healthCheckTimeout = Duration.ofSeconds(tg.healthCheckTimeoutSeconds.toLong()),
                       healthCheckPort = when (tg.healthCheckPort) {
                         "traffic-port" -> tg.port
                         else -> tg.healthCheckPort.toInt()
@@ -253,7 +253,7 @@ class ApplicationLoadBalancerHandler(
                       healthCheckProtocol = tg.healthCheckProtocol,
                       healthCheckHttpCode = tg.matcher.httpCode,
                       healthCheckPath = tg.healthCheckPath,
-                      healthCheckIntervalSeconds = Duration.ofSeconds(tg.healthCheckIntervalSeconds.toLong()),
+                      healthCheckInterval = Duration.ofSeconds(tg.healthCheckIntervalSeconds.toLong()),
                       healthyThresholdCount = tg.healthyThresholdCount,
                       unhealthyThresholdCount = tg.unhealthyThresholdCount,
                       attributes = tg.attributes
@@ -299,12 +299,12 @@ class ApplicationLoadBalancerHandler(
               "protocol" to it.protocol,
               "port" to it.port,
               "healthCheckEnabled" to it.healthCheckEnabled,
-              "healthCheckTimeout" to it.healthCheckTimeoutSeconds.seconds,
+              "healthCheckTimeout" to it.healthCheckTimeout.seconds,
               "healthCheckPort" to it.healthCheckPort,
               "healthCheckProtocol" to it.healthCheckProtocol,
               "healthCheckHttpCode" to it.healthCheckHttpCode,
               "healthCheckPath" to it.healthCheckPath,
-              "healthCheckInterval" to it.healthCheckIntervalSeconds.seconds,
+              "healthCheckInterval" to it.healthCheckInterval.seconds,
               "healthyThreshold" to it.healthyThresholdCount,
               "unhealthyThreshold" to it.unhealthyThresholdCount,
               "attributes" to it.attributes
