@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
 import com.netflix.spinnaker.keel.events.PersistentEvent.Companion.clock
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -58,17 +59,18 @@ class SqlConfiguration {
     SqlResourceRepository(jooq, clock, resourceSpecIdentifier, specMigrators, objectMapper, SqlRetry(sqlRetryProperties))
 
   @Bean
-  fun artifactRepository(jooq: DSLContext, clock: Clock, objectMapper: ObjectMapper) =
-    SqlArtifactRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
+  fun artifactRepository(jooq: DSLContext, clock: Clock, objectMapper: ObjectMapper, artifactPublishers: List<ArtifactPublisher<*>>) =
+    SqlArtifactRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties), artifactPublishers)
 
   @Bean
   fun deliveryConfigRepository(
     jooq: DSLContext,
     clock: Clock,
     resourceSpecIdentifier: ResourceSpecIdentifier,
-    objectMapper: ObjectMapper
+    objectMapper: ObjectMapper,
+    artifactPublishers: List<ArtifactPublisher<*>>
   ) =
-    SqlDeliveryConfigRepository(jooq, clock, resourceSpecIdentifier, objectMapper, SqlRetry(sqlRetryProperties))
+    SqlDeliveryConfigRepository(jooq, clock, resourceSpecIdentifier, objectMapper, SqlRetry(sqlRetryProperties), artifactPublishers)
 
   @Bean
   fun diffFingerprintRepository(

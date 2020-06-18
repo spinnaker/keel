@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.netflix.spinnaker.keel.actuation.ArtifactHandler
 import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
+import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
@@ -24,6 +25,7 @@ class KeelConfigurationFinalizer(
   private val resourceHandlers: List<ResourceHandler<*, *>> = emptyList(),
   private val constraintEvaluators: List<ConstraintEvaluator<*>> = emptyList(),
   private val artifactHandlers: List<ArtifactHandler> = emptyList(),
+  private val artifactPublishers: List<ArtifactPublisher<*>> = emptyList(),
   private val objectMappers: List<ObjectMapper>
 ) {
 
@@ -59,6 +61,25 @@ class KeelConfigurationFinalizer(
       .forEach { attributeType ->
         log.info("Registering Constraint Attributes sub-type {}: {}", attributeType.name, attributeType.type.simpleName)
         val namedType = NamedType(attributeType.type, attributeType.name)
+        objectMappers.forEach { it.registerSubtypes(namedType) }
+      }
+  }
+
+  @PostConstruct
+  fun registerArtifactPublisherSubtypes() {
+    artifactPublishers
+      .map { it.supportedArtifact }
+      .forEach { (name, artifactClass) ->
+        log.info("Registering DeliveryArtifact sub-type {}: {}", name, artifactClass.simpleName)
+        val namedType = NamedType(artifactClass, name)
+        objectMappers.forEach { it.registerSubtypes(namedType) }
+      }
+
+    artifactPublishers
+      .flatMap { it.supportedVersioningStrategies }
+      .forEach { (name, strategyClass) ->
+        log.info("Registering VersioningStrategy sub-type {}: {}", name, strategyClass.simpleName)
+        val namedType = NamedType(strategyClass, name)
         objectMappers.forEach { it.registerSubtypes(namedType) }
       }
   }
