@@ -30,16 +30,16 @@ class DockerArtifactPublisher(
 ) : ArtifactPublisher<DockerArtifact> {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
-  override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>>
-    get() = listOf(
-      SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
-    )
+  override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>> =
+    listOf(SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java))
 
   override suspend fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? {
     if (artifact !is DockerArtifact) {
       throw IllegalArgumentException("Only Docker artifacts are supported by this implementation.")
     }
 
+    // Note: we currently don't have a way to derive account information from artifacts,
+    // so, in the calls to clouddriver below, we look in all accounts.
     val latestTag = cloudDriverService
       .findDockerTagsForImage("*", artifact.name, deliveryConfig.serviceAccount)
       .distinct()
@@ -47,9 +47,6 @@ class DockerArtifactPublisher(
       .firstOrNull()
 
     return if (latestTag != null) {
-      // TODO: do we need to look in a specific account? if so, then DockerArtifact should have an
-      // `account` property. In retrospect, it feels weird that we specify images without a repository
-      // URL (from which we could infer the account), or an account.
       cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = latestTag)
         .firstOrNull()
         ?.let { dockerImage ->

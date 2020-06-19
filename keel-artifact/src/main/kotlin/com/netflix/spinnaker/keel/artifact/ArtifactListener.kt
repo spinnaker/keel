@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.artifact
 
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
@@ -10,6 +11,7 @@ import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
 import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
 import com.netflix.spinnaker.keel.api.plugins.supporting
+import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
 import java.util.concurrent.atomic.AtomicBoolean
@@ -69,15 +71,12 @@ class ArtifactListener(
   @EventListener(ArtifactRegisteredEvent::class)
   fun onArtifactRegisteredEvent(event: ArtifactRegisteredEvent) {
     val artifact = event.artifact
-    val deliveryConfig = artifact.deliveryConfigName
-      ?.let { repository.getDeliveryConfig(it) }
-      ?: error("Delivery config name missing in artifact")
 
     if (repository.artifactVersions(artifact).isEmpty()) {
       val artifactPublisher = artifactPublishers.supporting(artifact.type)
       val latestArtifact = runBlocking {
         log.debug("Retrieving latest version of registered artifact {}", artifact)
-        artifactPublisher.getLatestArtifact(deliveryConfig, artifact)
+        artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
       }
       val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
       if (latestVersion != null) {
@@ -110,10 +109,7 @@ class ArtifactListener(
           launch {
             val lastRecordedVersion = getLatestStoredVersion(artifact)
             val artifactPublisher = artifactPublishers.supporting(artifact.type)
-            val deliveryConfig = artifact.deliveryConfigName
-              ?.let { repository.getDeliveryConfig(it) }
-              ?: error("Delivery config name missing in artifact")
-            val latestArtifact = artifactPublisher.getLatestArtifact(deliveryConfig, artifact)
+            val latestArtifact = artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
             val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
             if (latestVersion != null) {
               val hasNew = when {
@@ -139,10 +135,15 @@ class ArtifactListener(
   private fun getLatestStoredVersion(artifact: DeliveryArtifact): String? =
     repository.artifactVersions(artifact).sortedWith(artifact.versioningStrategy.comparator).firstOrNull()
 
+  private val DeliveryArtifact.deliveryConfig: DeliveryConfig
+    get() = this.deliveryConfigName
+      ?.let { repository.getDeliveryConfig(it) }
+      ?: throw InvalidSystemStateException("Delivery config name missing in artifact object")
+
   private val PublishedArtifact.artifactType: ArtifactType
     get() = artifactTypeNames.find { it == type.toLowerCase() }
       ?.let { type.toLowerCase() }
-      ?: error("Unable to find registered artifact type for '$type'")
+      ?: throw InvalidSystemStateException("Unable to find registered artifact type for '$type'")
 
   private val artifactTypeNames by lazy {
     artifactPublishers.map { it.supportedArtifact.name }

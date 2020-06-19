@@ -29,10 +29,8 @@ class DebianArtifactPublisher(
 ) : ArtifactPublisher<DebianArtifact> {
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)
 
-  override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>>
-    get() = listOf(
-      SupportedVersioningStrategy("deb", DebianSemVerVersioningStrategy::class.java)
-    )
+  override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>> =
+    listOf(SupportedVersioningStrategy("deb", DebianSemVerVersioningStrategy::class.java))
 
   override suspend fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     artifactService
