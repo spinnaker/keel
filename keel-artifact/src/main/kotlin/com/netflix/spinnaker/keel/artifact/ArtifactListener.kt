@@ -108,9 +108,12 @@ class ArtifactListener(
         repository.getAllArtifacts().forEach { artifact ->
           launch {
             val lastRecordedVersion = getLatestStoredVersion(artifact)
+            log.debug("Last recorded version of ${artifact.type}:${artifact.name}: $lastRecordedVersion")
             val artifactPublisher = artifactPublishers.supporting(artifact.type)
             val latestArtifact = artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
             val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
+            log.debug("Latest version of ${artifact.type}:${artifact.name}: $latestVersion")
+
             if (latestVersion != null) {
               val hasNew = when {
                 lastRecordedVersion == null -> true
