@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
@@ -19,4 +20,6 @@ data class DockerArtifact(
   val organization: String = name.substringBefore('/')
   @JsonIgnore
   val image: String = name.substringAfter('/')
+  @JsonIgnore
+  override val statuses: Set<ArtifactStatus> = emptySet()
 }
