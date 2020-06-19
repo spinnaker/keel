@@ -13,14 +13,18 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.kork.plugins.api.internal.SpinnakerExtensionPoint
 
 /**
- * Keel plugin interface to be implemented by publishers of artifact information.
+ * Keel plugin interface to be implemented by suppliers of artifact information.
  *
- * The primary responsibility of an [ArtifactPublisher] is to detect new versions of artifacts, using
+ * The primary responsibility of an [ArtifactSupplier] is to detect new versions of artifacts, using
  * whatever mechanism they choose (e.g. they could receive events from another system,
  * or poll an artifact repository for artifact versions), and notify keel via the [publishArtifact]
  * method, so that the artifact versions can be persisted and evaluated for promotion.
+ *
+ * Secondarily, [ArtifactSupplier]s are also periodically called to retrieve the latest available
+ * version of an artifact. This is so that we don't miss any versions in case of missed or failure
+ * to handle events in case of downtime, etc.
  */
-interface ArtifactPublisher<T : DeliveryArtifact> : SpinnakerExtensionPoint {
+interface ArtifactSupplier<T : DeliveryArtifact> : SpinnakerExtensionPoint {
   val eventPublisher: EventPublisher
   val supportedArtifact: SupportedArtifact<T>
   val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>>
@@ -44,25 +48,25 @@ interface ArtifactPublisher<T : DeliveryArtifact> : SpinnakerExtensionPoint {
   suspend fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact?
 
   /**
-   * Given a [PublishedArtifact] supported by this [ArtifactPublisher], return the full representation of
+   * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the full representation of
    * a version string, if different from [PublishedArtifact.version].
    */
   fun getFullVersionString(artifact: PublishedArtifact): String = artifact.version
 
   /**
-   * Given a [PublishedArtifact] supported by this [ArtifactPublisher], return the display name for the
+   * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the display name for the
    * artifact version, if different from [PublishedArtifact.version].
    */
   fun getVersionDisplayName(artifact: PublishedArtifact): String = artifact.version
 
   /**
-   * Given a [PublishedArtifact] supported by this [ArtifactPublisher], return the [ArtifactStatus] for
+   * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the [ArtifactStatus] for
    * the artifact, if applicable.
    */
   fun getReleaseStatus(artifact: PublishedArtifact): ArtifactStatus? = null
 
   /**
-   * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactPublisher],
+   * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactSupplier],
    * return the [BuildMetadata] for the artifact, if available.
    *
    * This function is currently *not* expected to make calls to other systems, but only look into
@@ -71,7 +75,7 @@ interface ArtifactPublisher<T : DeliveryArtifact> : SpinnakerExtensionPoint {
   fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? = null
 
   /**
-   * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactPublisher],
+   * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactSupplier],
    * return the [GitMetadata] for the artifact, if available.
    *
    * This function is currently *not* expected to make calls to other systems, but only look into
@@ -81,8 +85,8 @@ interface ArtifactPublisher<T : DeliveryArtifact> : SpinnakerExtensionPoint {
 }
 
 /**
- * Return the [ArtifactPublisher] supporting the specified artifact type.
+ * Return the [ArtifactSupplier] supporting the specified artifact type.
  */
-fun List<ArtifactPublisher<*>>.supporting(type: ArtifactType) =
+fun List<ArtifactSupplier<*>>.supporting(type: ArtifactType) =
   find { it.supportedArtifact.name.toLowerCase() == type.toLowerCase() }
     ?: error("Artifact type '$type' is not supported.")

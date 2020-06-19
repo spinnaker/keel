@@ -26,7 +26,7 @@ import strikt.assertions.containsExactly
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 
-internal class DebianArtifactPublisherTests : JUnit5Minutests {
+internal class DebianArtifactSupplierTests : JUnit5Minutests {
   object Fixture {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true)
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
@@ -46,7 +46,7 @@ internal class DebianArtifactPublisherTests : JUnit5Minutests {
       version = "${debianArtifact.name}-${versions.last()}",
       metadata = mapOf("releaseStatus" to SNAPSHOT)
     )
-    val debianArtifactPublisher = DebianArtifactPublisher(eventBridge, artifactService)
+    val debianArtifactPublisher = DebianArtifactSupplier(eventBridge, artifactService)
   }
 
   fun tests() = rootContext<Fixture> {

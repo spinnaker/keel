@@ -23,7 +23,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.exceptions.ArtifactParsingException
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 
 private val objectMapper: ObjectMapper = configuredObjectMapper()
@@ -32,7 +32,7 @@ private val objectMapper: ObjectMapper = configuredObjectMapper()
  * A helper function to construct the proper artifact type from the serialized JSON.
  */
 fun mapToArtifact(
-  artifactPublisher: ArtifactPublisher<*>,
+  artifactSupplier: ArtifactSupplier<*>,
   name: String,
   type: ArtifactType,
   json: String,
@@ -48,7 +48,7 @@ fun mapToArtifact(
         it["reference"] = reference
         it["deliveryConfigName"] = deliveryConfigName
       }
-    return objectMapper.convertValue(artifactAsMap, artifactPublisher.supportedArtifact.artifactClass)
+    return objectMapper.convertValue(artifactAsMap, artifactSupplier.supportedArtifact.artifactClass)
   } catch (e: JsonMappingException) {
     throw ArtifactParsingException(name, type, json, e)
   }

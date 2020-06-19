@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component
 class ArtifactListener(
   private val repository: KeelRepository,
   private val publisher: ApplicationEventPublisher,
-  private val artifactPublishers: List<ArtifactPublisher<*>>
+  private val artifactSuppliers: List<ArtifactSupplier<*>>
 ) {
   private val enabled = AtomicBoolean(false)
 
@@ -51,9 +51,9 @@ class ArtifactListener(
       .filter { it.type.toLowerCase() in artifactTypeNames }
       .forEach { artifact ->
         if (repository.isRegistered(artifact.name, artifact.artifactType)) {
-          val artifactPublisher = artifactPublishers.supporting(artifact.artifactType)
-          val version = artifactPublisher.getFullVersionString(artifact)
-          var status = artifactPublisher.getReleaseStatus(artifact)
+          val artifactSupplier = artifactSuppliers.supporting(artifact.artifactType)
+          val version = artifactSupplier.getFullVersionString(artifact)
+          var status = artifactSupplier.getReleaseStatus(artifact)
           log.info("Registering version {} ({}) of {} {}", version, status, artifact.name, artifact.type)
           repository.storeArtifact(artifact.name, artifact.artifactType, version, status)
             .also { wasAdded ->
@@ -73,14 +73,14 @@ class ArtifactListener(
     val artifact = event.artifact
 
     if (repository.artifactVersions(artifact).isEmpty()) {
-      val artifactPublisher = artifactPublishers.supporting(artifact.type)
+      val artifactSupplier = artifactSuppliers.supporting(artifact.type)
       val latestArtifact = runBlocking {
         log.debug("Retrieving latest version of registered artifact {}", artifact)
-        artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
+        artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
       }
-      val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
+      val latestVersion = latestArtifact?.let { artifactSupplier.getFullVersionString(it) }
       if (latestVersion != null) {
-        var status = artifactPublisher.getReleaseStatus(latestArtifact)
+        var status = artifactSupplier.getReleaseStatus(latestArtifact)
         log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion, status, artifact)
         repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
       } else {
@@ -110,9 +110,9 @@ class ArtifactListener(
           launch {
             val lastRecordedVersion = getLatestStoredVersion(artifact)
             log.debug("Last recorded version of $artifact: $lastRecordedVersion")
-            val artifactPublisher = artifactPublishers.supporting(artifact.type)
-            val latestArtifact = artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
-            val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
+            val artifactSupplier = artifactSuppliers.supporting(artifact.type)
+            val latestArtifact = artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
+            val latestVersion = latestArtifact?.let { artifactSupplier.getFullVersionString(it) }
             log.debug("Latest available version of $artifact: $latestVersion")
 
             if (latestVersion != null) {
@@ -126,7 +126,7 @@ class ArtifactListener(
 
               if (hasNew) {
                 log.debug("$artifact has a missing version $latestVersion, persisting.")
-                val status = artifactPublisher.getReleaseStatus(latestArtifact)
+                val status = artifactSupplier.getReleaseStatus(latestArtifact)
                 repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
               } else {
                 log.debug("No new versions to persist for $artifact")
@@ -152,7 +152,7 @@ class ArtifactListener(
       ?: throw InvalidSystemStateException("Unable to find registered artifact type for '$type'")
 
   private val artifactTypeNames by lazy {
-    artifactPublishers.map { it.supportedArtifact.name }
+    artifactSuppliers.map { it.supportedArtifact.name }
   }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }

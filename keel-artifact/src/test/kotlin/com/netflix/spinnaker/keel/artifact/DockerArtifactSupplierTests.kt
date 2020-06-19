@@ -27,7 +27,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNull
 
-internal class DockerArtifactPublisherTests : JUnit5Minutests {
+internal class DockerArtifactSupplierTests : JUnit5Minutests {
   object Fixture {
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
@@ -44,7 +44,7 @@ internal class DockerArtifactPublisherTests : JUnit5Minutests {
       reference = dockerArtifact.reference,
       version = versions.last()
     )
-    val dockerArtifactPublisher = DockerArtifactPublisher(eventBridge, clouddriverService)
+    val dockerArtifactPublisher = DockerArtifactSupplier(eventBridge, clouddriverService)
   }
 
   fun tests() = rootContext<Fixture> {

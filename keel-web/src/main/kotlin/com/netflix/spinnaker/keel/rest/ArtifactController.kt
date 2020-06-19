@@ -4,8 +4,8 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
-import com.netflix.spinnaker.keel.artifact.DebianArtifactPublisher
-import com.netflix.spinnaker.keel.artifact.DockerArtifactPublisher
+import com.netflix.spinnaker.keel.artifact.DebianArtifactSupplier
+import com.netflix.spinnaker.keel.artifact.DockerArtifactSupplier
 import com.netflix.spinnaker.keel.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.artifacts.DOCKER
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.RestController
 class ArtifactController(
   private val eventPublisher: ApplicationEventPublisher,
   private val repository: KeelRepository,
-  private val debianArtifactSupplier: DebianArtifactPublisher,
-  private val dockerArtifactSupplier: DockerArtifactPublisher
+  private val debianArtifactSupplier: DebianArtifactSupplier,
+  private val dockerArtifactSupplier: DockerArtifactSupplier
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

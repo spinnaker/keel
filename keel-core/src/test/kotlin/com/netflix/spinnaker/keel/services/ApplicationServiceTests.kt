@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -109,7 +109,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     private val publishedArtifact = slot<PublishedArtifact>()
-    private val artifactPublisher = mockk<ArtifactPublisher<DummyArtifact>>(relaxUnitFun = true) {
+    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact>>(relaxUnitFun = true) {
       every { supportedArtifact } returns SupportedArtifact("dummy", DummyArtifact::class.java)
       every {
         getVersionDisplayName(capture(publishedArtifact))
@@ -125,7 +125,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       repository,
       resourceStatusService,
       listOf(dependsOnEvaluator),
-      listOf(artifactPublisher),
+      listOf(artifactSupplier),
       configuredTestObjectMapper()
     )
   }

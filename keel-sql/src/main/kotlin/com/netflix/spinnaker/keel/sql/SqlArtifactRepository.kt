@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.TagComparator
@@ -64,7 +64,7 @@ class SqlArtifactRepository(
   private val clock: Clock,
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry,
-  private val artifactPublishers: List<ArtifactPublisher<*>> = emptyList()
+  private val artifactSuppliers: List<ArtifactSupplier<*>> = emptyList()
 ) : ArtifactRepository {
   override fun register(artifact: DeliveryArtifact) {
     val id: String = (sqlRetry.withRetry(READ) {
@@ -125,7 +125,7 @@ class SqlArtifactRepository(
         .and(DELIVERY_ARTIFACT.TYPE.eq(type))
         .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
         .fetch { (details, reference) ->
-          mapToArtifact(artifactPublishers.supporting(type), name, type, details, reference, deliveryConfigName)
+          mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)
         }
     } ?: throw NoSuchArtifactException(name, type)
   }
@@ -142,7 +142,7 @@ class SqlArtifactRepository(
         .fetchOne()
     }
       ?.let { (details, reference) ->
-        mapToArtifact(artifactPublishers.supporting(type), name, type, details, reference, deliveryConfigName)
+        mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
@@ -158,7 +158,7 @@ class SqlArtifactRepository(
         .fetchOne()
     }
       ?.let { (name, details, reference, type) ->
-        mapToArtifact(artifactPublishers.supporting(type), name, type, details, reference, deliveryConfigName)
+        mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
@@ -217,7 +217,7 @@ class SqlArtifactRepository(
         .from(DELIVERY_ARTIFACT)
         .apply { if (type != null) where(DELIVERY_ARTIFACT.TYPE.eq(type.toString())) }
         .fetch { (name, storedType, details, reference, configName) ->
-          mapToArtifact(artifactPublishers.supporting(storedType), name, storedType.toLowerCase(), details, reference, configName)
+          mapToArtifact(artifactSuppliers.supporting(storedType), name, storedType.toLowerCase(), details, reference, configName)
         }
     }
 
@@ -894,7 +894,7 @@ class SqlArtifactRepository(
             deliveryConfigName = deliveryConfig.name,
             targetEnvironment = environmentName,
             artifact = mapToArtifact(
-              artifactPublishers.supporting(type),
+              artifactSuppliers.supporting(type),
               artifactName,
               type.toLowerCase(),
               details,
@@ -1033,7 +1033,7 @@ class SqlArtifactRepository(
             }
           }
           .map { (_, name, type, details, reference, deliveryConfigName) ->
-            mapToArtifact(artifactPublishers.supporting(type), name, type, details, reference, deliveryConfigName)
+            mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)
           }
       }
     }

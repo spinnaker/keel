@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_CO
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -20,14 +20,14 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import org.springframework.stereotype.Component
 
 /**
- * Built-in keel implementation of [ArtifactPublisher] that does not itself receive/retrieve artifact information
+ * Built-in keel implementation of [ArtifactSupplier] that does not itself receive/retrieve artifact information
  * but is used by keel's `POST /artifacts/events` API to notify the core of new Docker artifacts.
  */
 @Component
-class DockerArtifactPublisher(
+class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService
-) : ArtifactPublisher<DockerArtifact> {
+) : ArtifactSupplier<DockerArtifact> {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
   override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>> =

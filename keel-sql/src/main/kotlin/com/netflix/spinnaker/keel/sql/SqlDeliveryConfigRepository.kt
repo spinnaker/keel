@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.allPass
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.api.statefulCount
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
@@ -58,7 +58,7 @@ class SqlDeliveryConfigRepository(
   private val resourceSpecIdentifier: ResourceSpecIdentifier,
   private val mapper: ObjectMapper,
   private val sqlRetry: SqlRetry,
-  private val artifactPublishers: List<ArtifactPublisher<*>> = emptyList()
+  private val artifactSuppliers: List<ArtifactSupplier<*>> = emptyList()
 ) : DeliveryConfigRepository {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -372,7 +372,7 @@ class SqlDeliveryConfigRepository(
         .where(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
         .and(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(uid))
         .fetch { (name, type, details, reference, configName) ->
-          mapToArtifact(artifactPublishers.supporting(type), name, type.toLowerCase(), details, reference, configName)
+          mapToArtifact(artifactSuppliers.supporting(type), name, type.toLowerCase(), details, reference, configName)
         }
     }
       .toSet()

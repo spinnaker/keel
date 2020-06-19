@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -19,14 +19,14 @@ import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import org.springframework.stereotype.Component
 
 /**
- * Built-in keel implementation of [ArtifactPublisher] that does not itself receive/retrieve artifact information
+ * Built-in keel implementation of [ArtifactSupplier] that does not itself receive/retrieve artifact information
  * but is used by keel's `POST /artifacts/events` API to notify the core of new Debian artifacts.
  */
 @Component
-class DebianArtifactPublisher(
+class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService
-) : ArtifactPublisher<DebianArtifact> {
+) : ArtifactSupplier<DebianArtifact> {
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)
 
   override val supportedVersioningStrategies: List<SupportedVersioningStrategy<*>> =

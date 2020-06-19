@@ -18,7 +18,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.api.id
-import com.netflix.spinnaker.keel.api.plugins.ArtifactPublisher
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
@@ -54,7 +54,7 @@ class ApplicationService(
   private val repository: KeelRepository,
   private val resourceStatusService: ResourceStatusService,
   private val constraintEvaluators: List<ConstraintEvaluator<*>>,
-  private val artifactPublishers: List<ArtifactPublisher<*>>,
+  private val artifactSuppliers: List<ArtifactSupplier<*>>,
   private val objectMapper: ObjectMapper
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -320,14 +320,14 @@ class ApplicationService(
     version: String,
     environments: Set<ArtifactSummaryInEnvironment>
   ): ArtifactVersionSummary {
-    val artifactPublisher = artifactPublishers.supporting(artifact.type)
+    val artifactSupplier = artifactSuppliers.supporting(artifact.type)
     val publishedArtifact = artifact.toSpinnakerArtifact(version)
     return ArtifactVersionSummary(
       version = version,
       environments = environments,
-      displayName = artifactPublisher.getVersionDisplayName(publishedArtifact),
-      build = artifactPublisher.getBuildMetadata(publishedArtifact, artifact.versioningStrategy),
-      git = artifactPublisher.getGitMetadata(publishedArtifact, artifact.versioningStrategy)
+      displayName = artifactSupplier.getVersionDisplayName(publishedArtifact),
+      build = artifactSupplier.getBuildMetadata(publishedArtifact, artifact.versioningStrategy),
+      git = artifactSupplier.getGitMetadata(publishedArtifact, artifact.versioningStrategy)
     )
   }
 
