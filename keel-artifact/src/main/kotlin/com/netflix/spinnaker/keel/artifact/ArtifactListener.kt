@@ -76,12 +76,13 @@ class ArtifactListener(
     if (repository.artifactVersions(artifact).isEmpty()) {
       val artifactPublisher = artifactPublishers.supporting(artifact.type)
       val latestArtifact = runBlocking {
+        log.debug("Retrieving latest version of registered artifact {}", artifact)
         artifactPublisher.getLatestArtifact(deliveryConfig, artifact)
       }
       val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
       if (latestVersion != null) {
         var status = artifactPublisher.getReleaseStatus(latestArtifact)
-        log.debug("Storing latest version {} ({}) for registered artifact {}", latestVersion, status, artifact)
+        log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion, status, artifact)
         repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
