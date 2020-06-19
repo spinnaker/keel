@@ -24,5 +24,5 @@ abstract class DeliveryArtifact {
   abstract val reference: String // friendly reference to use within a delivery config
   abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
   open val statuses: Set<ArtifactStatus> = emptySet()
-  override fun toString() = "$type:$name (ref: $reference)"
+  override fun toString() = "${type.toUpperCase()} artifact $name (ref: $reference)"
 }

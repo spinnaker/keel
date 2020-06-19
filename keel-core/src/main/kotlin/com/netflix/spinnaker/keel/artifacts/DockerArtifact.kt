@@ -22,4 +22,5 @@ data class DockerArtifact(
   val image: String = name.substringAfter('/')
   @JsonIgnore
   override val statuses: Set<ArtifactStatus> = emptySet()
+  override fun toString(): String = super.toString()
 }

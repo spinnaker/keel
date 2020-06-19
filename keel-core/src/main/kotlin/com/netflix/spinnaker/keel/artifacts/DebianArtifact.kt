@@ -14,4 +14,5 @@ data class DebianArtifact(
   override val versioningStrategy: VersioningStrategy = DebianSemVerVersioningStrategy
 ) : DeliveryArtifact() {
   override val type = DEBIAN
+  override fun toString(): String = super.toString()
 }

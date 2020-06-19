@@ -105,14 +105,15 @@ class ArtifactListener(
   fun syncArtifactVersions() {
     if (enabled.get()) {
       runBlocking {
+        log.debug("Syncing artifact versions...")
         repository.getAllArtifacts().forEach { artifact ->
           launch {
             val lastRecordedVersion = getLatestStoredVersion(artifact)
-            log.debug("Last recorded version of ${artifact.type}:${artifact.name}: $lastRecordedVersion")
+            log.debug("Last recorded version of $artifact: $lastRecordedVersion")
             val artifactPublisher = artifactPublishers.supporting(artifact.type)
             val latestArtifact = artifactPublisher.getLatestArtifact(artifact.deliveryConfig, artifact)
             val latestVersion = latestArtifact?.let { artifactPublisher.getFullVersionString(it) }
-            log.debug("Latest version of ${artifact.type}:${artifact.name}: $latestVersion")
+            log.debug("Latest available version of $artifact: $latestVersion")
 
             if (latestVersion != null) {
               val hasNew = when {
@@ -124,9 +125,11 @@ class ArtifactListener(
               }
 
               if (hasNew) {
-                log.debug("Artifact {} has a missing version {}, persisting...", artifact, latestVersion)
+                log.debug("$artifact has a missing version $latestVersion, persisting.")
                 val status = artifactPublisher.getReleaseStatus(latestArtifact)
                 repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
+              } else {
+                log.debug("No new versions to persist for $artifact")
               }
             }
           }
