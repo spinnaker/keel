@@ -17,10 +17,12 @@ class DummyArtifact(
   override val reference: String = "fnord"
 ) : DeliveryArtifact() {
   override val type: ArtifactType = "dummy"
-  override val versioningStrategy = object : VersioningStrategy() {
-    override val comparator: Comparator<String> = Comparator.naturalOrder()
-    override val type = "dummy"
-  }
+  override val versioningStrategy = DummyVersioningStrategy
+}
+
+object DummyVersioningStrategy : VersioningStrategy() {
+  override val comparator: Comparator<String> = Comparator.naturalOrder()
+  override val type = "dummy"
 }
 
 fun defaultArtifactPublishers(): List<ArtifactSupplier<*, *>> {
