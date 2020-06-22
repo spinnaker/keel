@@ -22,7 +22,6 @@ import io.mockk.coVerify as verify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
-import strikt.assertions.containsExactly
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 
@@ -69,7 +68,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
       }
 
       test("supports Debian semver versioning strategy") {
-        expectThat(debianArtifactPublisher.supportedVersioningStrategies)
+        expectThat(debianArtifactPublisher.supportedVersioningStrategy)
           .hasSize(1)
           .containsExactly(
             SupportedVersioningStrategy(DEBIAN, DebianSemVerVersioningStrategy::class.java)

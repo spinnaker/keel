@@ -23,7 +23,7 @@ class DummyArtifact(
   }
 }
 
-fun defaultArtifactPublishers(): List<ArtifactSupplier<*>> {
+fun defaultArtifactPublishers(): List<ArtifactSupplier<*, *>> {
   val artifactService: ArtifactService = mockk(relaxUnitFun = true)
   val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
   val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
