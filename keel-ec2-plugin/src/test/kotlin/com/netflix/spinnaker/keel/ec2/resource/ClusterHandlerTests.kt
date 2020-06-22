@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
+import com.netflix.spinnaker.keel.api.ClusterHealth
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -127,6 +128,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         StaggeredRegion(region = vpcEast.region, hours = "16-02")
       )
     ),
+    clusterHealth = ClusterHealth(),
     _defaults = ServerGroupSpec(
       launchConfiguration = LaunchConfigurationSpec(
         image = VirtualMachineImage(
@@ -156,7 +158,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       dependencies = ClusterDependencies(
         loadBalancerNames = setOf("keel-test-frontend"),
         securityGroupNames = setOf(sg1West.name, sg2West.name)
-      )
+      ),
+      clusterHealth = ClusterHealth()
     )
   )
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.netflix.spinnaker.keel.api.ClusterHealth
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
@@ -127,7 +128,8 @@ data class ClusterSpec(
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = null
+  override val unhappyWaitTime: Duration? = null,
+  override val clusterHealth: ClusterHealth? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, OverrideableClusterDependencyContainer<ServerGroupSpec>, UnhappyControl {
   @JsonIgnore
   override val id = "${locations.account}:$moniker"
@@ -172,7 +174,8 @@ data class ClusterSpec(
     scaling: Scaling?,
     tags: Map<String, String>?,
     @JsonInclude(NON_EMPTY)
-    overrides: Map<String, ServerGroupSpec> = emptyMap()
+    overrides: Map<String, ServerGroupSpec> = emptyMap(),
+    clusterHealth: ClusterHealth = ClusterHealth()
   ) : this(
     moniker,
     imageProvider,
@@ -184,7 +187,8 @@ data class ClusterSpec(
       dependencies,
       health,
       scaling,
-      tags
+      tags,
+      clusterHealth
     ),
     overrides
   )
@@ -196,7 +200,8 @@ data class ClusterSpec(
     val health: HealthSpec? = null,
     val scaling: Scaling? = null,
     @JsonInclude(NON_EMPTY)
-    val tags: Map<String, String>? = null
+    val tags: Map<String, String>? = null,
+    val clusterHealth: ClusterHealth? = null
   ) : ClusterDependencyContainer {
     init {
       // Require capacity.desired or scaling policies, or let them both be blank for constructing overrides

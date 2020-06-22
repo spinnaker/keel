@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.netflix.spinnaker.keel.api.ClusterHealth
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -66,7 +67,8 @@ data class TitusClusterSpec(
   override val maxDiffCount: Int? = 2,
   @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
-  override val unhappyWaitTime: Duration? = null
+  override val unhappyWaitTime: Duration? = null,
+  override val clusterHealth: ClusterHealth? = ClusterHealth()
 ) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
 
   @JsonIgnore
@@ -109,7 +111,8 @@ data class TitusClusterSpec(
     migrationPolicy: MigrationPolicy?,
     dependencies: ClusterDependencies?,
     tags: Map<String, String>?,
-    overrides: Map<String, TitusServerGroupSpec> = emptyMap()
+    overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
+    clusterHealth: ClusterHealth?
   ) : this(
     moniker,
     deployWith,
@@ -126,7 +129,8 @@ data class TitusClusterSpec(
       iamProfile = iamProfile,
       migrationPolicy = migrationPolicy,
       resources = resources,
-      tags = tags
+      tags = tags,
+      clusterHealth = clusterHealth
     ),
     overrides,
     containerProvider = container
@@ -145,7 +149,8 @@ data class TitusServerGroupSpec(
   val iamProfile: String? = null,
   val migrationPolicy: MigrationPolicy? = null,
   val resources: ResourcesSpec? = null,
-  val tags: Map<String, String>? = null
+  val tags: Map<String, String>? = null,
+  val clusterHealth: ClusterHealth? = null
 )
 
 data class ResourcesSpec(

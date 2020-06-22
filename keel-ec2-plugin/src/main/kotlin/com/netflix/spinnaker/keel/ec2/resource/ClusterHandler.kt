@@ -52,6 +52,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.PredefinedMetricSpecificatio
 import com.netflix.spinnaker.keel.clouddriver.model.ScalingPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
 import com.netflix.spinnaker.keel.clouddriver.model.Tag
+import com.netflix.spinnaker.keel.clouddriver.model.isHealthy
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
@@ -784,7 +785,7 @@ class ClusterHandler(
     )
       .also { them ->
         val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
-        val healthy: Boolean = them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = them.all { isHealthy(resource.spec.clusterHealth, it.instanceCounts) }
         if (allSame && healthy) {
           // // only publish a successfully deployed event if the server group is healthy
           val appVersion = them.first().launchConfiguration.appVersion

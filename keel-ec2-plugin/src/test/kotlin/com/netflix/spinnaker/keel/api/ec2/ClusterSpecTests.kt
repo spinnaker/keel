@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.netflix.spinnaker.keel.api.ClusterHealth
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -153,7 +154,8 @@ object Fixture {
       ),
       health = HealthSpec(
         warmup = Duration.ofSeconds(120)
-      )
+      ),
+      clusterHealth = ClusterHealth()
     ),
     overrides = mapOf(
       "us-east-1" to ServerGroupSpec(
@@ -185,7 +187,8 @@ object Fixture {
           keyPair = "fnord-keypair-325719997469-us-west-2"
         )
       )
-    )
+    ),
+    clusterHealth = null
   )
 
   fun resolve(): Set<ServerGroup> = spec.resolve()

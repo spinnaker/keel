@@ -49,6 +49,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
+import com.netflix.spinnaker.keel.clouddriver.model.isHealthy
 import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
@@ -414,7 +415,7 @@ class TitusClusterHandler(
     )
       .also { them ->
         val sameContainer: Boolean = them.distinctBy { it.container.digest }.size == 1
-        val healthy: Boolean = them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = them.all { isHealthy(resource.spec.clusterHealth, it.instanceCounts) }
         if (sameContainer && healthy) {
           // only publish a successfully deployed event if the server group is healthy
           val container = them.first().container

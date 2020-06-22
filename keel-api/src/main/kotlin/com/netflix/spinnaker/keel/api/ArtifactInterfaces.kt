@@ -52,7 +52,27 @@ interface ArtifactReferenceProvider {
     }
 }
 
-interface ComputeResourceSpec : ResourceSpec, VersionedArtifactProvider, ArtifactReferenceProvider
+interface ComputeResourceSpec : ResourceSpec, VersionedArtifactProvider, ArtifactReferenceProvider {
+  val clusterHealth: ClusterHealth?
+}
+
+/**
+ * Contains user-configured health information about a server group
+ * [ignoreHealthForDeployments] if true, considers deployments healthy when instances are not in a
+ *  [InstanceCounts] down, out of service, or starting status. This is the setting for apps which
+ *  "only consider provider health"
+ * [healthyPercentage] the percentage of instances that need to be in the "up" status before
+ *  we consider a cluster fully deployed
+ */
+data class ClusterHealth(
+  val ignoreHealthForDeployments: Boolean = false,
+  val healthyPercentage: Double = 100.0
+) {
+  init {
+    require(healthyPercentage > 0.0) { "healthyPercentage must be > 0" }
+    require(healthyPercentage <= 100.0) { "healthyPercentage must be <= 100" }
+  }
+}
 
 /**
  * Simple container of the information defined in [ArtifactProvider] that ensures non-nullability of the fields.
