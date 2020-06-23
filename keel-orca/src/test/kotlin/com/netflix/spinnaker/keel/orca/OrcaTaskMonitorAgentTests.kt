@@ -173,6 +173,25 @@ internal class OrcaTaskMonitorAgentTests : JUnit5Minutests {
       }
     }
 
+    context("cannot determinate task status since orca returned an exception for the task id") {
+      before {
+        every { resourceRepository.get(resource.id) } returns resource
+        every { taskTrackingRepository.getTasks() } returns setOf(event.taskRecord)
+        every {
+          orcaService.getOrchestrationExecution(event.taskRecord.id)
+        } throws Exception()
+      }
+
+      test("task record was removed from the table") {
+        runBlocking {
+          subject.invokeAgent()
+        }
+
+        verify(exactly = 0) { publisher.publishEvent(any()) }
+        verify { taskTrackingRepository.delete(event.taskRecord.id) }
+      }
+    }
+
     context("constraint events") {
       modifyFixture {
         event = TaskCreatedEvent(taskConstraintRecord)
