@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
+import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import java.time.Clock
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
+import retrofit2.HttpException
 
 @Component
 class OrcaTaskMonitorAgent(
@@ -52,11 +54,16 @@ class OrcaTaskMonitorAgent(
             async {
               try {
                 orcaService.getOrchestrationExecution(it.id, DEFAULT_SERVICE_ACCOUNT)
-              } catch (e: Exception) {
-                log.warn("Exception ${e.message} has caught while calling orca to fetch status for execution id: ${it.id}" +
-                  " Possible reason: orca is saving info for 2000 tasks/app and this task is older.")
-                // when we get an exception from orca, we shouldn't try to get the status anymore
-                taskTrackingRepository.delete(it.id)
+              } catch (e: HttpException) {
+                when (e.isNotFound) {
+                  true -> {
+                    log.warn("Exception ${e.message} has caught while calling orca to fetch status for execution id: ${it.id}" +
+                      " Possible reason: orca is saving info for 2000 tasks/app and this task is older.")
+                    // when we get not found exception from orca, we shouldn't try to get the status anymore
+                    taskTrackingRepository.delete(it.id)
+                  }
+                  else -> throw e
+              }
                 null
               }
             }.await()
