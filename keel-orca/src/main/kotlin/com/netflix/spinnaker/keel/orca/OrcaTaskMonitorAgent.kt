@@ -58,7 +58,7 @@ class OrcaTaskMonitorAgent(
                 when (e.isNotFound) {
                   true -> {
                     log.warn("Exception ${e.message} has caught while calling orca to fetch status for execution id: ${it.id}" +
-                      " Possible reason: orca is saving info for 2000 tasks/app and this task is older.")
+                      " Possible reason: orca is saving info for 2000 tasks/app and this task is older. $e")
                     // when we get not found exception from orca, we shouldn't try to get the status anymore
                     taskTrackingRepository.delete(it.id)
                   }
