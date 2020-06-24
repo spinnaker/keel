@@ -592,7 +592,7 @@ class SqlArtifactRepository(
       return false
     }
 
-    return getArtifactDetailsFromEnvironment(envUid, artUid, veto.version)
+    return selectArtifactDetailsFromEnvironment(envUid, artUid, veto.version)
       .fetchOne { (_, ref) ->
         ref?.let { reference ->
           /**
@@ -643,7 +643,11 @@ class SqlArtifactRepository(
       .execute()
   }
 
-  private fun DSLContext.addRecordToEnvironmentArtifactVetoTable(envUid: String, artUid: String, veto: EnvironmentArtifactVeto) {
+  private fun DSLContext.addRecordToEnvironmentArtifactVetoTable(
+    envUid: String,
+    artUid: String,
+    veto: EnvironmentArtifactVeto
+  ) {
     insertInto(ENVIRONMENT_ARTIFACT_VETO)
       .set(ENVIRONMENT_ARTIFACT_VETO.ENVIRONMENT_UID, envUid)
       .set(ENVIRONMENT_ARTIFACT_VETO.ARTIFACT_UID, artUid)
@@ -658,7 +662,12 @@ class SqlArtifactRepository(
       .execute()
   }
 
-  private fun DSLContext.updateAsVetoedInEnvironmentArtifactVersionsTable(prior: String?, veto: EnvironmentArtifactVeto, envUid: String, artUid: String) {
+  private fun DSLContext.updateAsVetoedInEnvironmentArtifactVersionsTable(
+    prior: String?,
+    veto: EnvironmentArtifactVeto,
+    envUid: String,
+    artUid: String
+  ) {
     update(ENVIRONMENT_ARTIFACT_VERSIONS)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, VETOED.name)
       .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE, prior ?: veto.version)
@@ -670,7 +679,11 @@ class SqlArtifactRepository(
       .execute()
   }
 
-  private fun getArtifactDetailsFromEnvironment(envUid: String, artUid: String, version: String): SelectConditionStep<Record2<String, String>> {
+  private fun selectArtifactDetailsFromEnvironment(
+    envUid: String,
+    artUid: String,
+    version: String
+  ): SelectConditionStep<Record2<String, String>> {
     return jooq
       .select(
         ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS,
@@ -682,7 +695,11 @@ class SqlArtifactRepository(
         ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
   }
 
-  private fun isPinned(envUid: String, artUid: String, version: String): Boolean {
+  private fun isPinned(
+    envUid: String,
+    artUid: String,
+    version: String
+  ): Boolean {
     return sqlRetry.withRetry(READ) {
       jooq
         .fetchExists(
@@ -693,7 +710,11 @@ class SqlArtifactRepository(
     }
   }
 
-  private fun environmentAndArtifactIds(deliveryConfig: DeliveryConfig, targetEnvironment: String, artifact: DeliveryArtifact): Pair<String, String> {
+  private fun environmentAndArtifactIds(
+    deliveryConfig: DeliveryConfig,
+    targetEnvironment: String,
+    artifact: DeliveryArtifact
+  ): Pair<String, String> {
     return sqlRetry.withRetry(READ) {
       Pair(
         deliveryConfig.getUidStringFor(
