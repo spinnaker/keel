@@ -52,7 +52,6 @@ import java.time.ZoneOffset.UTC
 import javax.xml.bind.DatatypeConverter
 import org.jooq.DSLContext
 import org.jooq.Record1
-import org.jooq.Record2
 import org.jooq.Select
 import org.jooq.SelectConditionStep
 import org.jooq.impl.DSL
@@ -593,7 +592,7 @@ class SqlArtifactRepository(
     }
 
     return selectArtifactDetailsFromEnvironment(envUid, artUid, veto.version)
-      .fetchOne { (_, ref) ->
+      .fetchOne { ref ->
         ref?.let { reference ->
           /**
            * If there's a promotion reference, that means this artifact version was deployed as a result of
@@ -683,11 +682,9 @@ class SqlArtifactRepository(
     envUid: String,
     artUid: String,
     version: String
-  ): SelectConditionStep<Record2<String, String>> {
+  ): SelectConditionStep<Record1<String>> {
     return jooq
-      .select(
-        ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS,
-        ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
+      .select(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
       .from(ENVIRONMENT_ARTIFACT_VERSIONS)
       .where(
         ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid),
