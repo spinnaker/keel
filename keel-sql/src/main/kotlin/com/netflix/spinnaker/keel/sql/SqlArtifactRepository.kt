@@ -592,7 +592,7 @@ class SqlArtifactRepository(
     }
 
     return selectPromotionReference(envUid, artUid, veto.version)
-      .fetchOne { (ref : String?) ->
+      .fetchOne { (ref: String?) ->
         ref?.let { reference ->
           /**
            * If there's a promotion reference, that means this artifact version was deployed as a result of
