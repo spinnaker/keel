@@ -592,7 +592,7 @@ class SqlArtifactRepository(
       return false
     }
 
-    return selectArtifactStatusAndPromotionReferenceInTargetEnvironment(envUid, artUid, veto.version)
+    return getArtifactDetailsFromEnvironment(envUid, artUid, veto.version)
       .fetchOne { (_, ref) ->
         ref?.let { reference ->
           /**
@@ -670,7 +670,7 @@ class SqlArtifactRepository(
       .execute()
   }
 
-  private fun selectArtifactStatusAndPromotionReferenceInTargetEnvironment(envUid: String, artUid: String, version: String): SelectConditionStep<Record2<String, String>> {
+  private fun getArtifactDetailsFromEnvironment(envUid: String, artUid: String, version: String): SelectConditionStep<Record2<String, String>> {
     return jooq
       .select(
         ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS,
