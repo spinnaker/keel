@@ -591,7 +591,7 @@ class SqlArtifactRepository(
       return false
     }
 
-    return selectArtifactDetailsFromEnvironment(envUid, artUid, veto.version)
+    return selectPromotionReference(envUid, artUid, veto.version)
       .fetchOne { ref ->
         ref?.let { reference ->
           /**
@@ -678,7 +678,7 @@ class SqlArtifactRepository(
       .execute()
   }
 
-  private fun selectArtifactDetailsFromEnvironment(
+  private fun selectPromotionReference(
     envUid: String,
     artUid: String,
     version: String
