@@ -302,7 +302,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
         }
 
-        test("an artifact version can be vetoed") {
+        test("an artifact version can be vetoed even if it was not previously deployed") {
           val veto = EnvironmentArtifactVeto(
             targetEnvironment = environment1.name,
             reference = artifact1.reference,
