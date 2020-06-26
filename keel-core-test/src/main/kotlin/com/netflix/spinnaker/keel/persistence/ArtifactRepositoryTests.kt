@@ -28,6 +28,7 @@ import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.api.expectThrows
+import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.first
@@ -41,6 +42,7 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
+import strikt.assertions.size
 
 abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests {
   abstract fun factory(clock: Clock): T
@@ -300,6 +302,27 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             get(ArtifactVersionStatus::deploying).isNull()
             get(ArtifactVersionStatus::previous).isEmpty()
           }
+        }
+
+        test("an artifact version can be vetoed") {
+          val veto = EnvironmentArtifactVeto(
+            targetEnvironment = environment1.name,
+            reference = artifact1.reference,
+            version = version1,
+            vetoedBy = "someone",
+            comment = "testing if mark as bad works"
+          )
+
+          subject.markAsVetoedIn(deliveryConfig = manifest, veto = veto, force = true)
+
+          expectThat(
+            subject.vetoedEnvironmentVersions(manifest))
+            .isEqualTo(listOf(
+            EnvironmentArtifactVetoes(
+              deliveryConfigName = manifest.name,
+              targetEnvironment = environment1.name,
+              artifact = artifact1,
+              versions = mutableSetOf(version1))))
         }
       }
 
