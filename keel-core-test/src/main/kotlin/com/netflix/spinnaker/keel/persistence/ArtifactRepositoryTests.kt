@@ -28,7 +28,6 @@ import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.api.expectThrows
-import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.first
@@ -42,7 +41,6 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
-import strikt.assertions.size
 
 abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests {
   abstract fun factory(clock: Clock): T
