@@ -597,8 +597,7 @@ class SqlArtifactRepository(
      * another artifact version being vetoed. In that case, we don't veto unless [force] is enabled.
      */
     selectPromotionReference(envUid, artUid, veto.version)
-      .fetchOne() // null if [veto.version] never made it to the target environment
-      ?.value1() // null if the `promotion_reference` column is NULL
+      .fetchOne(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
       ?.let { reference ->
       if (!force) {
         log.warn(
