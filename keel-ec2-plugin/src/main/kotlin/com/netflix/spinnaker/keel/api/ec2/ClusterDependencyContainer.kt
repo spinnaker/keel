@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.api.ec2
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
-import com.netflix.spinnaker.keel.core.api.ClusterDependencies
 
 /**
  * A [ResourceSpec] that has default and override cluster dependencies (i.e. security groups, load

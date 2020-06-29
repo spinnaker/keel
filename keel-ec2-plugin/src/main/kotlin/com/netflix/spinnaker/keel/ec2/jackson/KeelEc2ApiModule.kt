@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ser.Serializers
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
+import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
@@ -30,6 +31,7 @@ import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ArtifactImageProviderMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClassicLoadBalancerSpecMixin
+import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterDependenciesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.CustomizedMetricSpecificationMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.HealthMixin
@@ -53,6 +55,7 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       setMixInAnnotations<ApplicationLoadBalancerSpec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<ArtifactImageProvider, ArtifactImageProviderMixin>()
       setMixInAnnotations<ClassicLoadBalancerSpec, ClassicLoadBalancerSpecMixin>()
+      setMixInAnnotations<ClusterDependencies, ClusterDependenciesMixin>()
       setMixInAnnotations<ClusterSpec, ClusterSpecMixin>()
       setMixInAnnotations<CustomizedMetricSpecification, CustomizedMetricSpecificationMixin>()
       setMixInAnnotations<Health, HealthMixin>()

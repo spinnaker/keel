@@ -15,12 +15,8 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.core.api
+package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-
-@JsonInclude(NON_EMPTY)
 data class ClusterDependencies(
   val loadBalancerNames: Set<String> = emptySet(),
   val securityGroupNames: Set<String> = emptySet(),
