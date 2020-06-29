@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.apidocs
 
 import com.netflix.spinnaker.keel.api.docs.Description
+import com.netflix.spinnaker.keel.api.docs.Literal
 import com.netflix.spinnaker.keel.api.docs.Optional
 import io.swagger.v3.oas.models.media.ComposedSchema
 import io.swagger.v3.oas.models.media.Schema
@@ -30,6 +31,12 @@ class ApiAnnotationModelConverter : AbstractSchemaCustomizer() {
   }
 
   private fun handleClassAnnotations(type: Class<*>, schema: Schema<*>) {
+    val literal = type.kotlin.findAnnotation<Literal>()
+    if (literal != null) {
+      schema.type(literal.type)
+      schema.enum = listOf(literal.value)
+    }
+
     val description = type.kotlin.findAnnotation<Description>()
     if (description != null) {
       schema.description(description.value)

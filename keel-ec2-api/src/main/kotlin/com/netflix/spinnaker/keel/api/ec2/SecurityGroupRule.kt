@@ -15,7 +15,7 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import io.swagger.v3.oas.annotations.media.Schema
+import com.netflix.spinnaker.keel.api.docs.Literal
 
 sealed class SecurityGroupRule {
   abstract val protocol: Protocol
@@ -53,7 +53,7 @@ data class CidrRule(
 
 sealed class IngressPorts
 
-@Schema(type = "string", allowableValues = ["ALL"])
+@Literal(value = "ALL")
 object AllPorts : IngressPorts()
 
 data class PortRange(

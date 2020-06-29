@@ -17,8 +17,7 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
-import de.danielbechler.diff.introspection.ObjectDiffProperty
+import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import java.time.Duration
 
 val DEFAULT_AUTOSCALE_INSTANCE_WARMUP: Duration = Duration.ofMinutes(5)
@@ -35,7 +34,7 @@ data class Scaling(
 sealed class ScalingPolicy
 
 data class TargetTrackingPolicy(
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val name: String? = null,
   val warmup: Duration = DEFAULT_AUTOSCALE_INSTANCE_WARMUP,
   val targetValue: Double,
@@ -80,7 +79,7 @@ data class TargetTrackingPolicy(
 }
 
 data class StepScalingPolicy(
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val name: String? = null,
   val adjustmentType: String,
   val actionsEnabled: Boolean,

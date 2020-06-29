@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.api.UnhappyControl
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.core.api.RedBlack
 import java.time.Duration

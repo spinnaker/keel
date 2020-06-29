@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.api
 
 import java.time.Duration
 
+// TODO: it really doesn't make sense to surface this via keel-api
 interface UnhappyControl {
   /**
    * [maxDiffCount] allows customization of how many times keel will attempt to

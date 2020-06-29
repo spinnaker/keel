@@ -19,8 +19,6 @@ import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.SimpleLocations
-import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
-import de.danielbechler.diff.introspection.ObjectDiffProperty
 
 data class SecurityGroupSpec(
   override val moniker: Moniker,
@@ -33,7 +31,6 @@ data class SecurityGroupSpec(
 }
 
 data class SecurityGroupOverride(
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
   val description: String? = null,
   val inboundRules: Set<SecurityGroupRule>? = null,
   val vpc: String? = null

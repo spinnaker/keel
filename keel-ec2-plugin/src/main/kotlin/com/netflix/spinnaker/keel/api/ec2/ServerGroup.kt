@@ -17,7 +17,7 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonIgnore
+import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
@@ -25,10 +25,7 @@ import com.netflix.spinnaker.keel.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.BuildInfo
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
-import com.netflix.spinnaker.keel.core.api.Capacity
 import com.netflix.spinnaker.keel.core.parseMoniker
-import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
-import de.danielbechler.diff.introspection.ObjectDiffProperty
 
 data class ServerGroup(
   /**
@@ -39,7 +36,7 @@ data class ServerGroup(
    * useful for some things (e.g. specifying ancestor server group when red-blacking a new version)
    * but is meaningless for a diff.
    */
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val name: String,
   val location: Location,
   val launchConfiguration: LaunchConfiguration,
@@ -48,23 +45,17 @@ data class ServerGroup(
   val health: Health = Health(),
   val scaling: Scaling = Scaling(),
   val tags: Map<String, String> = emptyMap(),
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val image: ActiveServerGroupImage? = null,
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val buildInfo: BuildInfo? = null,
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   override val artifactName: String? = null,
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   override val artifactType: ArtifactType? = DEBIAN,
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   override val artifactVersion: String? = null,
-  @JsonIgnore
-  @get:ObjectDiffProperty(inclusion = EXCLUDED)
+  @get:ExcludedFromDiff
   val instanceCounts: InstanceCounts? = null
 ) : VersionedArtifactProvider {
   init {
