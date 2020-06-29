@@ -1,8 +1,5 @@
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
@@ -20,7 +17,6 @@ data class ApplicationLoadBalancerSpec(
   override val idleTimeout: Duration = Duration.ofSeconds(60),
   val listeners: Set<Listener>,
   val targetGroups: Set<TargetGroup>,
-  @JsonInclude(NON_EMPTY)
   val overrides: Map<String, ApplicationLoadBalancerOverride> = emptyMap()
 ) : LoadBalancerSpec, UnhappyControl {
 
@@ -30,17 +26,13 @@ data class ApplicationLoadBalancerSpec(
     }
   }
 
-  @JsonIgnore
   override val maxDiffCount: Int? = 2
 
-  @JsonIgnore
   // Once load balancers go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = null
 
-  @JsonIgnore
   override val loadBalancerType: LoadBalancerType = APPLICATION
 
-  @JsonIgnore
   override val id: String = "${locations.account}:$moniker"
 
   data class Listener(

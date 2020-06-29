@@ -17,22 +17,17 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-import de.danielbechler.diff.inclusion.Inclusion
+import de.danielbechler.diff.inclusion.Inclusion.EXCLUDED
 import de.danielbechler.diff.introspection.ObjectDiffProperty
 import java.time.Duration
 
 val DEFAULT_AUTOSCALE_INSTANCE_WARMUP: Duration = Duration.ofMinutes(5)
 
-@JsonInclude(NON_EMPTY)
 data class Scaling(
   val suspendedProcesses: Set<ScalingProcess> = emptySet(),
   val targetTrackingPolicies: Set<TargetTrackingPolicy> = emptySet(),
   val stepScalingPolicies: Set<StepScalingPolicy> = emptySet()
 ) {
-  @JsonIgnore
   fun hasScalingPolicies(): Boolean =
     targetTrackingPolicies.isNotEmpty() || stepScalingPolicies.isNotEmpty()
 }
@@ -40,8 +35,7 @@ data class Scaling(
 sealed class ScalingPolicy
 
 data class TargetTrackingPolicy(
-  @get:ObjectDiffProperty(inclusion = Inclusion.EXCLUDED)
-  @JsonIgnore
+  @get:ObjectDiffProperty(inclusion = EXCLUDED)
   val name: String? = null,
   val warmup: Duration = DEFAULT_AUTOSCALE_INSTANCE_WARMUP,
   val targetValue: Double,
@@ -85,10 +79,8 @@ data class TargetTrackingPolicy(
   }
 }
 
-@JsonInclude(NON_EMPTY)
 data class StepScalingPolicy(
-  @get:ObjectDiffProperty(inclusion = Inclusion.EXCLUDED)
-  @JsonIgnore
+  @get:ObjectDiffProperty(inclusion = EXCLUDED)
   val name: String? = null,
   val adjustmentType: String,
   val actionsEnabled: Boolean,
@@ -162,7 +154,6 @@ data class MetricDimension(
 )
 
 // https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_CustomizedMetricSpecification.html
-@JsonInclude(NON_EMPTY)
 data class CustomizedMetricSpecification(
   val name: String,
   val namespace: String,
@@ -178,7 +169,6 @@ data class PredefinedMetricSpecification(
 )
 
 // https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_StepAdjustment.html
-@JsonInclude(NON_EMPTY)
 data class StepAdjustment(
   val lowerBound: Double? = null,
   val upperBound: Double? = null,

@@ -17,37 +17,28 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.ec2.jackson.ImageProviderDeserializer
 
 /**
  * Base interface for providing an image
  */
-@JsonDeserialize(using = ImageProviderDeserializer::class)
 sealed class ImageProvider
 
 /**
  * Provides image id by reference to a package
  */
-@JsonDeserialize(using = JsonDeserializer.None::class)
 @Deprecated("Non-reference-based artifact providers are no longer supported.",
   replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
 )
 data class ArtifactImageProvider(
   val deliveryArtifact: DeliveryArtifact,
-  @JsonInclude(NON_EMPTY)
   val artifactStatuses: List<ArtifactStatus> = emptyList() // treated as "all statuses" by ImageResolver
 ) : ImageProvider()
 
 /**
  * Provides image id by referencing an artifact defined in the delivery config
  */
-@JsonDeserialize(using = JsonDeserializer.None::class)
 data class ReferenceArtifactImageProvider(
   val reference: String
 ) : ImageProvider()
@@ -55,7 +46,6 @@ data class ReferenceArtifactImageProvider(
 /**
  * Provides an image by reference to a jenkins master, job, and job number
  */
-@JsonDeserialize(using = JsonDeserializer.None::class)
 @Deprecated("Non-reference-based artifact providers are no longer supported.",
   replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
 )

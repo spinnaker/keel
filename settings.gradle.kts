@@ -22,7 +22,7 @@ listOf("fiat", "kork").forEach { prj ->
   }
 }
 
-enableFeaturePreview("VERSION_ORDERING_V2")
+//enableFeaturePreview("VERSION_ORDERING_V2")
 
 include(
   "keel-api",
@@ -34,6 +34,7 @@ include(
   "keel-core",
   "keel-core-test",
   "keel-docker",
+  "keel-ec2-api",
   "keel-ec2-plugin",
   "keel-echo",
   "keel-eureka",

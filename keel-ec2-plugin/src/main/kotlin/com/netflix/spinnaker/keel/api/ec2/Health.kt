@@ -17,13 +17,11 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
+import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy.OldestInstance
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import java.time.Duration
 
-@JsonInclude(NON_EMPTY)
 data class Health(
   val cooldown: Duration = Duration.ofSeconds(10),
   val warmup: Duration = Duration.ofSeconds(600),
@@ -31,7 +29,7 @@ data class Health(
   val enabledMetrics: Set<Metric> = emptySet(),
   // Note: the default for this in Deck is currently setOf(TerminationPolicy.Default), but we were advised by Netflix
   // SRE to change the default to OldestInstance
-  val terminationPolicies: Set<TerminationPolicy> = setOf(TerminationPolicy.OldestInstance)
+  val terminationPolicies: Set<TerminationPolicy> = setOf(OldestInstance)
 ) {
 
   /**

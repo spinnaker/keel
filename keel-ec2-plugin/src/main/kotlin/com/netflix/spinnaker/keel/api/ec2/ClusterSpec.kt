@@ -1,10 +1,5 @@
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
@@ -115,21 +110,14 @@ data class ClusterSpec(
   val deployWith: ClusterDeployStrategy = RedBlack(),
   override val locations: SubnetAwareLocations,
   private val _defaults: ServerGroupSpec,
-  @JsonInclude(NON_EMPTY)
   override val overrides: Map<String, ServerGroupSpec> = emptyMap(),
-  @JsonIgnore
   override val artifactType: ArtifactType? = DEBIAN,
-  @JsonIgnore
   private val _artifactName: String? = null, // Custom backing field for artifactName, used by resolvers
-  @JsonIgnore
   override val artifactVersion: String? = null,
-  @JsonIgnore
   override val maxDiffCount: Int? = 2,
-  @JsonIgnore
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, OverrideableClusterDependencyContainer<ServerGroupSpec>, UnhappyControl {
-  @JsonIgnore
   override val id = "${locations.account}:$moniker"
 
   /**
@@ -140,11 +128,11 @@ data class ClusterSpec(
    * top level in the cluster spec YAML / JSON is nicer for the user.
    */
   override val defaults: ServerGroupSpec
-    @JsonUnwrapped get() = _defaults
+    get() = _defaults
 
   // Returns the artifact name set by resolvers, or attempts to find the artifact name from the image provider.
   override val artifactName: String?
-    @JsonIgnore get() = _artifactName
+    get() = _artifactName
       ?: when (imageProvider) {
         is ArtifactImageProvider -> imageProvider.deliveryArtifact.name
         else -> null
@@ -153,41 +141,10 @@ data class ClusterSpec(
   // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
   // image provider.
   override val artifactReference: String?
-    @JsonIgnore get() = when (imageProvider) {
+    get() = when (imageProvider) {
       is ReferenceArtifactImageProvider -> imageProvider.reference
       else -> null
     }
-
-  @JsonCreator
-  constructor(
-    moniker: Moniker,
-    imageProvider: ImageProvider,
-    deployWith: ClusterDeployStrategy = RedBlack(),
-    locations: SubnetAwareLocations,
-    launchConfiguration: LaunchConfigurationSpec?,
-    capacity: Capacity?,
-    dependencies: ClusterDependencies?,
-    health: HealthSpec?,
-    @JsonInclude(NON_EMPTY)
-    scaling: Scaling?,
-    tags: Map<String, String>?,
-    @JsonInclude(NON_EMPTY)
-    overrides: Map<String, ServerGroupSpec> = emptyMap()
-  ) : this(
-    moniker,
-    imageProvider,
-    deployWith,
-    locations,
-    ServerGroupSpec(
-      launchConfiguration,
-      capacity,
-      dependencies,
-      health,
-      scaling,
-      tags
-    ),
-    overrides
-  )
 
   data class ServerGroupSpec(
     val launchConfiguration: LaunchConfigurationSpec? = null,
@@ -195,7 +152,6 @@ data class ClusterSpec(
     override val dependencies: ClusterDependencies? = null,
     val health: HealthSpec? = null,
     val scaling: Scaling? = null,
-    @JsonInclude(NON_EMPTY)
     val tags: Map<String, String>? = null
   ) : ClusterDependencyContainer {
     init {
@@ -211,23 +167,6 @@ data class ClusterSpec(
     }
   }
 
-  data class LaunchConfigurationSpec(
-    val image: VirtualMachineImage? = null,
-    val instanceType: String? = null,
-    val ebsOptimized: Boolean? = null,
-    val iamRole: String? = null,
-    val keyPair: String? = null,
-    val instanceMonitoring: Boolean? = null,
-    val ramdiskId: String? = null
-  )
-
-  data class VirtualMachineImage(
-    val id: String,
-    val appVersion: String,
-    val baseImageVersion: String
-  )
-
-  @JsonInclude(NON_EMPTY)
   data class HealthSpec(
     val cooldown: Duration? = null,
     val warmup: Duration? = null,
