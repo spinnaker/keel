@@ -15,7 +15,7 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api.titus.cluster
+package com.netflix.spinnaker.titus
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Exportable
@@ -39,19 +39,17 @@ import com.netflix.spinnaker.keel.api.ec2.ServerGroup.InstanceCounts
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
-import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
-import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
+import com.netflix.spinnaker.keel.api.titus.ResourcesSpec
+import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
-import com.netflix.spinnaker.keel.clouddriver.model.Constraints
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
-import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
-import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
@@ -69,6 +67,8 @@ import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.titus.exceptions.RegistryNotFoundException
+import com.netflix.spinnaker.titus.exceptions.TitusAccountConfigurationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -216,7 +216,7 @@ class TitusClusterHandler(
       locations = locations,
       _defaults = base.exportSpec(exportable.moniker.app),
       overrides = mutableMapOf(),
-      containerProvider = ReferenceProvider(base.container.repository()),
+      container = ReferenceProvider(base.container.repository()),
       deployWith = deployStrategy.withDefaultsOmitted()
     )
 
@@ -591,13 +591,13 @@ class TitusClusterHandler(
         digest = image.dockerImageDigest
       ),
       entryPoint = entryPoint,
-      resources = resources,
+      resources = resources.run { TitusServerGroup.Resources(cpu, disk, gpu, memory, networkMbps) },
       env = env,
       containerAttributes = containerAttributes,
-      constraints = constraints,
+      constraints = constraints.run { TitusServerGroup.Constraints(hard, soft) },
       iamProfile = iamProfile.substringAfterLast("/"),
       capacityGroup = capacityGroup,
-      migrationPolicy = migrationPolicy,
+      migrationPolicy = migrationPolicy.run { TitusServerGroup.MigrationPolicy(type) },
       dependencies = ClusterDependencies(
         loadBalancers,
         securityGroupNames = securityGroupNames,
@@ -638,10 +638,10 @@ class TitusClusterHandler(
     val defaults = TitusServerGroupSpec(
       capacity = Capacity(1, 1, 1),
       iamProfile = application + "InstanceProfile",
-      resources = mapper.convertValue(Resources()),
+      resources = mapper.convertValue(TitusServerGroup.Resources()),
       entryPoint = "",
-      constraints = Constraints(),
-      migrationPolicy = MigrationPolicy(),
+      constraints = TitusServerGroup.Constraints(),
+      migrationPolicy = TitusServerGroup.MigrationPolicy(),
       dependencies = ClusterDependencies(),
       capacityGroup = application,
       env = emptyMap(),
@@ -653,7 +653,6 @@ class TitusClusterHandler(
       capacity = capacity,
       capacityGroup = capacityGroup,
       constraints = constraints,
-      container = ReferenceProvider(container.repository()),
       dependencies = dependencies,
       entryPoint = entryPoint,
       env = env,
@@ -667,7 +666,7 @@ class TitusClusterHandler(
     return checkNotNull(buildSpecFromDiff(defaults, thisSpec))
   }
 
-  private fun Resources.toSpec(): ResourcesSpec =
+  private fun TitusServerGroup.Resources.toSpec(): ResourcesSpec =
     ResourcesSpec(
       cpu = cpu,
       disk = disk,
