@@ -1,18 +1,18 @@
 package com.netflix.spinnaker.keel.api.ec2
 
+import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Locations
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Monikered
+import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.UnhappyControl
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
-import com.netflix.spinnaker.keel.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.core.api.ClusterDeployStrategy
-import com.netflix.spinnaker.keel.core.api.RedBlack
 import java.time.Duration
 
 /**
@@ -70,7 +70,7 @@ private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec
   )
 }
 
-internal fun ClusterSpec.resolveCapacity(region: String) =
+fun ClusterSpec.resolveCapacity(region: String) =
   overrides[region]?.capacity ?: defaults.capacity ?: Capacity(1, 1, 1)
 
 private fun ClusterSpec.resolveScaling(region: String): Scaling =

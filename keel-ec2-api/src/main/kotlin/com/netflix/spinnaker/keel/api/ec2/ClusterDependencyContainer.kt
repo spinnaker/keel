@@ -25,7 +25,7 @@ interface ClusterDependencyContainer {
 /**
  * A named dependency (security group, load balancer, or target group) that must be present in one or more regions.
  */
-internal data class RegionalDependency(
+data class RegionalDependency(
   val name: String,
   val account: String,
   val regions: Set<String>
@@ -40,13 +40,13 @@ internal data class RegionalDependency(
  * fnord-ext -> (us-east-1)
  * ```
  */
-internal val OverrideableClusterDependencyContainer<*>.securityGroupsByRegion: Collection<RegionalDependency>
+val OverrideableClusterDependencyContainer<*>.securityGroupsByRegion: Collection<RegionalDependency>
   get() = dependencyByRegion { it.securityGroupNames }
 
-internal val OverrideableClusterDependencyContainer<*>.loadBalancersByRegion: Collection<RegionalDependency>
+val OverrideableClusterDependencyContainer<*>.loadBalancersByRegion: Collection<RegionalDependency>
   get() = dependencyByRegion { it.loadBalancerNames }
 
-internal val OverrideableClusterDependencyContainer<*>.targetGroupsByRegion: Collection<RegionalDependency>
+val OverrideableClusterDependencyContainer<*>.targetGroupsByRegion: Collection<RegionalDependency>
   get() = dependencyByRegion { it.targetGroups }
 
 private fun OverrideableClusterDependencyContainer<*>.dependencyByRegion(fn: (ClusterDependencies) -> Set<String>): Collection<RegionalDependency> {

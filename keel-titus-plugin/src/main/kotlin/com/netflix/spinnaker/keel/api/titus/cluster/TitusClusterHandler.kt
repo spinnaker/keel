@@ -20,6 +20,7 @@ package com.netflix.spinnaker.keel.api.titus.cluster
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.SimpleLocations
@@ -52,7 +53,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
-import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs

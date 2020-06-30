@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
-import com.netflix.spinnaker.keel.core.api.RedBlack
 
 class ClusterSpecDeserializer : StdNodeBasedDeserializer<ClusterSpec>(ClusterSpec::class.java) {
   override fun convert(root: JsonNode, context: DeserializationContext): ClusterSpec =

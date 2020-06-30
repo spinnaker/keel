@@ -6,7 +6,7 @@ plugins {
 dependencies {
   implementation(project(":keel-retrofit"))
   implementation(project(":keel-core"))
-  implementation(project(":keel-ec2-api"))
+  implementation(project(":keel-ec2-api")) // TODO: remove, duplicating models
   implementation("com.netflix.spinnaker.moniker:moniker")
   implementation("com.fasterxml.jackson.core:jackson-databind")
   implementation("com.fasterxml.jackson.core:jackson-annotations")
@@ -19,6 +19,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-autoconfigure")
   implementation("com.netflix.frigga:frigga")
 
+  testImplementation(project(":keel-ec2-plugin")) // TODO: remove once keel-ec2-api dependency is gone
   testImplementation(project(":keel-retrofit-test-support"))
   testImplementation("com.squareup.retrofit2:retrofit-mock")
   testImplementation("com.squareup.okhttp3:mockwebserver")

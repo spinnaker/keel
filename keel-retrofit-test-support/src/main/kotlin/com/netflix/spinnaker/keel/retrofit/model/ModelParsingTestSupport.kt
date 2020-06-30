@@ -20,12 +20,14 @@ import strikt.assertions.propertiesAreEqualTo
 
 abstract class ModelParsingTestSupport<in S : Any, out E : Any>(serviceType: Class<S>) {
 
-  private val mapper = ObjectMapper()
+  open fun createMapper(): ObjectMapper = ObjectMapper()
     .registerModule(KotlinModule())
     .registerModule(JavaTimeModule())
     .enable(INDENT_OUTPUT)
     .disable(FAIL_ON_UNKNOWN_PROPERTIES)
     .disable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS)
+
+  private val mapper = createMapper()
 
   private val server = MockWebServer()
   private val service = Retrofit.Builder()

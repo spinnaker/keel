@@ -36,9 +36,10 @@ class KeyPairResolver(private val cloudDriverCache: CloudDriverCache) : Resolver
       // to the overrides, if necessary.
       locations.regions.forEach { region ->
         val override = overrides[region.name]
-        if (override?.launchConfiguration != null) {
-          if (override.launchConfiguration.keyPair == null) {
-            overrideLaunchConfigs[region.name] = override.launchConfiguration.copy(
+        val launchConfiguration = override?.launchConfiguration
+        if (launchConfiguration != null) {
+          if (launchConfiguration.keyPair == null) {
+            overrideLaunchConfigs[region.name] = launchConfiguration.copy(
               keyPair = defaultKeyPair.replace(REGION_PLACEHOLDER, region.name)
             )
           }

@@ -11,8 +11,10 @@ import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.Serializers
+import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
+import com.netflix.spinnaker.keel.api.ec2.BuildInfo
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -32,6 +34,7 @@ import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1Spec
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ArtifactImageProviderMixin
+import com.netflix.spinnaker.keel.ec2.jackson.mixins.BuildInfoMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClassicLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterDependenciesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterSpecMixin
@@ -59,6 +62,7 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       // same annotations are required for this legacy model, so it can reuse the same mixin
       setMixInAnnotations<ApplicationLoadBalancerV1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<ArtifactImageProvider, ArtifactImageProviderMixin>()
+      setMixInAnnotations<BuildInfo, BuildInfoMixin>()
       setMixInAnnotations<ClassicLoadBalancerSpec, ClassicLoadBalancerSpecMixin>()
       setMixInAnnotations<ClusterDependencies, ClusterDependenciesMixin>()
       setMixInAnnotations<ClusterSpec, ClusterSpecMixin>()
@@ -89,6 +93,7 @@ internal object KeelEc2ApiSerializers : Serializers.Base() {
 internal object KeelEc2ApiDeserializers : Deserializers.Base() {
   override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
     when (type.rawClass) {
+      ActiveServerGroupImage::class.java -> ActiveServerGroupImageDeserializer()
       ClusterSpec::class.java -> ClusterSpecDeserializer()
       ImageProvider::class.java -> ImageProviderDeserializer()
       IngressPorts::class.java -> IngressPortsDeserializer()

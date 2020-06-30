@@ -18,14 +18,9 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 import com.netflix.spinnaker.keel.api.ExcludedFromDiff
-import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
-import com.netflix.spinnaker.keel.clouddriver.model.BuildInfo
-import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
-import com.netflix.spinnaker.keel.core.parseMoniker
+import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 
 data class ServerGroup(
   /**
@@ -67,9 +62,6 @@ data class ServerGroup(
     }
   }
 }
-
-val ServerGroup.moniker: Moniker
-  get() = parseMoniker(name)
 
 fun Iterable<ServerGroup>.byRegion(): Map<String, ServerGroup> =
   associateBy { it.location.region }

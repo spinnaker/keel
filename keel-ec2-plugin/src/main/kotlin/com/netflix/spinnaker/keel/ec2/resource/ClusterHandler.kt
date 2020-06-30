@@ -5,6 +5,7 @@ import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.api.artifact.internal.debian.DebianArtifactParser
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
@@ -14,6 +15,7 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.UNKNOWN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
@@ -37,7 +39,6 @@ import com.netflix.spinnaker.keel.api.ec2.StepScalingPolicy
 import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.api.ec2.byRegion
-import com.netflix.spinnaker.keel.api.ec2.moniker
 import com.netflix.spinnaker.keel.api.ec2.resolve
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.Resolver
@@ -48,7 +49,6 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
-import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.CustomizedMetricSpecificationModel
 import com.netflix.spinnaker.keel.clouddriver.model.MetricDimensionModel
 import com.netflix.spinnaker.keel.clouddriver.model.PredefinedMetricSpecificationModel
@@ -56,8 +56,8 @@ import com.netflix.spinnaker.keel.clouddriver.model.ScalingPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
 import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
-import com.netflix.spinnaker.keel.core.api.RedBlack
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
+import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
@@ -444,8 +444,8 @@ class ClusterHandler(
    * This function attempts to use image description to guess what OS the image is.
    * If not found, it will throw an error.
    */
-  fun guessBaseOsFrom(image: ActiveServerGroupImage): String =
-    parseBaseOsFrom(image.description)
+  fun guessBaseOsFrom(image: ActiveServerGroupImage?): String =
+    parseBaseOsFrom(image?.description)
       ?: throw ExportError("Unable to determine the base image from image description: $image")
 
   /**
@@ -961,6 +961,9 @@ class ClusterHandler(
         )
       }
       .toSet()
+
+  private val ServerGroup.moniker: Moniker
+    get() = parseMoniker(name)
 
   private val ServerGroup.securityGroupIds: Collection<String>
     get() = dependencies

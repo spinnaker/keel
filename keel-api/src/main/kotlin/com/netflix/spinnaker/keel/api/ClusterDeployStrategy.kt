@@ -1,32 +1,10 @@
-package com.netflix.spinnaker.keel.core.api
+package com.netflix.spinnaker.keel.api
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
-import com.fasterxml.jackson.annotation.JsonTypeName
-import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintEvaluator
 import java.time.Duration
 import java.time.Duration.ZERO
 
-@JsonTypeInfo(
-  use = Id.NAME,
-  include = As.PROPERTY,
-  property = "strategy"
-)
-@JsonSubTypes(
-  Type(RedBlack::class),
-  Type(Highlander::class)
-)
 sealed class ClusterDeployStrategy {
-  @get:JsonIgnore
   open val isStaggered: Boolean = false
-
-  @get:JsonInclude(NON_EMPTY)
   open val stagger: List<StaggeredRegion> = emptyList()
   abstract fun toOrcaJobProperties(): Map<String, Any?>
   abstract fun withDefaultsOmitted(): ClusterDeployStrategy
@@ -36,7 +14,6 @@ sealed class ClusterDeployStrategy {
   }
 }
 
-@JsonTypeName("red-black")
 data class RedBlack(
   // defaulting to false because this rollback behavior doesn't seem to play nice with managed delivery
   val rollbackOnFailure: Boolean? = false,
@@ -46,7 +23,6 @@ data class RedBlack(
   val delayBeforeScaleDown: Duration? = ZERO,
   val waitForInstancesUp: Duration? = DEFAULT_WAIT_FOR_INSTANCES_UP,
   // The order of this list is important for pauseTime based staggers
-  @JsonInclude(NON_EMPTY)
   override val stagger: List<StaggeredRegion> = emptyList()
 ) : ClusterDeployStrategy() {
 
@@ -95,7 +71,6 @@ data class RedBlack(
     )
 }
 
-@JsonTypeName("highlander")
 object Highlander : ClusterDeployStrategy() {
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "highlander",
@@ -130,15 +105,14 @@ data class StaggeredRegion(
     }
 
     if (hours != null) {
-      require(hours.matches(AllowedTimesConstraintEvaluator.intRange)) {
+      require(hours.matches("""^\d+-\d+$""".toRegex())) {
         "hours should contain a single range, i.e. 9-17 or 22-2"
       }
     }
   }
 
-  @get:JsonIgnore
-  val allowedHours: Set<Int>
-    get() = AllowedTimesConstraintEvaluator.parseHours(hours)
+//  val allowedHours: Set<Int>
+//    get() = AllowedTimesConstraintEvaluator.parseHours(hours)
 }
 
 private fun <T> nullIfDefault(value: T, default: T): T? =

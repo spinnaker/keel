@@ -1,15 +1,15 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
-import com.netflix.spinnaker.keel.api.ec2.Capacity
+import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
+import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
 import com.netflix.spinnaker.keel.api.ec2.Metric
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
-import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.AutoScalingGroup
+import com.netflix.spinnaker.keel.clouddriver.model.Capacity
 import com.netflix.spinnaker.keel.clouddriver.model.CustomizedMetricSpecificationModel
-import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceMonitoring
 import com.netflix.spinnaker.keel.clouddriver.model.LaunchConfig
 import com.netflix.spinnaker.keel.clouddriver.model.MetricDimensionModel

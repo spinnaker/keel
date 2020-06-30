@@ -22,11 +22,11 @@ import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
-import com.netflix.spinnaker.keel.artifacts.DOCKER
+import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.model.Constraints
-import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.core.parseMoniker

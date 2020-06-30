@@ -12,10 +12,10 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.generateId
 import com.netflix.spinnaker.keel.api.plugins.SimpleResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import java.time.Duration
 import java.util.UUID

@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
 
 /**
  * Fields common to classes that model Titus server groups
