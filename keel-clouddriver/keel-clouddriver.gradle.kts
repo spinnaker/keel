@@ -6,6 +6,7 @@ plugins {
 dependencies {
   implementation(project(":keel-retrofit"))
   implementation(project(":keel-core"))
+  implementation(project(":keel-ec2-api"))
   implementation("com.netflix.spinnaker.moniker:moniker")
   implementation("com.fasterxml.jackson.core:jackson-databind")
   implementation("com.fasterxml.jackson.core:jackson-annotations")

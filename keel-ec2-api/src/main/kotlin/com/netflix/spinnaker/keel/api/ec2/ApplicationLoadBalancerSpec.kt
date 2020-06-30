@@ -1,29 +1,19 @@
-package com.netflix.spinnaker.keel.api.ec2.old
+package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerOverride
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Listener
-import com.netflix.spinnaker.keel.api.ec2.LoadBalancerDependencies
-import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec
-import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType.APPLICATION
-import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.TargetGroupAttributes
 import java.time.Duration
 
-data class ApplicationLoadBalancerV1Spec(
+data class ApplicationLoadBalancerSpec(
   override val moniker: Moniker,
   override val locations: SubnetAwareLocations,
   override val internal: Boolean = true,
   override val dependencies: LoadBalancerDependencies = LoadBalancerDependencies(),
   override val idleTimeout: Duration = Duration.ofSeconds(60),
   val listeners: Set<Listener>,
-  val targetGroups: Set<TargetGroupV1>,
-  @JsonInclude(NON_EMPTY)
+  val targetGroups: Set<TargetGroup>,
   val overrides: Map<String, ApplicationLoadBalancerOverride> = emptyMap()
 ) : LoadBalancerSpec, UnhappyControl {
 
@@ -33,31 +23,35 @@ data class ApplicationLoadBalancerV1Spec(
     }
   }
 
-  @JsonIgnore
   override val maxDiffCount: Int? = 2
 
-  @JsonIgnore
   // Once load balancers go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = null
 
-  @JsonIgnore
   override val loadBalancerType: LoadBalancerType = APPLICATION
 
-  @JsonIgnore
   override val id: String = "${locations.account}:$moniker"
 
-  data class TargetGroupV1(
+  data class Listener(
+    val port: Int,
+    val protocol: String,
+    val certificateArn: String?,
+    val rules: Set<Rule> = emptySet(),
+    val defaultActions: Set<Action> = emptySet()
+  )
+
+  data class TargetGroup(
     val name: String,
     val targetType: String = "instance",
     val protocol: String = "HTTP",
     val port: Int,
     val healthCheckEnabled: Boolean = true,
-    val healthCheckTimeoutSeconds: Duration = Duration.ofSeconds(5),
+    val healthCheckTimeout: Duration = Duration.ofSeconds(5),
     val healthCheckPort: Int = 7001,
     val healthCheckProtocol: String = "HTTP",
     val healthCheckHttpCode: String = "200-299",
     val healthCheckPath: String = "/healthcheck",
-    val healthCheckIntervalSeconds: Duration = Duration.ofSeconds(10),
+    val healthCheckInterval: Duration = Duration.ofSeconds(10),
     val healthyThresholdCount: Int = 10,
     val unhealthyThresholdCount: Int = 2,
     val attributes: TargetGroupAttributes = TargetGroupAttributes()
@@ -69,3 +63,9 @@ data class ApplicationLoadBalancerV1Spec(
     }
   }
 }
+
+data class ApplicationLoadBalancerOverride(
+  val dependencies: LoadBalancerDependencies? = null,
+  val listeners: Set<ApplicationLoadBalancerSpec.Listener>? = null,
+  val targetGroups: Set<ApplicationLoadBalancerSpec.TargetGroup>? = null
+)

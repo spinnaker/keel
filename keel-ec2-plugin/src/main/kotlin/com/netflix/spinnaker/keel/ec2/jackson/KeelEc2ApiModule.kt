@@ -27,7 +27,9 @@ import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.StepAdjustment
 import com.netflix.spinnaker.keel.api.ec2.StepScalingPolicy
+import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
+import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1Spec
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ArtifactImageProviderMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClassicLoadBalancerSpecMixin
@@ -42,6 +44,7 @@ import com.netflix.spinnaker.keel.ec2.jackson.mixins.SecurityGroupSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ServerGroupSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.StepAdjustmentMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.StepScalingPolicyMixin
+import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetGroupAttributesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetTrackingPolicyMixin
 
 fun ObjectMapper.registerKeelEc2ApiModule(): ObjectMapper = registerModule(KeelEc2ApiModule)
@@ -53,6 +56,8 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       addDeserializers(KeelEc2ApiDeserializers)
 
       setMixInAnnotations<ApplicationLoadBalancerSpec, ApplicationLoadBalancerSpecMixin>()
+      // same annotations are required for this legacy model, so it can reuse the same mixin
+      setMixInAnnotations<ApplicationLoadBalancerV1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<ArtifactImageProvider, ArtifactImageProviderMixin>()
       setMixInAnnotations<ClassicLoadBalancerSpec, ClassicLoadBalancerSpecMixin>()
       setMixInAnnotations<ClusterDependencies, ClusterDependenciesMixin>()
@@ -66,6 +71,7 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       setMixInAnnotations<ServerGroupSpec, ServerGroupSpecMixin>()
       setMixInAnnotations<StepAdjustment, StepAdjustmentMixin>()
       setMixInAnnotations<StepScalingPolicy, StepScalingPolicyMixin>()
+      setMixInAnnotations<TargetGroupAttributes, TargetGroupAttributesMixin>()
       setMixInAnnotations<TargetTrackingPolicy, TargetTrackingPolicyMixin>()
     }
     super.setupModule(context)
