@@ -482,7 +482,7 @@ class TitusClusterHandler(
         account = placement.account,
         region = region
       ),
-      capacity = capacity,
+      capacity = capacity.run { Capacity(min, max, desired) },
       container = DigestProvider(
         organization = image.dockerImageName.split("/").first(),
         image = image.dockerImageName.split("/").last(),

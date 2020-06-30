@@ -702,18 +702,18 @@ class ClusterHandler(
         "targetTrackingConfiguration" to mapOf(
           "targetValue" to it.targetValue,
           "disableScaleIn" to it.disableScaleIn,
-          "predefinedMetricSpecification" to when (it.predefinedMetricSpec) {
+          "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
             null -> null
-            else -> with(it.predefinedMetricSpec) {
+            else -> with(metricsSpec) {
               PredefinedMetricSpecificationModel(
                 predefinedMetricType = type,
                 resourceLabel = label
               )
             }
           },
-          "customizedMetricSpecification" to when (it.customMetricSpec) {
+          "customizedMetricSpecification" to when (val metricsSpec = it.customMetricSpec) {
             null -> null
-            else -> with(it.customMetricSpec) {
+            else -> with(metricsSpec) {
               CustomizedMetricSpecificationModel(
                 metricName = name,
                 namespace = namespace,

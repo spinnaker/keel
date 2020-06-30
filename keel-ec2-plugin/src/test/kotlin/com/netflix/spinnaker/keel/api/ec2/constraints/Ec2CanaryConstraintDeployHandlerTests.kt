@@ -5,7 +5,6 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
-import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -13,6 +12,7 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.AutoScalingGroup
+import com.netflix.spinnaker.keel.clouddriver.model.Capacity
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceMonitoring
