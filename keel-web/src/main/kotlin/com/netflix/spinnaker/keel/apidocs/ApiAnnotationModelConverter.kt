@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.apidocs
 import com.netflix.spinnaker.keel.api.docs.Description
 import com.netflix.spinnaker.keel.api.docs.Literal
 import com.netflix.spinnaker.keel.api.docs.Optional
+import io.swagger.v3.core.converter.ModelConverterContext
 import io.swagger.v3.oas.models.media.ComposedSchema
 import io.swagger.v3.oas.models.media.Schema
 import kotlin.reflect.KProperty1
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Component
 @Order(LOWEST_PRECEDENCE) // needs to run after KotlinOptionalPropertyConverter
 class ApiAnnotationModelConverter : AbstractSchemaCustomizer() {
 
-  override fun customize(schema: Schema<*>, type: Class<*>) {
+  override fun customize(schema: Schema<*>, type: Class<*>, context: ModelConverterContext) {
     handleClassAnnotations(type, schema)
 
     schema.properties?.forEach { (name, propertySchema) ->
