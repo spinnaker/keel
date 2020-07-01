@@ -1,11 +1,7 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
 import com.netflix.spinnaker.keel.api.Moniker
-import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
-import com.netflix.spinnaker.keel.api.ec2.BuildInfo
-import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
-import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.retrofit.model.ModelParsingTestSupport
 import java.util.UUID.randomUUID
 import kotlin.random.Random.Default.nextInt
@@ -30,8 +26,6 @@ object ActiveServerGroupTest : ModelParsingTestSupport<CloudDriverService, Activ
   private val ip = randomIp()
   private val owner = randomHex(12)
   private val launch = randomNumeric(12)
-
-  override fun createMapper() = super.createMapper().registerKeelEc2ApiModule()
 
   fun randomHex(count: Int = 8): String = random(count, "0123456789abcdef")
   fun randomIp() = (0..3).map { nextInt(0, 1000) }.joinToString(".")

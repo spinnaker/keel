@@ -63,6 +63,7 @@ import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.EC2_CLUSTER_V1
 import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
+import com.netflix.spinnaker.keel.ec2.toSpec
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
@@ -854,7 +855,7 @@ class ClusterHandler(
           ramdiskId = ramdiskId.orNull()
         )
       },
-      buildInfo = buildInfo,
+      buildInfo = buildInfo?.toSpec(),
       capacity = capacity.let {
         when (scalingPolicies.isEmpty()) {
           true -> Capacity(it.min, it.max, it.desired)
@@ -879,8 +880,8 @@ class ClusterHandler(
         stepScalingPolicies = scalingPolicies.toStepScalingPolicies()
       ),
       tags = asg.tags.associateBy(Tag::key, Tag::value).filterNot { it.key in DEFAULT_TAGS },
-      image = image,
-      instanceCounts = instanceCounts
+      image = image.toSpec(),
+      instanceCounts = instanceCounts.toSpec()
     )
 
   private fun List<MetricDimensionModel>?.toSpec(): Set<MetricDimension> =

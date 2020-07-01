@@ -24,7 +24,6 @@ dependencies {
   api("com.fasterxml.jackson.module:jackson-module-kotlin")
   api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
-  implementation(project(":keel-ec2-api")) // TODO: the stuff imported from here should be duplicated in keel-clouddriver
   implementation(project(":keel-clouddriver"))
   implementation(project(":keel-core"))
   implementation("com.fasterxml.jackson.core:jackson-databind")

@@ -37,7 +37,7 @@ fun ServerGroup.toCloudDriverResponse(
       name = "$name-v$sequence",
       region = location.region,
       zones = location.availabilityZones,
-      image = ActiveServerGroupImage(
+      image = com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage(
         imageId = launchConfiguration.imageId,
         appVersion = launchConfiguration.appVersion,
         baseImageVersion = launchConfiguration.baseImageVersion,
@@ -107,6 +107,6 @@ fun ServerGroup.toCloudDriverResponse(
       securityGroups = securityGroups.map(SecurityGroupSummary::id).toSet(),
       accountName = location.account,
       moniker = parseMoniker("$name-v$sequence"),
-      instanceCounts = instanceCounts
+      instanceCounts = instanceCounts.run { com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts(total, up, down, unknown, outOfService, starting) }
     )
   }

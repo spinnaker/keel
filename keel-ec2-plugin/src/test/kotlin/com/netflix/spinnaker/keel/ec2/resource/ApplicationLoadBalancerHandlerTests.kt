@@ -2,16 +2,16 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Exportable
-import com.netflix.spinnaker.keel.api.ec2.Action
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancer
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
-import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
+import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.Action
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.ApplicationLoadBalancerListener
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.TargetGroup
+import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.TargetGroupAttributes
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel.TargetGroupMatcher
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_1
 import com.netflix.spinnaker.keel.ec2.resolvers.ApplicationLoadBalancerDefaultsResolver
 import com.netflix.spinnaker.keel.ec2.resolvers.ApplicationLoadBalancerNetworkResolver
+import com.netflix.spinnaker.keel.ec2.toSpec
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.OrcaTaskLauncher
@@ -211,7 +212,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         val listeners = slot.captured.job.first()["listeners"] as Set<ApplicationLoadBalancerSpec.Listener>
 
         expectThat(listeners.first()) {
-          get { defaultActions.first() }.isEqualTo(model().listeners.first().defaultActions.first())
+          get { defaultActions.first() }.isEqualTo(model().listeners.first().defaultActions.first().toSpec())
         }
       }
     }

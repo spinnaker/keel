@@ -40,6 +40,6 @@ fun TitusServerGroup.toClouddriverResponse(
       tags = emptyMap(),
       resources = resources,
       capacityGroup = moniker.app,
-      instanceCounts = instanceCounts
+      instanceCounts = instanceCounts.run { com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts(total, up, down, unknown, outOfService, starting) }
     )
   }

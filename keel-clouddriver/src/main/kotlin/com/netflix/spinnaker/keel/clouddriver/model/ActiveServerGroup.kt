@@ -1,9 +1,8 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.netflix.spinnaker.keel.api.Moniker
-import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
-import com.netflix.spinnaker.keel.api.ec2.BuildInfo
-import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.kork.exceptions.SystemException
 
@@ -27,6 +26,19 @@ interface BaseServerGroup {
   val disabled: Boolean
     get() = false
   val instanceCounts: InstanceCounts
+}
+
+data class InstanceCounts(
+  val total: Int,
+  val up: Int,
+  val down: Int,
+  val unknown: Int,
+  val outOfService: Int,
+  val starting: Int
+) {
+  // active asg is healthy if all instances are up
+  fun isHealthy(): Boolean =
+    up == total
 }
 
 /**
@@ -117,6 +129,36 @@ fun ActiveServerGroup.subnet(cloudDriverCache: CloudDriverCache): String =
       .subnetBy(subnetId)
       .purpose ?: error("Subnet $subnetId has no purpose!")
   }
+
+data class ActiveServerGroupImage(
+  val imageId: String,
+  val appVersion: String?,
+  val baseImageVersion: String?,
+  val name: String,
+  val imageLocation: String,
+  val description: String?
+) {
+  @JsonCreator
+  constructor(
+    imageId: String,
+    name: String,
+    imageLocation: String,
+    description: String?,
+    tags: List<Map<String, Any?>>
+  ) : this(
+    imageId = imageId,
+    appVersion = tags.getTag("appversion")?.substringBefore("/"),
+    baseImageVersion = tags.getTag("base_ami_version"),
+    name = name,
+    imageLocation = imageLocation,
+    description = description
+  )
+}
+
+private fun List<Map<String, Any?>>.getTag(key: String) =
+  firstOrNull { it["key"] == key }
+    ?.get("value")
+    ?.toString()
 
 class RequiredTagMissing(tagName: String, imageId: String) :
   SystemException("Required tag \"$tagName\" was not found on AMI $imageId")
@@ -218,4 +260,9 @@ data class Tag(
 
 data class InstanceMonitoring(
   val enabled: Boolean
+)
+
+data class BuildInfo(
+  @JsonAlias("package_name")
+  val packageName: String?
 )
