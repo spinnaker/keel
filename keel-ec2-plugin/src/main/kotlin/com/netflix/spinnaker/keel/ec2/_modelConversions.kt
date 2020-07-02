@@ -12,7 +12,12 @@ import com.netflix.spinnaker.keel.clouddriver.model.BuildInfo
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
 
 internal fun ApplicationLoadBalancerModel.Rule.toEc2Api(): Rule =
-  Rule(priority, conditions?.map { it.toEc2Api() }, actions.map { it.toEc2Api() }, default)
+  Rule(
+    priority = priority,
+    conditions = conditions?.map { it.toEc2Api() } ?: emptyList(),
+    actions = actions.map { it.toEc2Api() },
+    default = default
+  )
 
 internal fun ApplicationLoadBalancerModel.Condition.toEc2Api(): Condition =
   Condition(field, values)

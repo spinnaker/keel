@@ -67,6 +67,7 @@ abstract class AbstractSchemaCustomizer() : BaseModelConverter() {
    */
   private fun KProperty<*>.toSchemaPropertyName() =
     if (returnType.javaType == Boolean::class.java) {
+      // boolean properties are named `is*` but appear in the API without that prefix
       name.substring(2).decapitalize()
     } else {
       name

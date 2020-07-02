@@ -81,7 +81,7 @@ data class ApplicationLoadBalancerSpec(
 
   data class Rule(
     val priority: String,
-    val conditions: List<Condition>?,
+    val conditions: List<Condition> = emptyList(),
     val actions: List<Action>,
     val default: Boolean
   )

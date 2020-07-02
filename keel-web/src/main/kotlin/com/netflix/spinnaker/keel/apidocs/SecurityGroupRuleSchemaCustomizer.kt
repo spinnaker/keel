@@ -11,8 +11,8 @@ class SecurityGroupRuleSchemaCustomizer : AbstractSchemaCustomizer() {
 
   override fun customize(schema: Schema<*>, type: Class<*>, context: ModelConverterContext) {
     eachSchemaProperty(SecurityGroupRule::isSelfReference) {
-        schema.properties?.remove(it)
-        schema.markOptional(it)
-      }
+      schema.properties?.remove(it)
+      schema.markOptional(it)
+    }
   }
 }

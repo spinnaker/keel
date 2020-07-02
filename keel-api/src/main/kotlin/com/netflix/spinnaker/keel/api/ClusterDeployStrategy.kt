@@ -105,14 +105,15 @@ data class StaggeredRegion(
     }
 
     if (hours != null) {
-      require(hours.matches("""^\d+-\d+$""".toRegex())) {
+      require(hours.matches(HOUR_RANGE_PATTERN)) {
         "hours should contain a single range, i.e. 9-17 or 22-2"
       }
     }
   }
 
-//  val allowedHours: Set<Int>
-//    get() = AllowedTimesConstraintEvaluator.parseHours(hours)
+  companion object {
+    private val HOUR_RANGE_PATTERN = """^\d+-\d+$""".toRegex()
+  }
 }
 
 private fun <T> nullIfDefault(value: T, default: T): T? =

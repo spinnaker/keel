@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
+import com.netflix.spinnaker.keel.clouddriver.model.Capacity as ClouddriverCapacity
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
@@ -374,5 +375,5 @@ private fun ActiveServerGroup.withNonDefaultLaunchConfigProps(): ActiveServerGro
 
 private fun ActiveServerGroup.withDifferentSize(): ActiveServerGroup =
   copy(
-    capacity = com.netflix.spinnaker.keel.clouddriver.model.Capacity(min = 1, max = 10, desired = 5)
+    capacity = ClouddriverCapacity(min = 1, max = 10, desired = 5)
   )

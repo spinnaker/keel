@@ -12,7 +12,7 @@ class LocatableSchemaCustomizer : AbstractSchemaCustomizer() {
 
   override fun customize(schema: Schema<*>, type: Class<*>, context: ModelConverterContext) {
     eachSchemaProperty(Locatable<*>::locations) {
-    schema.markOptional(it)
-  }
+      schema.markOptional(it)
+    }
   }
 }
