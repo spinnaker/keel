@@ -10,26 +10,26 @@ import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
 import com.netflix.spinnaker.keel.clouddriver.model.BuildInfo
 import com.netflix.spinnaker.keel.clouddriver.model.InstanceCounts
 
-internal fun ApplicationLoadBalancerModel.Rule.toSpec(): Rule =
-  Rule(priority, conditions?.map { it.toSpec() }, actions.map { it.toSpec() }, default)
+internal fun ApplicationLoadBalancerModel.Rule.toEc2Api(): Rule =
+  Rule(priority, conditions?.map { it.toEc2Api() }, actions.map { it.toEc2Api() }, default)
 
-internal fun ApplicationLoadBalancerModel.Condition.toSpec(): Condition =
+internal fun ApplicationLoadBalancerModel.Condition.toEc2Api(): Condition =
   Condition(field, values)
 
-internal fun ApplicationLoadBalancerModel.Action.toSpec(): Action =
-  Action(type, order, targetGroupName, redirectConfig?.toSpec())
+internal fun ApplicationLoadBalancerModel.Action.toEc2Api(): Action =
+  Action(type, order, targetGroupName, redirectConfig?.toEc2Api())
 
-internal fun ApplicationLoadBalancerModel.RedirectConfig.toSpec(): RedirectConfig =
+internal fun ApplicationLoadBalancerModel.RedirectConfig.toEc2Api(): RedirectConfig =
   RedirectConfig(protocol, port, host, path, query, statusCode)
 
-internal fun ApplicationLoadBalancerModel.TargetGroupAttributes.toSpec(): TargetGroupAttributes =
+internal fun ApplicationLoadBalancerModel.TargetGroupAttributes.toEc2Api(): TargetGroupAttributes =
   TargetGroupAttributes(stickinessEnabled, deregistrationDelay, stickinessType, stickinessDuration, slowStartDurationSeconds, properties)
 
-internal fun BuildInfo.toSpec(): com.netflix.spinnaker.keel.api.ec2.BuildInfo =
+internal fun BuildInfo.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.BuildInfo =
   com.netflix.spinnaker.keel.api.ec2.BuildInfo(packageName)
 
-internal fun ActiveServerGroupImage.toSpec(): com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage =
+internal fun ActiveServerGroupImage.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage =
   com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage(imageId, appVersion, baseImageVersion, name, imageLocation, description)
 
-internal fun InstanceCounts.toSpec(): com.netflix.spinnaker.keel.api.ec2.InstanceCounts =
+internal fun InstanceCounts.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.InstanceCounts =
   com.netflix.spinnaker.keel.api.ec2.InstanceCounts(total, up, down, unknown, outOfService, starting)

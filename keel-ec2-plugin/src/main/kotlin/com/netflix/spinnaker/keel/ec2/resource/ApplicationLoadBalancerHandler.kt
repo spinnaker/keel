@@ -24,7 +24,7 @@ import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_1
-import com.netflix.spinnaker.keel.ec2.toSpec
+import com.netflix.spinnaker.keel.ec2.toEc2Api
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.retrofit.isNotFound
@@ -232,8 +232,8 @@ class ApplicationLoadBalancerHandler(
                       protocol = l.protocol,
                       certificateArn = l.certificates?.firstOrNull()?.certificateArn,
                       // TODO: filtering out default rules seems wrong, see TODO in ApplicationLoadBalancerNormalizer
-                      rules = l.rules.filter { !it.default }.map { it.toSpec() }.toSet(),
-                      defaultActions = l.defaultActions.map { it.toSpec() }.toSet()
+                      rules = l.rules.filter { !it.default }.map { it.toEc2Api() }.toSet(),
+                      defaultActions = l.defaultActions.map { it.toEc2Api() }.toSet()
                     )
                   }.toSet(),
                   dependencies = LoadBalancerDependencies(
@@ -257,7 +257,7 @@ class ApplicationLoadBalancerHandler(
                       healthCheckInterval = Duration.ofSeconds(tg.healthCheckIntervalSeconds.toLong()),
                       healthyThresholdCount = tg.healthyThresholdCount,
                       unhealthyThresholdCount = tg.unhealthyThresholdCount,
-                      attributes = tg.attributes.toSpec()
+                      attributes = tg.attributes.toEc2Api()
                     )
                   }.toSet()
                 )
