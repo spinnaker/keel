@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.api.ec2.old
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerOverride
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Listener
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerDependencies
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec

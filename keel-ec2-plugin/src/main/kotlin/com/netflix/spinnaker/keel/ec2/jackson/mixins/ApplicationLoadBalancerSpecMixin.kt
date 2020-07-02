@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.ec2.jackson.mixins
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerOverride
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType
 import java.time.Duration
 

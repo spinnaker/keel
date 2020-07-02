@@ -1,9 +1,10 @@
 package com.netflix.spinnaker.keel.ec2
 
-import com.netflix.spinnaker.keel.api.ec2.Action
-import com.netflix.spinnaker.keel.api.ec2.Condition
-import com.netflix.spinnaker.keel.api.ec2.RedirectConfig
-import com.netflix.spinnaker.keel.api.ec2.Rule
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Condition
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.RedirectConfig
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Rule
+import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.clouddriver.model.ApplicationLoadBalancerModel
@@ -25,11 +26,11 @@ internal fun ApplicationLoadBalancerModel.RedirectConfig.toEc2Api(): RedirectCon
 internal fun ApplicationLoadBalancerModel.TargetGroupAttributes.toEc2Api(): TargetGroupAttributes =
   TargetGroupAttributes(stickinessEnabled, deregistrationDelay, stickinessType, stickinessDuration, slowStartDurationSeconds, properties)
 
-internal fun BuildInfo.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.BuildInfo =
-  com.netflix.spinnaker.keel.api.ec2.BuildInfo(packageName)
+internal fun BuildInfo.toEc2Api(): ServerGroup.BuildInfo =
+  ServerGroup.BuildInfo(packageName)
 
-internal fun ActiveServerGroupImage.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage =
-  com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage(imageId, appVersion, baseImageVersion, name, imageLocation, description)
+internal fun ActiveServerGroupImage.toEc2Api(): ServerGroup.ActiveServerGroupImage =
+  ServerGroup.ActiveServerGroupImage(imageId, appVersion, baseImageVersion, name, imageLocation, description)
 
-internal fun InstanceCounts.toEc2Api(): com.netflix.spinnaker.keel.api.ec2.InstanceCounts =
-  com.netflix.spinnaker.keel.api.ec2.InstanceCounts(total, up, down, unknown, outOfService, starting)
+internal fun InstanceCounts.toEc2Api(): ServerGroup.InstanceCounts =
+  ServerGroup.InstanceCounts(total, up, down, unknown, outOfService, starting)

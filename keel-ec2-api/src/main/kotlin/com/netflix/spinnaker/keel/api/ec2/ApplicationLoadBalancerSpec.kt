@@ -3,6 +3,9 @@ package com.netflix.spinnaker.keel.api.ec2
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Listener
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.TargetGroup
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType.APPLICATION
 import java.time.Duration
 
@@ -62,10 +65,38 @@ data class ApplicationLoadBalancerSpec(
       }
     }
   }
-}
 
-data class ApplicationLoadBalancerOverride(
-  val dependencies: LoadBalancerDependencies? = null,
-  val listeners: Set<ApplicationLoadBalancerSpec.Listener>? = null,
-  val targetGroups: Set<ApplicationLoadBalancerSpec.TargetGroup>? = null
-)
+  data class ApplicationLoadBalancerOverride(
+    val dependencies: LoadBalancerDependencies? = null,
+    val listeners: Set<Listener>? = null,
+    val targetGroups: Set<TargetGroup>? = null
+  )
+
+  data class Action(
+    val type: String,
+    val order: Int,
+    val targetGroupName: String?,
+    val redirectConfig: RedirectConfig?
+  )
+
+  data class Rule(
+    val priority: String,
+    val conditions: List<Condition>?,
+    val actions: List<Action>,
+    val default: Boolean
+  )
+
+  data class Condition(
+    val field: String,
+    val values: List<String>
+  )
+
+  data class RedirectConfig(
+    val protocol: String,
+    val port: String?,
+    val host: String,
+    val path: String,
+    val query: String?,
+    val statusCode: String
+  )
+}

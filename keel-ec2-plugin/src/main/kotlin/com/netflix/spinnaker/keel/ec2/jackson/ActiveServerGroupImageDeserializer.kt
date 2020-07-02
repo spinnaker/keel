@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.netflix.spinnaker.keel.api.ec2.ActiveServerGroupImage
+import com.netflix.spinnaker.keel.api.ec2.ServerGroup.ActiveServerGroupImage
 
 class ActiveServerGroupImageDeserializer : StdNodeBasedDeserializer<ActiveServerGroupImage>(ActiveServerGroupImage::class.java) {
   override fun convert(root: JsonNode, ctxt: DeserializationContext): ActiveServerGroupImage {

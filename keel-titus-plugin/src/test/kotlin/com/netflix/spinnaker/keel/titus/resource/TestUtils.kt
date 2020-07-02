@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.titus.resource
 
-import com.netflix.spinnaker.keel.api.ec2.InstanceCounts
+import com.netflix.spinnaker.keel.api.ec2.ServerGroup.InstanceCounts
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroup
 import com.netflix.spinnaker.keel.api.titus.cluster.moniker

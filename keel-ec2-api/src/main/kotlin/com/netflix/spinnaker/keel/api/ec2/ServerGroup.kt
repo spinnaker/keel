@@ -21,6 +21,8 @@ import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
+import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy.OldestInstance
+import java.time.Duration
 
 data class ServerGroup(
   /**
@@ -59,6 +61,61 @@ data class ServerGroup(
         capacity.desired == null && scaling.hasScalingPolicies()
     ) {
       "capacity.desired and auto-scaling policies are mutually exclusive"
+    }
+  }
+
+  data class ActiveServerGroupImage(
+    val imageId: String,
+    val appVersion: String?,
+    val baseImageVersion: String?,
+    val name: String,
+    val imageLocation: String,
+    val description: String?
+  )
+
+  data class BuildInfo(
+    val packageName: String?
+  )
+
+  data class Health(
+    val cooldown: Duration = Duration.ofSeconds(10),
+    val warmup: Duration = Duration.ofSeconds(600),
+    val healthCheckType: HealthCheckType = HealthCheckType.EC2,
+    val enabledMetrics: Set<Metric> = emptySet(),
+    // Note: the default for this in Deck is currently setOf(TerminationPolicy.Default), but we were advised by Netflix
+    // SRE to change the default to OldestInstance
+    val terminationPolicies: Set<TerminationPolicy> = setOf(OldestInstance)
+  )
+
+  data class InstanceCounts(
+    val total: Int,
+    val up: Int,
+    val down: Int,
+    val unknown: Int,
+    val outOfService: Int,
+    val starting: Int
+  ) {
+    // active asg is healthy if all instances are up
+    fun isHealthy(): Boolean =
+      up == total
+  }
+
+  data class LaunchConfiguration(
+    val imageId: String,
+    val appVersion: String?,
+    val baseImageVersion: String?,
+    val instanceType: String,
+    val ebsOptimized: Boolean = DEFAULT_EBS_OPTIMIZED,
+    val iamRole: String,
+    val keyPair: String,
+    val instanceMonitoring: Boolean = DEFAULT_INSTANCE_MONITORING,
+    val ramdiskId: String? = null
+  ) {
+    companion object {
+      const val DEFAULT_EBS_OPTIMIZED = false
+      const val DEFAULT_INSTANCE_MONITORING = false
+      // TODO (lpollo): make configurable, or resolve via LaunchConfigurationResolver
+      fun defaultIamRoleFor(application: String) = "${application}InstanceProfile"
     }
   }
 }
