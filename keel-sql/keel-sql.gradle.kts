@@ -3,7 +3,7 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 plugins {
   `java-library`
   id("kotlin-spring")
-  id("ch.ayedo.jooqmodelator") version "3.6.0"
+  id("ch.ayedo.jooqmodelator") version "3.9.0"
   id("org.liquibase.gradle") version "2.0.2"
 }
 
