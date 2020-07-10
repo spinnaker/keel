@@ -83,12 +83,8 @@ class DeliveryConfigController(
   @PreAuthorize("""@authorizationSupport.hasApplicationPermission('WRITE', 'DELIVERY_CONFIG', #name)
     and @authorizationSupport.hasServiceAccountAccess('DELIVERY_CONFIG', #name)"""
   )
-  fun delete(@PathVariable("name") name: String): DeliveryConfig {
-    val deliveryConfig = repository.getDeliveryConfig(name)
-    log.info("Deleting delivery config $name: $deliveryConfig")
-    repository.deleteDeliveryConfig(name)
-    return deliveryConfig
-  }
+  fun delete(@PathVariable("name") name: String) =
+    repository.deleteDeliveryConfigByName(name)
 
   // todo eb: make this work with artifact references
   @PostMapping(

@@ -64,7 +64,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     }
 
     fun delete() {
-      repository.deleteByApplication(deliveryConfig.application)
+      repository.deleteWithoutSerialization(deliveryConfig.application)
     }
 
     fun store() {
