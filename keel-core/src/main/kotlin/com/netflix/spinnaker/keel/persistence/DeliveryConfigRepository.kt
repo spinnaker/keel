@@ -40,20 +40,14 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun getByApplication(application: String): DeliveryConfig
 
   /**
-   * Deletes a delivery config, and the environments within in it.
-   * Does not delete any resources or artifacts.
+   * Deletes a delivery config and everything in it
    */
-  fun delete(name: String)
+  fun delete(application: String)
 
   /**
-   * Deletes a delivery config and everything in it without serializing the resources, in case of a database problem.
+   * Deletes a delivery config and everything in it
    */
-  fun deleteWithoutSerialization(application: String)
-
-  /**
-   * Deletes a delivery config and everything in it without serializing the resources, in case of a database problem.
-   */
-  fun deleteWithoutSerializationByName(name: String)
+  fun deleteByName(name: String)
 
   /**
    * Removes a resource from an environment

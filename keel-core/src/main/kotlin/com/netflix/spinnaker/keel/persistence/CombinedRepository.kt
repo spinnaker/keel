@@ -124,16 +124,16 @@ class CombinedRepository(
   }
 
   /**
-   * Deletes a config and everything in it and about it w/o serializing it
+   * Deletes a config and everything in it and about it
    */
   override fun deleteDeliveryConfigByApplication(application: String) =
-    deliveryConfigRepository.deleteWithoutSerialization(application)
+    deliveryConfigRepository.delete(application)
 
   /**
-   * Deletes a config and everything in it and about it w/o serializing it
+   * Deletes a config and everything in it and about it
    */
   override fun deleteDeliveryConfigByName(name: String) {
-    deliveryConfigRepository.deleteWithoutSerializationByName(name)
+    deliveryConfigRepository.deleteByName(name)
   }
 
   /**

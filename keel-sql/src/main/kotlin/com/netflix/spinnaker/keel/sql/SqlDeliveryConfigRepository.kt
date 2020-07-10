@@ -82,27 +82,6 @@ class SqlDeliveryConfigRepository(
         }
     } ?: throw NoDeliveryConfigForApplication(application)
 
-  override fun delete(name: String) {
-    sqlRetry.withRetry(WRITE) {
-      jooq.transaction { config ->
-        val txn = DSL.using(config)
-        val deliveryConfigUid: String = txn
-          .select(DELIVERY_CONFIG.UID)
-          .from(DELIVERY_CONFIG)
-          .where(DELIVERY_CONFIG.NAME.eq(name))
-          .fetchOne(DELIVERY_CONFIG.UID)
-        txn
-          .deleteFrom(DELIVERY_CONFIG)
-          .where(DELIVERY_CONFIG.NAME.eq(name))
-          .execute()
-        txn
-          .deleteFrom(DELIVERY_CONFIG_LAST_CHECKED)
-          .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
-          .execute()
-      }
-    }
-  }
-
   override fun deleteResourceFromEnv(deliveryConfigName: String, environmentName: String, resourceId: String) {
     sqlRetry.withRetry(WRITE) {
       jooq.deleteFrom(ENVIRONMENT_RESOURCE)
@@ -191,7 +170,7 @@ class SqlDeliveryConfigRepository(
       }
   }
 
-  override fun deleteWithoutSerializationByName(name: String) {
+  override fun deleteByName(name: String) {
     val application = sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_CONFIG.NAME)
@@ -199,10 +178,10 @@ class SqlDeliveryConfigRepository(
         .where(DELIVERY_CONFIG.NAME.eq(name))
         .fetchOne(DELIVERY_CONFIG.NAME)
     }
-    deleteWithoutSerialization(application)
+    delete(application)
   }
 
-  override fun deleteWithoutSerialization(application: String) {
+  override fun delete(application: String) {
     val configUid = getUIDByApplication(application)
     val envUids = getEnvironmentUIDs(listOf(configUid))
     val resourceUids = getResourceUIDs(envUids)
