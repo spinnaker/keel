@@ -8,14 +8,23 @@ databaseChangeLog:
           alter table event add column application varchar(255) generated always as (json ->> '$.application');
     - createIndex:
         tableName: event
-        indexName: event_ref_scope_application_timestamp_idx
+        indexName: event_scope_application_timestamp_idx
         columns:
-        - column:
-            name: ref
         - column:
             name: scope
         - column:
             name: application
+        - column:
+            name: timestamp
+            descending: true
+    - createIndex:
+        tableName: event
+        indexName: event_scope_ref_timestamp_idx
+        columns:
+        - column:
+            name: scope
+        - column:
+            name: ref
         - column:
             name: timestamp
             descending: true
