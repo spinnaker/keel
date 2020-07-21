@@ -51,10 +51,10 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
     context("DebianArtifactPublisher") {
       before {
         every {
-          artifactService.getVersions(debianArtifact.name)
+          artifactService.getVersions(debianArtifact.name, artifactType = DEBIAN)
         } returns versions
         every {
-          artifactService.getArtifact(debianArtifact.name, versions.last())
+          artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         } returns latestArtifact
       }
 
@@ -67,7 +67,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
       test("supports Debian semver versioning strategy") {
         expectThat(debianArtifactPublisher.supportedVersioningStrategy)
           .isEqualTo(
-            SupportedVersioningStrategy(DEBIAN, DebianSemVerVersioningStrategy::class.java)
+            SupportedVersioningStrategy(DEBIAN, NetflixSemVerVersioningStrategy::class.java)
           )
       }
 
@@ -77,8 +77,8 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         }
         expectThat(result).isEqualTo(latestArtifact)
         verify(exactly = 1) {
-          artifactService.getVersions(debianArtifact.name)
-          artifactService.getArtifact(debianArtifact.name, versions.last())
+          artifactService.getVersions(debianArtifact.name, artifactType = DEBIAN)
+          artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         }
       }
 
