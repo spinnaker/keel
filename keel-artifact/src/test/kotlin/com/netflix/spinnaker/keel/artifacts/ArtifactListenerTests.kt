@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.artifact
+package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
@@ -11,8 +11,6 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.persistence.KeelRepository

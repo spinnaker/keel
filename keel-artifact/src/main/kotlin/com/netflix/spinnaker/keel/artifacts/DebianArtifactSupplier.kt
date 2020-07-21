@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.artifact
+package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
@@ -13,8 +13,6 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DebianSemVerVersioningStrategy
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import org.springframework.stereotype.Component
 
