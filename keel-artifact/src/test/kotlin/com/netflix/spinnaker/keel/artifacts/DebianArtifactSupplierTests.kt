@@ -51,7 +51,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
     context("DebianArtifactPublisher") {
       before {
         every {
-          artifactService.getVersions(debianArtifact.name, artifactType = DEBIAN)
+          artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
         } returns versions
         every {
           artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
@@ -77,7 +77,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         }
         expectThat(result).isEqualTo(latestArtifact)
         verify(exactly = 1) {
-          artifactService.getVersions(debianArtifact.name, artifactType = DEBIAN)
+          artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
           artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         }
       }

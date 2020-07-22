@@ -44,7 +44,7 @@ class DebianArtifactSupplier(
 
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     runWithIoContext {
-      artifactService.getVersions(artifact.name, artifactType = DEBIAN)
+      artifactService.getVersions(artifact.name, artifact.statusesForQuery, DEBIAN)
         .map { version -> "${artifact.name}-$version" }
         .sortedWith(artifact.versioningStrategy.comparator)
         .firstOrNull() // versioning strategies return descending by default... ¯\_(ツ)_/¯
@@ -98,4 +98,7 @@ class DebianArtifactSupplier(
   // Debian Artifacts should contain a releaseStatus in the metadata
   private fun PublishedArtifact.hasReleaseStatus() =
     this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
+
+  private val DeliveryArtifact.statusesForQuery: List<String>
+    get() = statuses.map { it.name }
 }
