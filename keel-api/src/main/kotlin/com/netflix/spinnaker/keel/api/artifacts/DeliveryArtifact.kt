@@ -19,7 +19,7 @@ enum class ArtifactStatus {
  *
  * Unlike other places within Spinnaker, this class does not describe a specific instance of a software artifact
  * (i.e. the output of a build that is published to an artifact repository), but rather the high-level properties
- * that allow keel and [ArtifactPublisher] plugins to find/process the actual artifacts.
+ * that allow keel and [ArtifactSupplier] plugins to find/process the actual artifacts.
  */
 abstract class DeliveryArtifact {
   abstract val name: String

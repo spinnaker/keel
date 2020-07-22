@@ -25,7 +25,7 @@ object DummyVersioningStrategy : VersioningStrategy {
   override val type = "dummy"
 }
 
-fun defaultArtifactPublishers(): List<ArtifactSupplier<*, *>> {
+fun defaultArtifactSuppliers(): List<ArtifactSupplier<*, *>> {
   val artifactService: ArtifactService = mockk(relaxUnitFun = true)
   val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
   val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
