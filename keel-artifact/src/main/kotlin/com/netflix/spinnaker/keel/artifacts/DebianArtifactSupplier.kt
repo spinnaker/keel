@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -26,10 +27,20 @@ class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService
 ) : ArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy> {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)
 
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("deb", NetflixSemVerVersioningStrategy::class.java)
+
+  override fun publishArtifact(artifact: PublishedArtifact) {
+    if (artifact.hasReleaseStatus()) {
+      super.publishArtifact(artifact)
+    } else {
+      log.debug("Ignoring artifact event without release status: $artifact")
+    }
+  }
 
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     runWithIoContext {
@@ -83,4 +94,8 @@ class DebianArtifactSupplier(
     }
     return null
   }
+
+  // Debian Artifacts should contain a releaseStatus in the metadata
+  private fun PublishedArtifact.hasReleaseStatus() =
+    this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
 }
