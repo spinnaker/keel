@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -93,6 +94,12 @@ class ApiDocTests : JUnit5Minutests {
     DigestProvider::class,
     VersionedTagProvider::class
   )
+
+  @Autowired
+  lateinit var artifactSuppliers: List<ArtifactSupplier<*, *>>
+
+  val artifactTypes
+    get() = artifactSuppliers.map { it.supportedArtifact.artifactClass.kotlin }
 
   val api: JsonNode by lazy {
     mvc
@@ -200,10 +207,7 @@ class ApiDocTests : JUnit5Minutests {
         .path("oneOf")
         .isArray()
         .findValuesAsText("\$ref")
-        .containsExactlyInAnyOrder(
-          constructRef("DebianArtifact"),
-          constructRef("DockerArtifact")
-        )
+        .containsExactlyInAnyOrder(artifactTypes.map { constructRef("${it.simpleName}") })
     }
 
     sequenceOf(
