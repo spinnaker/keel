@@ -13,8 +13,8 @@ object NetflixSemVerVersioningStrategy : VersioningStrategy {
   override val comparator: Comparator<String> =
     NETFLIX_SEMVER_COMPARATOR
 
-  private val NETFLIX_VERSION_REGEX = Regex("(\\d+\\.\\d+\\.\\d+(-rc(\\.\\d+)?)?)(-[h]?\\w+)?(-\\w+)?")
-  private val BUILD_REGEX = Regex("-[h]?")
+  private val NETFLIX_VERSION_REGEX =
+    Regex("(\\d+\\.\\d+\\.\\d+)([-~](dev|snapshot|rc|rel|final)(\\.\\d+)?)?(-[h]?(\\w+))?(-(\\w+))?")
 
   /**
    * Extracts a version display name from the longer version string, leaving out build and git details if present.
@@ -28,18 +28,14 @@ object NetflixSemVerVersioningStrategy : VersioningStrategy {
    * Extracts the build number from the version string, if available.
    */
   fun getBuildNumber(artifact: PublishedArtifact): Int? {
-    return NETFLIX_VERSION_REGEX.find(artifact.version)?.groups?.get(4)?.value
-      ?.let {
-        it.replace(BUILD_REGEX, "")
-      }?.toInt()
+    return NETFLIX_VERSION_REGEX.find(artifact.version)?.groups?.get(6)?.value?.toInt()
   }
 
   /**
    * Extracts the commit hash from the version string, if available.
    */
   fun getCommitHash(artifact: PublishedArtifact): String? {
-    return NETFLIX_VERSION_REGEX.find(artifact.version)?.groups?.get(5)?.value
-      ?.let { it.replace("-", "") }
+    return NETFLIX_VERSION_REGEX.find(artifact.version)?.groups?.get(8)?.value
   }
 
   override fun toString(): String =
