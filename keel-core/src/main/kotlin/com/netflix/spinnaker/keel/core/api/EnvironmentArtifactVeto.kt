@@ -11,7 +11,15 @@ data class EnvironmentArtifactVeto(
   val version: String,
   val vetoedBy: String?,
   val comment: String?
-)
+) {
+  init {
+    if (comment != null) {
+      require(comment.length <= 255) {
+        "Comment length should be 255 characters max."
+      }
+    }
+  }
+}
 
 data class EnvironmentArtifactVetoes(
   val deliveryConfigName: String,
