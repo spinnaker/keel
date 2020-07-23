@@ -35,7 +35,7 @@ class ArtifactController(
   )
   @ResponseStatus(ACCEPTED)
   fun submitArtifact(@RequestBody echoArtifactEvent: EchoArtifactEvent) {
-    log.debug("Received artifact event")
+    log.debug("Received artifact event: $echoArtifactEvent")
     echoArtifactEvent.payload.artifacts.forEach { artifact ->
       try {
         log.debug("Processing artifact from event: $artifact")
