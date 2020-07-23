@@ -54,6 +54,7 @@ class ApiDocCompatibilityTests : JUnit5Minutests {
       .let { jacksonObjectMapper().readTree(it) }
   }
 
+  // FIXME: the order of the @Beans used to customize type handling for the OpenAPI stuff is causing a stack overflow
   fun tests() = SKIP - rootContext<SchemaValidator> {
     fixture {
       SchemaValidator("Keel", api)
