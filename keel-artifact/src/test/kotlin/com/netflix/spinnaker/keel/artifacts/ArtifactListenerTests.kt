@@ -180,7 +180,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         before {
           every { repository.storeArtifact(any(), any(), any(), any()) } returns false
           every { repository.artifactVersions(any()) } returns emptyList()
-          coEvery { artifactService.getVersions("fnord", artifactType = DEBIAN) } returns
+          coEvery { artifactService.getVersions("fnord", emptyList(), DEBIAN) } returns
             listOf(
               "0.227.0-h141.bd97556",
               "0.226.0-h140.705469b",
@@ -203,7 +203,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("there no versions of the artifact") {
         before {
-          coEvery { artifactService.getVersions("fnord", artifactType = DEBIAN) } returns listOf()
+          coEvery { artifactService.getVersions("fnord", emptyList(), DEBIAN) } returns listOf()
           coEvery { repository.artifactVersions(any()) } returns listOf()
 
           listener.onArtifactRegisteredEvent(event)
@@ -261,7 +261,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
         every { repository.artifactVersions(debArtifact) } returns listOf()
         every { repository.artifactVersions(dockerArtifact) } returns listOf()
-        coEvery { artifactService.getVersions(debArtifact.name, artifactType = DEBIAN) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
+        coEvery { artifactService.getVersions(debArtifact.name, emptyList(), DEBIAN) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
         coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h5.blahblah")
         coEvery {
           clouddriverService.findDockerImages("*", dockerArtifact.name, "master-h5.blahblah", any(), any())
@@ -287,7 +287,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("a new version") {
         before {
-          coEvery { artifactService.getVersions(debArtifact.name, artifactType = DEBIAN) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
+          coEvery { artifactService.getVersions(debArtifact.name, emptyList(), DEBIAN) } returns listOf("0.161.0-h61.116f116", "0.160.0-h60.f67f671")
           coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf("master-h6.hehehe")
           coEvery {
             clouddriverService.findDockerImages("*", dockerArtifact.name, "master-h6.hehehe", any(), any())
@@ -306,7 +306,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("no new version") {
         before {
-          coEvery { artifactService.getVersions(debArtifact.name, artifactType = DEBIAN) } returns listOf("0.156.0-h58.f67fe09")
+          coEvery { artifactService.getVersions(debArtifact.name, emptyList(), DEBIAN) } returns listOf("0.156.0-h58.f67fe09")
           coEvery {
             artifactService.getArtifact(debArtifact.name, "0.156.0-h58.f67fe09", DEBIAN)
           } returns PublishedArtifact(name = debArtifact.name, type = DEBIAN, reference = debArtifact.name, version = "0.156.0-h58.f67fe09")
@@ -325,7 +325,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("no version information ") {
         before {
-          coEvery { artifactService.getVersions(debArtifact.name, artifactType = DEBIAN) } returns listOf()
+          coEvery { artifactService.getVersions(debArtifact.name, emptyList(), DEBIAN) } returns listOf()
           coEvery { clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, any()) } returns listOf()
         }
 
