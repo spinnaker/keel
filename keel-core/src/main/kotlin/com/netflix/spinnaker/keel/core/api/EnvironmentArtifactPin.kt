@@ -13,7 +13,7 @@ data class EnvironmentArtifactPin(
   init {
     if (comment != null) {
       require(comment.length <= 255) {
-        "Comment length should be 255 characters max."
+        "Comments should have a maximum length of 255 characters."
       }
     }
   }
@@ -31,7 +31,7 @@ data class PinnedEnvironment(
   init {
     if (comment != null) {
       require(comment.length <= 255) {
-        "Comment length should be 255 characters max."
+        "Comments should have a maximum length of 255 characters."
       }
     }
   }

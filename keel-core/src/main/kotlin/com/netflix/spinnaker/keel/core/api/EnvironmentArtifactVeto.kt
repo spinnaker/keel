@@ -15,7 +15,7 @@ data class EnvironmentArtifactVeto(
   init {
     if (comment != null) {
       require(comment.length <= 255) {
-        "Comment length should be 255 characters max."
+        "Comments should have a maximum size of 255 characters."
       }
     }
   }
