@@ -61,6 +61,15 @@ internal class ApplicationControllerTests : JUnit5Minutests {
     const val user = "keel@keel.io"
   }
 
+  val payloadWithLongComment =
+    """{
+        |  "version": "master-h22.0e0310f",
+        |  "reference": "my-artifact",
+        |  "targetEnvironment": "testing",
+        |  "comment": "ccdkclkvdlf;kgvfl;dkdfl;,d.,md,vmfdkljfkgm,mdbkfgjkfgmb,fbmfkbnfgkbnfgkbnfgbnfgbnfgnbfgbnfgbmf,.bmfgklbhjgkbmfg,bmkfbkvmlvmka;ldvkdflmd,mcas;dflkfjdflkgvfd,mvldfkgjbkm,m,dvmdfljvkdmvd,vfm,lfdvjfdkmvfdlvmfkdvmfddgfksdl;gkfdlgkfdl;gkdfl;gkdflgkfdlgkdlfgkldfgkfdllg",
+        |}"""
+      .trimMargin()
+
   fun tests() = rootContext {
     after {
       clearAllMocks()
@@ -175,6 +184,22 @@ internal class ApplicationControllerTests : JUnit5Minutests {
               "currentEnvironmentConstraints",
               "resources"
             )
+        }
+
+        test("returns bad request for pinned request with comment length > 256") {
+          val request = post("/application/$application/pin")
+            .content(payloadWithLongComment)
+            .accept(APPLICATION_JSON_VALUE)
+          mvc.perform(request)
+            .andExpect(status().isBadRequest)
+        }
+
+        test("returns bad request for veto request with comment length > 256") {
+          val request = post("/application/$application/veto")
+            .content(payloadWithLongComment)
+            .accept(APPLICATION_JSON_VALUE)
+          mvc.perform(request)
+            .andExpect(status().isBadRequest)
         }
       }
 
