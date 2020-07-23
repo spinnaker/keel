@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.core.api
 
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.core.validateComment
 import java.time.Instant
 
 data class EnvironmentArtifactPin(
@@ -11,11 +12,7 @@ data class EnvironmentArtifactPin(
   val comment: String?
 ) {
   init {
-    if (comment != null) {
-      require(comment.length <= 255) {
-        "Comments should have a maximum length of 255 characters."
-      }
-    }
+    validateComment(comment)
   }
 }
 
@@ -29,10 +26,6 @@ data class PinnedEnvironment(
   val comment: String?
 ) {
   init {
-    if (comment != null) {
-      require(comment.length <= 255) {
-        "Comments should have a maximum length of 255 characters."
-      }
-    }
+    validateComment(comment)
   }
 }

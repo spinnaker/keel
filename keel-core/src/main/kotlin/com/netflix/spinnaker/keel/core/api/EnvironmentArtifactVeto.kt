@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.core.api
 
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.core.validateComment
 
 /**
  * The request body of an artifact veto
@@ -13,11 +14,7 @@ data class EnvironmentArtifactVeto(
   val comment: String?
 ) {
   init {
-    if (comment != null) {
-      require(comment.length <= 255) {
-        "Comments should have a maximum size of 255 characters."
-      }
-    }
+    validateComment(comment)
   }
 }
 
