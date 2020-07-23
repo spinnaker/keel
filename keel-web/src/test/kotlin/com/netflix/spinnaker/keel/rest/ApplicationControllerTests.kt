@@ -66,8 +66,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
         |  "version": "master-h22.0e0310f",
         |  "reference": "my-artifact",
         |  "targetEnvironment": "testing",
-        |  "comment": "Bacon ipsum dolor amet turducken prosciutto shoulder ground round hamburger, flank frankfurter rump ham hock sirloin leberkas meatloaf shankle landjaeger pig.  Shoulder shankle doner ball tip burgdoggen kevin alcatra bresaola.  Leberkas alcatra cow, sausage picanha chislic tongue hamburger turkey tail chicken flank.  Chislic tri-tip ribeye meatloaf swine biltong rump.  Bacon salami ball tip, kevin turkey cow short loin cupim drumstick landjaeger rump meatball flank.",
-  "Burgdoggen leberkas pork loin salami ribeye pig, ham meatloaf sirloin beef prosciutto chuck cupim pork swine.  Bacon cupim doner pig drumstick prosciutto pork loin picanha beef ribs pork.  Pig beef strip steak buffalo short ribs swine jowl short loin alcatra.  Frankfurter spare ribs cupim leberkas.  Ham hock cow venison boudin ham tenderloin chuck chislic porchetta kevin leberkas.  Tri-tip buffalo meatball leberkas tail.",
+        |  "comment": "Bacon ipsum dolor amet turducken prosciutto shoulder ground round hamburger, flank frankfurter rump ham hock sirloin leberkas meatloaf shankle landjaeger pig.  Shoulder shankle doner ball tip burgdoggen kevin alcatra bresaola.  Leberkas alcatra cow, sausage picanha chislic tongue hamburger turkey tail chicken flank.",
         |}"""
       .trimMargin()
 
