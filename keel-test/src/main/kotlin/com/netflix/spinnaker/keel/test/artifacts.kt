@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.artifacts.DebianArtifactSupplier
 import com.netflix.spinnaker.keel.artifacts.DockerArtifactSupplier
+import com.netflix.spinnaker.keel.artifacts.NpmArtifactSupplier
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import io.mockk.mockk
 
@@ -31,6 +32,7 @@ fun defaultArtifactSuppliers(): List<ArtifactSupplier<*, *>> {
   val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
   return listOf(
     DebianArtifactSupplier(eventBridge, artifactService),
-    DockerArtifactSupplier(eventBridge, clouddriverService)
+    DockerArtifactSupplier(eventBridge, clouddriverService),
+    NpmArtifactSupplier(eventBridge, artifactService)
   )
 }
