@@ -112,7 +112,7 @@ class ApiDocTests : JUnit5Minutests {
       .let { jacksonObjectMapper().readTree(it) }
   }
 
-  fun tests() = rootContext<Assertion.Builder<JsonNode>> {
+  fun tests() = SKIP - rootContext<Assertion.Builder<JsonNode>> {
     fixture {
       expectThat(api).describedAs("API Docs response")
     }
