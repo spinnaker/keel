@@ -109,6 +109,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       version1,
+      artifact.type,
       "manual-judgement",
       PENDING
     )
@@ -117,6 +118,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       version2,
+      artifact.type,
       "manual-judgement",
       PENDING
     )
@@ -125,6 +127,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       version1,
+      artifact.type,
       "manual-judgement",
       OVERRIDE_PASS
     )
@@ -172,7 +175,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
             subject.checkEnvironments(deliveryConfig)
           }
 
-          expectThat(repository.getConstraintState(deliveryConfig.name, environment.name, version1, "manual-judgement")).get {
+          expectThat(repository.getConstraintState(deliveryConfig.name, environment.name, version1, "manual-judgement", artifact.type)).get {
             this?.status
           }.isEqualTo(
             passedManualJudgement1.status

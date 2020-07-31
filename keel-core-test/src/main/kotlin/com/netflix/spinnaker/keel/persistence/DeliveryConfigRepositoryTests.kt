@@ -92,6 +92,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
               deliveryConfigName = deliveryConfig.name,
               environmentName = env.name,
               artifactVersion = "${art.name}-1.0.0",
+              artifactType = art.type,
               type = "manual-judgement",
               status = ConstraintStatus.PENDING
             )

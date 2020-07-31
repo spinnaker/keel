@@ -68,6 +68,7 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       "2.0",
+      artifact.type,
       "manual-judgement",
       ConstraintStatus.PENDING
     )
@@ -76,6 +77,7 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       "1.2",
+      artifact.type,
       "manual-judgement",
       ConstraintStatus.OVERRIDE_PASS
     )
@@ -265,11 +267,11 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
         before {
           // TODO: sucks that this is necessary but when using deriveFixture you get a different mockk
           every {
-            repository.getConstraintState(any(), any(), "2.0", "manual-judgement")
+            repository.getConstraintState(any(), any(), "2.0", "manual-judgement", any())
           } returns pendingManualJudgement
 
           every {
-            repository.getConstraintState(any(), any(), "1.2", "manual-judgement")
+            repository.getConstraintState(any(), any(), "1.2", "manual-judgement", any())
           } returns passedManualJudgement
 
           every {

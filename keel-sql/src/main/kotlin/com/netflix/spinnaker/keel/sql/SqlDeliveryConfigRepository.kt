@@ -500,6 +500,7 @@ class SqlDeliveryConfigRepository(
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_AT, state.judgedAt?.toTimestamp())
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.COMMENT, state.comment)
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES, mapper.writeValueAsString(state.attributes))
+              .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE, state.artifactType)
               .onDuplicateKeyUpdate()
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS))
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY))
@@ -529,6 +530,7 @@ class SqlDeliveryConfigRepository(
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, state.artifactVersion)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.timestamp())
+                .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_TYPE, state.artifactType)
                 .onDuplicateKeyIgnore()
                 .execute()
             }
@@ -543,7 +545,8 @@ class SqlDeliveryConfigRepository(
     deliveryConfigName: String,
     environmentName: String,
     artifactVersion: String,
-    type: String
+    type: String,
+    artifactType: String
   ): ConstraintState? {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return null
@@ -553,6 +556,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -565,22 +569,26 @@ class SqlDeliveryConfigRepository(
         .where(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(environmentUID),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(artifactVersion),
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE.eq(artifactType),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE.eq(type)
         )
         .fetchOne { (deliveryConfigName,
                       environmentName,
                       artifactVersion,
+                      artifactType,
                       constraintType,
                       status,
                       createdAt,
                       judgedBy,
                       judgedAt,
                       comment,
-                      attributes) ->
+                      attributes
+                    ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactType,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -603,6 +611,7 @@ class SqlDeliveryConfigRepository(
           DELIVERY_CONFIG.NAME,
           ENVIRONMENT.NAME,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -618,6 +627,7 @@ class SqlDeliveryConfigRepository(
         .fetchOne { (deliveryConfigName,
                       environmentName,
                       artifactVersion,
+                      artifactType,
                       constraintType,
                       status,
                       createdAt,
@@ -629,6 +639,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactType,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -686,6 +697,7 @@ class SqlDeliveryConfigRepository(
         .select(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
@@ -725,6 +737,7 @@ class SqlDeliveryConfigRepository(
 
     return constraintResult.mapNotNull { (envId,
                                            artifactVersion,
+                                           artifactType,
                                            type,
                                            createdAt,
                                            status,
@@ -738,6 +751,7 @@ class SqlDeliveryConfigRepository(
             ?: error("Environment id $envId does not belong to a delivery-config"),
           environmentNames[envId] ?: error("Invalid environment id $envId"),
           artifactVersion,
+          artifactType,
           type,
           ConstraintStatus.valueOf(status),
           createdAt.toInstant(ZoneOffset.UTC),
@@ -774,6 +788,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -789,6 +804,7 @@ class SqlDeliveryConfigRepository(
         .fetch { (deliveryConfigName,
                    environmentName,
                    artifactVersion,
+                   artifactType,
                    constraintType,
                    status,
                    createdAt,
@@ -800,6 +816,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactType,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -838,6 +855,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -854,6 +872,7 @@ class SqlDeliveryConfigRepository(
         .fetch { (deliveryConfigName,
                    environmentName,
                    artifactVersion,
+                   artifactType,
                    constraintType,
                    status,
                    createdAt,
@@ -865,6 +884,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactType,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -905,7 +925,7 @@ class SqlDeliveryConfigRepository(
       jooq.select(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .from(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
         .where(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(environmentUID))
-        .and(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE.eq(artifactType))
+        .and(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_TYPE.eq(artifactType))
         .fetch(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .toSet()
     }
@@ -930,7 +950,7 @@ class SqlDeliveryConfigRepository(
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, artifactVersion)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.timestamp())
-            .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE, artifactType)
+            .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_TYPE, artifactType)
             .onDuplicateKeyIgnore()
             .execute()
         }
@@ -950,7 +970,7 @@ class SqlDeliveryConfigRepository(
             .where(
               ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(envUid),
               ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION.eq(artifactVersion),
-              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE.eq(artifactType))
+              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_TYPE.eq(artifactType))
             .execute()
         }
     }

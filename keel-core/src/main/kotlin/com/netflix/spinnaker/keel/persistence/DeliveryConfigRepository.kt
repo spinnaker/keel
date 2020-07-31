@@ -80,7 +80,8 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
     deliveryConfigName: String,
     environmentName: String,
     artifactVersion: String,
-    type: String
+    type: String,
+    artifactType: String
   ): ConstraintState?
 
   fun getConstraintStateById(

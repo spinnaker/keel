@@ -120,7 +120,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
           every { orcaService.getCorrelatedExecutions(any(), any()) } returns emptyList()
 
           every {
-            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
           } answers {
             canaryConstraintState(NOT_EVALUATED)
           }
@@ -159,7 +159,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
           every { orcaService.getOrchestrationExecution(any(), any()) } answers { executionDetailResponse(id = firstArg()) }
 
           every {
-            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
           } answers {
             canaryConstraintState(
               status = PENDING,
@@ -231,7 +231,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
           }
 
           every {
-            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
           } answers {
             canaryConstraintState(
               status = PENDING,
@@ -274,7 +274,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
           every { orcaService.getOrchestrationExecution(west2Id, any()) } returns executionDetailResponse(west2Id, TERMINAL)
 
           every {
-            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+            repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
           } answers {
             canaryConstraintState(
               status = PENDING,
@@ -328,7 +328,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
         every { orcaService.getCorrelatedExecutions("$judge:us-west-2", any()) } returns emptyList()
 
         every {
-          repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+          repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
         } answers {
           canaryConstraintState(
             status = PENDING,
@@ -401,7 +401,7 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
         val retryCount = AtomicInteger()
 
         every {
-          repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type)
+          repository.getConstraintState(deliveryConfig.name, targetEnvironment.name, version, constraint.type, artifact.type)
         } answers {
           canaryConstraintState(NOT_EVALUATED)
         } andThen {

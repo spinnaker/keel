@@ -6,7 +6,14 @@ databaseChangeLog:
         - addColumn:
             tableName: environment_artifact_queued_approval
             columns:
-              - name: type
+              - name: artifact_type
+                type: varchar(255)
+                constraints:
+                  nullable: false
+        - addColumn:
+            tableName: environment_artifact_constraint
+            columns:
+              - name: artifact_type
                 type: varchar(255)
                 constraints:
                   nullable: false
@@ -14,4 +21,5 @@ databaseChangeLog:
     rollback:
     - sql:
         sql: |
-          alter table environment_artifact_queued_approval drop column type;
+          alter table environment_artifact_queued_approval drop column artifact_type;
+          alter table environment_artifact_constraint drop column artifact_type;

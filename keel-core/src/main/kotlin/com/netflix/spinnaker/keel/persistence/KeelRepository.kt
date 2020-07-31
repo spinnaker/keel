@@ -108,7 +108,7 @@ interface KeelRepository {
 
   fun storeConstraintState(state: ConstraintState)
 
-  fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String): ConstraintState?
+  fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String, artifactType: String): ConstraintState?
 
   fun getConstraintStateById(uid: UID): ConstraintState?
 
