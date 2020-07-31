@@ -81,7 +81,7 @@ class ApplicationService(
       environment,
       status.artifactVersion,
       status.type,
-      status.artifactType) ?: throw InvalidConstraintException(
+      status.artifactReference) ?: throw InvalidConstraintException(
       "${config.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
 
     repository.storeConstraintState(

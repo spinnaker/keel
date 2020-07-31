@@ -50,7 +50,7 @@ internal class ManualJudgementConstraintEvaluatorTests : JUnit5Minutests {
       deliveryConfigName = configName,
       environmentName = env.name,
       artifactVersion = version,
-      artifactType = artifact.type,
+      artifactReference = artifact.type,
       type = "manual-judgement",
       status = ConstraintStatus.PENDING,
       createdAt = clock.instant()

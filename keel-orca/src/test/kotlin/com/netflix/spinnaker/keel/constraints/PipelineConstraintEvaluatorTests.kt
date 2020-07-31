@@ -59,6 +59,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
 
     val artifact = DebianArtifact(
       name = "fnord",
+      reference = "fnord",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
     )
 
@@ -105,7 +106,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
       context("first pass") {
         before {
           every {
-            repository.getConstraintState(manifest.name, environment.name, version, type, artifact.type)
+            repository.getConstraintState(manifest.name, environment.name, version, type, artifact.reference)
           } answers {
             canaryConstraintState(NOT_EVALUATED)
           }
@@ -153,7 +154,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
       context("a pipeline was previously launched") {
         before {
           every {
-            repository.getConstraintState(manifest.name, environment.name, version, type, artifact.type)
+            repository.getConstraintState(manifest.name, environment.name, version, type, artifact.reference)
           } answers {
             canaryConstraintState(
               status = PENDING,

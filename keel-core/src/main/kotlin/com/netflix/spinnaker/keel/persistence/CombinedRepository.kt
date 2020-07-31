@@ -205,8 +205,8 @@ class CombinedRepository(
   override fun storeConstraintState(state: ConstraintState) =
     deliveryConfigRepository.storeConstraintState(state)
 
-  override fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String, artifactType: String): ConstraintState? =
-    deliveryConfigRepository.getConstraintState(deliveryConfigName, environmentName, artifactVersion, type, artifactType)
+  override fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String, artifactReference: String?): ConstraintState? =
+    deliveryConfigRepository.getConstraintState(deliveryConfigName, environmentName, artifactVersion, type, artifactReference)
 
   override fun constraintStateFor(deliveryConfigName: String, environmentName: String, artifactVersion: String): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(deliveryConfigName, environmentName, artifactVersion)
@@ -214,14 +214,14 @@ class CombinedRepository(
   override fun pendingConstraintVersionsFor(deliveryConfigName: String, environmentName: String): List<String> =
     deliveryConfigRepository.pendingConstraintVersionsFor(deliveryConfigName, environmentName)
 
-  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactType: String): Set<String> =
-    deliveryConfigRepository.getQueuedConstraintApprovals(deliveryConfigName, environmentName, artifactType)
+  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactReference: String?): Set<String> =
+    deliveryConfigRepository.getQueuedConstraintApprovals(deliveryConfigName, environmentName, artifactReference)
 
-  override fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String) =
-    deliveryConfigRepository.queueAllConstraintsApproved(deliveryConfigName, environmentName, artifactVersion, artifactType)
+  override fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactReference: String?) =
+    deliveryConfigRepository.queueAllConstraintsApproved(deliveryConfigName, environmentName, artifactVersion, artifactReference)
 
-  override fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String) =
-    deliveryConfigRepository.deleteQueuedConstraintApproval(deliveryConfigName, environmentName, artifactVersion, artifactType)
+  override fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactReference: String?) =
+    deliveryConfigRepository.deleteQueuedConstraintApproval(deliveryConfigName, environmentName, artifactVersion, artifactReference)
 
   override fun getConstraintStateById(uid: UID): ConstraintState? =
     deliveryConfigRepository.getConstraintStateById(uid)

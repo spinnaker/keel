@@ -21,7 +21,7 @@ package com.netflix.spinnaker.keel.api.constraints
 data class UpdatedConstraintStatus(
   val type: String,
   val artifactVersion: String,
-  val artifactType: String? = null,
+  val artifactReference: String? = null,
   val status: ConstraintStatus,
   val comment: String? = null
 )

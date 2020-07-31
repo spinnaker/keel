@@ -248,7 +248,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
       context("there are several versions queued for approval") {
         before {
           every {
-            repository.getQueuedConstraintApprovals(deliveryConfig.name, environment.name, dockerArtifact.type)
+            repository.getQueuedConstraintApprovals(deliveryConfig.name, environment.name, dockerArtifact.reference)
           } returns setOf("2.0", "1.2", "1.1")
         }
 
@@ -363,11 +363,11 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
         } returns listOf("3.0")
 
         every {
-          repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, dockerArtifact.type)
+          repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, dockerArtifact.reference)
         } returns setOf("2.0")
 
         every {
-          repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, debianArtifact.type)
+          repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, debianArtifact.reference)
         } returns setOf("3.0")
 
         every {
@@ -419,7 +419,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
             repository.artifactVersions(dockerArtifact)
           } returns listOf("2.0", "1.1")
           every {
-            repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, dockerArtifact.type)
+            repository.getQueuedConstraintApprovals(deliveryConfigWith2ArtifactTypes.name, environment.name, dockerArtifact.reference)
           } returns setOf("2.0", "1.1")
           every {
             repository.approveVersionFor(deliveryConfigWith2ArtifactTypes, dockerArtifact, "1.1", environment.name)

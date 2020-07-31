@@ -81,7 +81,7 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
     environmentName: String,
     artifactVersion: String,
     type: String,
-    artifactType: String
+    artifactReference: String?
   ): ConstraintState?
 
   fun getConstraintStateById(
@@ -142,17 +142,17 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   /**
    * Gets all versions queued for approval for the environment
    */
-  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactType: String): Set<String>
+  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactReference: String?): Set<String>
 
   /**
    * Adds an artifact version to the queued table to indicate all constraints pass for that version
    */
-  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
+  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactReference: String?)
 
   /**
    * Removes a queued version from the queued table
    */
-  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
+  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactReference: String?)
 
   fun getApplicationSummaries(): Collection<ApplicationSummary>
 }

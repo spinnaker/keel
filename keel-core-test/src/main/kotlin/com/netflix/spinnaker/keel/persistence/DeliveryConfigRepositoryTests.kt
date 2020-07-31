@@ -92,7 +92,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
               deliveryConfigName = deliveryConfig.name,
               environmentName = env.name,
               artifactVersion = "${art.name}-1.0.0",
-              artifactType = art.type,
+              artifactReference = art.reference,
               type = "manual-judgement",
               status = ConstraintStatus.PENDING
             )
@@ -102,7 +102,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     }
 
     fun queueConstraintApproval() {
-      repository.queueAllConstraintsApproved(deliveryConfig.name, "staging", "keel-1.0.0", DEBIAN)
+      repository.queueAllConstraintsApproved(deliveryConfig.name, "staging", "keel-1.0.0", "my-artifact")
     }
 
     fun getEnvironment(resource: Resource<*>) = expectCatching {
