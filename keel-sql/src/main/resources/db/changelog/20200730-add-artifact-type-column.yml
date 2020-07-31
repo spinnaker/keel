@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-artifact-type-column
+      author: lpollo
+      changes:
+        - addColumn:
+            tableName: environment_artifact_queued_approval
+            columns:
+              - name: type
+                type: varchar(255)
+                constraints:
+                  nullable: false
+
+    rollback:
+    - sql:
+        sql: |
+          alter table environment_artifact_queued_approval drop column type;

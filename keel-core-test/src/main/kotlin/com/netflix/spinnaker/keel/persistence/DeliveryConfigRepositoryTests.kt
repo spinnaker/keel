@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
+import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
@@ -100,7 +101,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     }
 
     fun queueConstraintApproval() {
-      repository.queueAllConstraintsApproved(deliveryConfig.name, "staging", "keel-1.0.0")
+      repository.queueAllConstraintsApproved(deliveryConfig.name, "staging", "keel-1.0.0", DEBIAN)
     }
 
     fun getEnvironment(resource: Resource<*>) = expectCatching {
@@ -289,7 +290,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
         test("can queue constraint approvals") {
           queueConstraintApproval()
-          expectThat(repository.getQueuedConstraintApprovals(deliveryConfig.name, "staging"))
+          expectThat(repository.getQueuedConstraintApprovals(deliveryConfig.name, "staging", DEBIAN))
             .isEqualTo(setOf("keel-1.0.0"))
         }
 

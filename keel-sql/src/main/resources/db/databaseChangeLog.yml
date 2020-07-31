@@ -167,3 +167,6 @@ databaseChangeLog:
   - include:
       file: changelog/20200714-add-event-application-column.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20200730-add-artifact-type-column.yml
+      relativeToChangelogFile: true

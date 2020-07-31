@@ -58,7 +58,7 @@ class EnvironmentPromotionChecker(
 
               // everything the constraint runner has already approved
               val queuedForApproval: MutableSet<String> = repository
-                .getQueuedConstraintApprovals(deliveryConfig.name, environment.name)
+                .getQueuedConstraintApprovals(deliveryConfig.name, environment.name, artifact.type)
                 .toMutableSet()
 
               /**
@@ -76,7 +76,7 @@ class EnvironmentPromotionChecker(
                     "and being evaluated for stateless constraints in environment ${environment.name}")
                   if (constraintRunner.checkStatelessConstraints(artifact, deliveryConfig, v, environment)) {
                     approveVersion(deliveryConfig, artifact, v, environment.name)
-                    repository.deleteQueuedConstraintApproval(deliveryConfig.name, environment.name, v)
+                    repository.deleteQueuedConstraintApproval(deliveryConfig.name, environment.name, v, artifact.type)
                   }
                 }
 

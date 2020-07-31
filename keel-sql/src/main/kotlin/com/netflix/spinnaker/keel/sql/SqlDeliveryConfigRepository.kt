@@ -897,7 +897,7 @@ class SqlDeliveryConfigRepository(
   }
 
   // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
-  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String): Set<String> {
+  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactType: String): Set<String> {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptySet()
 
@@ -905,6 +905,7 @@ class SqlDeliveryConfigRepository(
       jooq.select(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .from(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
         .where(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(environmentUID))
+        .and(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE.eq(artifactType))
         .fetch(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .toSet()
     }
@@ -919,7 +920,8 @@ class SqlDeliveryConfigRepository(
   override fun queueAllConstraintsApproved(
     deliveryConfigName: String,
     environmentName: String,
-    artifactVersion: String
+    artifactVersion: String,
+    artifactType: String
   ) {
     sqlRetry.withRetry(WRITE) {
       environmentUidByName(deliveryConfigName, environmentName)
@@ -928,6 +930,7 @@ class SqlDeliveryConfigRepository(
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, artifactVersion)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.timestamp())
+            .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE, artifactType)
             .onDuplicateKeyIgnore()
             .execute()
         }
@@ -937,7 +940,8 @@ class SqlDeliveryConfigRepository(
   override fun deleteQueuedConstraintApproval(
     deliveryConfigName: String,
     environmentName: String,
-    artifactVersion: String
+    artifactVersion: String,
+    artifactType: String
   ) {
     sqlRetry.withRetry(WRITE) {
       environmentUidByName(deliveryConfigName, environmentName)
@@ -945,7 +949,8 @@ class SqlDeliveryConfigRepository(
           jooq.deleteFrom(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
             .where(
               ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(envUid),
-              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION.eq(artifactVersion))
+              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION.eq(artifactVersion),
+              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.TYPE.eq(artifactType))
             .execute()
         }
     }

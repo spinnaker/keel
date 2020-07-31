@@ -122,11 +122,11 @@ interface KeelRepository {
 
   fun pendingConstraintVersionsFor(deliveryConfigName: String, environmentName: String): List<String>
 
-  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String): Set<String>
+  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactType: String): Set<String>
 
-  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String)
+  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
 
-  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
+  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
 
   fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig>
 

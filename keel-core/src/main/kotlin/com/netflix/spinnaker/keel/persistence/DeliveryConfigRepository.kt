@@ -141,17 +141,17 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   /**
    * Gets all versions queued for approval for the environment
    */
-  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String): Set<String>
+  fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactType: String): Set<String>
 
   /**
    * Adds an artifact version to the queued table to indicate all constraints pass for that version
    */
-  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String)
+  fun queueAllConstraintsApproved(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
 
   /**
    * Removes a queued version from the queued table
    */
-  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String)
+  fun deleteQueuedConstraintApproval(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactType: String)
 
   fun getApplicationSummaries(): Collection<ApplicationSummary>
 }
