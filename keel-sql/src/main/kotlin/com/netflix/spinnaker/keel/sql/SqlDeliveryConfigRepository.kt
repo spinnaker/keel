@@ -525,7 +525,6 @@ class SqlDeliveryConfigRepository(
              */
             val allStates = constraintStateForWithTransaction(state.deliveryConfigName, state.environmentName, state.artifactVersion, txn)
             if (allStates.allPass && allStates.size >= environment.constraints.statefulCount) {
-              // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
               txn.insertInto(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, state.artifactVersion)
@@ -900,7 +899,6 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
   override fun pendingConstraintVersionsFor(deliveryConfigName: String, environmentName: String): List<String> {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptyList()

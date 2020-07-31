@@ -1,25 +1,29 @@
 databaseChangeLog:
   - changeSet:
       id: add-artifact-type-column
-      author: lpollo
+      author: gyardeni
       changes:
         - addColumn:
             tableName: environment_artifact_queued_approval
             columns:
               - name: artifact_type
                 type: varchar(255)
+                afterColumn: artifact_version
                 constraints:
-                  nullable: false
+                  nullable: true
         - addColumn:
             tableName: environment_artifact_constraint
             columns:
               - name: artifact_type
                 type: varchar(255)
+                afterColumn: artifact_version
                 constraints:
-                  nullable: false
+                  nullable: true
 
-    rollback:
-    - sql:
-        sql: |
-          alter table environment_artifact_queued_approval drop column artifact_type;
-          alter table environment_artifact_constraint drop column artifact_type;
+      rollback:
+        - dropColumn:
+            tableName: environment_artifact_constraint
+            columnName: artifact_type
+        - dropColumn:
+            tableName: environment_artifact_queued_approval
+            columnName: artifact_type
