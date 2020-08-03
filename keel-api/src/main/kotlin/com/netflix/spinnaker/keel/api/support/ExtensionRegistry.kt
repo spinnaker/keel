@@ -22,9 +22,3 @@ inline fun <reified BASE : Any> ExtensionRegistry.register(
 ) {
   register(BASE::class.java, extensionType, discriminator)
 }
-
-inline fun <reified BASE : Any, reified EXTENSION : BASE> ExtensionRegistry.register(
-  discriminator: String
-) {
-  register(BASE::class.java, EXTENSION::class.java, discriminator)
-}

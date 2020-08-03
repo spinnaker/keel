@@ -11,9 +11,6 @@ class DefaultExtensionRegistry(
   private val mappers: List<ObjectMapper>
 ) : ExtensionRegistry {
   private val baseToExtensionTypes = mutableMapOf<Class<*>, MutableMap<String, Class<*>>>()
-  private val classBySimpleName = Comparator<Class<*>> { left, right ->
-    left.simpleName.compareTo(right.simpleName)
-  }
 
   override fun <BASE : Any> register(
     baseType: Class<BASE>,
@@ -29,51 +26,9 @@ class DefaultExtensionRegistry(
     }
   }
 
-  fun forEachExtension(callback: (Class<*>, Class<*>, String) -> Unit) {
-    baseToExtensionTypes
-      .keys
-      .sortedWith(classBySimpleName)
-      .forEach { baseType ->
-        forEachExtensionOf(baseType) { extensionType, discriminator ->
-          callback(baseType, extensionType, discriminator)
-        }
-      }
-  }
-
   @Suppress("UNCHECKED_CAST")
   override fun <BASE : Any> extensionsOf(baseType: Class<BASE>): Map<String, Class<out BASE>> =
     baseToExtensionTypes[baseType] as Map<String, Class<out BASE>>? ?: emptyMap()
 
-  fun <BASE> forEachExtensionOf(baseType: Class<BASE>, callback: (Class<out BASE>, String) -> Unit) {
-    (baseToExtensionTypes[baseType] ?: emptyMap<String, Class<out BASE>>())
-      .toSortedMap()
-      .forEach { (discriminator, extensionType) ->
-        @Suppress("UNCHECKED_CAST")
-        callback(extensionType as Class<out BASE>, discriminator)
-      }
-  }
-
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
-}
-
-fun <EXTENSION : Any> ObjectMapper.registerExtension(
-  extensionType: Class<EXTENSION>,
-  discriminator: String
-) {
-  registerSubtypes(NamedType(extensionType, discriminator))
-}
-
-fun <EXTENSION : Any> Iterable<ObjectMapper>.registerExtension(
-  extensionType: Class<EXTENSION>,
-  discriminator: String
-) {
-  forEach {
-    it.registerExtension(extensionType, discriminator)
-  }
-}
-
-inline fun <reified EXTENSION : Any> Iterable<ObjectMapper>.registerExtension(
-  discriminator: String
-) {
-  registerExtension(EXTENSION::class.java, discriminator)
 }
