@@ -68,7 +68,7 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       "2.0",
-      artifact.type,
+      artifact.reference,
       "manual-judgement",
       ConstraintStatus.PENDING
     )
@@ -77,7 +77,7 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
       deliveryConfig.name,
       environment.name,
       "1.2",
-      artifact.type,
+      artifact.reference,
       "manual-judgement",
       ConstraintStatus.OVERRIDE_PASS
     )

@@ -19,13 +19,6 @@ databaseChangeLog:
                 afterColumn: artifact_version
                 constraints:
                   nullable: true
-      rollback:
-        - dropColumn:
-            tableName: environment_artifact_constraint
-            columnName: artifact_reference
-        - dropColumn:
-            tableName: environment_artifact_queued_approval
-            columnName: artifact_reference
 
   - changeSet:
       id: create-artifact-reference-indicies
