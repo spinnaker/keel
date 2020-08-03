@@ -7,7 +7,6 @@ import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
-import dev.minutest.experimental.SKIP
 import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -55,7 +54,7 @@ class ApiDocCompatibilityTests : JUnit5Minutests {
   }
 
   // FIXME: the order of the @Beans used to customize type handling for the OpenAPI stuff is causing a stack overflow
-  fun tests() = SKIP - rootContext<SchemaValidator> {
+  fun tests() = rootContext<SchemaValidator> {
     fixture {
       SchemaValidator("Keel", api)
     }

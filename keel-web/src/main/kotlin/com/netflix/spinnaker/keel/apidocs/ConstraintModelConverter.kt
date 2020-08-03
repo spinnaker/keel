@@ -1,7 +1,8 @@
 package com.netflix.spinnaker.keel.apidocs
 
 import com.netflix.spinnaker.keel.api.Constraint
-import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
+import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
+import com.netflix.spinnaker.keel.api.support.extensionsOf
 import io.swagger.v3.oas.models.media.Schema
 import org.springframework.stereotype.Component
 
@@ -11,14 +12,14 @@ import org.springframework.stereotype.Component
  */
 @Component
 class ConstraintModelConverter(
-  evaluators: List<ConstraintEvaluator<*>>
+  private val extensionRegistry: ExtensionRegistry
 ) : SubtypesModelConverter<Constraint>(Constraint::class.java) {
 
-  override val subTypes = evaluators.map { it.supportedType.type }
+  override val subTypes: List<Class<out Constraint>>
+    get() = mapping.values.toList()
 
   override val discriminator: String? = Constraint::type.name
 
-  override val mapping: Map<String, Class<out Constraint>> = evaluators.associate {
-    it.supportedType.name to it.supportedType.type
-  }
+  override val mapping: Map<String, Class<out Constraint>>
+    get() = extensionRegistry.extensionsOf()
 }

@@ -15,7 +15,7 @@ class DefaultExtensionRegistry(
     left.simpleName.compareTo(right.simpleName)
   }
 
-  override fun <BASE> register(
+  override fun <BASE : Any> register(
     baseType: Class<BASE>,
     extensionType: Class<out BASE>,
     discriminator: String
@@ -40,6 +40,10 @@ class DefaultExtensionRegistry(
       }
   }
 
+  @Suppress("UNCHECKED_CAST")
+  override fun <BASE : Any> extensionsOf(baseType: Class<BASE>): Map<String, Class<out BASE>> =
+    baseToExtensionTypes[baseType] as Map<String, Class<out BASE>>? ?: emptyMap()
+
   fun <BASE> forEachExtensionOf(baseType: Class<BASE>, callback: (Class<out BASE>, String) -> Unit) {
     (baseToExtensionTypes[baseType] ?: emptyMap<String, Class<out BASE>>())
       .toSortedMap()
@@ -52,14 +56,14 @@ class DefaultExtensionRegistry(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
 
-fun <EXTENSION> ObjectMapper.registerExtension(
+fun <EXTENSION : Any> ObjectMapper.registerExtension(
   extensionType: Class<EXTENSION>,
   discriminator: String
 ) {
   registerSubtypes(NamedType(extensionType, discriminator))
 }
 
-fun <EXTENSION> Iterable<ObjectMapper>.registerExtension(
+fun <EXTENSION : Any> Iterable<ObjectMapper>.registerExtension(
   extensionType: Class<EXTENSION>,
   discriminator: String
 ) {
@@ -68,7 +72,7 @@ fun <EXTENSION> Iterable<ObjectMapper>.registerExtension(
   }
 }
 
-inline fun <reified EXTENSION> Iterable<ObjectMapper>.registerExtension(
+inline fun <reified EXTENSION : Any> Iterable<ObjectMapper>.registerExtension(
   discriminator: String
 ) {
   registerExtension(EXTENSION::class.java, discriminator)
