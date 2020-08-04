@@ -11,6 +11,8 @@ interface ExtensionRegistry {
   )
 
   fun <BASE : Any> extensionsOf(baseType: Class<BASE>): Map<String, Class<out BASE>>
+
+  fun baseTypes(): Collection<Class<*>>
 }
 
 inline fun <reified BASE : Any> ExtensionRegistry.extensionsOf(): Map<String, Class<out BASE>> =

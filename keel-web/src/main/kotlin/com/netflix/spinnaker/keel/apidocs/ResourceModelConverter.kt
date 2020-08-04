@@ -22,7 +22,8 @@ class ResourceModelConverter(
   private val extensionRegistry: ExtensionRegistry
 ) : BaseModelConverter() {
 
-  private val specTypes: Map<String, Class<out ResourceSpec>> = extensionRegistry.extensionsOf()
+  private val specTypes: Map<String, Class<out ResourceSpec>>
+    get() = extensionRegistry.extensionsOf()
 
   override fun resolve(
     annotatedType: AnnotatedType,

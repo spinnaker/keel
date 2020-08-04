@@ -30,5 +30,7 @@ class DefaultExtensionRegistry(
   override fun <BASE : Any> extensionsOf(baseType: Class<BASE>): Map<String, Class<out BASE>> =
     baseToExtensionTypes[baseType] as Map<String, Class<out BASE>>? ?: emptyMap()
 
+  override fun baseTypes(): Collection<Class<*>> = baseToExtensionTypes.keys
+
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
