@@ -18,7 +18,8 @@ class RegisteredExtensionModelConverter(
     context: ModelConverterContext,
     chain: MutableIterator<ModelConverter>
   ): Schema<*>? =
-    if (annotatedType.rawClass in extensionRegistry.baseTypes()) { val extensionTypes = extensionRegistry.extensionsOf(annotatedType.rawClass)
+    if (annotatedType.rawClass in extensionRegistry.baseTypes()) {
+      val extensionTypes = extensionRegistry.extensionsOf(annotatedType.rawClass)
       context.defineSchemaAsOneOf(annotatedType.rawClass, extensionTypes.values.toList())
         .also { schema ->
             schema.discriminator = Discriminator()

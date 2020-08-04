@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.extensionsOf
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -25,13 +26,13 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.swagger.v3.core.util.RefUtils.constructRef
 import kotlin.reflect.KClass
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
+import org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
-import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -56,7 +57,6 @@ import strikt.jackson.path
 import strikt.jackson.textValue
 import strikt.jackson.textValues
 
-@ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class],
   properties = [
@@ -67,12 +67,13 @@ import strikt.jackson.textValues
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
+@EnableAutoConfiguration(exclude = [TaskSchedulingAutoConfiguration::class])
 class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var mvc: MockMvc
 
   @Autowired
-  lateinit var extensionRegistry: com.netflix.spinnaker.keel.api.support.ExtensionRegistry
+  lateinit var extensionRegistry: ExtensionRegistry
 
   val resourceSpecTypes
     get() = extensionRegistry.extensionsOf<ResourceSpec>().values.toList()
@@ -95,20 +96,16 @@ class ApiDocTests : JUnit5Minutests {
   val artifactTypes
     get() = extensionRegistry.extensionsOf<DeliveryArtifact>().values.toList()
 
-  val api: JsonNode by lazy {
-    mvc
-      .perform(get("/v3/api-docs").accept(APPLICATION_JSON_VALUE))
-      .andExpect(status().isOk)
-      .andReturn()
-      .response
-      .contentAsString
-      .also(::println)
-      .let { jacksonObjectMapper().readTree(it) }
-  }
-
-  // FIXME: the order of the @Beans used to customize type handling for the OpenAPI stuff is causing a stack overflow
   fun tests() = rootContext<Assertion.Builder<JsonNode>> {
     fixture {
+      val api = mvc
+        .perform(get("/v3/api-docs").accept(APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk)
+        .andReturn()
+        .response
+        .contentAsString
+        .also(::println)
+        .let { jacksonObjectMapper().readTree(it) }
       expectThat(api).describedAs("API Docs response")
     }
 
