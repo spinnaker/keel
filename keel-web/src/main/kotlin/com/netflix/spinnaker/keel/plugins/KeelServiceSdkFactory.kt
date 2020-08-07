@@ -27,7 +27,7 @@ class KeelServiceSdkFactory(
     keelServiceSdk
 
   private inline fun <reified T> getFirstBeanOfType(clazz: Class<T>): T =
-    applicationContext.getBeansOfType(T::class.java)
+    applicationContext.getBeansOfType(clazz)
       .let {
         if (it.isEmpty()) {
           throw SystemException("Failed to locate bean of type ${T::class.java.name} in application context")
