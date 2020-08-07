@@ -2,12 +2,15 @@ package com.netflix.spinnaker.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.actuation.ArtifactHandler
+import com.netflix.spinnaker.keel.api.ResourceKind
+import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
+import com.netflix.spinnaker.keel.api.support.extensionsOf
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
@@ -32,8 +35,6 @@ class KeelConfigurationFinalizer(
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
-
-  private val kinds: List<SupportedKind<*>> by lazy { resourceHandlers.map { it.supportedKind } }
 
   // TODO: not sure if we can do this more dynamically
   @PostConstruct
@@ -98,6 +99,11 @@ class KeelConfigurationFinalizer(
       .forEach { (type, implementation) ->
         log.info("{} implementation: {}", type.simpleName, implementation?.simpleName)
       }
+
+    val kinds = extensionRegistry
+      .extensionsOf<ResourceSpec>()
+      .entries
+      .map { SupportedKind(ResourceKind.parseKind(it.key), it.value) }
 
     log.info("Supported resources: {}", kinds.joinToString { it.kind.toString() })
     log.info("Supported artifacts: {}", artifactSuppliers.joinToString { it.supportedArtifact.name })
