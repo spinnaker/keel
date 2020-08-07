@@ -36,6 +36,8 @@ class KeelConfigurationFinalizer(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
+  private val kinds: List<SupportedKind<*>> by lazy { resourceHandlers.map { it.supportedKind } }
+
   // TODO: not sure if we can do this more dynamically
   @PostConstruct
   fun registerApiExtensionsWithObjectMappers() {
