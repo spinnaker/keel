@@ -28,7 +28,7 @@ keel:
   constraints:
     manual-judgement:
       interactive-notifications:
-        enabled: true
+        enabled: false
 
 front50:
   enabled: ${services.front50.enabled}
@@ -60,10 +60,6 @@ sql:
       jdbcUrl: jdbc:mysql://127.0.0.1:3306/keel?useSSL=false&serverTimezone=UTC
       user: root
       password:
-  migration:
-    jdbcUrl: jdbc:mysql://127.0.0.1:3306/keel?useSSL=false&serverTimezone=UTC
-    user: root
-    password:
 
 okHttpClient:
   # moved to spinnaker-common
@@ -75,7 +71,7 @@ okHttpClient:
   interceptor.skipHeaderCheck: true
 
 server:
-  port: 7002
+  port: 7010
   legacyServerPort: 7101
   ssl:
     enabled: false
