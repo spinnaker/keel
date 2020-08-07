@@ -22,7 +22,6 @@ import org.springframework.stereotype.Component
 @Component
 class KeelConfigurationFinalizer(
   private val baseImageCache: BaseImageCache? = null,
-  private val kinds: List<SupportedKind<*>> = emptyList(),
   private val resourceHandlers: List<ResourceHandler<*, *>> = emptyList(),
   private val specMigrators: List<SpecMigrator<*, *>> = emptyList(),
   private val constraintEvaluators: List<ConstraintEvaluator<*>> = emptyList(),
@@ -33,6 +32,8 @@ class KeelConfigurationFinalizer(
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
+  private val kinds: List<SupportedKind<*>> by lazy { resourceHandlers.map { it.supportedKind } }
 
   // TODO: not sure if we can do this more dynamically
   @PostConstruct
