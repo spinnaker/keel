@@ -500,6 +500,7 @@ class SqlDeliveryConfigRepository(
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_AT, state.judgedAt?.toTimestamp())
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.COMMENT, state.comment)
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES, mapper.writeValueAsString(state.attributes))
+              .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE, state.artifactReference)
               .onDuplicateKeyUpdate()
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS))
               .set(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY, MySQLDSL.values(ENVIRONMENT_ARTIFACT_CONSTRAINT.JUDGED_BY))
@@ -524,11 +525,11 @@ class SqlDeliveryConfigRepository(
              */
             val allStates = constraintStateForWithTransaction(state.deliveryConfigName, state.environmentName, state.artifactVersion, txn)
             if (allStates.allPass && allStates.size >= environment.constraints.statefulCount) {
-              // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
               txn.insertInto(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, state.artifactVersion)
                 .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.timestamp())
+                .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_REFERENCE, state.artifactReference)
                 .onDuplicateKeyIgnore()
                 .execute()
             }
@@ -543,7 +544,8 @@ class SqlDeliveryConfigRepository(
     deliveryConfigName: String,
     environmentName: String,
     artifactVersion: String,
-    type: String
+    type: String,
+    artifactReference: String?
   ): ConstraintState? {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return null
@@ -553,6 +555,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -567,20 +570,33 @@ class SqlDeliveryConfigRepository(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(artifactVersion),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE.eq(type)
         )
+        .let {
+          // For backwards-compatibility, only use the artifact reference in the query when passed in
+          if (artifactReference != null) {
+            it.and(
+              ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE.eq(artifactReference)
+            )
+          } else {
+            it
+          }
+        }
         .fetchOne { (deliveryConfigName,
                       environmentName,
                       artifactVersion,
+                      artifactReference,
                       constraintType,
                       status,
                       createdAt,
                       judgedBy,
                       judgedAt,
                       comment,
-                      attributes) ->
+                      attributes
+                    ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -603,6 +619,7 @@ class SqlDeliveryConfigRepository(
           DELIVERY_CONFIG.NAME,
           ENVIRONMENT.NAME,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -618,6 +635,7 @@ class SqlDeliveryConfigRepository(
         .fetchOne { (deliveryConfigName,
                       environmentName,
                       artifactVersion,
+                      artifactReference,
                       constraintType,
                       status,
                       createdAt,
@@ -629,6 +647,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -686,6 +705,7 @@ class SqlDeliveryConfigRepository(
         .select(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
@@ -725,6 +745,7 @@ class SqlDeliveryConfigRepository(
 
     return constraintResult.mapNotNull { (envId,
                                            artifactVersion,
+                                           artifactReference,
                                            type,
                                            createdAt,
                                            status,
@@ -738,6 +759,7 @@ class SqlDeliveryConfigRepository(
             ?: error("Environment id $envId does not belong to a delivery-config"),
           environmentNames[envId] ?: error("Invalid environment id $envId"),
           artifactVersion,
+          artifactReference,
           type,
           ConstraintStatus.valueOf(status),
           createdAt.toInstant(ZoneOffset.UTC),
@@ -774,6 +796,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -789,6 +812,7 @@ class SqlDeliveryConfigRepository(
         .fetch { (deliveryConfigName,
                    environmentName,
                    artifactVersion,
+                   artifactReference,
                    constraintType,
                    status,
                    createdAt,
@@ -800,6 +824,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -838,6 +863,7 @@ class SqlDeliveryConfigRepository(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
           inline(environmentName).`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.STATUS,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT,
@@ -854,6 +880,7 @@ class SqlDeliveryConfigRepository(
         .fetch { (deliveryConfigName,
                    environmentName,
                    artifactVersion,
+                   artifactReference,
                    constraintType,
                    status,
                    createdAt,
@@ -865,6 +892,7 @@ class SqlDeliveryConfigRepository(
             deliveryConfigName,
             environmentName,
             artifactVersion,
+            artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
             createdAt.toInstant(ZoneOffset.UTC),
@@ -880,7 +908,6 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
   override fun pendingConstraintVersionsFor(deliveryConfigName: String, environmentName: String): List<String> {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptyList()
@@ -896,8 +923,7 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
-  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String): Set<String> {
+  override fun getQueuedConstraintApprovals(deliveryConfigName: String, environmentName: String, artifactReference: String?): Set<String> {
     val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
       ?: return emptySet()
 
@@ -905,6 +931,9 @@ class SqlDeliveryConfigRepository(
       jooq.select(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .from(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
         .where(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(environmentUID))
+        .and(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_REFERENCE.eq(artifactReference)
+          // for backward comparability
+          .or(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_REFERENCE.isNull))
         .fetch(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION)
         .toSet()
     }
@@ -915,11 +944,11 @@ class SqlDeliveryConfigRepository(
    * in that place the envId does not have to be queried for.
    * It's also done as part of the existing transaction
    */
-  // todo eb: add link to artifact https://github.com/spinnaker/keel/issues/1270
   override fun queueAllConstraintsApproved(
     deliveryConfigName: String,
     environmentName: String,
-    artifactVersion: String
+    artifactVersion: String,
+    artifactReference: String?
   ) {
     sqlRetry.withRetry(WRITE) {
       environmentUidByName(deliveryConfigName, environmentName)
@@ -928,6 +957,7 @@ class SqlDeliveryConfigRepository(
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID, envUid)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION, artifactVersion)
             .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.QUEUED_AT, clock.timestamp())
+            .set(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_REFERENCE, artifactReference)
             .onDuplicateKeyIgnore()
             .execute()
         }
@@ -937,7 +967,8 @@ class SqlDeliveryConfigRepository(
   override fun deleteQueuedConstraintApproval(
     deliveryConfigName: String,
     environmentName: String,
-    artifactVersion: String
+    artifactVersion: String,
+    artifactReference: String?
   ) {
     sqlRetry.withRetry(WRITE) {
       environmentUidByName(deliveryConfigName, environmentName)
@@ -945,7 +976,8 @@ class SqlDeliveryConfigRepository(
           jooq.deleteFrom(ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL)
             .where(
               ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ENVIRONMENT_UID.eq(envUid),
-              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION.eq(artifactVersion))
+              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_VERSION.eq(artifactVersion),
+              ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL.ARTIFACT_REFERENCE.eq(artifactReference))
             .execute()
         }
     }

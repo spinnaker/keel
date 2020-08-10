@@ -18,13 +18,13 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.clearAllMocks
 import io.mockk.every
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
+import org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
-import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -34,12 +34,12 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 
-@ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class, MockEurekaConfiguration::class],
   webEnvironment = MOCK
 )
 @AutoConfigureMockMvc
+@EnableAutoConfiguration(exclude = [TaskSchedulingAutoConfiguration::class])
 internal class ApplicationControllerTests : JUnit5Minutests {
   @MockkBean
   lateinit var authorizationSupport: AuthorizationSupport
@@ -60,6 +60,15 @@ internal class ApplicationControllerTests : JUnit5Minutests {
     const val application = "fnord"
     const val user = "keel@keel.io"
   }
+
+  val payloadWithLongComment =
+    """{
+        |  "version": "master-h22.0e0310f",
+        |  "reference": "my-artifact",
+        |  "targetEnvironment": "testing",
+        |  "comment": "Bacon ipsum dolor amet turducken prosciutto shoulder ground round hamburger, flank frankfurter rump ham hock sirloin leberkas meatloaf shankle landjaeger pig.  Shoulder shankle doner ball tip burgdoggen kevin alcatra bresaola.  Leberkas alcatra cow, sausage picanha chislic tongue hamburger turkey tail chicken flank.",
+        |}"""
+      .trimMargin()
 
   fun tests() = rootContext {
     after {
@@ -176,6 +185,22 @@ internal class ApplicationControllerTests : JUnit5Minutests {
               "resources"
             )
         }
+
+        test("returns bad request for pinned request with comment length > 256") {
+          val request = post("/application/$application/pin")
+            .content(payloadWithLongComment)
+            .accept(APPLICATION_JSON_VALUE)
+          mvc.perform(request)
+            .andExpect(status().isBadRequest)
+        }
+
+        test("returns bad request for veto request with comment length > 256") {
+          val request = post("/application/$application/veto")
+            .content(payloadWithLongComment)
+            .accept(APPLICATION_JSON_VALUE)
+          mvc.perform(request)
+            .andExpect(status().isBadRequest)
+        }
       }
 
       context("with paused application") {
@@ -278,7 +303,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
           }
           test("request is forbidden") {
             val request = post("/application/fnord/environment/prod/constraint").addData(jsonMapper,
-              UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
+              UpdatedConstraintStatus("manual-judgement", "prod", "deb", OVERRIDE_PASS)
             )
               .accept(APPLICATION_JSON_VALUE)
               .header("X-SPINNAKER-USER", user)
@@ -293,7 +318,7 @@ internal class ApplicationControllerTests : JUnit5Minutests {
           }
           test("request is forbidden") {
             val request = post("/application/fnord/environment/prod/constraint").addData(jsonMapper,
-              UpdatedConstraintStatus("manual-judgement", "prod", OVERRIDE_PASS)
+              UpdatedConstraintStatus("manual-judgement", "prod", "deb", OVERRIDE_PASS)
             )
               .accept(APPLICATION_JSON_VALUE)
               .header("X-SPINNAKER-USER", user)
