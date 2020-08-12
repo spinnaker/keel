@@ -20,7 +20,11 @@ jobs:
       run: ./gradlew --version
     - name: List of generated files before
       run: ls keel-sql/src/generated/java || true
+    - name: current directory location
+      run: echo $PWD
     - name: Build
       run: ./gradlew build
     - name: List of generated files after
       run: ls keel-sql/src/generated/java
+    - name: List gradle files
+      run: ls ~/.gradle
