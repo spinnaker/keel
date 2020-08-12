@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: Show version info
+        run: ./gradlew --version
       - name: Build
         run: ./gradlew build jacocoAggregateReport --stacktrace
       - name: Codecov
