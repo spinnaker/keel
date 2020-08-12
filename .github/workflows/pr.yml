@@ -18,5 +18,9 @@ jobs:
         java-version: ${{ matrix.java }}
     - name: Show version info
       run: ./gradlew --version
+    - name: List of generated files before
+      run: ls keel-sql/src/generated/java
     - name: Build
       run: ./gradlew build
+    - name: List of generated files after
+      run: ls keel-sql/src/generated/java
