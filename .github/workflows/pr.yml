@@ -19,7 +19,7 @@ jobs:
     - name: Show version info
       run: ./gradlew --version
     - name: List of generated files before
-      run: ls keel-sql/src/generated/java
+      run: ls keel-sql/src/generated/java || true
     - name: Build
       run: ./gradlew build
     - name: List of generated files after
