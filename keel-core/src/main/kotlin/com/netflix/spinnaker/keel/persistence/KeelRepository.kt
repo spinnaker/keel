@@ -3,9 +3,12 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.persistence.KeelReadOnlyRepository
@@ -142,9 +145,13 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun getAllArtifacts(type: ArtifactType? = null): List<DeliveryArtifact>
 
-  fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean
+  fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean
 
-  fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
+  fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean
+
+  fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata?
+
+  fun getArtifactGitMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): GitMetadata?
 
   fun deleteArtifact(artifact: DeliveryArtifact)
 

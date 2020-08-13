@@ -104,21 +104,21 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     with(subject) {
       register(artifact1)
       setOf(version1, version2, version3).forEach {
-        store(artifact1, it, SNAPSHOT)
+        store(artifact1, it, SNAPSHOT, null)
       }
       setOf(version4, version5).forEach {
-        store(artifact1, it, RELEASE)
+        store(artifact1, it, RELEASE, null)
       }
       register(artifact2)
       setOf(version1, version2, version3).forEach {
-        store(artifact2, it, SNAPSHOT)
+        store(artifact2, it, SNAPSHOT, null)
       }
       setOf(version4, version5).forEach {
-        store(artifact2, it, RELEASE)
+        store(artifact2, it, RELEASE, null)
       }
       register(artifact3)
       setOf(version6, versionBad).forEach {
-        store(artifact3, it, null)
+        store(artifact3, it, null, null)
       }
     }
     persist(manifest)
@@ -154,7 +154,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       test("storing a new version throws an exception") {
         expectThrows<NoSuchArtifactException> {
-          subject.store(artifact1, version1, SNAPSHOT)
+          subject.store(artifact1, version1, SNAPSHOT, null)
         }
       }
 
@@ -193,17 +193,17 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       context("an artifact version already exists") {
         before {
-          subject.store(artifact1, version1, SNAPSHOT)
+          subject.store(artifact1, version1, SNAPSHOT, null)
         }
 
         test("registering the same version is a no-op") {
-          val result = subject.store(artifact1, version1, SNAPSHOT)
+          val result = subject.store(artifact1, version1, SNAPSHOT, null)
           expectThat(result).isFalse()
           expectThat(subject.versions(artifact1)).hasSize(1)
         }
 
         test("adding a new version adds it to the list") {
-          val result = subject.store(artifact1, version2, SNAPSHOT)
+          val result = subject.store(artifact1, version2, SNAPSHOT, null)
 
           expectThat(result).isTrue()
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
@@ -211,7 +211,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
         test("querying the list for returns both artifacts") {
           // status is stored on the artifact
-          subject.store(artifact1, version2, SNAPSHOT)
+          subject.store(artifact1, version2, SNAPSHOT, null)
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
         }
       }
@@ -222,9 +222,9 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             .shuffled()
             .forEach {
               if (it == version4 || it == version5) {
-                subject.store(artifact1, it, RELEASE)
+                subject.store(artifact1, it, RELEASE, null)
               } else {
-                subject.store(artifact1, it, SNAPSHOT)
+                subject.store(artifact1, it, SNAPSHOT, null)
               }
             }
         }
@@ -637,8 +637,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("getting all filters by type") {
       before {
         persist()
-        subject.store(artifact1, version4, FINAL)
-        subject.store(artifact3, version6, FINAL)
+        subject.store(artifact1, version4, FINAL, null)
+        subject.store(artifact3, version6, FINAL, null)
       }
 
       test("querying works") {

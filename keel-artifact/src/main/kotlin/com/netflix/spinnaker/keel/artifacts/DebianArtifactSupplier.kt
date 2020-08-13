@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -25,7 +26,8 @@ import org.springframework.stereotype.Component
 @Component
 class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
-  private val artifactService: ArtifactService
+  private val artifactService: ArtifactService,
+  private val repository: KeelRepository
 ) : ArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy> {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -76,23 +78,31 @@ class DebianArtifactSupplier(
   }
 
   override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
-    // attempt to parse helpful info from the appversion.
-    // todo(eb): replace, this is brittle
-    val appversion = AppVersion.parseName(artifact.version)
-    if (appversion?.buildNumber != null) {
-      return BuildMetadata(id = appversion.buildNumber.toInt())
+
+    val buildMetadata = repository.getArtifactBuildMetadata(artifact.name, artifact.type, artifact.version,
+      artifact.metadata["releaseStatus"] as ArtifactStatus?)
+    if (buildMetadata == null) {
+      // attempt to parse helpful info from the appversion.
+      val appversion = AppVersion.parseName(artifact.version)
+      if (appversion?.buildNumber != null) {
+        return BuildMetadata(id = appversion.buildNumber.toInt())
+      }
     }
-    return null
+    return buildMetadata
   }
 
   override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
-    // attempt to parse helpful info from the appversion.
-    // todo(eb): replace, this is brittle
-    val appversion = AppVersion.parseName(artifact.version)
-    if (appversion?.commit != null) {
-      return GitMetadata(commit = appversion.commit)
+
+    val gitMetadata = repository.getArtifactGitMetadata(artifact.name, artifact.type, artifact.version,
+      artifact.metadata["releaseStatus"] as ArtifactStatus?)
+    if (gitMetadata == null) {
+      // attempt to parse helpful info from the appversion.
+      val appversion = AppVersion.parseName(artifact.version)
+      if (appversion?.commit != null) {
+        return GitMetadata(commit = appversion.commit)
+      }
     }
-    return null
+    return gitMetadata
   }
 
   // Debian Artifacts should contain a releaseStatus in the metadata

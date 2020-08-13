@@ -2,11 +2,15 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -117,6 +121,18 @@ class SqlArtifactRepository(
     return objectMapper.writeValueAsString(details)
   }
 
+  private fun BuildMetadata.detailsAsJson(): String {
+    val details = objectMapper.convertValue<Map<String, Any?>>(this)
+      .toMutableMap()
+    return objectMapper.writeValueAsString(details)
+  }
+
+  private fun GitMetadata.detailsAsJson(): String {
+    val details = objectMapper.convertValue<Map<String, Any?>>(this)
+      .toMutableMap()
+    return objectMapper.writeValueAsString(details)
+  }
+
   override fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> {
     return sqlRetry.withRetry(READ) {
       jooq
@@ -163,10 +179,10 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
-    store(artifact.name, artifact.type, version, status)
+  override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean =
+    store(artifact.name, artifact.type, version, status, artifactMetadata)
 
-  override fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean {
+  override fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean {
     if (!isRegistered(name, type)) {
       throw NoSuchArtifactException(name, type)
     }
@@ -177,9 +193,43 @@ class SqlArtifactRepository(
         .set(ARTIFACT_VERSIONS.TYPE, type)
         .set(ARTIFACT_VERSIONS.VERSION, version)
         .set(ARTIFACT_VERSIONS.RELEASE_STATUS, status?.toString())
+        .set(ARTIFACT_VERSIONS.BUILD_METADATA, artifactMetadata?.buildMetadata?.detailsAsJson())
+        .set(ARTIFACT_VERSIONS.GIT_METADATA, artifactMetadata?.gitMetadata?.detailsAsJson())
         .onDuplicateKeyIgnore()
         .execute()
     } == 1
+  }
+
+  override fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(ARTIFACT_VERSIONS.BUILD_METADATA)
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .fetchOne()
+        ?.let { (metadata) ->
+          objectMapper.readValue<BuildMetadata>(metadata)
+        }
+    }
+  }
+
+  override fun getArtifactGitMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): GitMetadata? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(ARTIFACT_VERSIONS.GIT_METADATA)
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .fetchOne()
+        ?.let { (metadata) ->
+          objectMapper.readValue<GitMetadata>(metadata)
+        }
+    }
   }
 
   override fun delete(artifact: DeliveryArtifact) {
@@ -599,16 +649,16 @@ class SqlArtifactRepository(
     selectPromotionReference(envUid, artUid, veto.version)
       .fetchOne(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
       ?.let { reference ->
-      if (!force) {
-        log.warn(
-          "Not vetoing artifact version as it appears to have already been an automated rollback target: " +
-            "deliveryConfig=${deliveryConfig.name}, " +
-            "environment=${veto.targetEnvironment}, " +
-            "artifactVersion=${veto.version}, " +
-            "priorVersionReference=$reference")
-        return false
+        if (!force) {
+          log.warn(
+            "Not vetoing artifact version as it appears to have already been an automated rollback target: " +
+              "deliveryConfig=${deliveryConfig.name}, " +
+              "environment=${veto.targetEnvironment}, " +
+              "artifactVersion=${veto.version}, " +
+              "priorVersionReference=$reference")
+          return false
+        }
       }
-    }
 
     val prior = priorVersionDeployedIn(envUid, artUid, veto.version)
 
