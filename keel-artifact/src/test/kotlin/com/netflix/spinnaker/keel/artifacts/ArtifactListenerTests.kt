@@ -52,8 +52,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService),
-      DockerArtifactSupplier(eventBridge, clouddriverService)
+      DebianArtifactSupplier(eventBridge, artifactService, repository),
+      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
     ),
       ArtifactMetadataService(buildService))
   }
@@ -140,8 +140,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService),
-      DockerArtifactSupplier(eventBridge, clouddriverService)
+      DebianArtifactSupplier(eventBridge, artifactService, repository),
+      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
     ),
       ArtifactMetadataService(buildService))
   }
@@ -245,8 +245,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService),
-      DockerArtifactSupplier(eventBridge, clouddriverService)
+      DebianArtifactSupplier(eventBridge, artifactService, repository),
+      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
     ),
       ArtifactMetadataService(buildService))
   }
