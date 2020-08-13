@@ -320,6 +320,10 @@ class CombinedRepository(
   override fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean =
     artifactRepository.store(artifact, version, status, artifactMetadata)
 
+  override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?) {
+    artifactRepository.updateArtifactMetadata(name, type, version, status, artifactMetadata)
+  }
+
   override fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata? =
     artifactRepository.getArtifactBuildMetadata(name, type, version, status)
 

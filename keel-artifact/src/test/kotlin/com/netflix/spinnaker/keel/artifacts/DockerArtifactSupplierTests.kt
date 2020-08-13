@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -28,7 +28,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
   object Fixture {
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
-    val repository: KeelRepository = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
     val deliveryConfig = deliveryConfig()
     val dockerArtifact = DockerArtifact(
       name = "fnord",
@@ -42,7 +42,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       reference = dockerArtifact.reference,
       version = versions.last()
     )
-    val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, repository)
+    val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -63,13 +63,6 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
             digest = "sha123"
           )
         )
-        every {
-          repository.getArtifactGitMetadata(any(), any(), any(), any())
-        } returns null
-
-        every {
-          repository.getArtifactBuildMetadata(any(), any(), any(), any())
-        } returns null
       }
 
       test("supports Docker artifacts") {

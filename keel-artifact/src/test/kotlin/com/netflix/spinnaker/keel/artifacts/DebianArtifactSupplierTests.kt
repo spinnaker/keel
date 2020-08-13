@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -28,7 +28,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true)
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
-    val repository: KeelRepository = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
     val deliveryConfig = deliveryConfig()
     val debianArtifact = DebianArtifact(
       name = "fnord",
@@ -44,7 +44,7 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
       version = "${debianArtifact.name}-${versions.last()}",
       metadata = mapOf("releaseStatus" to SNAPSHOT)
     )
-    val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, repository)
+    val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -59,14 +59,6 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         every {
           artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         } returns latestArtifact
-
-        every {
-          repository.getArtifactGitMetadata(any(), any(), any(), any())
-        } returns null
-
-        every {
-          repository.getArtifactBuildMetadata(any(), any(), any(), any())
-        } returns null
       }
 
       test("supports Debian artifacts") {

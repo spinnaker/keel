@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -24,7 +24,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
   object Fixture {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true)
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
-    val repository: KeelRepository = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
     val deliveryConfig = deliveryConfig()
     val npmArtifact = NpmArtifact(
       name = "fnord",
@@ -39,7 +39,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
       version = "${npmArtifact.name}-${versions.last()}",
       metadata = mapOf("releaseStatus" to CANDIDATE)
     )
-    val npmArtifactSupplier = NpmArtifactSupplier(eventBridge, artifactService, repository)
+    val npmArtifactSupplier = NpmArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -53,14 +53,6 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         every {
           artifactService.getArtifact(npmArtifact.name, versions.last(), NPM)
         } returns latestArtifact
-
-        every {
-          repository.getArtifactGitMetadata(any(), any(), any(), any())
-        } returns null
-
-        every {
-          repository.getArtifactBuildMetadata(any(), any(), any(), any())
-        } returns null
       }
 
       test("supports NPM artifacts") {

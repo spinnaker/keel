@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -15,7 +16,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import org.springframework.stereotype.Component
 
 /**
@@ -26,7 +27,7 @@ import org.springframework.stereotype.Component
 class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
-  private val repository: KeelRepository
+  private val artifactMetadataService: ArtifactMetadataService
 ) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy> {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
@@ -67,8 +68,6 @@ class DockerArtifactSupplier(
   }
 
   override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
-    val buildMetadata = repository.getArtifactBuildMetadata(artifact.name, artifact.type, artifact.version, null)
-    if (buildMetadata == null) {
       if (versioningStrategy.hasBuild()) {
         val regex = Regex("""^.*-h(\d+).*$""")
         val result = regex.find(artifact.version)
@@ -76,18 +75,19 @@ class DockerArtifactSupplier(
           return BuildMetadata(id = result.groupValues[1].toInt())
         }
       }
-    }
-    return buildMetadata
+    return null
   }
 
   override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
-    val gitMetadata = repository.getArtifactGitMetadata(artifact.name, artifact.type, artifact.version, null)
-    if (gitMetadata == null) {
       if (versioningStrategy.hasCommit()) {
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
-    }
-    return gitMetadata
+    return null
+  }
+
+  override fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
+    return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
+      artifact.metadata["commitHash"]?.toString())
   }
 
   private fun VersioningStrategy.hasBuild(): Boolean {

@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.igor.ArtifactService
-import com.netflix.spinnaker.igor.BuildService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -48,14 +47,13 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true),
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true),
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true),
-    val buildService: BuildService = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService, repository),
-      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
-    ),
-      ArtifactMetadataService(buildService))
+      DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService),
+      DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
+    ))
   }
 
   fun artifactEventTests() = rootContext<ArtifactFixture> {
@@ -136,14 +134,13 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true),
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true),
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true),
-    val buildService: BuildService = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService, repository),
-      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
-    ),
-      ArtifactMetadataService(buildService))
+      DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService),
+      DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
+    ))
   }
 
   fun artifactRegisteredEventTests() = rootContext<RegisteredFixture> {
@@ -173,7 +170,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       }
 
       test("nothing is done") {
-        verify(exactly = 0) { repository.storeArtifact(any(), any(), any(), any()) }
+        verify(exactly = 0) { repository.storeArtifact(any(), any(), any()) }
       }
     }
 
@@ -217,7 +214,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("no versions are persisted") {
           verify(exactly = 0) {
-            repository.storeArtifact(any(), any(), any(), any())
+            repository.storeArtifact(any(), any(), any())
           }
         }
       }
@@ -241,14 +238,13 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true),
     val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true),
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true),
-    val buildService: BuildService = mockk(relaxUnitFun = true)
+    val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
   ) {
     private val eventBridge = SpringEventPublisherBridge(publisher)
     val listener: ArtifactListener = ArtifactListener(repository, publisher, listOf(
-      DebianArtifactSupplier(eventBridge, artifactService, repository),
-      DockerArtifactSupplier(eventBridge, clouddriverService, repository)
-    ),
-      ArtifactMetadataService(buildService))
+      DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService),
+      DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
+    ))
   }
 
   fun syncArtifactsFixture() = rootContext<SyncArtifactsFixture> {

@@ -119,6 +119,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
       every { getBuildMetadata(any(), any()) } returns null
       every { getGitMetadata(any(), any()) } returns null
+      every { getReleaseStatus(any()) } returns null
     }
 
     // subject
@@ -138,6 +139,14 @@ class ApplicationServiceTests : JUnit5Minutests {
 
     before {
       every { repository.getDeliveryConfigForApplication(application) } returns deliveryConfig
+
+      every {
+        repository.getArtifactGitMetadata(any(), any(), any(), any())
+      } returns null
+
+      every {
+        repository.getArtifactBuildMetadata(any(), any(), any(), any())
+      } returns null
     }
 
     context("artifact summaries by application") {

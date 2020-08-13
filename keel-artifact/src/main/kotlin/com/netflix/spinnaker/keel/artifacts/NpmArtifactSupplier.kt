@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -13,7 +14,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import org.springframework.stereotype.Component
 
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component
 class NpmArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
-  private val repository: KeelRepository
+  private val artifactMetadataService: ArtifactMetadataService
 ) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy> {
 
   override val supportedArtifact = SupportedArtifact(NPM, NpmArtifact::class.java)
@@ -65,22 +66,22 @@ class NpmArtifactSupplier(
    * Extracts the build number from the version string using the Netflix semver convention.
    */
   override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
-    val buildMetadata = repository.getArtifactBuildMetadata(artifact.name, artifact.type, artifact.version,
-      artifact.metadata["releaseStatus"] as ArtifactStatus?)
-            ?: return NetflixSemVerVersioningStrategy.getBuildNumber(artifact)
-              ?.let { BuildMetadata(it) }
-    return buildMetadata
+    return NetflixSemVerVersioningStrategy.getBuildNumber(artifact)
+      ?.let { BuildMetadata(it) }
   }
 
   /**
    * Extracts the commit hash from the version string using the Netflix semver convention.
    */
   override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
-    val gitMetadata = repository.getArtifactGitMetadata(artifact.name, artifact.type, artifact.version,
-      artifact.metadata["releaseStatus"] as ArtifactStatus?)
-            ?: return NetflixSemVerVersioningStrategy.getCommitHash(artifact)
-              ?.let { GitMetadata(it) }
-    return gitMetadata
+
+    return NetflixSemVerVersioningStrategy.getCommitHash(artifact)
+      ?.let { GitMetadata(it) }
+  }
+
+  override fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
+    return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
+      artifact.metadata["commitHash"]?.toString())
   }
 
   // The API requires colons in place of slashes to avoid path pattern conflicts

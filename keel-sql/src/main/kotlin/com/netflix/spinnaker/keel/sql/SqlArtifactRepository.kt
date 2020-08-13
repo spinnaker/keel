@@ -121,18 +121,6 @@ class SqlArtifactRepository(
     return objectMapper.writeValueAsString(details)
   }
 
-  private fun BuildMetadata.detailsAsJson(): String {
-    val details = objectMapper.convertValue<Map<String, Any?>>(this)
-      .toMutableMap()
-    return objectMapper.writeValueAsString(details)
-  }
-
-  private fun GitMetadata.detailsAsJson(): String {
-    val details = objectMapper.convertValue<Map<String, Any?>>(this)
-      .toMutableMap()
-    return objectMapper.writeValueAsString(details)
-  }
-
   override fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> {
     return sqlRetry.withRetry(READ) {
       jooq
@@ -193,11 +181,28 @@ class SqlArtifactRepository(
         .set(ARTIFACT_VERSIONS.TYPE, type)
         .set(ARTIFACT_VERSIONS.VERSION, version)
         .set(ARTIFACT_VERSIONS.RELEASE_STATUS, status?.toString())
-        .set(ARTIFACT_VERSIONS.BUILD_METADATA, artifactMetadata?.buildMetadata?.detailsAsJson())
-        .set(ARTIFACT_VERSIONS.GIT_METADATA, artifactMetadata?.gitMetadata?.detailsAsJson())
+        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata?.buildMetadata))
+        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata?.gitMetadata))
         .onDuplicateKeyIgnore()
         .execute()
     } == 1
+  }
+
+  override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?) {
+    if (!isRegistered(name, type)) {
+      throw NoSuchArtifactException(name, type)
+    }
+
+    return sqlRetry.withRetry(WRITE) {
+      jooq.update(ARTIFACT_VERSIONS)
+        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata?.buildMetadata))
+        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata?.gitMetadata))
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .execute()
+    }
   }
 
   override fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata? {

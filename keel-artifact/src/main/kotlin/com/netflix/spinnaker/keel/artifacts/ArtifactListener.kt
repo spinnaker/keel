@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
@@ -14,7 +13,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.services.ArtifactMetadataService
+import com.netflix.spinnaker.keel.telemetry.ArtifactSaved
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.launch
@@ -29,8 +28,7 @@ import org.springframework.stereotype.Component
 class ArtifactListener(
   private val repository: KeelRepository,
   private val publisher: ApplicationEventPublisher,
-  private val artifactSuppliers: List<ArtifactSupplier<*, *>>,
-  private val artifactMetadataService: ArtifactMetadataService
+  private val artifactSuppliers: List<ArtifactSupplier<*, *>>
 ) {
   private val enabled = AtomicBoolean(false)
 
@@ -58,13 +56,12 @@ class ArtifactListener(
           val version = artifactSupplier.getFullVersionString(artifact)
           var status = artifactSupplier.getReleaseStatus(artifact)
           log.info("Registering version {} ({}) of {} {}", version, status, artifact.name, artifact.type)
-
-          val artifactMetadata = artifactMetadata(artifact)
-
-          repository.storeArtifact(artifact.name, artifact.artifactType, version, status, artifactMetadata)
+          repository.storeArtifact(artifact.name, artifact.artifactType, version, status)
             .also { wasAdded ->
               if (wasAdded) {
                 publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
+                // send an event when the artifact is stored, so we can fetch its metadata
+                publisher.publishEvent(ArtifactSaved(artifact.copy(version = version), status))
               }
             }
         }
@@ -88,10 +85,9 @@ class ArtifactListener(
       if (latestVersion != null) {
         var status = artifactSupplier.getReleaseStatus(latestArtifact)
         log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion, status, artifact)
-
-        val artifactMetadata = artifactMetadata(latestArtifact)
-
-        repository.storeArtifact(artifact.name, artifact.type, latestVersion, status, artifactMetadata)
+        repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
+        // send an event when the artifact is stored, so we can fetch its metadata
+        publisher.publishEvent(ArtifactSaved(latestArtifact, status))
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
       }
@@ -136,8 +132,9 @@ class ArtifactListener(
               if (hasNew) {
                 log.debug("$artifact has a missing version $latestVersion, persisting.")
                 val status = artifactSupplier.getReleaseStatus(latestArtifact)
-                val artifactMetadata = artifactMetadata(latestArtifact)
-                repository.storeArtifact(artifact.name, artifact.type, latestVersion, status, artifactMetadata)
+                repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
+                // send an event when the artifact is stored, so we can fetch its metadata
+                publisher.publishEvent(ArtifactSaved(latestArtifact, status))
               } else {
                 log.debug("No new versions to persist for $artifact")
               }
@@ -147,11 +144,6 @@ class ArtifactListener(
       }
     }
   }
-
-  private fun artifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? =
-    // TODO: add buildNumber and commitHash into PublishedArtifact metadata
-    artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
-      artifact.metadata["commitHash"]?.toString())
 
   private fun getLatestStoredVersion(artifact: DeliveryArtifact): String? =
     repository.artifactVersions(artifact).sortedWith(artifact.versioningStrategy.comparator).firstOrNull()
