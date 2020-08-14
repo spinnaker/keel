@@ -92,7 +92,7 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
    *
    * This function is currently expected to make calls to CI systems.
    */
-  suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? = null
+  suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata?
 }
 
 /**

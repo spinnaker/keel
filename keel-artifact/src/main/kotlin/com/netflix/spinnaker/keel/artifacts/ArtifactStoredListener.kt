@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactSaved
+import kotlinx.coroutines.runBlocking
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
@@ -14,9 +15,11 @@ class ArtifactStoredListener(
 ) {
 
   @EventListener(ArtifactSaved::class)
-  suspend fun onArtifactSaved(event: ArtifactSaved) {
+  fun onArtifactSaved(event: ArtifactSaved) {
     val artifactSupplier = artifactSuppliers.supporting(event.artifact.type)
-    val artifactMetadata = artifactSupplier.getArtifactMetadata(event.artifact)
+    val artifactMetadata = runBlocking {
+      artifactSupplier.getArtifactMetadata(event.artifact)
+    }
     repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
   }
 }

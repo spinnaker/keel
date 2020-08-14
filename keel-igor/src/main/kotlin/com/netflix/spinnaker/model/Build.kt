@@ -21,5 +21,5 @@ data class Build(
   val url: String? = null,
   val id: String? = null,
 
-  val properties: Map<String, *>? = null
+  val properties: Map<String, Any?>? = null
 )
