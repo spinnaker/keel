@@ -100,16 +100,16 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       }
 
       test("returns git metadata based on tag when available") {
-        expectThat(dockerArtifactSupplier.getGitMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
+        expectThat(dockerArtifactSupplier.getDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
           .isEqualTo(GitMetadata(commit = "8a5b962"))
-        expectThat(dockerArtifactSupplier.getGitMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
+        expectThat(dockerArtifactSupplier.getDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
       }
 
       test("returns build metadata based on tag when available") {
-        expectThat(dockerArtifactSupplier.getBuildMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
+        expectThat(dockerArtifactSupplier.getDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
           .isEqualTo(BuildMetadata(id = 1182))
-        expectThat(dockerArtifactSupplier.getBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
+        expectThat(dockerArtifactSupplier.getDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
       }
     }

@@ -65,7 +65,7 @@ class NpmArtifactSupplier(
   /**
    * Extracts the build number from the version string using the Netflix semver convention.
    */
-  override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     return NetflixSemVerVersioningStrategy.getBuildNumber(artifact)
       ?.let { BuildMetadata(it) }
   }
@@ -73,13 +73,13 @@ class NpmArtifactSupplier(
   /**
    * Extracts the commit hash from the version string using the Netflix semver convention.
    */
-  override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
 
     return NetflixSemVerVersioningStrategy.getCommitHash(artifact)
       ?.let { GitMetadata(it) }
   }
 
-  override fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
+  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
     return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
       artifact.metadata["commitHash"]?.toString())
   }

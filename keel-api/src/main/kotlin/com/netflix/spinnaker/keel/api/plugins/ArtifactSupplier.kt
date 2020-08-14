@@ -75,7 +75,7 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
    * This function is currently *not* expected to make calls to other systems, but only look into
    * the metadata available within the [PublishedArtifact] object itself.
    */
-  fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? = null
+  fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? = null
 
   /**
    * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactSupplier],
@@ -84,7 +84,7 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
    * This function is currently *not* expected to make calls to other systems, but only look into
    * the metadata available within the [PublishedArtifact] object itself.
    */
-  fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? = null
+  fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? = null
 
   /**
    * Given a [PublishedArtifact] supported by this [ArtifactSupplier],
@@ -92,7 +92,7 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
    *
    * This function is currently expected to make calls to CI systems.
    */
-  fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? = null
+  suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? = null
 }
 
 /**

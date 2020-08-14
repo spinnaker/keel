@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.api.artifacts
+package com.netflix.spinnaker.model
 
 /**
  * An immutable data class that represents a published software artifact in the Spinnaker ecosystem.

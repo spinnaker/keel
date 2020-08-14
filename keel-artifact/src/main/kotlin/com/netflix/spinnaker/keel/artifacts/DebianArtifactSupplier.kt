@@ -78,7 +78,7 @@ class DebianArtifactSupplier(
     }
   }
 
-  override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     val appversion = AppVersion.parseName(artifact.version)
     if (appversion?.buildNumber != null) {
@@ -87,7 +87,7 @@ class DebianArtifactSupplier(
     return null
   }
 
-  override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
 
     // attempt to parse helpful info from the appversion.
     val appversion = AppVersion.parseName(artifact.version)
@@ -97,7 +97,7 @@ class DebianArtifactSupplier(
     return null
   }
 
-  override fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
+  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
     return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
       artifact.metadata["commitHash"]?.toString())
   }

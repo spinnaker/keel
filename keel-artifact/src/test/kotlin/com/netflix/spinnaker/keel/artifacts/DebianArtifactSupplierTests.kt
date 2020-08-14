@@ -97,13 +97,13 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on frigga parser") {
         val gitMeta = GitMetadata(commit = AppVersion.parseName(latestArtifact.version)!!.commit)
-        expectThat(debianArtifactSupplier.getGitMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.getDefaultGitMetadata(latestArtifact, debianArtifact.versioningStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on frigga parser") {
         val buildMeta = BuildMetadata(id = AppVersion.parseName(latestArtifact.version)!!.buildNumber.toInt())
-        expectThat(debianArtifactSupplier.getBuildMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.getDefaultBuildMetadata(latestArtifact, debianArtifact.versioningStrategy))
           .isEqualTo(buildMeta)
       }
     }

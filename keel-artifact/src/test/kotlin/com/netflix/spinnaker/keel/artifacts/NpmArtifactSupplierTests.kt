@@ -96,13 +96,13 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on Netflix semver convention") {
         val gitMeta = GitMetadata(commit = NetflixSemVerVersioningStrategy.getCommitHash(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.getGitMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.getDefaultGitMetadata(latestArtifact, npmArtifact.versioningStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on Netflix semver convention") {
         val buildMeta = BuildMetadata(id = NetflixSemVerVersioningStrategy.getBuildNumber(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.getBuildMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.getDefaultBuildMetadata(latestArtifact, npmArtifact.versioningStrategy))
           .isEqualTo(buildMeta)
       }
     }

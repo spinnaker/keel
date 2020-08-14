@@ -67,7 +67,7 @@ class DockerArtifactSupplier(
     }
   }
 
-  override fun getBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
       if (versioningStrategy.hasBuild()) {
         val regex = Regex("""^.*-h(\d+).*$""")
         val result = regex.find(artifact.version)
@@ -78,14 +78,14 @@ class DockerArtifactSupplier(
     return null
   }
 
-  override fun getGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
       if (versioningStrategy.hasCommit()) {
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
     return null
   }
 
-  override fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
+  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
     return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
       artifact.metadata["commitHash"]?.toString())
   }

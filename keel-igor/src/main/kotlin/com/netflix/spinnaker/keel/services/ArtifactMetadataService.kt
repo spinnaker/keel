@@ -4,7 +4,6 @@ import com.netflix.spinnaker.igor.BuildService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
 
 /**
@@ -15,7 +14,7 @@ class ArtifactMetadataService(
   private val buildService: BuildService
 ) {
 
-  fun getArtifactMetadata(
+  suspend fun getArtifactMetadata(
     commitId: String?,
     buildNumber: String?
   ): ArtifactMetadata? {
@@ -23,9 +22,8 @@ class ArtifactMetadataService(
     if (commitId == null || buildNumber == null) {
       return null
     }
-      val builds = runBlocking {
+      val builds =
         buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
-    }
 
     // TODO: implement the exact conversion between build service response to the objects we are expecting
     return ArtifactMetadata(

@@ -117,8 +117,8 @@ class ApplicationServiceTests : JUnit5Minutests {
       } answers {
         publishedArtifact.captured.version
       }
-      every { getBuildMetadata(any(), any()) } returns null
-      every { getGitMetadata(any(), any()) } returns null
+      every { getDefaultBuildMetadata(any(), any()) } returns null
+      every { getDefaultGitMetadata(any(), any()) } returns null
       every { getReleaseStatus(any()) } returns null
     }
 
