@@ -14,7 +14,7 @@ class ArtifactStoredListener(
 ) {
 
   @EventListener(ArtifactSaved::class)
-  fun onArtifactSaved(event: ArtifactSaved) {
+  suspend fun onArtifactSaved(event: ArtifactSaved) {
     val artifactSupplier = artifactSuppliers.supporting(event.artifact.type)
     val artifactMetadata = artifactSupplier.getArtifactMetadata(event.artifact)
     repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
