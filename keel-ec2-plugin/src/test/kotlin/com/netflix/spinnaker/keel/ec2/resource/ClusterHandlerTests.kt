@@ -733,7 +733,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
 
         test("a different deploy strategy is used") {
           runBlocking {
-            upsert(resource.copy(spec = resource.spec.copy(deployWith = Highlander)), diff)
+            upsert(resource.copy(spec = resource.spec.copy(deployWith = Highlander())), diff)
           }
 
           val slot = slot<OrchestrationRequest>()

@@ -6,6 +6,7 @@ import java.time.Duration.ZERO
 sealed class ClusterDeployStrategy {
   open val isStaggered: Boolean = false
   open val stagger: List<StaggeredRegion> = emptyList()
+  abstract val considerOnlyAmazonHealth: Boolean
   abstract fun toOrcaJobProperties(): Map<String, Any?>
   abstract fun withDefaultsOmitted(): ClusterDeployStrategy
 
@@ -15,6 +16,7 @@ sealed class ClusterDeployStrategy {
 }
 
 data class RedBlack(
+  override val considerOnlyAmazonHealth: Boolean = false,
   // defaulting to false because this rollback behavior doesn't seem to play nice with managed delivery
   val rollbackOnFailure: Boolean? = false,
   val resizePreviousToZero: Boolean? = false,
@@ -71,7 +73,9 @@ data class RedBlack(
     )
 }
 
-object Highlander : ClusterDeployStrategy() {
+data class Highlander(
+  override val considerOnlyAmazonHealth: Boolean = false
+) : ClusterDeployStrategy() {
   override fun toOrcaJobProperties() = mapOf(
     "strategy" to "highlander",
     "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis()

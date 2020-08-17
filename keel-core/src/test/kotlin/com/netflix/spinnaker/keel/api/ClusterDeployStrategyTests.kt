@@ -28,11 +28,13 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
 
   fun tests() = rootContext<Fixture> {
     context("highlander") {
-      fixture { Fixture(Highlander) }
+      fixture { Fixture(Highlander()) }
 
       test("serializes to JSON") {
-        expectThat(mapper.writeValueAsString(strategy))
-          .isEqualTo("""{"strategy":"highlander"}""")
+        expectThat<ObjectNode>(mapper.valueToTree(strategy)) {
+          path("strategy").textValue() isEqualTo "highlander"
+          path("considerOnlyAmazonHealth").booleanValue().isFalse()
+        }
       }
     }
 
@@ -43,6 +45,7 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
         println(mapper.writeValueAsString(strategy))
         expectThat<ObjectNode>(mapper.valueToTree(strategy)) {
           path("strategy").textValue() isEqualTo "red-black"
+          path("considerOnlyAmazonHealth").booleanValue().isFalse()
           path("resizePreviousToZero").booleanValue().isFalse()
           path("rollbackOnFailure").booleanValue().isFalse()
           path("maxServerGroups").numberValue().isEqualTo(2)

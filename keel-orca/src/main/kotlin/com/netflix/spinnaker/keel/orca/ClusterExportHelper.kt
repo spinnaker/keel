@@ -102,7 +102,7 @@ class ClusterExportHelper(
             null
           }
         }
-        "highlander" -> Highlander
+        "highlander" -> Highlander()
         null -> null.also {
           log.error(
             "Deployment strategy information not found for server group $serverGroupName " +
