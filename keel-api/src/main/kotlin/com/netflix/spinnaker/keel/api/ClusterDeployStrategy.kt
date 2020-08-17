@@ -6,9 +6,7 @@ import java.time.Duration.ZERO
 sealed class ClusterDeployStrategy {
   open val isStaggered: Boolean = false
   open val stagger: List<StaggeredRegion> = emptyList()
-  abstract val considerOnlyAmazonHealth: Boolean
-  abstract fun toOrcaJobProperties(): Map<String, Any?>
-  abstract fun withDefaultsOmitted(): ClusterDeployStrategy
+  abstract val considerOnlyInstanceHealth: Boolean
 
   companion object {
     val DEFAULT_WAIT_FOR_INSTANCES_UP: Duration = Duration.ofMinutes(30)
@@ -16,7 +14,7 @@ sealed class ClusterDeployStrategy {
 }
 
 data class RedBlack(
-  override val considerOnlyAmazonHealth: Boolean = false,
+  override val considerOnlyInstanceHealth: Boolean = false,
   // defaulting to false because this rollback behavior doesn't seem to play nice with managed delivery
   val rollbackOnFailure: Boolean? = false,
   val resizePreviousToZero: Boolean? = false,
@@ -27,63 +25,28 @@ data class RedBlack(
   // The order of this list is important for pauseTime based staggers
   override val stagger: List<StaggeredRegion> = emptyList()
 ) : ClusterDeployStrategy() {
-
-  companion object {
-    fun fromOrcaStageContext(context: Map<String, Any?>) =
-      RedBlack(
-        rollbackOnFailure = context["rollback"]
-          ?.let {
-            @Suppress("UNCHECKED_CAST")
-            it as Map<String, Any>
-          }
-          ?.get("onFailure") as Boolean,
-        resizePreviousToZero = context["scaleDown"] as Boolean,
-        maxServerGroups = context["maxRemainingAsgs"].toString().toInt(),
-        delayBeforeDisable = Duration.ofSeconds((context["delayBeforeDisableSec"].toString().toInt()).toLong()),
-        delayBeforeScaleDown = Duration.ofSeconds((context["delayBeforeScaleDownSec"].toString().toInt()).toLong())
-      )
-
-    val DEFAULTS = RedBlack()
-  }
-
-  override fun toOrcaJobProperties() = mapOf(
-    "strategy" to "redblack",
-    "maxRemainingAsgs" to maxServerGroups,
-    "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
-    "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
-    "scaleDown" to resizePreviousToZero,
-    "rollback" to mapOf("onFailure" to rollbackOnFailure),
-    "stageTimeoutMs" to (
-      (waitForInstancesUp ?: DEFAULT_WAIT_FOR_INSTANCES_UP) +
-        (delayBeforeDisable ?: ZERO) +
-        (delayBeforeScaleDown ?: ZERO)
-      ).toMillis(),
-    "interestingHealthProviderNames" to if (considerOnlyAmazonHealth) listOf("Amazon") else null
-  )
-
   override val isStaggered: Boolean
     get() = stagger.isNotEmpty()
-
-  override fun withDefaultsOmitted() =
-    RedBlack(
-      maxServerGroups = nullIfDefault(maxServerGroups, DEFAULTS.maxServerGroups),
-      delayBeforeDisable = nullIfDefault(delayBeforeDisable, DEFAULTS.delayBeforeDisable),
-      delayBeforeScaleDown = nullIfDefault(delayBeforeScaleDown, DEFAULTS.delayBeforeScaleDown),
-      resizePreviousToZero = nullIfDefault(resizePreviousToZero, DEFAULTS.resizePreviousToZero),
-      rollbackOnFailure = nullIfDefault(rollbackOnFailure, DEFAULTS.rollbackOnFailure)
-    )
 }
 
 data class Highlander(
-  override val considerOnlyAmazonHealth: Boolean = false
-) : ClusterDeployStrategy() {
-  override fun toOrcaJobProperties() = mapOf(
-    "strategy" to "highlander",
-    "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis()
-  )
+  override val considerOnlyInstanceHealth: Boolean = false
+) : ClusterDeployStrategy()
 
-  override fun withDefaultsOmitted() = this
-}
+fun ClusterDeployStrategy.withDefaultsOmitted(): ClusterDeployStrategy =
+  when (this) {
+    is RedBlack -> {
+      val defaults = RedBlack()
+      RedBlack(
+        maxServerGroups = nullIfDefault(maxServerGroups, defaults.maxServerGroups),
+        delayBeforeDisable = nullIfDefault(delayBeforeDisable, defaults.delayBeforeDisable),
+        delayBeforeScaleDown = nullIfDefault(delayBeforeScaleDown, defaults.delayBeforeScaleDown),
+        resizePreviousToZero = nullIfDefault(resizePreviousToZero, defaults.resizePreviousToZero),
+        rollbackOnFailure = nullIfDefault(rollbackOnFailure, defaults.rollbackOnFailure)
+      )
+    }
+      else -> this
+  }
 
 /**
  * Allows the deployment of multi-region clusters to be staggered by region.

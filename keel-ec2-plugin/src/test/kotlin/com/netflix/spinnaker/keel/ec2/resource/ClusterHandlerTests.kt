@@ -733,7 +733,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
 
         test("the cluster does not use discovery-based health during deployment") {
-          val deployWith = RedBlack(considerOnlyAmazonHealth = true)
+          val deployWith = RedBlack(considerOnlyInstanceHealth = true)
           runBlocking {
             upsert(resource.copy(spec = resource.spec.copy(deployWith = deployWith)), diff)
           }
@@ -748,7 +748,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
         }
 
         test("the cluster uses discovery-based health during deployment") {
-          val deployWith = RedBlack(considerOnlyAmazonHealth = false)
+          val deployWith = RedBlack(considerOnlyInstanceHealth = false)
           runBlocking {
             upsert(resource.copy(spec = resource.spec.copy(deployWith = deployWith)), diff)
           }

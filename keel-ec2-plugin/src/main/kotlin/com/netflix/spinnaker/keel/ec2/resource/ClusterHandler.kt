@@ -46,6 +46,7 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.serviceAccount
+import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -71,6 +72,7 @@ import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
+import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
@@ -805,7 +807,7 @@ class ClusterHandler(
     )
       .also { them ->
         val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
-        val healthy: Boolean = resource.spec.deployWith.considerOnlyAmazonHealth || them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = resource.spec.deployWith.considerOnlyInstanceHealth || them.all { it.instanceCounts?.isHealthy() == true }
         if (allSame && healthy) {
           // // only publish a successfully deployed event if the server group is healthy
           val appVersion = them.first().launchConfiguration.appVersion
