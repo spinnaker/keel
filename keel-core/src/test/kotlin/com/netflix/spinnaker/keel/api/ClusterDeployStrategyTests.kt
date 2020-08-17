@@ -98,7 +98,8 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
                 "delayBeforeScaleDownSec" to strategy.delayBeforeScaleDown?.seconds,
                 "scaleDown" to strategy.resizePreviousToZero,
                 "rollback" to mapOf("onFailure" to strategy.rollbackOnFailure),
-                "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis()
+                "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis(),
+                "interestingHealthProviderNames" to null
               )
             )
           }
@@ -128,7 +129,8 @@ internal class ClusterDeployStrategyTests : JUnit5Minutests {
                   strategy.delayBeforeDisable!! +
                     strategy.delayBeforeScaleDown!! +
                     strategy.waitForInstancesUp!!
-                  ).toMillis()
+                  ).toMillis(),
+                "interestingHealthProviderNames" to null
               )
             )
           }

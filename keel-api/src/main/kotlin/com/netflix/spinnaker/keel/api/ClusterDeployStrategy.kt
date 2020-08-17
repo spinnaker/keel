@@ -57,7 +57,8 @@ data class RedBlack(
       (waitForInstancesUp ?: DEFAULT_WAIT_FOR_INSTANCES_UP) +
         (delayBeforeDisable ?: ZERO) +
         (delayBeforeScaleDown ?: ZERO)
-      ).toMillis()
+      ).toMillis(),
+    "interestingHealthProviderNames" to if (considerOnlyAmazonHealth) listOf("Amazon") else null
   )
 
   override val isStaggered: Boolean
