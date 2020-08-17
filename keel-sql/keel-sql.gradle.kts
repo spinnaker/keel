@@ -1,16 +1,22 @@
 import ch.ayedo.jooqmodelator.gradle.JooqModelatorTask
 import com.diffplug.gradle.spotless.SpotlessExtension
 
+val buildingInDocker = project.properties["buildingInDocker"]?.toString().let { it == "true" }
+
 plugins {
   `java-library`
   id("kotlin-spring")
   id("ch.ayedo.jooqmodelator") version "3.9.0"
+  id("nu.studer.jooq") version "5.0.1"
   id("org.liquibase.gradle") version "2.0.4"
 }
 
 afterEvaluate {
-  tasks.getByName("compileKotlin") {
-    dependsOn("generateJooqMetamodel")
+  // When not running in Docker, we can use jooqModelator (which itself uses Docker) to generate the jOOQ meta-model
+  if (!buildingInDocker) {
+    tasks.getByName("compileKotlin") {
+      dependsOn("generateJooqMetamodel")
+    }
   }
 }
 
@@ -54,7 +60,15 @@ dependencies {
   jooqModelatorRuntime(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
   jooqModelatorRuntime("mysql:mysql-connector-java")
 
+  jooqGenerator(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
+  jooqGenerator("mysql:mysql-connector-java")
+  jooqGenerator("org.jooq:jooq-meta-extensions")
+  jooqGenerator("ch.qos.logback:logback-classic")
+
   liquibaseRuntime(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
+  liquibaseRuntime("org.liquibase:liquibase-core")
+  liquibaseRuntime("ch.qos.logback:logback-classic")
+  liquibaseRuntime("org.yaml:snakeyaml")
   liquibaseRuntime("mysql:mysql-connector-java")
 }
 
@@ -69,6 +83,16 @@ jooqModelator {
   dockerEnv = listOf("MYSQL_ROOT_PASSWORD=sa", "MYSQL_ROOT_HOST=%", "MYSQL_DATABASE=keel")
   dockerHostPort = 6603
   dockerContainerPort = 3306
+}
+
+// Task used when building in Docker in place of jooqModelator (see Dockerfile.compile)
+tasks.register<JavaExec>("jooqGenerate") {
+  group = "Execution"
+  description = "Run the jOOQ code generation tool"
+  classpath = configurations.named("jooqGenerator").get()
+  main = "org.jooq.codegen.GenerationTool"
+  args = listOf("$buildDir/resources/main/jooqConfig.xml")
+  dependsOn("processResources")
 }
 
 // expand properties in jooqConfig.xml so it gets a fully-qualified directory to generate into
@@ -93,14 +117,23 @@ afterEvaluate {
 }
 
 liquibase {
-  activities.register("main") {
+  activities.register("local") {
     arguments = mapOf(
       "logLevel" to "info",
-      "changeLogFile" to "db/databaseChangeLog.yml",
+      "changeLogFile" to "src/main/resources/db/databaseChangeLog.yml",
       "url" to "jdbc:mysql://localhost:3306/keel?useSSL=false&serverTimezone=UTC",
       "username" to "root",
       "password" to ""
     )
   }
-  runList = "main"
+  activities.register("docker") {
+    arguments = mapOf(
+      "logLevel" to "info",
+      "changeLogFile" to "src/main/resources/db/databaseChangeLog.yml",
+      "url" to "jdbc:mysql://localhost:6603/keel?useSSL=false&serverTimezone=UTC",
+      "username" to "root",
+      "password" to "sa"
+    )
+  }
+  runList = if (buildingInDocker) "docker" else "local"
 }
