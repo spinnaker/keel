@@ -96,8 +96,8 @@ data class ServerGroup(
     val starting: Int
   ) {
     // active asg is healthy if all instances are up
-    fun isHealthy(considerOnlyInstanceHealth: Boolean): Boolean =
-      if (considerOnlyInstanceHealth) unknown == total
+    fun isHealthy(noHealth: Boolean): Boolean =
+      if (noHealth) unknown == total
       else up == total
   }
 

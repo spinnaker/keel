@@ -26,7 +26,7 @@ fun ClusterDeployStrategy.toOrcaJobProperties(vararg instanceOnlyHealthProviders
           (delayBeforeDisable ?: ZERO) +
           (delayBeforeScaleDown ?: ZERO)
         ).toMillis(),
-      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) {
+      "interestingHealthProviderNames" to if (noHealth) {
         instanceOnlyHealthProviders.toList()
       } else {
         null
@@ -35,7 +35,7 @@ fun ClusterDeployStrategy.toOrcaJobProperties(vararg instanceOnlyHealthProviders
     is Highlander -> mapOf(
       "strategy" to "highlander",
       "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis(),
-      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) {
+      "interestingHealthProviderNames" to if (noHealth) {
         instanceOnlyHealthProviders.toList()
       } else {
         null

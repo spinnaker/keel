@@ -6,7 +6,7 @@ import java.time.Duration.ZERO
 sealed class ClusterDeployStrategy {
   open val isStaggered: Boolean = false
   open val stagger: List<StaggeredRegion> = emptyList()
-  abstract val considerOnlyInstanceHealth: Boolean
+  abstract val noHealth: Boolean
 
   companion object {
     val DEFAULT_WAIT_FOR_INSTANCES_UP: Duration = Duration.ofMinutes(30)
@@ -14,7 +14,7 @@ sealed class ClusterDeployStrategy {
 }
 
 data class RedBlack(
-  override val considerOnlyInstanceHealth: Boolean = false,
+  override val noHealth: Boolean = false,
   // defaulting to false because this rollback behavior doesn't seem to play nice with managed delivery
   val rollbackOnFailure: Boolean? = false,
   val resizePreviousToZero: Boolean? = false,
@@ -30,7 +30,7 @@ data class RedBlack(
 }
 
 data class Highlander(
-  override val considerOnlyInstanceHealth: Boolean = false
+  override val noHealth: Boolean = false
 ) : ClusterDeployStrategy()
 
 fun ClusterDeployStrategy.withDefaultsOmitted(): ClusterDeployStrategy =
