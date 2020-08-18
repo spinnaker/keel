@@ -9,7 +9,7 @@ import java.time.Duration.ZERO
 /**
  * Transforms [ClusterDeployStrategy] into the properties required for an Orca deploy stage.
  */
-fun ClusterDeployStrategy.toOrcaJobProperties(): Map<String, Any?> =
+fun ClusterDeployStrategy.toOrcaJobProperties(vararg instanceOnlyHealthProviders: String): Map<String, Any?> =
   when (this) {
     is RedBlack -> mapOf(
       "strategy" to "redblack",
@@ -24,11 +24,19 @@ fun ClusterDeployStrategy.toOrcaJobProperties(): Map<String, Any?> =
           (delayBeforeDisable ?: ZERO) +
           (delayBeforeScaleDown ?: ZERO)
         ).toMillis(),
-      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) listOf("Amazon") else null
+      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) {
+        instanceOnlyHealthProviders.toList()
+      } else {
+        null
+      }
     )
     is Highlander -> mapOf(
       "strategy" to "highlander",
       "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis(),
-      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) listOf("Amazon") else null
+      "interestingHealthProviderNames" to if (considerOnlyInstanceHealth) {
+        instanceOnlyHealthProviders.toList()
+      } else {
+        null
+      }
     )
   }

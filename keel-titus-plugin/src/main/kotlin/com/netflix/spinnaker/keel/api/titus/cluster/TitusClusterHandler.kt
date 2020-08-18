@@ -149,7 +149,7 @@ class TitusClusterHandler(
 
           val job = when {
             diff.isCapacityOnly() -> diff.resizeServerGroupJob()
-            else -> diff.upsertServerGroupJob(tagToUse) + resource.spec.deployWith.toOrcaJobProperties()
+            else -> diff.upsertServerGroupJob(tagToUse) + resource.spec.deployWith.toOrcaJobProperties("Amazon")
           }
 
           val description = when (version) {

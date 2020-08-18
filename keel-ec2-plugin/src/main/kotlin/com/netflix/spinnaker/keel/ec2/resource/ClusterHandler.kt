@@ -205,11 +205,11 @@ class ClusterHandler(
         }
         when {
           diff.shouldDeployAndModifyScalingPolicies() -> {
-            stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+            stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
             refId++
             stages.addAll(diff.modifyScalingPolicyJob(refId))
           }
-          else -> stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+          else -> stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
         }
 
         if (stages.isEmpty()) {
@@ -266,7 +266,7 @@ class ClusterHandler(
           refId++
         }
 
-        val stage = (diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+        val stage = (diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
           .toMutableMap()
 
         refId++

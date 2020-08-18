@@ -17,18 +17,19 @@ class ClusterDeployStrategyTests : JUnit5Minutests {
       context("conversion to orca job properties") {
         context("with defaults") {
           test("includes job properties as expected, stage timeout is default wait + margin") {
-            expectThat(toOrcaJobProperties()).isEqualTo(
-              mapOf(
-                "strategy" to "redblack",
-                "maxRemainingAsgs" to maxServerGroups,
-                "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
-                "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
-                "scaleDown" to resizePreviousToZero,
-                "rollback" to mapOf("onFailure" to rollbackOnFailure),
-                "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis(),
-                "interestingHealthProviderNames" to null
+            expectThat(toOrcaJobProperties("Amazon"))
+              .isEqualTo(
+                mapOf(
+                  "strategy" to "redblack",
+                  "maxRemainingAsgs" to maxServerGroups,
+                  "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
+                  "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
+                  "scaleDown" to resizePreviousToZero,
+                  "rollback" to mapOf("onFailure" to rollbackOnFailure),
+                  "stageTimeoutMs" to DEFAULT_WAIT_FOR_INSTANCES_UP.toMillis(),
+                  "interestingHealthProviderNames" to null
+                )
               )
-            )
           }
         }
 
@@ -42,22 +43,23 @@ class ClusterDeployStrategyTests : JUnit5Minutests {
           }
 
           test("includes job properties as expected, stage timeout is specified delays combined + margin") {
-            expectThat(toOrcaJobProperties()).isEqualTo(
-              mapOf(
-                "strategy" to "redblack",
-                "maxRemainingAsgs" to maxServerGroups,
-                "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
-                "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
-                "scaleDown" to resizePreviousToZero,
-                "rollback" to mapOf("onFailure" to rollbackOnFailure),
-                "stageTimeoutMs" to (
-                  delayBeforeDisable!! +
-                    delayBeforeScaleDown!! +
-                    waitForInstancesUp!!
-                  ).toMillis(),
-                "interestingHealthProviderNames" to null
+            expectThat(toOrcaJobProperties("Amazon"))
+              .isEqualTo(
+                mapOf(
+                  "strategy" to "redblack",
+                  "maxRemainingAsgs" to maxServerGroups,
+                  "delayBeforeDisableSec" to delayBeforeDisable?.seconds,
+                  "delayBeforeScaleDownSec" to delayBeforeScaleDown?.seconds,
+                  "scaleDown" to resizePreviousToZero,
+                  "rollback" to mapOf("onFailure" to rollbackOnFailure),
+                  "stageTimeoutMs" to (
+                    delayBeforeDisable!! +
+                      delayBeforeScaleDown!! +
+                      waitForInstancesUp!!
+                    ).toMillis(),
+                  "interestingHealthProviderNames" to null
+                )
               )
-            )
           }
         }
       }
