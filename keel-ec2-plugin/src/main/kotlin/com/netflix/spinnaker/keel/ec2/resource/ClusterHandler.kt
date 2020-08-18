@@ -807,7 +807,9 @@ class ClusterHandler(
     )
       .also { them ->
         val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
-        val healthy: Boolean = resource.spec.deployWith.considerOnlyInstanceHealth || them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = them.all {
+          it.instanceCounts?.isHealthy(resource.spec.deployWith.considerOnlyInstanceHealth) == true
+        }
         if (allSame && healthy) {
           // // only publish a successfully deployed event if the server group is healthy
           val appVersion = them.first().launchConfiguration.appVersion
