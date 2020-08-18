@@ -45,7 +45,7 @@ fun ClusterDeployStrategy.withDefaultsOmitted(): ClusterDeployStrategy =
         rollbackOnFailure = nullIfDefault(rollbackOnFailure, defaults.rollbackOnFailure)
       )
     }
-      else -> this
+    else -> this
   }
 
 /**

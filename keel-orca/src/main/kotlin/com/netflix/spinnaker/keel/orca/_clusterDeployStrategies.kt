@@ -19,8 +19,10 @@ fun ClusterDeployStrategy.toOrcaJobProperties(vararg instanceOnlyHealthProviders
       "scaleDown" to resizePreviousToZero,
       "rollback" to mapOf("onFailure" to rollbackOnFailure),
       "stageTimeoutMs" to (
-        (waitForInstancesUp
-          ?: DEFAULT_WAIT_FOR_INSTANCES_UP) +
+        (
+          waitForInstancesUp
+            ?: DEFAULT_WAIT_FOR_INSTANCES_UP
+          ) +
           (delayBeforeDisable ?: ZERO) +
           (delayBeforeScaleDown ?: ZERO)
         ).toMillis(),
