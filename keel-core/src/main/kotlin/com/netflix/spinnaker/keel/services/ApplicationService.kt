@@ -6,8 +6,6 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SimpleLocations
-import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
@@ -81,15 +79,19 @@ class ApplicationService(
       environment,
       status.artifactVersion,
       status.type,
-      status.artifactReference) ?: throw InvalidConstraintException(
-      "${config.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found")
+      status.artifactReference
+    ) ?: throw InvalidConstraintException(
+      "${config.name}/$environment/${status.type}/${status.artifactVersion}", "constraint not found"
+    )
 
     repository.storeConstraintState(
       currentState.copy(
         status = status.status,
         comment = status.comment ?: currentState.comment,
         judgedAt = Instant.now(),
-        judgedBy = user))
+        judgedBy = user
+      )
+    )
   }
 
   fun pin(user: String, application: String, pin: EnvironmentArtifactPin) {
@@ -125,7 +127,8 @@ class ApplicationService(
       deliveryConfig = config,
       artifact = artifact,
       version = version,
-      targetEnvironment = targetEnvironment)
+      targetEnvironment = targetEnvironment
+    )
   }
 
   /**
@@ -152,11 +155,7 @@ class ApplicationService(
         null
       },
       locations = if (spec is Locatable<*>) {
-        SimpleLocations(
-          account = (spec as Locatable<*>).locations.account,
-          vpc = (spec as Locatable<*>).locations.vpc,
-          regions = (spec as Locatable<*>).locations.regions.map { SimpleRegionSpec(it.name) }.toSet()
-        )
+        (spec as Locatable<*>).locations
       } else {
         null
       },

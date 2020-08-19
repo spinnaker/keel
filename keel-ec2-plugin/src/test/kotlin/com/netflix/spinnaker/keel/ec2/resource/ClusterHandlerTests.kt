@@ -64,6 +64,7 @@ import org.springframework.context.ApplicationEventPublisher
 import strikt.api.Assertion
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
 import strikt.assertions.get
@@ -141,16 +142,18 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       ),
       capacity = Capacity(1, 6),
       scaling = Scaling(
-        targetTrackingPolicies = setOf(TargetTrackingPolicy(
-          name = targetTrackingPolicyName,
-          targetValue = 560.0,
-          disableScaleIn = true,
-          customMetricSpec = CustomizedMetricSpecification(
-            name = "RPS per instance",
-            namespace = "SPIN/ACH",
-            statistic = "Average"
+        targetTrackingPolicies = setOf(
+          TargetTrackingPolicy(
+            name = targetTrackingPolicyName,
+            targetValue = 560.0,
+            disableScaleIn = true,
+            customMetricSpec = CustomizedMetricSpecification(
+              name = "RPS per instance",
+              namespace = "SPIN/ACH",
+              statistic = "Average"
+            )
           )
-        ))
+        )
       ),
       dependencies = ClusterDependencies(
         loadBalancerNames = setOf("keel-test-frontend"),
@@ -259,7 +262,9 @@ internal class ClusterHandlerTests : JUnit5Minutests {
               serverGroups.map {
                 it.copy(scaling = Scaling(), capacity = Capacity(2, 2, 2))
               }.byRegion(),
-              emptyMap()))
+              emptyMap()
+            )
+          )
         }
 
         val slot = slot<OrchestrationRequest>()
@@ -727,9 +732,39 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           }
         }
 
+        test("the cluster does not use discovery-based health during deployment") {
+          val deployWith = RedBlack(noHealth = true)
+          runBlocking {
+            upsert(resource.copy(spec = resource.spec.copy(deployWith = deployWith)), diff)
+          }
+
+          val slot = slot<OrchestrationRequest>()
+          coVerify { orcaService.orchestrate(resource.serviceAccount, capture(slot)) }
+
+          expectThat(slot.captured.job.first()) {
+            get("strategy").isEqualTo("redblack")
+            get("interestingHealthProviderNames").isA<List<String>>().containsExactly("Amazon")
+          }
+        }
+
+        test("the cluster uses discovery-based health during deployment") {
+          val deployWith = RedBlack(noHealth = false)
+          runBlocking {
+            upsert(resource.copy(spec = resource.spec.copy(deployWith = deployWith)), diff)
+          }
+
+          val slot = slot<OrchestrationRequest>()
+          coVerify { orcaService.orchestrate(resource.serviceAccount, capture(slot)) }
+
+          expectThat(slot.captured.job.first()) {
+            get("strategy").isEqualTo("redblack")
+            get("interestingHealthProviderNames").isNull()
+          }
+        }
+
         test("a different deploy strategy is used") {
           runBlocking {
-            upsert(resource.copy(spec = resource.spec.copy(deployWith = Highlander)), diff)
+            upsert(resource.copy(spec = resource.spec.copy(deployWith = Highlander())), diff)
           }
 
           val slot = slot<OrchestrationRequest>()

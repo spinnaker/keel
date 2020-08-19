@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
+import com.netflix.spinnaker.keel.api.AccountAwareLocations
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.application
 import com.netflix.spinnaker.keel.api.serviceAccount
@@ -107,8 +108,10 @@ class AuthorizationSupport(
       AuthenticatedRequest.allowAnonymous {
         permissionEvaluator.hasPermission(auth, application, "APPLICATION", action.name)
       }.also { allowed ->
-        log.debug("[ACCESS {}] User {}: {} access to application {}.",
-          allowed.toAuthorization(), auth.principal, action.name, application)
+        log.debug(
+          "[ACCESS {}] User {}: {} access to application {}.",
+          allowed.toAuthorization(), auth.principal, action.name, application
+        )
 
         if (!allowed) {
           throw AccessDeniedException("User ${auth.principal} does not have access to application $application")
@@ -135,8 +138,10 @@ class AuthorizationSupport(
       AuthenticatedRequest.allowAnonymous {
         permissionEvaluator.hasPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
       }.also { allowed ->
-        log.debug("[ACCESS {}] User {}: access to service account {}.",
-          allowed.toAuthorization(), auth.principal, serviceAccount)
+        log.debug(
+          "[ACCESS {}] User {}: access to service account {}.",
+          allowed.toAuthorization(), auth.principal, serviceAccount
+        )
 
         if (!allowed) {
           throw AccessDeniedException("User ${auth.principal} does not have access to service account $serviceAccount")
@@ -163,15 +168,18 @@ class AuthorizationSupport(
         APPLICATION -> repository.getDeliveryConfigForApplication(identifier).resources
         DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).resources
         else -> throw InvalidRequestException("Invalid target type ${target.name} for cloud account permission check")
-      }.filter { it.spec is Locatable<*> }
+      }.filter { (it.spec as? Locatable<*>)?.locations is AccountAwareLocations<*> }
 
       locatableResources.forEach {
-        val account = (it.spec as Locatable<*>).locations.account
+        val locations = (it.spec as Locatable<*>).locations
+        val account = (locations as AccountAwareLocations<*>).account
         AuthenticatedRequest.allowAnonymous {
           permissionEvaluator.hasPermission(auth, account, "ACCOUNT", action.name)
         }.also { allowed ->
-          log.debug("[ACCESS {}] User {}: {} access to cloud account {}.",
-            allowed.toAuthorization(), auth.principal, action.name, account)
+          log.debug(
+            "[ACCESS {}] User {}: {} access to cloud account {}.",
+            allowed.toAuthorization(), auth.principal, action.name, account
+          )
 
           if (!allowed) {
             throw AccessDeniedException("User ${auth.principal} does not have access to cloud account $account")

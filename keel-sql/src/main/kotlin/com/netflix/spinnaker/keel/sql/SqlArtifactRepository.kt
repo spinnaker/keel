@@ -72,17 +72,21 @@ class SqlArtifactRepository(
   private val artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList()
 ) : ArtifactRepository {
   override fun register(artifact: DeliveryArtifact) {
-    val id: String = (sqlRetry.withRetry(READ) {
-      jooq
-        .select(DELIVERY_ARTIFACT.UID)
-        .from(DELIVERY_ARTIFACT)
-        .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name)
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
-          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
-          .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference)))
-        .fetchOne(DELIVERY_ARTIFACT.UID)
-    }
-      ?: randomUID().toString())
+    val id: String = (
+      sqlRetry.withRetry(READ) {
+        jooq
+          .select(DELIVERY_ARTIFACT.UID)
+          .from(DELIVERY_ARTIFACT)
+          .where(
+            DELIVERY_ARTIFACT.NAME.eq(artifact.name)
+              .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
+              .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
+              .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
+          )
+          .fetchOne(DELIVERY_ARTIFACT.UID)
+      }
+        ?: randomUID().toString()
+      )
 
     sqlRetry.withRetry(WRITE) {
       jooq.insertInto(DELIVERY_ARTIFACT)
@@ -351,7 +355,8 @@ class SqlArtifactRepository(
         .from(ENVIRONMENT_ARTIFACT_PIN)
         .where(
           ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(envUid),
-          ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artifactId))
+          ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artifactId)
+        )
         .fetchOne(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION)
         ?: jooq
           .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
@@ -365,9 +370,10 @@ class SqlArtifactRepository(
           .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
           .let {
             when (it.isNotEmpty()) {
-              true -> it
-                .sortedWith(artifact.versioningStrategy.comparator)
-                .first()
+              true ->
+                it
+                  .sortedWith(artifact.versioningStrategy.comparator)
+                  .first()
               else -> null
             }
           }
@@ -572,15 +578,18 @@ class SqlArtifactRepository(
       )
       .fetch { (envName, artifactId, version) ->
         if (artifactsById.containsKey(artifactId)) {
-          vetoes.getOrPut(vetoKey(envName, artifactId),
+          vetoes.getOrPut(
+            vetoKey(envName, artifactId),
             {
               EnvironmentArtifactVetoes(
                 deliveryConfigName = deliveryConfig.name,
                 targetEnvironment = envName,
                 artifact = artifactsById[artifactId]
                   ?: error("Invalid artifactId $artifactId for deliveryConfig ${deliveryConfig.name}"),
-                versions = mutableSetOf())
-            })
+                versions = mutableSetOf()
+              )
+            }
+          )
             .versions.add(version)
         }
       }
@@ -643,7 +652,8 @@ class SqlArtifactRepository(
         "Pinned artifact version cannot be vetoed: " +
           "deliveryConfig=${deliveryConfig.name}, " +
           "environment=${veto.targetEnvironment}, " +
-          "artifactVersion=${veto.version}")
+          "artifactVersion=${veto.version}"
+      )
       return false
     }
 
@@ -660,7 +670,8 @@ class SqlArtifactRepository(
               "deliveryConfig=${deliveryConfig.name}, " +
               "environment=${veto.targetEnvironment}, " +
               "artifactVersion=${veto.version}, " +
-              "priorVersionReference=$reference")
+              "priorVersionReference=$reference"
+          )
           return false
         }
       }
@@ -746,7 +757,8 @@ class SqlArtifactRepository(
       .where(
         ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envUid),
         ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artUid),
-        ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+        ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version)
+      )
   }
 
   private fun isPinned(
@@ -760,7 +772,8 @@ class SqlArtifactRepository(
           ENVIRONMENT_ARTIFACT_PIN,
           ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(envUid)
             .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artUid))
-            .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION.eq(version)))
+            .and(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION.eq(version))
+        )
     }
   }
 
@@ -772,8 +785,10 @@ class SqlArtifactRepository(
     return sqlRetry.withRetry(READ) {
       Pair(
         deliveryConfig.getUidStringFor(
-          deliveryConfig.environmentNamed(targetEnvironment)),
-        artifact.uidString)
+          deliveryConfig.environmentNamed(targetEnvironment)
+        ),
+        artifact.uidString
+      )
     }
   }
 
@@ -784,7 +799,8 @@ class SqlArtifactRepository(
     targetEnvironment: String
   ) {
     val envId = deliveryConfig.getUidFor(
-      deliveryConfig.environmentNamed(targetEnvironment))
+      deliveryConfig.environmentNamed(targetEnvironment)
+    )
     val artId = artifact.uidString
 
     sqlRetry.withRetry(WRITE) {
@@ -793,7 +809,8 @@ class SqlArtifactRepository(
         .where(
           ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envId),
           ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid),
-          ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+          ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version)
+        )
         .fetchOne(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
 
       /**
@@ -809,7 +826,8 @@ class SqlArtifactRepository(
             .where(
               ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envId),
               ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artId),
-              ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(referenceVersion))
+              ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(referenceVersion)
+            )
             .fetchOne(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_REFERENCE)
         }
       }
@@ -823,7 +841,8 @@ class SqlArtifactRepository(
           .where(
             ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envId),
             ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artId),
-            ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+            ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version)
+          )
           .execute()
 
         if (referencesReferenceVersion != null && referenceVersion == referencesReferenceVersion) {
@@ -832,7 +851,8 @@ class SqlArtifactRepository(
             .where(
               ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(envId),
               ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artId),
-              ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(referenceVersion))
+              ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(referenceVersion)
+            )
             .execute()
         }
 
@@ -956,11 +976,14 @@ class SqlArtifactRepository(
           .toSet()
         val versions = unionedVersions
           .sortedWith(compareBy(artifact.versioningStrategy.comparator) { (version, _, _) -> version })
-          .groupBy({ (_, _, promotionStatus) ->
-            promotionStatus
-          }, { (version, _, _) ->
-            version
-          })
+          .groupBy(
+            { (_, _, promotionStatus) ->
+              promotionStatus
+            },
+            { (version, _, _) ->
+              version
+            }
+          )
 
         val currentVersion = versions[CURRENT]?.firstOrNull()
         ArtifactVersions(
@@ -976,8 +999,10 @@ class SqlArtifactRepository(
             approved = versions[APPROVED] ?: emptyList(),
             previous = versions[PREVIOUS] ?: emptyList(),
             vetoed = versions[VETOED] ?: emptyList(),
-            skipped = removeNewerIfCurrentExists(artifact, currentVersion, versions[PENDING]).plus(versions[SKIPPED]
-              ?: emptyList())
+            skipped = removeNewerIfCurrentExists(artifact, currentVersion, versions[PENDING]).plus(
+              versions[SKIPPED]
+                ?: emptyList()
+            )
           ),
           pinnedVersion = pinnedEnvs.find { it.targetEnvironment == environment.name }?.version
         )
@@ -1040,7 +1065,8 @@ class SqlArtifactRepository(
               type.toLowerCase(),
               details,
               reference,
-              deliveryConfig.name),
+              deliveryConfig.name
+            ),
             version = version,
             pinnedAt = pinnedAt.toInstant(UTC),
             pinnedBy = pinnedBy,
@@ -1058,7 +1084,8 @@ class SqlArtifactRepository(
         .on(ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
         .where(
           ENVIRONMENT.NAME.eq(targetEnvironment),
-          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid)
+        )
         .fetch { (envUid, artUid) ->
           deletePin(envUid, artUid)
         }
@@ -1081,7 +1108,8 @@ class SqlArtifactRepository(
           DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name),
           DELIVERY_ARTIFACT.REFERENCE.eq(reference),
           ENVIRONMENT.NAME.eq(targetEnvironment),
-          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid)
+        )
         .fetch { (envUid, artUid) ->
           deletePin(envUid, artUid)
         }
@@ -1237,24 +1265,30 @@ class SqlArtifactRepository(
   private val DeliveryArtifact.uid: Select<Record1<String>>
     get() = select(DELIVERY_ARTIFACT.UID)
       .from(DELIVERY_ARTIFACT)
-      .where(DELIVERY_ARTIFACT.NAME.eq(name)
-        .and(DELIVERY_ARTIFACT.TYPE.eq(type))
-        .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
-        .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference)))
+      .where(
+        DELIVERY_ARTIFACT.NAME.eq(name)
+          .and(DELIVERY_ARTIFACT.TYPE.eq(type))
+          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
+          .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference))
+      )
 
   private val DeliveryArtifact.uidString: String
     get() = sqlRetry.withRetry(READ) {
       jooq.select(DELIVERY_ARTIFACT.UID)
         .from(DELIVERY_ARTIFACT)
-        .where(DELIVERY_ARTIFACT.NAME.eq(name)
-          .and(DELIVERY_ARTIFACT.TYPE.eq(type))
-          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
-          .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference)))
-        .fetchOne(DELIVERY_ARTIFACT.UID) ?: error("artifact not found for " +
-        "name=$name, " +
-        "type=$type, " +
-        "deliveryConfig=$deliveryConfigName, " +
-        "reference=$reference")
+        .where(
+          DELIVERY_ARTIFACT.NAME.eq(name)
+            .and(DELIVERY_ARTIFACT.TYPE.eq(type))
+            .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfigName))
+            .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference))
+        )
+        .fetchOne(DELIVERY_ARTIFACT.UID) ?: error(
+        "artifact not found for " +
+          "name=$name, " +
+          "type=$type, " +
+          "deliveryConfig=$deliveryConfigName, " +
+          "reference=$reference"
+      )
     }
 
   private val DeliveryConfig.uid: Select<Record1<String>>

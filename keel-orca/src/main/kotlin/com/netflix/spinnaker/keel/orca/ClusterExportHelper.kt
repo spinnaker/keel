@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.Highlander
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import java.time.Duration
 import kotlinx.coroutines.async
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -31,8 +32,10 @@ class ClusterExportHelper(
   ): ClusterDeployStrategy? {
     return kotlinx.coroutines.coroutineScope {
       val entityTags = async {
-        log.debug("Looking for entity tags on server group $serverGroupName in application $application, " +
-          "account $account in search of pipeline/task correlation.")
+        log.debug(
+          "Looking for entity tags on server group $serverGroupName in application $application, " +
+            "account $account in search of pipeline/task correlation."
+        )
         cloudDriverService.getEntityTags(
           cloudProvider = "aws",
           account = account,
@@ -43,8 +46,10 @@ class ClusterExportHelper(
       }.await()
 
       if (entityTags.isEmpty()) {
-        log.warn("Unable to find entity tags for server group $serverGroupName in application $application, " +
-          "account $account.")
+        log.warn(
+          "Unable to find entity tags for server group $serverGroupName in application $application, " +
+            "account $account."
+        )
         return@coroutineScope null
       }
 
@@ -56,8 +61,10 @@ class ClusterExportHelper(
         spinnakerMetadata["executionType"] == null ||
         spinnakerMetadata["executionId"] == null
       ) {
-        log.warn("Unable to find Spinnaker metadata for server group $serverGroupName in application $application, " +
-          "account $account in entity tags.")
+        log.warn(
+          "Unable to find Spinnaker metadata for server group $serverGroupName in application $application, " +
+            "account $account in entity tags."
+        )
         return@coroutineScope null
       }
 
@@ -72,8 +79,10 @@ class ClusterExportHelper(
       }.await()
 
       if (execution == null) {
-        log.error("Unsupported execution type $executionType in Spinnaker metadata. Unable to determine deployment " +
-          "strategy for server group $serverGroupName in application $application, account $account.")
+        log.error(
+          "Unsupported execution type $executionType in Spinnaker metadata. Unable to determine deployment " +
+            "strategy for server group $serverGroupName in application $application, account $account."
+        )
         return@coroutineScope null
       }
 
@@ -88,25 +97,43 @@ class ClusterExportHelper(
       when (val strategy = context?.get("strategy")) {
         "redblack" -> {
           try {
-            RedBlack.fromOrcaStageContext(context)
+            context.contextToRedBlack()
           } catch (e: ClassCastException) {
             log.error("Could not convert strategy to redblack, context is {}", context)
             null
           }
         }
-        "highlander" -> Highlander
+        "highlander" -> Highlander()
         null -> null.also {
-          log.error("Deployment strategy information not found for server group $serverGroupName " +
-            "in application $application, account $account")
+          log.error(
+            "Deployment strategy information not found for server group $serverGroupName " +
+              "in application $application, account $account"
+          )
         }
         else -> null.also {
-          log.error("Deployment strategy $strategy associated with server group $serverGroupName " +
-            "in application $application, account $account is not supported. " +
-            "Only redblack and highlander are supported at this time.")
+          log.error(
+            "Deployment strategy $strategy associated with server group $serverGroupName " +
+              "in application $application, account $account is not supported. " +
+              "Only redblack and highlander are supported at this time."
+          )
         }
       }
     }
   }
+
+  private fun Map<String, Any?>.contextToRedBlack() =
+    RedBlack(
+      rollbackOnFailure = this["rollback"]
+        ?.let {
+          @Suppress("UNCHECKED_CAST")
+          it as Map<String, Any>
+        }
+        ?.get("onFailure") as Boolean,
+      resizePreviousToZero = this["scaleDown"] as Boolean,
+      maxServerGroups = this["maxRemainingAsgs"].toString().toInt(),
+      delayBeforeDisable = Duration.ofSeconds((this["delayBeforeDisableSec"].toString().toInt()).toLong()),
+      delayBeforeScaleDown = Duration.ofSeconds((this["delayBeforeScaleDownSec"].toString().toInt()).toLong())
+    )
 
   @Suppress("UNCHECKED_CAST")
   private fun ExecutionDetailResponse.getDeployStageContext() =

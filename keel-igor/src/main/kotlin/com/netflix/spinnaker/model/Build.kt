@@ -15,9 +15,9 @@ data class Build(
   /** String representation of time in nanoseconds since Unix epoch  */
    val timestamp: String? = null,
 
-  val result: Any? = null,
-  val artifacts: List<Any>? = null,
-  val testResults: List<Any>? = null,
+//  val result: Any? = null,
+//  val artifacts: List<Any>? = null,
+//  val testResults: List<Any>? = null,
   val url: String? = null,
   val id: String? = null,
 

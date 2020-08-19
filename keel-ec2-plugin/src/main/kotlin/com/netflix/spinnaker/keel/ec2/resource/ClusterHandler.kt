@@ -46,6 +46,7 @@ import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.serviceAccount
+import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -71,6 +72,7 @@ import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
+import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
@@ -128,7 +130,8 @@ class ClusterHandler(
 
       if (modifyDiffs.isNotEmpty()) {
         deferred.addAll(
-          modifyInPlace(resource, modifyDiffs))
+          modifyInPlace(resource, modifyDiffs)
+        )
       }
 
       val version = diffs.first().desired.launchConfiguration.appVersion
@@ -144,10 +147,12 @@ class ClusterHandler(
       )
 
       if (createDiffs.isNotEmpty()) {
-        publisher.publishEvent(ArtifactVersionDeploying(
-          resourceId = resource.id,
-          artifactVersion = version
-        ))
+        publisher.publishEvent(
+          ArtifactVersionDeploying(
+            resourceId = resource.id,
+            artifactVersion = version
+          )
+        )
       }
 
       return@coroutineScope deferred.map { it.await() }
@@ -176,7 +181,8 @@ class ClusterHandler(
               description = "Modify $what of server group ${diff.desired.moniker} in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
               correlationId = "${resource.id}:${diff.desired.location.region}",
-              stages = job)
+              stages = job
+            )
           }
         }
       }
@@ -199,11 +205,11 @@ class ClusterHandler(
         }
         when {
           diff.shouldDeployAndModifyScalingPolicies() -> {
-            stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+            stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
             refId++
             stages.addAll(diff.modifyScalingPolicyJob(refId))
           }
-          else -> stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+          else -> stages.add(diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
         }
 
         if (stages.isEmpty()) {
@@ -217,7 +223,8 @@ class ClusterHandler(
               description = "Deploy $version to server group ${diff.desired.moniker}  in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
               correlationId = "${resource.id}:${diff.desired.location.region}",
-              stages = stages)
+              stages = stages
+            )
           }
         }
       }
@@ -259,7 +266,7 @@ class ClusterHandler(
           refId++
         }
 
-        val stage = (diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties())
+        val stage = (diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon"))
           .toMutableMap()
 
         refId++
@@ -281,7 +288,8 @@ class ClusterHandler(
 
         if (stagger.pauseTime != null) {
           stages.add(
-            waitStage(stagger.pauseTime!!, stages.size))
+            waitStage(stagger.pauseTime!!, stages.size)
+          )
         }
 
         val deferred = async {
@@ -294,10 +302,12 @@ class ClusterHandler(
           )
         }
 
-        publisher.publishEvent(ArtifactVersionDeploying(
-          resourceId = resource.id,
-          artifactVersion = version
-        ))
+        publisher.publishEvent(
+          ArtifactVersionDeploying(
+            resourceId = resource.id,
+            artifactVersion = version
+          )
+        )
 
         val task = deferred.await()
         priorExecutionId = task.id
@@ -334,8 +344,10 @@ class ClusterHandler(
       .byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
-        "in account: ${exportable.account} for export")
+      throw ResourceNotFound(
+        "Could not find cluster: ${exportable.moniker} " +
+          "in account: ${exportable.account} for export"
+      )
     }
 
     val zonesByRegion = serverGroups.map { (region, serverGroup) ->
@@ -352,12 +364,15 @@ class ClusterHandler(
       SubnetAwareRegionSpec(
         name = region,
         availabilityZones =
-        if (!serverGroup.location.availabilityZones.containsAll(zonesByRegion[region]
-            ?: error("Failed resolving availabilityZones for account: ${exportable.account}, region: $region"))) {
-          serverGroup.location.availabilityZones
-        } else {
-          emptySet()
-        }
+          if (!serverGroup.location.availabilityZones.containsAll(
+            zonesByRegion[region]
+              ?: error("Failed resolving availabilityZones for account: ${exportable.account}, region: $region")
+          )
+          ) {
+            serverGroup.location.availabilityZones
+          } else {
+            emptySet()
+          }
       )
     }
       .toSet()
@@ -416,8 +431,10 @@ class ClusterHandler(
       .byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
-        "in account: ${exportable.account} for export")
+      throw ResourceNotFound(
+        "Could not find cluster: ${exportable.moniker} " +
+          "in account: ${exportable.account} for export"
+      )
     }
 
     val base = serverGroups.values.maxBy { it.capacity.desired ?: it.capacity.max }
@@ -526,8 +543,10 @@ class ClusterHandler(
    */
   private fun ResourceDiff<ServerGroup>.hasScalingPolicyDiff(): Boolean =
     current != null && affectedRootPropertyTypes.contains(Scaling::class.java) &&
-      (current!!.scaling.targetTrackingPolicies != desired.scaling.targetTrackingPolicies ||
-        current!!.scaling.stepScalingPolicies != desired.scaling.stepScalingPolicies)
+      (
+        current!!.scaling.targetTrackingPolicies != desired.scaling.targetTrackingPolicies ||
+          current!!.scaling.stepScalingPolicies != desired.scaling.stepScalingPolicies
+        )
 
   private fun ResourceDiff<ServerGroup>.createServerGroupJob(startingRefId: Int = 0): Map<String, Any?> =
     with(desired) {
@@ -619,13 +638,15 @@ class ClusterHandler(
     var (refId, stages) = toDeletePolicyJob(startingRefId)
     val newTargetPolicies = when (current) {
       null -> desired.scaling.targetTrackingPolicies
-      else -> desired.scaling.targetTrackingPolicies
-        .subtract(current!!.scaling.targetTrackingPolicies)
+      else ->
+        desired.scaling.targetTrackingPolicies
+          .subtract(current!!.scaling.targetTrackingPolicies)
     }
     val newStepPolicies = when (current) {
       null -> desired.scaling.stepScalingPolicies
-      else -> desired.scaling.stepScalingPolicies
-        .subtract(current!!.scaling.stepScalingPolicies)
+      else ->
+        desired.scaling.stepScalingPolicies
+          .subtract(current!!.scaling.stepScalingPolicies)
     }
 
     if (newTargetPolicies.isNotEmpty()) {
@@ -643,139 +664,139 @@ class ClusterHandler(
 
   private fun ResourceDiff<ServerGroup>.toDeletePolicyJob(startingRefId: Int):
     Pair<Int, MutableList<Map<String, Any?>>> {
-    var refId = startingRefId
-    val stages: MutableList<Map<String, Any?>> = mutableListOf()
-    if (current == null) {
+      var refId = startingRefId
+      val stages: MutableList<Map<String, Any?>> = mutableListOf()
+      if (current == null) {
+        return Pair(refId, stages)
+      }
+      val current = current!!
+      val targetPoliciesToRemove = current.scaling.targetTrackingPolicies.filterNot {
+        desired.scaling.targetTrackingPolicies.contains(it)
+      }
+      val stepPoliciesToRemove = current.scaling.stepScalingPolicies.filterNot {
+        desired.scaling.stepScalingPolicies.contains(it)
+      }
+      val policyNamesToRemove = targetPoliciesToRemove.mapNotNull { it.name } +
+        stepPoliciesToRemove.mapNotNull { it.name }
+          .toSet()
+
+      stages.addAll(
+        policyNamesToRemove
+          .map {
+            refId++
+            mapOf(
+              "refId" to refId.toString(),
+              "requisiteStageRefIds" to when (refId) {
+                0, 1 -> listOf()
+                else -> listOf((refId - 1).toString())
+              },
+              "type" to "deleteScalingPolicy",
+              "policyName" to it,
+              "cloudProvider" to CLOUD_PROVIDER,
+              "credentials" to desired.location.account,
+              "moniker" to current.moniker.orcaClusterMoniker,
+              "region" to current.location.region
+            )
+          }
+          .toMutableList()
+      )
+
       return Pair(refId, stages)
     }
-    val current = current!!
-    val targetPoliciesToRemove = current.scaling.targetTrackingPolicies.filterNot {
-      desired.scaling.targetTrackingPolicies.contains(it)
-    }
-    val stepPoliciesToRemove = current.scaling.stepScalingPolicies.filterNot {
-      desired.scaling.stepScalingPolicies.contains(it)
-    }
-    val policyNamesToRemove = targetPoliciesToRemove.mapNotNull { it.name } +
-      stepPoliciesToRemove.mapNotNull { it.name }
-        .toSet()
-
-    stages.addAll(
-      policyNamesToRemove
-        .map {
-          refId++
-          mapOf(
-            "refId" to refId.toString(),
-            "requisiteStageRefIds" to when (refId) {
-              0, 1 -> listOf()
-              else -> listOf((refId - 1).toString())
-            },
-            "type" to "deleteScalingPolicy",
-            "policyName" to it,
-            "cloudProvider" to CLOUD_PROVIDER,
-            "credentials" to desired.location.account,
-            "moniker" to current.moniker.orcaClusterMoniker,
-            "region" to current.location.region
-          )
-        }
-        .toMutableList()
-    )
-
-    return Pair(refId, stages)
-  }
 
   private fun Set<TargetTrackingPolicy>.toCreateJob(startingRefId: Int, serverGroup: ServerGroup):
     Pair<Int, List<Map<String, Any?>>> {
-    var refId = startingRefId
-    val stages = map {
-      refId++
-      mapOf(
-        "refId" to refId.toString(),
-        "requisiteStageRefIds" to when (refId) {
-          0, 1 -> listOf()
-          else -> listOf((refId - 1).toString())
-        },
-        "type" to "upsertScalingPolicy",
-        "cloudProvider" to CLOUD_PROVIDER,
-        "credentials" to serverGroup.location.account,
-        "moniker" to serverGroup.moniker.orcaClusterMoniker,
-        "region" to serverGroup.location.region,
-        "estimatedInstanceWarmup" to it.warmup.seconds,
-        "targetTrackingConfiguration" to mapOf(
-          "targetValue" to it.targetValue,
-          "disableScaleIn" to it.disableScaleIn,
-          "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
-            null -> null
-            else -> with(metricsSpec) {
-              PredefinedMetricSpecificationModel(
-                predefinedMetricType = type,
-                resourceLabel = label
-              )
-            }
+      var refId = startingRefId
+      val stages = map {
+        refId++
+        mapOf(
+          "refId" to refId.toString(),
+          "requisiteStageRefIds" to when (refId) {
+            0, 1 -> listOf()
+            else -> listOf((refId - 1).toString())
           },
-          "customizedMetricSpecification" to when (val metricsSpec = it.customMetricSpec) {
-            null -> null
-            else -> with(metricsSpec) {
-              CustomizedMetricSpecificationModel(
-                metricName = name,
-                namespace = namespace,
-                statistic = statistic,
-                unit = unit,
-                dimensions = dimensions?.map { d ->
-                  MetricDimensionModel(name = d.name, value = d.value)
-                }
-              )
+          "type" to "upsertScalingPolicy",
+          "cloudProvider" to CLOUD_PROVIDER,
+          "credentials" to serverGroup.location.account,
+          "moniker" to serverGroup.moniker.orcaClusterMoniker,
+          "region" to serverGroup.location.region,
+          "estimatedInstanceWarmup" to it.warmup.seconds,
+          "targetTrackingConfiguration" to mapOf(
+            "targetValue" to it.targetValue,
+            "disableScaleIn" to it.disableScaleIn,
+            "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
+              null -> null
+              else -> with(metricsSpec) {
+                PredefinedMetricSpecificationModel(
+                  predefinedMetricType = type,
+                  resourceLabel = label
+                )
+              }
+            },
+            "customizedMetricSpecification" to when (val metricsSpec = it.customMetricSpec) {
+              null -> null
+              else -> with(metricsSpec) {
+                CustomizedMetricSpecificationModel(
+                  metricName = name,
+                  namespace = namespace,
+                  statistic = statistic,
+                  unit = unit,
+                  dimensions = dimensions?.map { d ->
+                    MetricDimensionModel(name = d.name, value = d.value)
+                  }
+                )
+              }
             }
-          }
+          )
         )
-      )
-    }
+      }
 
-    return Pair(refId, stages)
-  }
+      return Pair(refId, stages)
+    }
 
   private fun Set<StepScalingPolicy>.toCreateJob(startingRefId: Int, serverGroup: ServerGroup):
     List<Map<String, Any?>> {
-    var refId = startingRefId
-    return map {
-      refId++
-      mapOf(
-        "refId" to refId.toString(),
-        "requisiteStageRefIds" to when (refId) {
-          0, 1 -> listOf()
-          else -> listOf((refId - 1).toString())
-        },
-        "type" to "upsertScalingPolicy",
-        "cloudProvider" to CLOUD_PROVIDER,
-        "credentials" to serverGroup.location.account,
-        "moniker" to serverGroup.moniker.orcaClusterMoniker,
-        "region" to serverGroup.location.region,
-        "adjustmentType" to it.adjustmentType,
-        "alarm" to mapOf(
+      var refId = startingRefId
+      return map {
+        refId++
+        mapOf(
+          "refId" to refId.toString(),
+          "requisiteStageRefIds" to when (refId) {
+            0, 1 -> listOf()
+            else -> listOf((refId - 1).toString())
+          },
+          "type" to "upsertScalingPolicy",
+          "cloudProvider" to CLOUD_PROVIDER,
+          "credentials" to serverGroup.location.account,
+          "moniker" to serverGroup.moniker.orcaClusterMoniker,
           "region" to serverGroup.location.region,
-          "actionsEnabled" to it.actionsEnabled,
-          "comparisonOperator" to it.comparisonOperator,
-          "dimensions" to it.dimensions,
-          "evaluationPeriods" to it.evaluationPeriods,
-          "period" to it.period.seconds,
-          "threshold" to it.threshold,
-          "namespace" to it.namespace,
-          "metricName" to it.metricName,
-          "statistic" to it.statistic
-        ),
-        "step" to mapOf(
-          "estimatedInstanceWarmup" to it.warmup.seconds,
-          "metricAggregationType" to it.metricAggregationType,
-          "stepAdjustments" to it.stepAdjustments.map { adjustment ->
-            StepAdjustmentModel(
-              metricIntervalLowerBound = adjustment.lowerBound,
-              metricIntervalUpperBound = adjustment.upperBound,
-              scalingAdjustment = adjustment.scalingAdjustment
-            )
-          }
+          "adjustmentType" to it.adjustmentType,
+          "alarm" to mapOf(
+            "region" to serverGroup.location.region,
+            "actionsEnabled" to it.actionsEnabled,
+            "comparisonOperator" to it.comparisonOperator,
+            "dimensions" to it.dimensions,
+            "evaluationPeriods" to it.evaluationPeriods,
+            "period" to it.period.seconds,
+            "threshold" to it.threshold,
+            "namespace" to it.namespace,
+            "metricName" to it.metricName,
+            "statistic" to it.statistic
+          ),
+          "step" to mapOf(
+            "estimatedInstanceWarmup" to it.warmup.seconds,
+            "metricAggregationType" to it.metricAggregationType,
+            "stepAdjustments" to it.stepAdjustments.map { adjustment ->
+              StepAdjustmentModel(
+                metricIntervalLowerBound = adjustment.lowerBound,
+                metricIntervalUpperBound = adjustment.upperBound,
+                scalingAdjustment = adjustment.scalingAdjustment
+              )
+            }
+          )
         )
-      )
+      }
     }
-  }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<ClusterSpec>): Iterable<ServerGroup> =
     getServerGroups(
@@ -786,15 +807,19 @@ class ClusterHandler(
     )
       .also { them ->
         val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
-        val healthy: Boolean = them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = them.all {
+          it.instanceCounts?.isHealthy(resource.spec.deployWith.noHealth) == true
+        }
         if (allSame && healthy) {
           // // only publish a successfully deployed event if the server group is healthy
           val appVersion = them.first().launchConfiguration.appVersion
           if (appVersion != null) {
-            publisher.publishEvent(ArtifactVersionDeployed(
-              resourceId = resource.id,
-              artifactVersion = appVersion
-            ))
+            publisher.publishEvent(
+              ArtifactVersionDeployed(
+                resourceId = resource.id,
+                artifactVersion = appVersion
+              )
+            )
           }
         }
       }
@@ -887,9 +912,10 @@ class ClusterHandler(
   private fun List<MetricDimensionModel>?.toSpec(): Set<MetricDimension> =
     when (this) {
       null -> emptySet()
-      else -> this.filter { it.name != "AutoScalingGroupName" }
-        .map { MetricDimension(it.name, it.value) }
-        .toSet()
+      else ->
+        this.filter { it.name != "AutoScalingGroupName" }
+          .map { MetricDimension(it.name, it.value) }
+          .toSet()
     }
 
   private fun CustomizedMetricSpecificationModel?.toSpec() =
@@ -916,14 +942,15 @@ class ClusterHandler(
   private fun List<StepAdjustmentModel>?.toSteps() =
     when (this) {
       null -> emptySet()
-      else -> map {
-        StepAdjustment(
-          scalingAdjustment = it.scalingAdjustment,
-          lowerBound = it.metricIntervalLowerBound,
-          upperBound = it.metricIntervalUpperBound
-        )
-      }
-        .toSet()
+      else ->
+        map {
+          StepAdjustment(
+            scalingAdjustment = it.scalingAdjustment,
+            lowerBound = it.metricIntervalLowerBound,
+            upperBound = it.metricIntervalUpperBound
+          )
+        }
+          .toSet()
     }
 
   private fun List<ScalingPolicy>.toTargetTrackingPolicies(): Set<TargetTrackingPolicy> =

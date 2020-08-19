@@ -44,6 +44,7 @@ import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
 import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
+import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
@@ -65,6 +66,7 @@ import com.netflix.spinnaker.keel.exceptions.DockerArtifactExportError
 import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
@@ -147,7 +149,7 @@ class TitusClusterHandler(
 
           val job = when {
             diff.isCapacityOnly() -> diff.resizeServerGroupJob()
-            else -> diff.upsertServerGroupJob(tagToUse) + resource.spec.deployWith.toOrcaJobProperties()
+            else -> diff.upsertServerGroupJob(tagToUse) + resource.spec.deployWith.toOrcaJobProperties("Amazon")
           }
 
           val description = when (version) {
@@ -166,10 +168,12 @@ class TitusClusterHandler(
           }
 
           tags.forEach { tag ->
-            publisher.publishEvent(ArtifactVersionDeploying(
-              resourceId = resource.id,
-              artifactVersion = tag
-            ))
+            publisher.publishEvent(
+              ArtifactVersionDeploying(
+                resourceId = resource.id,
+                artifactVersion = tag
+              )
+            )
           }
           return@map result
         }
@@ -185,8 +189,10 @@ class TitusClusterHandler(
     ).byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
-        "in account: ${exportable.account} for export")
+      throw ResourceNotFound(
+        "Could not find cluster: ${exportable.moniker} " +
+          "in account: ${exportable.account} for export"
+      )
     }
 
     // let's assume that the largest server group is the most important and should be the base
@@ -233,8 +239,10 @@ class TitusClusterHandler(
     ).byRegion()
 
     if (serverGroups.isEmpty()) {
-      throw ResourceNotFound("Could not find cluster: ${exportable.moniker} " +
-        "in account: ${exportable.account} for export")
+      throw ResourceNotFound(
+        "Could not find cluster: ${exportable.moniker} " +
+          "in account: ${exportable.account} for export"
+      )
     }
 
     val container = serverGroups.values.maxBy { it.capacity.desired ?: it.capacity.max }?.container
@@ -408,14 +416,17 @@ class TitusClusterHandler(
     }
 
   private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
-    getServerGroups(resource.spec.locations.account,
+    getServerGroups(
+      resource.spec.locations.account,
       resource.spec.moniker,
       resource.spec.locations.regions.map { it.name }.toSet(),
       resource.serviceAccount
     )
       .also { them ->
         val sameContainer: Boolean = them.distinctBy { it.container.digest }.size == 1
-        val healthy: Boolean = them.all { it.instanceCounts?.isHealthy() == true }
+        val healthy: Boolean = them.all {
+          it.instanceCounts?.isHealthy(resource.spec.deployWith.noHealth) == true
+        }
         if (sameContainer && healthy) {
           // only publish a successfully deployed event if the server group is healthy
           val container = them.first().container
@@ -424,10 +435,12 @@ class TitusClusterHandler(
               // We publish an event for each tag that matches the digest
               // so that we handle the tags like `latest` where more than one tags have the same digest
               // and we don't care about some of them.
-              publisher.publishEvent(ArtifactVersionDeployed(
-                resourceId = resource.id,
-                artifactVersion = tag
-              ))
+              publisher.publishEvent(
+                ArtifactVersionDeployed(
+                  resourceId = resource.id,
+                  artifactVersion = tag
+                )
+              )
             }
         }
       }
