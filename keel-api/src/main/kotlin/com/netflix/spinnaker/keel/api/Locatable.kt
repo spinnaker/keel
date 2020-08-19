@@ -14,8 +14,8 @@ interface Locatable<T : Locations<*>> : ResourceSpec {
 /** A [Locations] type for resources where the regions alone are sufficient information */
 data class SimpleRegions(override val regions: Set<SimpleRegionSpec>) : Locations<SimpleRegionSpec>
 
-abstract class AccountAwareLocations<T : RegionSpec> : Locations<T> {
-  abstract val account: String
+interface AccountAwareLocations<T : RegionSpec> : Locations<T> {
+  val account: String
 }
 
 /** A [Locations] type for resources where the VPC and subnet matter. */
