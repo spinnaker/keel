@@ -51,7 +51,7 @@ data class SimpleLocations(
   // TODO: this is not ideal as we'd like this default to be configurable
   val vpc: String? = DEFAULT_VPC_NAME,
   override val regions: Set<SimpleRegionSpec>
-) : AccountAwareLocations<SimpleRegionSpec>()
+) : AccountAwareLocations<SimpleRegionSpec>
 
 object LocationConstants {
   const val DEFAULT_VPC_NAME = "vpc0"
