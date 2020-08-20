@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.igor.ArtifactService
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.CANDIDATE
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
@@ -37,9 +38,29 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
       type = npmArtifact.type,
       reference = npmArtifact.reference,
       version = "${npmArtifact.name}-${versions.last()}",
-      metadata = mapOf("releaseStatus" to CANDIDATE)
-    )
+      metadata = mapOf("releaseStatus" to CANDIDATE, "buildNumber" to "1", "commitId" to "a15p0")
+      )
     val npmArtifactSupplier = NpmArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
+
+    val artifactMetadata = ArtifactMetadata(
+      BuildMetadata(
+        id = 1,
+        jobName = "job bla bla",
+        uid = "1234",
+        startedAt = "yesterday",
+        completedAt = "today",
+        jobUrl = "jenkins.com",
+        number = "1"
+      ),
+      GitMetadata(
+        commit = "a15p0",
+        author = "keel-user",
+        commitMessage = "this is a commit message",
+        linkToCommit = "",
+        projectName = "spkr",
+        repoName = "keel"
+      )
+    )
   }
 
   fun tests() = rootContext<Fixture> {
@@ -53,6 +74,9 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         every {
           artifactService.getArtifact(npmArtifact.name, versions.last(), NPM)
         } returns latestArtifact
+        every {
+          artifactMetadataService.getArtifactMetadata("1", "a15p0")
+        } returns artifactMetadata
       }
 
       test("supports NPM artifacts") {
@@ -96,14 +120,22 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on Netflix semver convention") {
         val gitMeta = GitMetadata(commit = NetflixSemVerVersioningStrategy.getCommitHash(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.getDefaultGitMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.parseDefaultGitMetadata(latestArtifact, npmArtifact.versioningStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on Netflix semver convention") {
         val buildMeta = BuildMetadata(id = NetflixSemVerVersioningStrategy.getBuildNumber(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.getDefaultBuildMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, npmArtifact.versioningStrategy))
           .isEqualTo(buildMeta)
+      }
+
+      test("returns artifact metadata based on ci provider") {
+        val results = runBlocking {
+          npmArtifactSupplier.getArtifactMetadata(latestArtifact)
+        }
+        expectThat(results)
+          .isEqualTo(artifactMetadata)
       }
     }
   }

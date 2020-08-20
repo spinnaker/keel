@@ -2,12 +2,15 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
+import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
@@ -99,6 +102,26 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       pinnedBy = "keel@spinnaker",
       comment = "fnord"
     )
+
+    val artifactMetadata = ArtifactMetadata(
+        BuildMetadata(
+          id = 1,
+          jobName = "job bla bla",
+          uid = "1234",
+          startedAt = "yesterday",
+          completedAt = "today",
+          jobUrl = "jenkins.com",
+          number = "1"
+        ),
+        GitMetadata(
+          commit = "a15p0",
+          author = "keel-user",
+          commitMessage = "this is a commit message",
+          linkToCommit = "",
+          projectName = "spkr",
+          repoName = "keel"
+        )
+      )
   }
 
   open fun Fixture<T>.persist() {
@@ -728,6 +751,21 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           that(envArtifactSummary).isNotNull()
           that(envArtifactSummary?.vetoed).isNull()
         }
+      }
+    }
+
+    context("artifact metadata exists") {
+      before {
+        subject.register(artifact1)
+      }
+      test ("save and retrieves successfully") {
+        subject.store(artifact1, version1, SNAPSHOT, artifactMetadata)
+
+        expectThat(subject.getArtifactBuildMetadata(artifact1.name, artifact1.type, version1, SNAPSHOT))
+          .isEqualTo(artifactMetadata.buildMetadata)
+
+        expectThat(subject.getArtifactGitMetadata(artifact1.name, artifact1.type, version1, SNAPSHOT))
+          .isEqualTo(artifactMetadata.gitMetadata)
       }
     }
   }

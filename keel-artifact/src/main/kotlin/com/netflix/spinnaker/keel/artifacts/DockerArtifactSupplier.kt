@@ -27,8 +27,8 @@ import org.springframework.stereotype.Component
 class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
-  private val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy> {
+  override val artifactMetadataService: ArtifactMetadataService
+) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy>, ArtifactSupplierBaseClass(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
   override val supportedVersioningStrategy =
@@ -67,7 +67,7 @@ class DockerArtifactSupplier(
     }
   }
 
-  override fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
       if (versioningStrategy.hasBuild()) {
         val regex = Regex("""^.*-h(\d+).*$""")
         val result = regex.find(artifact.version)
@@ -78,7 +78,7 @@ class DockerArtifactSupplier(
     return null
   }
 
-  override fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
       if (versioningStrategy.hasCommit()) {
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
@@ -86,8 +86,7 @@ class DockerArtifactSupplier(
   }
 
   override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
-    return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
-      artifact.metadata["commitHash"]?.toString())
+    return super.getArtifactMetadataInternal(artifact)
   }
 
   private fun VersioningStrategy.hasBuild(): Boolean {

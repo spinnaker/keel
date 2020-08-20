@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
@@ -100,18 +102,27 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       }
 
       test("returns git metadata based on tag when available") {
-        expectThat(dockerArtifactSupplier.getDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
+        expectThat(dockerArtifactSupplier.parseDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
           .isEqualTo(GitMetadata(commit = "8a5b962"))
-        expectThat(dockerArtifactSupplier.getDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
+        expectThat(dockerArtifactSupplier.parseDefaultGitMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
       }
 
       test("returns build metadata based on tag when available") {
-        expectThat(dockerArtifactSupplier.getDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
+        expectThat(dockerArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(SEMVER_JOB_COMMIT_BY_SEMVER)))
           .isEqualTo(BuildMetadata(id = 1182))
-        expectThat(dockerArtifactSupplier.getDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
+        expectThat(dockerArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
       }
+
+      //TODO[gyardeni]: enable this test once will have docker build number + commit id
+//      test("returns artifact metadata based on ci provider") {
+//        val results = runBlocking {
+//          dockerArtifactSupplier.getArtifactMetadata(latestArtifact)
+//        }
+//        expectThat(results)
+//          .isEqualTo(artifactMetadata)
+//      }
     }
   }
 }

@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
+import com.netflix.spinnaker.keel.telemetry.ArtifactSaved
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -123,6 +124,9 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         test("a telemetry event is recorded") {
           verify { publisher.publishEvent(any<ArtifactVersionUpdated>()) }
         }
+        test("artifact saved event was sent") {
+          verify { publisher.publishEvent(any<ArtifactSaved>()) }
+        }
       }
     }
   }
@@ -202,6 +206,10 @@ internal class ArtifactListenerTests : JUnit5Minutests {
             repository.storeArtifact("fnord", DEBIAN, "fnord-0.227.0-h141.bd97556", FINAL, null)
           }
         }
+
+        test("artifact saved event was sent") {
+          verify { publisher.publishEvent(any<ArtifactSaved>()) }
+        }
       }
 
       context("there no versions of the artifact") {
@@ -216,6 +224,10 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           verify(exactly = 0) {
             repository.storeArtifact(any(), any(), any())
           }
+        }
+
+        test("artifact saved event was not sent") {
+          verify(exactly = 0) { publisher.publishEvent(any<ArtifactSaved>()) }
         }
       }
     }
@@ -279,6 +291,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         listener.syncArtifactVersions()
         verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) }
         verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null, null) }
+        verify { publisher.publishEvent(any<ArtifactSaved>()) }
       }
     }
 
@@ -305,6 +318,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           listener.syncArtifactVersions()
           verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) }
           verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null, null) }
+          verify { publisher.publishEvent(any<ArtifactSaved>()) }
         }
       }
 
@@ -324,6 +338,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           listener.syncArtifactVersions()
           verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL, null) }
           verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL, null) }
+          verify(exactly = 0) { publisher.publishEvent(any<ArtifactSaved>()) }
+
         }
       }
 
@@ -337,6 +353,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           listener.syncArtifactVersions()
           verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL, null) }
           verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL, null) }
+          verify(exactly = 0) { publisher.publishEvent(any<ArtifactSaved>()) }
         }
       }
     }

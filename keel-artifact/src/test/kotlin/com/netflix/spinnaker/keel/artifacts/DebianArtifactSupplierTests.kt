@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -16,12 +17,12 @@ import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import io.mockk.coEvery as every
-import io.mockk.coVerify as verify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import io.mockk.coEvery as every
+import io.mockk.coVerify as verify
 
 internal class DebianArtifactSupplierTests : JUnit5Minutests {
   object Fixture {
@@ -42,7 +43,27 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
       type = debianArtifact.type,
       reference = debianArtifact.reference,
       version = "${debianArtifact.name}-${versions.last()}",
-      metadata = mapOf("releaseStatus" to SNAPSHOT)
+      metadata = mapOf("releaseStatus" to SNAPSHOT, "buildNumber" to "1", "commitId" to "a15p0")
+    )
+
+    val artifactMetadata = ArtifactMetadata(
+      BuildMetadata(
+        id = 1,
+        jobName = "job bla bla",
+        uid = "1234",
+        startedAt = "yesterday",
+        completedAt = "today",
+        jobUrl = "jenkins.com",
+        number = "1"
+      ),
+      GitMetadata(
+        commit = "a15p0",
+        author = "keel-user",
+        commitMessage = "this is a commit message",
+        linkToCommit = "",
+        projectName = "spkr",
+        repoName = "keel"
+      )
     )
     val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
   }
@@ -59,6 +80,10 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         every {
           artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         } returns latestArtifact
+
+        every {
+          artifactMetadataService.getArtifactMetadata("1", "a15p0")
+        } returns artifactMetadata
       }
 
       test("supports Debian artifacts") {
@@ -97,14 +122,22 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on frigga parser") {
         val gitMeta = GitMetadata(commit = AppVersion.parseName(latestArtifact.version)!!.commit)
-        expectThat(debianArtifactSupplier.getDefaultGitMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.parseDefaultGitMetadata(latestArtifact, debianArtifact.versioningStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on frigga parser") {
         val buildMeta = BuildMetadata(id = AppVersion.parseName(latestArtifact.version)!!.buildNumber.toInt())
-        expectThat(debianArtifactSupplier.getDefaultBuildMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, debianArtifact.versioningStrategy))
           .isEqualTo(buildMeta)
+      }
+
+      test("returns artifact metadata based on ci provider") {
+        val results = runBlocking {
+          debianArtifactSupplier.getArtifactMetadata(latestArtifact)
+        }
+        expectThat(results)
+          .isEqualTo(artifactMetadata)
       }
     }
   }

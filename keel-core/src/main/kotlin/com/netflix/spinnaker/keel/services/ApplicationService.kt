@@ -332,11 +332,11 @@ class ApplicationService(
 
       // first attempt to fetch the artifact metadata from the DB, then fallback to the default if not found
       build = when (buildMetadata) {
-        null -> artifactSupplier.getDefaultBuildMetadata(publishedArtifact, artifact.versioningStrategy)
+        null -> artifactSupplier.parseDefaultBuildMetadata(publishedArtifact, artifact.versioningStrategy)
         else -> buildMetadata
       },
       git = when (gitMetadata) {
-        null -> artifactSupplier.getDefaultGitMetadata(publishedArtifact, artifact.versioningStrategy)
+        null -> artifactSupplier.parseDefaultGitMetadata(publishedArtifact, artifact.versioningStrategy)
         else -> gitMetadata
       }
     )

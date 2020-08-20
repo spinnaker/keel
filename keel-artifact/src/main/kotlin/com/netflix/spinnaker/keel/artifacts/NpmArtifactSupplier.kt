@@ -26,8 +26,8 @@ import org.springframework.stereotype.Component
 class NpmArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
-  private val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy> {
+  override val artifactMetadataService: ArtifactMetadataService
+) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy>, ArtifactSupplierBaseClass(artifactMetadataService) {
 
   override val supportedArtifact = SupportedArtifact(NPM, NpmArtifact::class.java)
 
@@ -65,7 +65,7 @@ class NpmArtifactSupplier(
   /**
    * Extracts the build number from the version string using the Netflix semver convention.
    */
-  override fun getDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     return NetflixSemVerVersioningStrategy.getBuildNumber(artifact)
       ?.let { BuildMetadata(it) }
   }
@@ -73,15 +73,14 @@ class NpmArtifactSupplier(
   /**
    * Extracts the commit hash from the version string using the Netflix semver convention.
    */
-  override fun getDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
 
     return NetflixSemVerVersioningStrategy.getCommitHash(artifact)
       ?.let { GitMetadata(it) }
   }
 
   override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
-    return artifactMetadataService.getArtifactMetadata(artifact.metadata["buildNumber"]?.toString(),
-      artifact.metadata["commitHash"]?.toString())
+    return super.getArtifactMetadataInternal(artifact)
   }
 
   // The API requires colons in place of slashes to avoid path pattern conflicts
