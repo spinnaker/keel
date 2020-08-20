@@ -11,11 +11,8 @@ plugins {
 }
 
 afterEvaluate {
-  // When not running in Docker, we can use jooqModelator (which itself uses Docker) to generate the jOOQ meta-model
-  if (!buildingInDocker) {
-    tasks.getByName("compileKotlin") {
-      dependsOn("jooqGenerate")
-    }
+  tasks.getByName("compileKotlin") {
+    dependsOn("jooqGenerate")
   }
 }
 
