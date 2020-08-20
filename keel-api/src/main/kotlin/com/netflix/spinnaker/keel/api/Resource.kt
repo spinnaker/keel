@@ -22,9 +22,6 @@ data class Resource<out T : ResourceSpec>(
   val application: String
     get() = metadata.getValue("application").toString()
 
-  val environment: String
-    get() = metadata.getValue("environmentName").toString()
-
   /**
    * Attempts to find an artifact in the delivery config based on information in this resource's spec.
    */

@@ -11,7 +11,4 @@ interface ResourceMixin {
 
   @get:JsonIgnore
   val application: String
-
-  @get:JsonIgnore
-  val environment: String
 }

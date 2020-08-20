@@ -83,8 +83,7 @@ internal class ResourceMetadataTests : JUnit5Minutests {
           metadata =  mapOf(
           "id" to "myResource",
           "serviceAccount" to "myAccount",
-          "application" to "fnord",
-          "environmentName" to "test"
+          "application" to "fnord"
         ))
       }
 
@@ -92,7 +91,6 @@ internal class ResourceMetadataTests : JUnit5Minutests {
         assertThat(this.id).isEqualTo("myResource")
         assertThat(this.serviceAccount).isEqualTo("myAccount")
         assertThat(this.application).isEqualTo("fnord")
-        assertThat(this.environment).isEqualTo("test")
       }
     }
   }
