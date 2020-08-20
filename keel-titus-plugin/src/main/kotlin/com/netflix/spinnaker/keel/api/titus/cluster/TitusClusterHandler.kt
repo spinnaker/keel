@@ -40,6 +40,7 @@ import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
+import com.netflix.spinnaker.keel.api.titus.exceptions.ActiveServerGroupsException
 import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
 import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
@@ -51,7 +52,9 @@ import com.netflix.spinnaker.keel.clouddriver.model.Constraints
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
+import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
+import com.netflix.spinnaker.keel.clouddriver.model.TitusServerGroup as ClouddriverTitusServerGroup
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
@@ -72,6 +75,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -101,7 +105,7 @@ class TitusClusterHandler(
 
   override suspend fun current(resource: Resource<TitusClusterSpec>): Map<String, TitusServerGroup> =
     cloudDriverService
-      .getServerGroups(resource)
+      .getActiveServerGroups(resource)
       .byRegion()
 
   override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
@@ -147,11 +151,13 @@ class TitusClusterHandler(
 
           val job = when {
             diff.isCapacityOnly() -> diff.resizeServerGroupJob()
+            diff.isEnabledOnly() -> diff.disableOtherServerGroupJob(resource, version.toString())
             else -> diff.upsertServerGroupJob(tagToUse) + resource.spec.deployWith.toOrcaJobProperties("Amazon")
           }
 
-          val description = when (version) {
-            null -> "Resize server group ${desired.moniker} in ${desired.location.account}/${desired.location.region}"
+          val description = when {
+            diff.isCapacityOnly() -> "Resize server group ${desired.moniker} in ${desired.location.account}/${desired.location.region}"
+            diff.isEnabledOnly() -> "Disable extra active server group ${job["asgName"]} in ${desired.location.account}/${desired.location.region}"
             else -> "Deploy $version to server group ${desired.moniker} in ${desired.location.account}/${desired.location.region}"
           }
           log.info("Upserting server group using task: {}", job)
@@ -165,13 +171,14 @@ class TitusClusterHandler(
             )
           }
 
-          tags.forEach { tag ->
-            publisher.publishEvent(
-              ArtifactVersionDeploying(
+          if (!diff.isEnabledOnly() && !diff.isCapacityOnly()) {
+            // only publish deploying if we're deploying a new version
+            tags.forEach { tag ->
+              publisher.publishEvent(ArtifactVersionDeploying(
                 resourceId = resource.id,
                 artifactVersion = tag
-              )
-            )
+              ))
+            }
           }
           return@map result
         }
@@ -179,7 +186,7 @@ class TitusClusterHandler(
     }
 
   override suspend fun export(exportable: Exportable): TitusClusterSpec {
-    val serverGroups = cloudDriverService.getServerGroups(
+    val serverGroups = cloudDriverService.getActiveServerGroups(
       exportable.account,
       exportable.moniker,
       exportable.regions,
@@ -229,7 +236,7 @@ class TitusClusterHandler(
   }
 
   override suspend fun exportArtifact(exportable: Exportable): DeliveryArtifact {
-    val serverGroups = cloudDriverService.getServerGroups(
+    val serverGroups = cloudDriverService.getActiveServerGroups(
       exportable.account,
       exportable.moniker,
       exportable.regions,
@@ -312,6 +319,52 @@ class TitusClusterHandler(
     } catch (e: IllegalArgumentException) {
       false
     }
+
+  // todo eb: capture this heuristic and document it for users
+  private fun ResourceDiff<TitusServerGroup>.disableOtherServerGroupJob(resource: Resource<TitusClusterSpec>, desiredVersion: String): Map<String, Any?> {
+    val current = requireNotNull(current) {
+      "Current server group must not be null when generating a disable job"
+    }
+    // todo eb: figure out what server group to disable
+    val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = runBlocking { getExistingServerGroupsByRegion(resource) }
+    val sgInRegion = existingServerGroups.getOrDefault(current.location.region, emptyList()).filterNot { it.disabled }
+
+    if (sgInRegion.size < 2) {
+      log.error("Diff says this is not the only active server group, but now we say otherwise. " +
+        "What is going on? Existing server groups: {}", existingServerGroups)
+      throw ActiveServerGroupsException(resource.id, "No other active server group found to disable.")
+    }
+
+    val wrongImageSGs = sgInRegion.filterNot { it.image.dockerImageVersion == desiredVersion }.sortedBy { it.createdTime }
+    val rightImageSGs = sgInRegion.filter { it.image.dockerImageVersion == desiredVersion }.sortedBy { it.createdTime }
+
+    val sgToDisable = when {
+      wrongImageSGs.isNotEmpty() -> {
+        log.debug("Disabling oldest server group with incorrect docker image version for {}", resource.id)
+        wrongImageSGs.first()
+      }
+      rightImageSGs.size > 1 -> {
+        log.debug("Disabling oldest server group with correct docker image version " +
+          "(because there is more than one active server group with the correct image) for {}", resource.id)
+        rightImageSGs.first()
+      }
+      else -> {
+        log.error("Could not find a server group to disable, looking at: {}", wrongImageSGs + rightImageSGs)
+        throw ActiveServerGroupsException(resource.id, "No other active server group found to disable.")
+      }
+    }
+    log.debug("Disabling server group {} for {}: {}", sgToDisable.name, resource.id, sgToDisable)
+
+    return mapOf(
+      "type" to "disableServerGroup",
+      "cloudProvider" to CLOUD_PROVIDER,
+      "credentials" to desired.location.account,
+      "moniker" to sgToDisable.moniker.orcaClusterMoniker,
+      "region" to sgToDisable.region,
+      "serverGroupName" to sgToDisable.name,
+      "asgName" to sgToDisable.name
+    )
+  }
 
   private fun ResourceDiff<TitusServerGroup>.resizeServerGroupJob(): Map<String, Any?> {
     val current = requireNotNull(current) {
@@ -404,6 +457,14 @@ class TitusClusterHandler(
   private fun ResourceDiff<TitusServerGroup>.isCapacityOnly(): Boolean =
     current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
 
+  /**
+   * @return true if the only difference is in the onlyActiveServerGroup property
+   */
+  private fun ResourceDiff<TitusServerGroup>.isEnabledOnly(): Boolean =
+    current != null &&
+      affectedRootPropertyNames.all { it == "onlyActiveServerGroup" } &&
+      current!!.onlyActiveServerGroup != desired.onlyActiveServerGroup
+
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
       val workingSpec = serverGroup.exportSpec(moniker.app)
@@ -413,35 +474,72 @@ class TitusClusterHandler(
       }
     }
 
-  private suspend fun CloudDriverService.getServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> =
-    getServerGroups(
+  private suspend fun CloudDriverService.getActiveServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> {
+    val activeServerGroups = getActiveServerGroups(
       resource.spec.locations.account,
       resource.spec.moniker,
       resource.spec.locations.regions.map { it.name }.toSet(),
       resource.serviceAccount
-    )
-      .also { them ->
-        val sameContainer: Boolean = them.distinctBy { it.container.digest }.size == 1
-        val healthy: Boolean = them.all {
-          it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
+    ).map { activeServerGroup ->
+      // get all server groups in the cluster, split by region,
+      val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = getExistingServerGroupsByRegion(resource)
+      val numEnabled = AtomicInteger()
+      existingServerGroups
+        .getOrDefault(activeServerGroup.location.region, emptyList<ServerGroup>())
+        .forEach { serverGroup ->
+          log.info(">> serverGroup is disabled: {}", serverGroup.disabled)
+          if (!serverGroup.disabled) {
+            numEnabled.incrementAndGet()
+          }
         }
-        if (sameContainer && healthy) {
-          // only publish a successfully deployed event if the server group is healthy
-          val container = them.first().container
-          getTagsForDigest(container, resource.spec.locations.account)
-            .forEach { tag ->
-              // We publish an event for each tag that matches the digest
-              // so that we handle the tags like `latest` where more than one tags have the same digest
-              // and we don't care about some of them.
-              publisher.publishEvent(
-                ArtifactVersionDeployed(
-                  resourceId = resource.id,
-                  artifactVersion = tag
-                )
-              )
-            }
-        }
+      when (numEnabled.get()) {
+        1 -> activeServerGroup.copy(onlyActiveServerGroup = true)
+        else -> activeServerGroup.copy(onlyActiveServerGroup = false)
       }
+    }
+
+    // publish health events
+    val sameContainer: Boolean = activeServerGroups.distinctBy { it.container.digest }.size == 1
+    val healthy: Boolean = activeServerGroups.all {
+      it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
+    }
+    if (sameContainer && healthy) {
+      // only publish a successfully deployed event if the server group is healthy
+      val container = activeServerGroups.first().container
+      getTagsForDigest(container, resource.spec.locations.account)
+        .forEach { tag ->
+          // We publish an event for each tag that matches the digest
+          // so that we handle the tags like `latest` where more than one tags have the same digest
+          // and we don't care about some of them.
+          publisher.publishEvent(
+            ArtifactVersionDeployed(
+              resourceId = resource.id,
+              artifactVersion = tag
+            )
+          )
+        }
+    }
+    return activeServerGroups
+  }
+
+  private suspend fun getExistingServerGroupsByRegion(resource: Resource<TitusClusterSpec>): Map<String, List<ClouddriverTitusServerGroup>> {
+    val existingServerGroups: MutableMap<String, MutableList<ClouddriverTitusServerGroup>> = mutableMapOf()
+
+    cloudDriverService
+      .listTitusServerGroups(
+        user = resource.serviceAccount,
+        app = resource.spec.application,
+        account = resource.spec.locations.account,
+        cluster = resource.spec.moniker.toString()
+      )
+      .serverGroups
+      .forEach { sg ->
+        val existing = existingServerGroups.getOrPut(sg.region, { mutableListOf() })
+        existing.add(sg)
+        existingServerGroups[sg.region] = existing
+      }
+    return existingServerGroups
+  }
 
   /**
    * Get all tags that match a digest, filtering out the "latest" tag.
@@ -457,7 +555,7 @@ class TitusClusterHandler(
       .map { it.tag }
       .toSet()
 
-  private suspend fun CloudDriverService.getServerGroups(
+  private suspend fun CloudDriverService.getActiveServerGroups(
     account: String,
     moniker: Moniker,
     regions: Set<String>,
