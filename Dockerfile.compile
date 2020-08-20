@@ -23,6 +23,4 @@ RUN usermod -d /var/lib/mysql/ mysql && \
 
 CMD /etc/init.d/mysql restart && \
     ./gradlew --no-daemon -PenableCrossCompilerPlugin=true -PbuildingInDocker=true \
-        keel-sql:liquibaseUpdate \
-        keel-sql:jooqGenerate \
         keel-web:installDist -x test
