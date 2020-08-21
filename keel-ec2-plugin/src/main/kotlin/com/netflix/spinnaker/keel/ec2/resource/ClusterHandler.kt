@@ -42,10 +42,8 @@ import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.TerminationPolicy
 import com.netflix.spinnaker.keel.api.ec2.byRegion
 import com.netflix.spinnaker.keel.api.ec2.resolve
-import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
-import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
@@ -808,7 +806,7 @@ class ClusterHandler(
       .also { them ->
         val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
         val healthy: Boolean = them.all {
-          it.instanceCounts?.isHealthy(resource.spec.deployWith.noHealth) == true
+          it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
         }
         if (allSame && healthy) {
           // // only publish a successfully deployed event if the server group is healthy

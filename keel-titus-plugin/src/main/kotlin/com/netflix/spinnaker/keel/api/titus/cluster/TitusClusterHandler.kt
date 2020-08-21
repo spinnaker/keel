@@ -36,10 +36,8 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.InstanceCounts
-import com.netflix.spinnaker.keel.api.id
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
-import com.netflix.spinnaker.keel.api.serviceAccount
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
@@ -425,7 +423,7 @@ class TitusClusterHandler(
       .also { them ->
         val sameContainer: Boolean = them.distinctBy { it.container.digest }.size == 1
         val healthy: Boolean = them.all {
-          it.instanceCounts?.isHealthy(resource.spec.deployWith.noHealth) == true
+          it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
         }
         if (sameContainer && healthy) {
           // only publish a successfully deployed event if the server group is healthy
