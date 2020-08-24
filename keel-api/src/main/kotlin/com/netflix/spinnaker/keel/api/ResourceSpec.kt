@@ -23,4 +23,9 @@ interface ResourceSpec {
    * [com.fasterxml.jackson.annotation.JsonIgnore].
    */
   val application: String
+
+  /**
+   * A more descriptive name than the [id], intended for displaying in the UI.
+   */
+  val displayName: String
 }
