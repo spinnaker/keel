@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import org.slf4j.LoggerFactory
 
-abstract class ArtifactSupplierBaseClass (
+abstract class BaseArtifactSupplier (
   open val artifactMetadataService: ArtifactMetadataService
 ) {
    suspend fun getArtifactMetadataInternal(artifact: PublishedArtifact): ArtifactMetadata? {

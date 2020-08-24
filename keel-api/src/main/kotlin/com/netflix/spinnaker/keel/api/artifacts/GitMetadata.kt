@@ -9,5 +9,9 @@ data class GitMetadata(
   val linkToCommit: String? = null,
   val repoName: String? = null, // the repository name, like "myApp"
   val projectName: String? = null, // the project name, like SPKR
-  val commitMessage: String? = null
+  val commitMessage: String? = null,
+  val branchName: String? = null,
+  val pullRequestNumber: String? = null,
+  val pullRequestUrl: String? = null,
+  val repoLink: String? = null
 )

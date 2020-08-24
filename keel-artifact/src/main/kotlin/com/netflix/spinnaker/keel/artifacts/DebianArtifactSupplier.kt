@@ -29,7 +29,7 @@ class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy>, ArtifactSupplierBaseClass(artifactMetadataService) {
+) : ArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)

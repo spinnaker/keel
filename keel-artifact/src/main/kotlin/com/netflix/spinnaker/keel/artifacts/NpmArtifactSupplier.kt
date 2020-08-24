@@ -27,7 +27,7 @@ class NpmArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy>, ArtifactSupplierBaseClass(artifactMetadataService) {
+) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
 
   override val supportedArtifact = SupportedArtifact(NPM, NpmArtifact::class.java)
 

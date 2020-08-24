@@ -28,7 +28,7 @@ class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy>, ArtifactSupplierBaseClass(artifactMetadataService) {
+) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
   override val supportedVersioningStrategy =
