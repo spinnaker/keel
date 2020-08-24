@@ -25,7 +25,9 @@ interface ResourceSpec {
   val application: String
 
   /**
-   * A more descriptive name than the [id], intended for displaying in the UI.
+   * A more descriptive name than the [id], intended for displaying in the UI. This property is
+   * not persisted, as it's expected to be calculated by the [ResourceSpec] implementation from
+   * other fields.
    */
   val displayName: String
 }
