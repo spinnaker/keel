@@ -40,7 +40,7 @@ import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.titus.exceptions.ActiveServerGroupsException
+import com.netflix.spinnaker.keel.exceptions.ActiveServerGroupsException
 import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
 import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
@@ -171,8 +171,7 @@ class TitusClusterHandler(
             )
           }
 
-          if (!diff.isEnabledOnly() && !diff.isCapacityOnly()) {
-            // only publish deploying if we're deploying a new version
+          if (diff.willDeployNewVersion()) {
             tags.forEach { tag ->
               publisher.publishEvent(ArtifactVersionDeploying(
                 resourceId = resource.id,
@@ -321,12 +320,11 @@ class TitusClusterHandler(
     }
 
   // todo eb: capture this heuristic and document it for users
-  private fun ResourceDiff<TitusServerGroup>.disableOtherServerGroupJob(resource: Resource<TitusClusterSpec>, desiredVersion: String): Map<String, Any?> {
+  private suspend fun ResourceDiff<TitusServerGroup>.disableOtherServerGroupJob(resource: Resource<TitusClusterSpec>, desiredVersion: String): Map<String, Any?> {
     val current = requireNotNull(current) {
       "Current server group must not be null when generating a disable job"
     }
-    // todo eb: figure out what server group to disable
-    val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = runBlocking { getExistingServerGroupsByRegion(resource) }
+    val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = getExistingServerGroupsByRegion(resource)
     val sgInRegion = existingServerGroups.getOrDefault(current.location.region, emptyList()).filterNot { it.disabled }
 
     if (sgInRegion.size < 2) {
@@ -335,21 +333,22 @@ class TitusClusterHandler(
       throw ActiveServerGroupsException(resource.id, "No other active server group found to disable.")
     }
 
-    val wrongImageSGs = sgInRegion.filterNot { it.image.dockerImageVersion == desiredVersion }.sortedBy { it.createdTime }
-    val rightImageSGs = sgInRegion.filter { it.image.dockerImageVersion == desiredVersion }.sortedBy { it.createdTime }
+    val (rightImageASGs, wrongImageASGs) = sgInRegion
+      .sortedBy { it.createdTime }
+      .partition { it.image.dockerImageVersion == desiredVersion }
 
     val sgToDisable = when {
-      wrongImageSGs.isNotEmpty() -> {
+      wrongImageASGs.isNotEmpty() -> {
         log.debug("Disabling oldest server group with incorrect docker image version for {}", resource.id)
-        wrongImageSGs.first()
+        wrongImageASGs.first()
       }
-      rightImageSGs.size > 1 -> {
+      rightImageASGs.size > 1 -> {
         log.debug("Disabling oldest server group with correct docker image version " +
           "(because there is more than one active server group with the correct image) for {}", resource.id)
-        rightImageSGs.first()
+        rightImageASGs.first()
       }
       else -> {
-        log.error("Could not find a server group to disable, looking at: {}", wrongImageSGs + rightImageSGs)
+        log.error("Could not find a server group to disable, looking at: {}", wrongImageASGs + rightImageASGs)
         throw ActiveServerGroupsException(resource.id, "No other active server group found to disable.")
       }
     }
@@ -451,6 +450,9 @@ class TitusClusterHandler(
         } ?: job
       }
 
+  private fun ResourceDiff<TitusServerGroup>.willDeployNewVersion(): Boolean =
+    !isCapacityOnly() && !isEnabledOnly()
+
   /**
    * @return `true` if the only changes in the diff are to capacity.
    */
@@ -475,24 +477,19 @@ class TitusClusterHandler(
     }
 
   private suspend fun CloudDriverService.getActiveServerGroups(resource: Resource<TitusClusterSpec>): Iterable<TitusServerGroup> {
+    val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = getExistingServerGroupsByRegion(resource)
     val activeServerGroups = getActiveServerGroups(
       resource.spec.locations.account,
       resource.spec.moniker,
       resource.spec.locations.regions.map { it.name }.toSet(),
       resource.serviceAccount
     ).map { activeServerGroup ->
-      // get all server groups in the cluster, split by region,
-      val existingServerGroups: Map<String, List<ClouddriverTitusServerGroup>> = getExistingServerGroupsByRegion(resource)
-      val numEnabled = AtomicInteger()
-      existingServerGroups
+      val numEnabled = existingServerGroups
         .getOrDefault(activeServerGroup.location.region, emptyList<ServerGroup>())
-        .forEach { serverGroup ->
-          log.info(">> serverGroup is disabled: {}", serverGroup.disabled)
-          if (!serverGroup.disabled) {
-            numEnabled.incrementAndGet()
-          }
-        }
-      when (numEnabled.get()) {
+        .filter { !it.disabled }
+        .size
+
+      when (numEnabled) {
         1 -> activeServerGroup.copy(onlyActiveServerGroup = true)
         else -> activeServerGroup.copy(onlyActiveServerGroup = false)
       }
