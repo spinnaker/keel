@@ -75,7 +75,6 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -460,12 +459,12 @@ class TitusClusterHandler(
     current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
 
   /**
-   * @return true if the only difference is in the onlyActiveServerGroup property
+   * @return true if the only difference is in the onlyEnabledServerGroup property
    */
   private fun ResourceDiff<TitusServerGroup>.isEnabledOnly(): Boolean =
     current != null &&
-      affectedRootPropertyNames.all { it == "onlyActiveServerGroup" } &&
-      current!!.onlyActiveServerGroup != desired.onlyActiveServerGroup
+      affectedRootPropertyNames.all { it == "onlyEnabledServerGroup" } &&
+      current!!.onlyEnabledServerGroup != desired.onlyEnabledServerGroup
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
     serverGroups.forEach { (region, serverGroup) ->
@@ -490,8 +489,8 @@ class TitusClusterHandler(
         .size
 
       when (numEnabled) {
-        1 -> activeServerGroup.copy(onlyActiveServerGroup = true)
-        else -> activeServerGroup.copy(onlyActiveServerGroup = false)
+        1 -> activeServerGroup.copy(onlyEnabledServerGroup = true)
+        else -> activeServerGroup.copy(onlyEnabledServerGroup = false)
       }
     }
 

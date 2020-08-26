@@ -59,7 +59,7 @@ data class TitusServerGroup(
   val deferredInitialization: Boolean = true,
   val delayBeforeDisableSec: Int = 0,
   val delayBeforeScaleDownSec: Int = 0,
-  val onlyActiveServerGroup: Boolean = true,
+  val onlyEnabledServerGroup: Boolean = true,
   @JsonIgnore
   @get:ExcludedFromDiff
   override val artifactName: String? = null,

@@ -360,7 +360,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         val west = serverGroupWest.toMultiServerGroupResponse(listOf(sg1West, sg2West), awsAccount)
 
         val modified = setOf(
-          serverGroupEast.copy(name = activeServerGroupResponseEast.name, onlyActiveServerGroup = false),
+          serverGroupEast.copy(name = activeServerGroupResponseEast.name, onlyEnabledServerGroup = false),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name)
         )
         val diff = DefaultResourceDiff(
