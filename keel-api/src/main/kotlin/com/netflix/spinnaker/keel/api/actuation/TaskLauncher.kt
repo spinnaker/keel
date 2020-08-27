@@ -5,31 +5,36 @@ import com.netflix.spinnaker.keel.api.Resource
 import java.util.concurrent.CompletableFuture
 
 interface TaskLauncher {
+
   suspend fun submitJob(
     resource: Resource<*>,
     description: String,
     correlationId: String,
-    job: Map<String, Any?>
+    job: Map<String, Any?>,
+    artifactVersionUnderDeployment: String? = null
   ): Task =
     submitJob(
       resource = resource,
       description = description,
       correlationId = correlationId,
-      stages = listOf(job)
+      stages = listOf(job),
+      artifactVersionUnderDeployment
     )
 
   suspend fun submitJob(
     resource: Resource<*>,
     description: String,
     correlationId: String,
-    stages: List<Map<String, Any?>>
+    stages: List<Map<String, Any?>>,
+    artifactVersionUnderDeployment: String? = null
   ): Task
 
   fun submitJobAsync(
     resource: Resource<*>,
     description: String,
     correlationId: String,
-    stages: List<Map<String, Any?>>
+    stages: List<Map<String, Any?>>,
+    artifactVersionUnderDeployment: String? = null
   ): CompletableFuture<Task>
 
   suspend fun submitJob(
@@ -41,7 +46,8 @@ interface TaskLauncher {
     correlationId: String,
     stages: List<Map<String, Any?>>,
     artifacts: List<Map<String, Any?>> = emptyList(),
-    parameters: Map<String, Any> = emptyMap()
+    parameters: Map<String, Any> = emptyMap(),
+    artifactVersionUnderDeployment: String? = null
   ): Task =
     submitJob(
       user = user,
@@ -53,7 +59,8 @@ interface TaskLauncher {
       stages = stages,
       type = SubjectType.CONSTRAINT,
       artifacts = artifacts,
-      parameters = parameters
+      parameters = parameters,
+      artifactVersionUnderDeployment = artifactVersionUnderDeployment
     )
 
   suspend fun submitJob(
@@ -66,7 +73,8 @@ interface TaskLauncher {
     stages: List<Map<String, Any?>>,
     type: SubjectType,
     artifacts: List<Map<String, Any?>> = emptyList(),
-    parameters: Map<String, Any> = emptyMap()
+    parameters: Map<String, Any> = emptyMap(),
+    artifactVersionUnderDeployment: String? = null
   ): Task
 
   suspend fun correlatedTasksRunning(correlationId: String): Boolean

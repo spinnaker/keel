@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.api.NotificationFrequency.quiet
 import com.netflix.spinnaker.keel.api.NotificationType.slack
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.model.NotificationEvent.ORCHESTRATION_FAILED
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -37,6 +38,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectThat
@@ -73,20 +75,36 @@ class OrcaTaskLauncherTests : JUnit5Minutests {
           notifications = setOf(notification)
         )
         every { combinedRepository.environmentFor(resource.id) } returns env
+      }
 
-        runBlocking {
-          taskLauncher.submitJob(resource, "task description", "correlate this", mapOf())
+      context("a job is submitted") {
+        before {
+          runBlocking {
+            taskLauncher.submitJob(resource, "task description", "correlate this", mapOf())
+          }
+        }
+
+        test("notifications get retrieved") {
+          expectThat(request.captured.trigger.notifications) {
+            isNotEmpty()
+            hasSize(1)
+            first().get { `when` }.isEqualTo(listOf(ORCHESTRATION_FAILED.text()))
+            first().get { message }.isEqualTo(
+              mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
+            )
+          }
         }
       }
 
-      test("notifications get retrieved") {
-        expectThat(request.captured.trigger.notifications) {
-          isNotEmpty()
-          hasSize(1)
-          first().get { `when` }.isEqualTo(listOf(ORCHESTRATION_FAILED.text()))
-          first().get { message }.isEqualTo(
-            mapOf(ORCHESTRATION_FAILED.text() to ORCHESTRATION_FAILED.notificationMessage())
-          )
+      context("a job to deploy an artifact is submitted") {
+        before {
+          runBlocking {
+            taskLauncher.submitJob(resource, "task description", "correlate this", mapOf(), "1.0.0")
+          }
+        }
+
+        test("an artifact deploying event is fired") {
+          verify { publisher.publishEvent(any<ArtifactVersionDeploying>()) }
         }
       }
     }

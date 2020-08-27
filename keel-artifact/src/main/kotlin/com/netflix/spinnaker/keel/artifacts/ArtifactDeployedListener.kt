@@ -39,7 +39,7 @@ class ArtifactDeployedListener(
           targetEnvironment = env.name
         )
         if (!markedCurrentlyDeployed) {
-          log.info("Marking {} as deployed in {} for config {} because it is already deployed", event.artifactVersion, env.name, deliveryConfig.name)
+          log.info("Marking {} as deployed in {} for config {}", event.artifactVersion, env.name, deliveryConfig.name)
           repository.markAsSuccessfullyDeployedTo(
             deliveryConfig = deliveryConfig,
             artifact = artifact,

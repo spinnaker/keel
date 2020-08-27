@@ -18,6 +18,7 @@ class SqlTaskTrackingRepository(
         .set(TASK_TRACKING.SUBJECT, task.subject)
         .set(TASK_TRACKING.TASK_ID, task.id)
         .set(TASK_TRACKING.TASK_NAME, task.name)
+        .set(TASK_TRACKING.ARTIFACT_VERSION_UNDER_DEPLOYMENT, task.artifactVersionUnderDeployment)
         .set(TASK_TRACKING.TIMESTAMP, clock.timestamp())
         .onDuplicateKeyIgnore()
         .execute()
@@ -27,11 +28,11 @@ class SqlTaskTrackingRepository(
   override fun getTasks(): Set<TaskRecord> {
     return sqlRetry.withRetry(RetryCategory.READ) {
       jooq
-        .select(TASK_TRACKING.SUBJECT, TASK_TRACKING.TASK_ID, TASK_TRACKING.TASK_NAME)
+        .select(TASK_TRACKING.TASK_ID, TASK_TRACKING.TASK_NAME, TASK_TRACKING.SUBJECT, TASK_TRACKING.ARTIFACT_VERSION_UNDER_DEPLOYMENT)
         .from(TASK_TRACKING)
         .fetch()
-        .map { (resource_id, task_id, task_name) ->
-          TaskRecord(task_id, task_name, resource_id)
+        .map { (task_id, task_name, subject, artifactVersionUnderDeployment) ->
+          TaskRecord(task_id, task_name, subject, artifactVersionUnderDeployment)
         }
         .toSet()
     }

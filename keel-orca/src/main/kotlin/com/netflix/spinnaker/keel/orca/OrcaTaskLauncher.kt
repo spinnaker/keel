@@ -20,9 +20,11 @@ package com.netflix.spinnaker.keel.orca
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.actuation.SubjectType
+import com.netflix.spinnaker.keel.api.actuation.SubjectType.RESOURCE
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -50,7 +52,8 @@ class OrcaTaskLauncher(
     resource: Resource<*>,
     description: String,
     correlationId: String,
-    stages: List<Map<String, Any?>>
+    stages: List<Map<String, Any?>>,
+    artifactVersionUnderDeployment: String?
   ) =
     submitJob(
       user = resource.serviceAccount,
@@ -60,16 +63,18 @@ class OrcaTaskLauncher(
       description = description,
       correlationId = correlationId,
       stages = stages,
-      type = SubjectType.RESOURCE
+      type = SubjectType.RESOURCE,
+      artifactVersionUnderDeployment = artifactVersionUnderDeployment
     )
 
   override fun submitJobAsync(
     resource: Resource<*>,
     description: String,
     correlationId: String,
-    stages: List<Map<String, Any?>>
+    stages: List<Map<String, Any?>>,
+    artifactVersionUnderDeployment: String?
   ): CompletableFuture<Task> = GlobalScope.future {
-    submitJob(resource, description, correlationId, stages)
+    submitJob(resource, description, correlationId, stages, artifactVersionUnderDeployment)
   }
 
   override suspend fun submitJob(
@@ -82,7 +87,8 @@ class OrcaTaskLauncher(
     stages: List<Map<String, Any?>>,
     type: SubjectType,
     artifacts: List<Map<String, Any?>>,
-    parameters: Map<String, Any>
+    parameters: Map<String, Any>,
+    artifactVersionUnderDeployment: String?
   ) =
     orcaService
       .orchestrate(
@@ -102,12 +108,28 @@ class OrcaTaskLauncher(
       )
       .let {
         log.info("Started task {} to upsert {}", it.ref, subject)
+
+        if (type == RESOURCE && artifactVersionUnderDeployment != null) {
+          log.debug("Task is an artifact deployment task for resource $subject, artifact version " +
+            "$artifactVersionUnderDeployment. Notifying artifact version deploying.")
+          publisher.publishEvent(ArtifactVersionDeploying(
+            resourceId = subject,
+            artifactVersion = artifactVersionUnderDeployment
+          ))
+        }
+
         publisher.publishEvent(
           TaskCreatedEvent(
-            TaskRecord(id = it.taskId, name = description, subject = "$type:$subject")
+            TaskRecord(
+              id = it.taskId,
+              name = description,
+              subject = "$type:$subject",
+              artifactVersionUnderDeployment = artifactVersionUnderDeployment
+            )
           )
         )
-        Task(id = it.taskId, name = description)
+
+        Task(it.taskId, description)
       }
 
   override suspend fun correlatedTasksRunning(correlationId: String): Boolean =

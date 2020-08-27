@@ -10,5 +10,6 @@ interface TaskTrackingRepository {
 data class TaskRecord(
   val id: String,
   val name: String,
-  val subject: String
+  val subject: String,
+  val artifactVersionUnderDeployment: String? = null
 )

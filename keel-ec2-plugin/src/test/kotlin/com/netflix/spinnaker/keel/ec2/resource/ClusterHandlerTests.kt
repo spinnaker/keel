@@ -354,10 +354,6 @@ internal class ClusterHandlerTests : JUnit5Minutests {
               activeServerGroupResponseWest.name
             )
         }
-
-        test("an event is fired if all server groups have the same artifact version") {
-          verify { publisher.publishEvent(ofType<ArtifactVersionDeployed>()) }
-        }
       }
     }
 

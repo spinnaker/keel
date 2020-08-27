@@ -78,7 +78,7 @@ class EnvironmentConstraintRunner(
     envContext: EnvironmentContext,
     pendingVersionsToCheck: MutableSet<String>
   ) {
-    var version: String? = null
+    var version: String?
     var versionIsPending = false
     val vetoedVersions: Set<String> = envContext.vetoedVersions
 

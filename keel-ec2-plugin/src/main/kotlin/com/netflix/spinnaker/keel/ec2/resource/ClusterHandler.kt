@@ -63,8 +63,6 @@ import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.ec2.toEc2Api
-import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
-import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -75,16 +73,16 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class ClusterHandler(
   private val cloudDriverService: CloudDriverService,
@@ -143,15 +141,6 @@ class ClusterHandler(
       deferred.addAll(
         upsertUnstaggered(resource, createDiffs, version)
       )
-
-      if (createDiffs.isNotEmpty()) {
-        publisher.publishEvent(
-          ArtifactVersionDeploying(
-            resourceId = resource.id,
-            artifactVersion = version
-          )
-        )
-      }
 
       return@coroutineScope deferred.map { it.await() }
     }
@@ -221,7 +210,8 @@ class ClusterHandler(
               description = "Deploy $version to server group ${diff.desired.moniker}  in " +
                 "${diff.desired.location.account}/${diff.desired.location.region}",
               correlationId = "${resource.id}:${diff.desired.location.region}",
-              stages = stages
+              stages = stages,
+              artifactVersionUnderDeployment = version
             )
           }
         }
@@ -296,16 +286,10 @@ class ClusterHandler(
             description = "Deploy $version to server group ${diff.desired.moniker} in " +
               "${diff.desired.location.account}/${diff.desired.location.region}",
             correlationId = "${resource.id}:${diff.desired.location.region}",
-            stages = stages
+            stages = stages,
+            artifactVersionUnderDeployment = version
           )
         }
-
-        publisher.publishEvent(
-          ArtifactVersionDeploying(
-            resourceId = resource.id,
-            artifactVersion = version
-          )
-        )
 
         val task = deferred.await()
         priorExecutionId = task.id
@@ -803,24 +787,6 @@ class ClusterHandler(
       regions = resource.spec.locations.regions.map { it.name }.toSet(),
       serviceAccount = resource.serviceAccount
     )
-      .also { them ->
-        val allSame: Boolean = them.distinctBy { it.launchConfiguration.appVersion }.size == 1
-        val healthy: Boolean = them.all {
-          it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
-        }
-        if (allSame && healthy) {
-          // // only publish a successfully deployed event if the server group is healthy
-          val appVersion = them.first().launchConfiguration.appVersion
-          if (appVersion != null) {
-            publisher.publishEvent(
-              ArtifactVersionDeployed(
-                resourceId = resource.id,
-                artifactVersion = appVersion
-              )
-            )
-          }
-        }
-      }
 
   private suspend fun CloudDriverService.getServerGroups(
     account: String,

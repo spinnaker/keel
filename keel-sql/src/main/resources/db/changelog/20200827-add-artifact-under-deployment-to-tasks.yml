@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-artifact-under-deployment-to-tasks
+      author: lpollo
+      changes:
+        - addColumn:
+            tableName: task_tracking
+            columns:
+              - name: artifact_version_under_deployment
+                type: varchar(255)
+                afterColumn: subject
+                constraints:
+                  nullable: true

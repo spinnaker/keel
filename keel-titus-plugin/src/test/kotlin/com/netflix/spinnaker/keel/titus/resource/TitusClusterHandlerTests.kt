@@ -67,9 +67,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import java.time.Clock
-import java.time.Duration
-import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -87,6 +84,9 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.map
+import java.time.Clock
+import java.time.Duration
+import java.util.UUID
 
 // todo eb: we could probably have generic cluster tests
 // where you provide the correct info for the spec and active server groups
@@ -285,10 +285,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
               activeServerGroupResponseWest.name
             )
         }
-
-        test("a deployed event fired") {
-          verify { publisher.publishEvent(any<ArtifactVersionDeployed>()) }
-        }
       }
     }
 
@@ -444,16 +440,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           serverGroups.byRegion(),
           modified.byRegion()
         )
-
-        test("events are fired for the artifact deploying") {
-          runBlocking {
-            upsert(resource, diff)
-          }
-          val slot = slot<OrchestrationRequest>()
-          coVerify { orcaService.orchestrate(resource.serviceAccount, capture(slot)) }
-          verify { publisher.publishEvent(ArtifactVersionDeploying(resource.id, "master-h2.blah")) }
-          verify { publisher.publishEvent(ArtifactVersionDeploying(resource.id, "im-master-now")) }
-        }
 
         test("resolving diff clones the current server group by digest") {
           runBlocking {

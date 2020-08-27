@@ -233,9 +233,9 @@ class ApplicationService(
             }
           }
         }
-        return@map versionToSummary(artifact, version, artifactSummariesInEnvironments.toSet())
+        versionToSummary(artifact, version, artifactSummariesInEnvironments.toSet())
       }
-      return@map ArtifactSummary(
+      ArtifactSummary(
         name = artifact.name,
         type = artifact.type,
         reference = artifact.reference,

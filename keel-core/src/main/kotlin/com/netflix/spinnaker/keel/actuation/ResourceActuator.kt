@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
+import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationVetoed
 import com.netflix.spinnaker.keel.events.ResourceCheckError
@@ -189,7 +190,7 @@ class ResourceActuator(
             log.info("Resource {} is valid", id)
             val lastEvent = resourceRepository.lastEvent(id)
             when (lastEvent) {
-              is ResourceActuationLaunched -> log.debug("waiting for actuating task to be completed") // do nothing and wait
+              is ResourceActuationLaunched -> log.debug("Still waiting for actuating task to complete.") // do nothing and wait
               is ResourceDeltaDetected, is ResourceTaskSucceeded, is ResourceTaskFailed -> {
                 // if a delta was detected and a task wasn't launched, the delta is resolved
                 // if a task was launched and it completed, either successfully or not, the delta is resolved

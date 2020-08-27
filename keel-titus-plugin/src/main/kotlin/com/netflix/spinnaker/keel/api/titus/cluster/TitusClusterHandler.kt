@@ -40,7 +40,6 @@ import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.titus.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
-import com.netflix.spinnaker.keel.exceptions.ActiveServerGroupsException
 import com.netflix.spinnaker.keel.api.titus.exceptions.RegistryNotFoundException
 import com.netflix.spinnaker.keel.api.titus.exceptions.TitusAccountConfigurationException
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
@@ -54,15 +53,13 @@ import com.netflix.spinnaker.keel.clouddriver.model.MigrationPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.Resources
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
-import com.netflix.spinnaker.keel.clouddriver.model.TitusServerGroup as ClouddriverTitusServerGroup
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
-import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
-import com.netflix.spinnaker.keel.events.ArtifactVersionDeploying
+import com.netflix.spinnaker.keel.exceptions.ActiveServerGroupsException
 import com.netflix.spinnaker.keel.exceptions.DockerArtifactExportError
 import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
@@ -71,16 +68,17 @@ import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.swiftzer.semver.SemVer
 import org.springframework.context.ApplicationEventPublisher
 import retrofit2.HttpException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import com.netflix.spinnaker.keel.clouddriver.model.TitusServerGroup as ClouddriverTitusServerGroup
 
 class TitusClusterHandler(
   private val cloudDriverService: CloudDriverService,
@@ -159,6 +157,7 @@ class TitusClusterHandler(
             diff.isEnabledOnly() -> "Disable extra active server group ${job["asgName"]} in ${desired.location.account}/${desired.location.region}"
             else -> "Deploy $version to server group ${desired.moniker} in ${desired.location.account}/${desired.location.region}"
           }
+
           log.info("Upserting server group using task: {}", job)
 
           val result = async {
@@ -166,18 +165,11 @@ class TitusClusterHandler(
               resource = resource,
               description = description,
               correlationId = "${resource.id}:${desired.location.region}",
-              job = job
+              job = job,
+              artifactVersionUnderDeployment = version?.toString()
             )
           }
 
-          if (diff.willDeployNewVersion()) {
-            tags.forEach { tag ->
-              publisher.publishEvent(ArtifactVersionDeploying(
-                resourceId = resource.id,
-                artifactVersion = tag
-              ))
-            }
-          }
           return@map result
         }
         .map { it.await() }
@@ -494,27 +486,6 @@ class TitusClusterHandler(
       }
     }
 
-    // publish health events
-    val sameContainer: Boolean = activeServerGroups.distinctBy { it.container.digest }.size == 1
-    val healthy: Boolean = activeServerGroups.all {
-      it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
-    }
-    if (sameContainer && healthy) {
-      // only publish a successfully deployed event if the server group is healthy
-      val container = activeServerGroups.first().container
-      getTagsForDigest(container, resource.spec.locations.account)
-        .forEach { tag ->
-          // We publish an event for each tag that matches the digest
-          // so that we handle the tags like `latest` where more than one tags have the same digest
-          // and we don't care about some of them.
-          publisher.publishEvent(
-            ArtifactVersionDeployed(
-              resourceId = resource.id,
-              artifactVersion = tag
-            )
-          )
-        }
-    }
     return activeServerGroups
   }
 

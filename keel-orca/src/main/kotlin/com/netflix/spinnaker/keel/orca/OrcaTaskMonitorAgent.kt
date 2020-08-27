@@ -4,11 +4,13 @@ import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.actuation.SubjectType.RESOURCE
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.TaskCreatedEvent
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
@@ -50,7 +52,7 @@ class OrcaTaskMonitorAgent(
     coroutineScope {
       taskTrackingRepository.getTasks()
         .associate {
-          it.subject to
+          it to
             async {
               try {
                 orcaService.getOrchestrationExecution(it.id, DEFAULT_SERVICE_ACCOUNT)
@@ -72,35 +74,55 @@ class OrcaTaskMonitorAgent(
             }.await()
         }
         .filterValues { it != null && it.status.isComplete() }
-        .map { (resourceId, taskDetails) ->
-          if (taskDetails != null) {
+        .map { (taskRecord, executionDetails) ->
+          if (executionDetails != null) {
             // only resource events are currently supported
-            if (resourceId.startsWith(RESOURCE.toString())) {
-              val id = resourceId.substringAfter(":")
+            if (taskRecord.subject.startsWith(RESOURCE.toString())) {
+              val resourceId = taskRecord.subject.substringAfter(":")
               try {
-                when (taskDetails.status.isSuccess()) {
-                  true -> publisher.publishEvent(
-                    ResourceTaskSucceeded(
-                      resourceRepository.get(id), listOf(Task(taskDetails.id, taskDetails.name)), clock
-                    )
-                  )
-                  false -> publisher.publishEvent(
-                    ResourceTaskFailed(
-                      resourceRepository.get(id),
-                      taskDetails.execution.stages.getFailureMessage()
-                        ?: "",
-                      listOf(Task(taskDetails.id, taskDetails.name)), clock
-                    )
-                  )
+                if (executionDetails.status.isSuccess()) {
+                  handleTaskSuccess(resourceId, executionDetails, taskRecord)
+                } else {
+                  handleTaskFailure(resourceId, executionDetails)
                 }
               } catch (e: NoSuchResourceId) {
-                log.warn("No resource found for id $resourceId")
+                log.warn("No resource found for id $taskRecord")
               }
             }
-            taskTrackingRepository.delete(taskDetails.id)
+            taskTrackingRepository.delete(executionDetails.id)
           }
         }
     }
+  }
+
+  private fun handleTaskSuccess(resourceId: String, executionDetails: ExecutionDetailResponse, taskRecord: TaskRecord) {
+    publisher.publishEvent(
+      ResourceTaskSucceeded(
+        resourceRepository.get(resourceId), listOf(Task(executionDetails.id, executionDetails.name)), clock
+      )
+    )
+
+    if (taskRecord.artifactVersionUnderDeployment != null) {
+      log.debug("Successful task ${taskRecord.id} deployed artifact version ${taskRecord.artifactVersionUnderDeployment} " +
+        "to resource ${resourceId}. Notifying artifact version deployed.")
+      publisher.publishEvent(
+        ArtifactVersionDeployed(
+          resourceId = resourceId,
+          artifactVersion = taskRecord.artifactVersionUnderDeployment!!
+        )
+      )
+    }
+  }
+
+  private fun handleTaskFailure(resourceId: String, executionDetails: ExecutionDetailResponse) {
+    publisher.publishEvent(
+      ResourceTaskFailed(
+        resourceRepository.get(resourceId),
+        executionDetails.execution.stages.getFailureMessage()
+          ?: "",
+        listOf(Task(executionDetails.id, executionDetails.name)), clock
+      )
+    )
   }
 
   // get the exception - can be either general orca exception or kato specific
