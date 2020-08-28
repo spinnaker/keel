@@ -79,6 +79,7 @@ import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
 import java.time.Clock
 import java.time.Duration
