@@ -86,7 +86,7 @@ class OrcaTaskMonitorAgent(
                   handleTaskFailure(resourceId, executionDetails)
                 }
               } catch (e: NoSuchResourceId) {
-                log.warn("No resource found for id $taskRecord")
+                log.warn("No resource found for id $resourceId")
               }
             }
             taskTrackingRepository.delete(executionDetails.id)
