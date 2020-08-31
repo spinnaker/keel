@@ -5,26 +5,26 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.ec2.Capacity
-import com.netflix.spinnaker.keel.api.titus.TITUS_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterHandler
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroup
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusServerGroupSpec
+import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.titus.TITUS_CLUSTER_V1
+import com.netflix.spinnaker.titus.TitusClusterHandler
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
-import java.time.Clock
 import kotlinx.coroutines.runBlocking
-import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectThat
 import strikt.assertions.getValue
 import strikt.assertions.isEqualTo
+import java.time.Clock
 
 class TitusClusterDesiredStateResolutionTests : JUnit5Minutests {
 
@@ -68,11 +68,6 @@ class TitusClusterDesiredStateResolutionTests : JUnit5Minutests {
       ),
       _defaults = TitusServerGroupSpec(
         capacity = Capacity(1, 1, 1),
-        container = DigestProvider(
-          organization = "fnord",
-          image = "some-image",
-          digest = "4ef5d72110943e43fc029b63cf84939f64893401b0870eed34b66d5b72bead2c"
-        ),
         containerAttributes = mapOf(
           "key" to "default value"
         ),
@@ -83,7 +78,7 @@ class TitusClusterDesiredStateResolutionTests : JUnit5Minutests {
           "key" to "default value"
         )
       ),
-      containerProvider = DigestProvider(
+      container = DigestProvider(
         organization = "fnord",
         image = "some-image",
         digest = "4ef5d72110943e43fc029b63cf84939f64893401b0870eed34b66d5b72bead2c"
@@ -113,7 +108,7 @@ class TitusClusterDesiredStateResolutionTests : JUnit5Minutests {
     val cloudDriverCache = mockk<CloudDriverCache>()
     val orcaService = mockk<OrcaService>()
     val taskLauncher = mockk<TaskLauncher>()
-    val publisher = mockk<ApplicationEventPublisher>()
+    val publisher = mockk<EventPublisher>()
     val handler = TitusClusterHandler(
       cloudDriverService,
       cloudDriverCache,

@@ -15,11 +15,11 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api.titus
+package com.netflix.spinnaker.titus.exceptions
 
-import com.netflix.spinnaker.keel.api.plugins.kind
-import com.netflix.spinnaker.keel.api.titus.cluster.TitusClusterSpec
+import com.netflix.spinnaker.keel.docker.ContainerProvider
+import com.netflix.spinnaker.kork.exceptions.SystemException
 
-const val CLOUD_PROVIDER = "titus"
-
-val TITUS_CLUSTER_V1 = kind<TitusClusterSpec>("titus/cluster@v1")
+class ErrorResolvingContainerException(
+  val container: ContainerProvider
+) : SystemException("There was an error resolving the correct docker container (current container: $container)")

@@ -15,13 +15,13 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api.titus.exceptions
+package com.netflix.spinnaker.titus.exceptions
 
+import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 
-/**
- * A titus registry was not provided by clouddriver for the specified titus account
- */
-class RegistryNotFoundException(
-  val titusAccount: String
-) : IntegrationException("Unable to find a registry configured for Titus account $titusAccount")
+class NoDigestFound(repository: String, tag: String) :
+  ResourceCurrentlyUnresolvable("No digest found for docker image $repository:$tag in any registry")
+
+class RegistryNotFound(titusAccount: String) :
+  IntegrationException("Unable to find docker registry for titus account $titusAccount")

@@ -15,11 +15,13 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.api.titus.exceptions
+package com.netflix.spinnaker.titus.exceptions
 
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 
-class TitusAccountConfigurationException(
-  val titusAccount: String,
-  val missingProperty: String
-) : IntegrationException("Titus account $titusAccount misconfigured: missing value for $missingProperty")
+/**
+ * A titus registry was not provided by clouddriver for the specified titus account
+ */
+class RegistryNotFoundException(
+  val titusAccount: String
+) : IntegrationException("Unable to find a registry configured for Titus account $titusAccount")

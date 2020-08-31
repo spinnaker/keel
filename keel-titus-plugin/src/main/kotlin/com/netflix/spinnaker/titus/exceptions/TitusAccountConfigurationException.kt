@@ -15,13 +15,11 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.events
+package com.netflix.spinnaker.titus.exceptions
 
-/**
- * An event fired while we check a server group that lets us know
- * what version of software is running in that server group
- */
-data class ArtifactVersionDeployed(
-  val resourceId: String,
-  val artifactVersion: String
-)
+import com.netflix.spinnaker.kork.exceptions.IntegrationException
+
+class TitusAccountConfigurationException(
+  val titusAccount: String,
+  val missingProperty: String
+) : IntegrationException("Titus account $titusAccount misconfigured: missing value for $missingProperty")
