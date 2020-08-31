@@ -42,7 +42,10 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.api.titus.ResourcesSpec
 import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Constraints
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.MigrationPolicy
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Resources
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -591,13 +594,13 @@ class TitusClusterHandler(
         digest = image.dockerImageDigest
       ),
       entryPoint = entryPoint,
-      resources = resources.run { TitusServerGroup.Resources(cpu, disk, gpu, memory, networkMbps) },
+      resources = resources.run { Resources(cpu, disk, gpu, memory, networkMbps) },
       env = env,
       containerAttributes = containerAttributes,
-      constraints = constraints.run { TitusServerGroup.Constraints(hard, soft) },
+      constraints = constraints.run { Constraints(hard, soft) },
       iamProfile = iamProfile.substringAfterLast("/"),
       capacityGroup = capacityGroup,
-      migrationPolicy = migrationPolicy.run { TitusServerGroup.MigrationPolicy(type) },
+      migrationPolicy = migrationPolicy.run { MigrationPolicy(type) },
       dependencies = ClusterDependencies(
         loadBalancers,
         securityGroupNames = securityGroupNames,
@@ -638,10 +641,10 @@ class TitusClusterHandler(
     val defaults = TitusServerGroupSpec(
       capacity = Capacity(1, 1, 1),
       iamProfile = application + "InstanceProfile",
-      resources = mapper.convertValue(TitusServerGroup.Resources()),
+      resources = mapper.convertValue(Resources()),
       entryPoint = "",
-      constraints = TitusServerGroup.Constraints(),
-      migrationPolicy = TitusServerGroup.MigrationPolicy(),
+      constraints = Constraints(),
+      migrationPolicy = MigrationPolicy(),
       dependencies = ClusterDependencies(),
       capacityGroup = application,
       env = emptyMap(),
@@ -666,7 +669,7 @@ class TitusClusterHandler(
     return checkNotNull(buildSpecFromDiff(defaults, thisSpec))
   }
 
-  private fun TitusServerGroup.Resources.toSpec(): ResourcesSpec =
+  private fun Resources.toSpec(): ResourcesSpec =
     ResourcesSpec(
       cpu = cpu,
       disk = disk,

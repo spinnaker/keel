@@ -27,26 +27,26 @@ class TitusClusterSpecDeserializationTests : JUnit5Minutests {
     context("a titus cluster where the locations are derived from the environment") {
       fixture {
         Fixture("""
----
-application: fnord
-serviceAccount: fzlem@spinnaker.io
-environments:
-  - name: test
-    locations:
-      account: test
-      regions:
-      - name: us-west-2
-      - name: us-east-1
-    resources:
-    - kind: titus/cluster@v1
-      spec:
-        moniker:
-          app: fnord
-        container:
-          organization: fnord
-          image: fnord
-          digest: sha:9e860d779528ea32b1692cdbb840c66c5d173b2c63aee0e7a75a957e06790de7
-      """.trimMargin())
+               |---
+               |application: fnord
+               |serviceAccount: fzlem@spinnaker.io
+               |environments:
+               |  - name: test
+               |    locations:
+               |      account: test
+               |      regions:
+               |      - name: us-west-2
+               |      - name: us-east-1
+               |    resources:
+               |    - kind: titus/cluster@v1
+               |      spec:
+               |        moniker:
+               |          app: fnord
+               |        container:
+               |          organization: fnord
+               |          image: fnord
+               |          digest: sha:9e860d779528ea32b1692cdbb840c66c5d173b2c63aee0e7a75a957e06790de7
+               |      """.trimMargin())
       }
 
       test("locations on the cluster are set based on the environment") {
