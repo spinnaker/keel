@@ -1,8 +1,8 @@
 package com.netflix.spinnaker.keel.apidocs
 
-import com.netflix.spinnaker.keel.api.docs.Description
-import com.netflix.spinnaker.keel.api.docs.Literal
-import com.netflix.spinnaker.keel.api.docs.Optional
+import com.netflix.spinnaker.keel.api.schema.Description
+import com.netflix.spinnaker.keel.api.schema.Literal
+import com.netflix.spinnaker.keel.api.schema.Optional
 import io.swagger.v3.core.converter.ModelConverterContext
 import io.swagger.v3.oas.models.media.ComposedSchema
 import io.swagger.v3.oas.models.media.Schema

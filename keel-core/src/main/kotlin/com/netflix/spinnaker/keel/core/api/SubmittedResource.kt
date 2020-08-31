@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.docs.Description
+import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.generateId
 
 /**
