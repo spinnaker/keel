@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.schema
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -47,14 +48,23 @@ class Generator {
     return schema
   }
 
-  private fun propertyType(it: KProperty1<*, *>) =
-    when {
-      it.returnType.javaType == String::class.java -> mapOf("type" to "string")
-      it.returnType.javaType == Boolean::class.java -> mapOf("type" to "boolean")
-      it.returnType.javaType == Int::class.java -> mapOf("type" to "integer")
+  private fun propertyType(it: KProperty1<*, *>): Map<String, Any> {
+    val javaType = it.returnType.javaType
+    return when {
+      javaType.isEnum -> mapOf("type" to "string", "enum" to javaType.enumNames)
+      javaType == String::class.java -> mapOf("type" to "string")
+      javaType == Boolean::class.java -> mapOf("type" to "boolean")
+      javaType == Int::class.java -> mapOf("type" to "integer")
       else -> TODO()
     }
+  }
 
+  @Suppress("UNCHECKED_CAST")
+  private val Type.enumNames: List<String>
+    get() = (this as? Class<Enum<*>>)?.enumConstants?.map { it.name } ?: emptyList()
+
+  private val Type.isEnum: Boolean
+    get() = (this as? Class<*>)?.isEnum ?: false
 }
 
 inline fun <reified TYPE : Any> Generator.generateSchema() = generateSchema(TYPE::class)

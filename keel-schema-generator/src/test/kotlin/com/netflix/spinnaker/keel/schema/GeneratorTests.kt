@@ -9,10 +9,8 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.doesNotContain
-import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.jackson.at
-import strikt.jackson.findValuesAsText
 import strikt.jackson.isArray
 import strikt.jackson.isObject
 import strikt.jackson.path
@@ -71,34 +69,58 @@ internal class GeneratorTests {
   }
 
   @Nested
-  @DisplayName("properties with default values")
-  class OptionalProperties {
+  @DisplayName("enum properties")
+  class EnumProperties {
     data class Foo(
-      val optionalString: String = "default value",
-      val requiredString: String
+      val size: Size
     )
+
+    enum class Size {
+      tall, grande, venti
+    }
 
     val schema = generateSchema<Foo>()
 
     @Test
-    fun `properties with defaults are optional`() {
-      expectThat(schema.at("/components/schemas/${Foo::class.java.simpleName}/required"))
-        .isArray()
-        .textValues()
-        .doesNotContain(Foo::optionalString.name)
-    }
-
-    @Test
-    fun `properties without defaults are required`() {
-      expectThat(schema.at("/components/schemas/${Foo::class.java.simpleName}/required"))
-        .isArray()
-        .textValues()
-        .contains(Foo::requiredString.name)
+    fun `applies correct property types`() {
+      expectThat(schema)
+        .at("/components/schemas/${Foo::class.java.simpleName}/properties")
+        .with({ path(Foo::size.name) }) {
+          path("type").textValue().isEqualTo("string")
+          path("enum").isArray().textValues().containsExactly(Size.values().map { it.name })
+        }
     }
   }
 }
 
-inline fun <reified T: Any> generateSchema() =
+@Nested
+@DisplayName("properties with default values")
+class OptionalProperties {
+  data class Foo(
+    val optionalString: String = "default value",
+    val requiredString: String
+  )
+
+  val schema = generateSchema<Foo>()
+
+  @Test
+  fun `properties with defaults are optional`() {
+    expectThat(schema.at("/components/schemas/${Foo::class.java.simpleName}/required"))
+      .isArray()
+      .textValues()
+      .doesNotContain(Foo::optionalString.name)
+  }
+
+  @Test
+  fun `properties without defaults are required`() {
+    expectThat(schema.at("/components/schemas/${Foo::class.java.simpleName}/required"))
+      .isArray()
+      .textValues()
+      .contains(Foo::requiredString.name)
+  }
+}
+
+inline fun <reified T : Any> generateSchema() =
   Generator()
     .generateSchema<T>()
     .also(::println)
