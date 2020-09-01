@@ -14,6 +14,7 @@ import strikt.assertions.doesNotContain
 import strikt.assertions.get
 import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEqualTo
 import strikt.assertions.one
 
 internal class GeneratorTests {
@@ -119,6 +120,82 @@ internal class GeneratorTests {
         .hasSize(2)
         .one { isA<NullProperty>() }
         .one { isA<StringProperty>() }
+    }
+  }
+
+  @Nested
+  @DisplayName("complex properties")
+  class ComplexProperties {
+    data class Foo(
+      val bar: Bar
+    )
+
+    data class Bar(
+      val str: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `complex property is defined as a $ref`() {
+      expectThat(schema.properties[Foo::bar.name])
+        .isA<Ref>()
+        .get { `$ref` }
+        .isEqualTo("#/definitions/${Bar::class.java.simpleName}")
+    }
+
+    @Test
+    fun `referenced schema is included in $defs`() {
+      expectThat(schema.`$defs`)
+        .hasSize(1)
+        .get(Bar::class.java.simpleName)
+        .isA<Schema>()
+        .get { properties }
+        .get(Bar::str.name)
+        .isA<StringProperty>()
+    }
+  }
+
+  @Nested
+  @DisplayName("nested complex properties")
+  class NestedComplexProperties {
+    data class Foo(
+      val bar: Bar
+    )
+
+    data class Bar(
+      val baz: Baz
+    )
+
+    data class Baz(
+      val str: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `nested complex property is defined as a $ref`() {
+      expectThat(schema.`$defs`)
+        .get(Bar::class.java.simpleName)
+        .isA<Schema>()
+        .get { properties }
+        .get(Bar::baz.name)
+        .isA<Ref>()
+        .get { `$ref` }
+        .isEqualTo("#/definitions/${Baz::class.java.simpleName}")
+    }
+
+    @Test
+    fun `deep referenced schema is included in $defs`() {
+      expectThat(schema.`$defs`)
+        .hasSize(2)
+        .containsKey(Bar::class.java.simpleName)
+        .containsKey(Baz::class.java.simpleName)
+        .get(Baz::class.java.simpleName)
+        .isA<Schema>()
+        .get { properties }
+        .get(Baz::str.name)
+        .isA<StringProperty>()
     }
   }
 }
