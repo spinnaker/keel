@@ -2,11 +2,8 @@ package com.netflix.spinnaker.keel.schema
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
-import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
-import kotlin.reflect.KVisibility.PUBLIC
 import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
@@ -53,7 +50,7 @@ class Generator {
     }
 
   private val <TYPE : Any> KClass<TYPE>.candidateProperties: List<KParameter>
-    get() = checkNotNull(primaryConstructor) { "${this.qualifiedName} has no primary constructor" }
+    get() = checkNotNull(primaryConstructor ?: constructors.first()) { "${this.qualifiedName} has no primary constructor" }
       .parameters
 
   private fun Context.buildProperty(property: KParameter): Schema =

@@ -299,6 +299,20 @@ internal class GeneratorTests {
         .isNull()
     }
   }
+
+  @Nested
+  @DisplayName("Java POJOs")
+  class JavaPojos {
+    val schema = generateSchema<JavaPojo>()
+
+    @Test
+    fun `constructor parameters are documented`() {
+      expectThat(schema.properties)
+        .containsKey("arg0")
+        .get("arg0")
+        .isA<StringSchema>()
+    }
+  }
 }
 
 inline fun <reified T : Any> generateSchema() =
