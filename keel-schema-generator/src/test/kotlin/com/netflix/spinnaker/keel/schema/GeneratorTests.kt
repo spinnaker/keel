@@ -26,7 +26,7 @@ internal class GeneratorTests {
   @Nested
   @DisplayName("a simple data class")
   class SimpleDataClass {
-    data class Foo(val str: String)
+    data class Foo(val string: String)
 
     val schema = generateSchema<Foo>()
 
@@ -34,8 +34,8 @@ internal class GeneratorTests {
     fun `documents all properties`() {
       expectThat(schema)
         .get { properties }
-        .containsKey(Foo::str.name)
-        .get(Foo::str.name)
+        .containsKey(Foo::string.name)
+        .get(Foo::string.name)
         .isA<StringSchema>()
     }
   }
@@ -135,7 +135,7 @@ internal class GeneratorTests {
     )
 
     data class Bar(
-      val str: String
+      val string: String
     )
 
     val schema = generateSchema<Foo>()
@@ -155,7 +155,7 @@ internal class GeneratorTests {
         .get(Bar::class.java.simpleName)
         .isA<ObjectSchema>()
         .get { properties }
-        .get(Bar::str.name)
+        .get(Bar::string.name)
         .isA<StringSchema>()
     }
   }
@@ -172,7 +172,7 @@ internal class GeneratorTests {
     )
 
     data class Baz(
-      val str: String
+      val string: String
     )
 
     val schema = generateSchema<Foo>()
@@ -198,7 +198,7 @@ internal class GeneratorTests {
         .get(Baz::class.java.simpleName)
         .isA<ObjectSchema>()
         .get { properties }
-        .get(Baz::str.name)
+        .get(Baz::string.name)
         .isA<StringSchema>()
     }
   }
@@ -211,10 +211,10 @@ internal class GeneratorTests {
     )
 
     sealed class Bar {
-      abstract val str: String
+      abstract val string: String
 
-      data class Bar1(override val str: String) : Bar()
-      data class Bar2(override val str: String) : Bar()
+      data class Bar1(override val string: String) : Bar()
+      data class Bar2(override val string: String) : Bar()
     }
 
     val schema = generateSchema<Foo>()
@@ -265,6 +265,25 @@ internal class GeneratorTests {
           get { items }.isA<StringSchema>()
           get { uniqueItems }.isTrue()
         }
+    }
+  }
+
+  @Nested
+  @DisplayName("non-public properties")
+  class NonPublicProperties {
+    @Suppress("ProtectedInFinal")
+    data class Foo(
+      val publicString: String,
+      protected val protectedString: String,
+      private val privateString: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `non-public properties are not documented`() {
+      expectThat(schema.properties.keys)
+        .containsExactly(Foo::publicString.name)
     }
   }
 }

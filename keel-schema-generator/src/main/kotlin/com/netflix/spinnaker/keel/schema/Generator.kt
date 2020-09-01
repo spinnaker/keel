@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.schema
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
+import kotlin.reflect.KVisibility.PUBLIC
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
@@ -51,7 +52,7 @@ class Generator {
     }
 
   private val <TYPE : Any> KClass<TYPE>.candidateProperties: Collection<KProperty1<TYPE, *>>
-    get() = memberProperties.filter { !it.isAbstract }
+    get() = memberProperties.filter { !it.isAbstract && it.visibility == PUBLIC }
 
   private fun <TYPE : Any> KClass<TYPE>.findConstructorParamFor(property: KProperty1<TYPE, *>) =
     primaryConstructor
