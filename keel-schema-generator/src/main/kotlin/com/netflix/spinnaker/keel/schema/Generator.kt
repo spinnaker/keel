@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.schema
 
+import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
 import java.time.Instant
@@ -11,7 +12,9 @@ import java.time.ZonedDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
@@ -59,15 +62,17 @@ class Generator(
         OneOf(
           oneOf = type.sealedSubclasses.map { define(it) }
         )
-      extensionRegistry.baseTypes().contains(type.java) ->
+      extensionRegistry.baseTypes().contains(type.java) -> {
         OneOf(
           oneOf = extensionRegistry.extensionsOf(type.java).map { define(it.value.kotlin) },
-          discriminator = Discriminator(
+          discriminator = OneOf.Discriminator(
+            propertyName = type.discriminatorPropertyName,
             mapping = extensionRegistry.extensionsOf(type.java).mapValues {
               it.value.kotlin.buildRef().`$ref`
             }
           )
         )
+      }
       else ->
         ObjectSchema(
           title = checkNotNull(type.simpleName),
@@ -95,13 +100,22 @@ class Generator(
     }
 
   /**
+   * The name of the property annotated with `@[Discriminator]`
+   */
+  private val KClass<*>.discriminatorPropertyName: String
+    get() = checkNotNull(memberProperties.find { it.hasAnnotation<Discriminator>() }) {
+      "$simpleName has no property annotated with @Discriminator but is registered as an extension base type"
+    }
+      .name
+
+  /**
    * Build the property schema for [type].
    *
    * - In the case of a nullable property, this is [OneOf] `null` and the non-null type.
    * - In the case of a string, integer, boolean, or enum this is a [TypedProperty].
    * - In the case of an array-like type this is an [ArraySchema].
    * - In the case of a [Map] this is a [MapSchema].
-   * - Otherwise this is is a [Ref] to the schema for the type, which will be added to this
+   * - Otherwise this is is a [Reference] to the schema for the type, which will be added to this
    * [Context] if not already defined.r
    */
   private fun Context.buildProperty(type: KType): Schema =
@@ -130,17 +144,17 @@ class Generator(
   /**
    * If a schema for [type] is not yet defined, define it now.
    *
-   * @return a [Ref] to the schema for [type].
+   * @return a [Reference] to the schema for [type].
    */
-  private fun Context.define(type: KType): Ref =
+  private fun Context.define(type: KType): Reference =
     define(type.jvmErasure)
 
   /**
    * If a schema for [type] is not yet defined, define it now.
    *
-   * @return a [Ref] to the schema for [type].
+   * @return a [Reference] to the schema for [type].
    */
-  private fun Context.define(type: KClass<*>): Ref {
+  private fun Context.define(type: KClass<*>): Reference {
     val name = checkNotNull(type.simpleName)
     if (!definitions.containsKey(name)) {
       definitions[name] = buildSchema(type)
@@ -152,7 +166,7 @@ class Generator(
    * Build a `$ref` URL to the schema for this type.
    */
   private fun KClass<*>.buildRef() =
-    Ref("#/${RootSchema::`$defs`.name}/${simpleName}")
+    Reference("#/${RootSchema::`$defs`.name}/${simpleName}")
 
   /**
    * Is this something we should represent as an enum?

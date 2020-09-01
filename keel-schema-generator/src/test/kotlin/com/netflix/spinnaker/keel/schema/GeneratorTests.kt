@@ -5,6 +5,7 @@ package com.netflix.spinnaker.keel.schema
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -169,7 +170,7 @@ internal class GeneratorTests {
     @Test
     fun `complex property is defined as a $ref`() {
       expectThat(schema.properties[Foo::bar.name])
-        .isA<Ref>()
+        .isA<Reference>()
         .get { `$ref` }
         .isEqualTo("#/\$defs/${Bar::class.java.simpleName}")
     }
@@ -210,7 +211,7 @@ internal class GeneratorTests {
         .isA<ObjectSchema>()
         .get { properties }
         .get(Bar::baz.name)
-        .isA<Ref>()
+        .isA<Reference>()
         .get { `$ref` }
         .isEqualTo("#/\$defs/${Baz::class.java.simpleName}")
     }
@@ -248,7 +249,7 @@ internal class GeneratorTests {
     @Test
     fun `sealed class property is a reference to the base type`() {
       expectThat(schema.properties[Foo::bar.name])
-        .isA<Ref>()
+        .isA<Reference>()
         .get { `$ref` }
         .isEqualTo("#/\$defs/Bar")
     }
@@ -258,8 +259,8 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`[Bar::class.java.simpleName])
         .isA<OneOf>()
         .get { oneOf }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar1::class.java.simpleName}") }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar2::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar1::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar2::class.java.simpleName}") }
     }
   }
 
@@ -308,7 +309,7 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::listOfObjects.name])
         .isA<ArraySchema>()
         .and {
-          get { items }.isA<Ref>()
+          get { items }.isA<Reference>()
         }
     }
 
@@ -346,7 +347,7 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::mapOfObjects.name])
         .isA<MapSchema>()
         .get { additionalProperties }
-        .isA<Ref>()
+        .isA<Reference>()
         .get { `$ref` }
         .isEqualTo("#/\$defs/${Bar::class.java.simpleName}")
     }
@@ -435,11 +436,16 @@ internal class GeneratorTests {
     )
 
     interface Wrapper<T> {
+      @Discriminator val type: String
       val value: T
     }
 
-    data class StringWrapper(override val value: String) : Wrapper<String>
-    data class IntegerWrapper(override val value: Int) : Wrapper<Int>
+    data class StringWrapper(override val value: String) : Wrapper<String> {
+      override val type = "string"
+    }
+    data class IntegerWrapper(override val value: Int) : Wrapper<Int> {
+      override val type = "integer"
+    }
 
     val schema by lazy { generateSchema<Foo>() }
 
@@ -454,7 +460,7 @@ internal class GeneratorTests {
     @Test
     fun `polymorphic properties are a reference to the base type`() {
       expectThat(schema.properties[Foo::wrapper.name])
-        .isA<Ref>()
+        .isA<Reference>()
         .get { `$ref` }
         .isEqualTo("#/\$defs/${Wrapper::class.java.simpleName}")
     }
@@ -464,8 +470,16 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
         .isA<OneOf>()
         .get { oneOf }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${StringWrapper::class.java.simpleName}") }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${IntegerWrapper::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${StringWrapper::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${IntegerWrapper::class.java.simpleName}") }
+    }
+
+    @Test
+    fun `the discriminator property is based on the presence of the @Discriminator annotation`() {
+      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
+        .isA<OneOf>()
+        .get { discriminator?.propertyName }
+        .isEqualTo(Wrapper<*>::type.name)
     }
 
     @Test

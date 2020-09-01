@@ -48,15 +48,16 @@ data class EnumSchema(
   val enum: List<String>
 ) : Schema
 
-data class Ref(
+data class Reference(
   val `$ref`: String
 ) : Schema
 
 data class OneOf(
   val oneOf: List<Schema>,
   val discriminator: Discriminator? = null
-) : Schema
-
-data class Discriminator(
-  val mapping: Map<String, String>
-)
+) : Schema {
+  data class Discriminator(
+    val propertyName: String,
+    val mapping: Map<String, String>
+  )
+}
