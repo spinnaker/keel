@@ -1,5 +1,12 @@
 package com.netflix.spinnaker.keel.schema
 
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
@@ -86,7 +93,7 @@ class Generator {
         listOf(NullSchema, buildProperty(type.withNullability(false)))
       )
       type.isEnum -> EnumSchema(type.enumNames)
-      type.isString -> StringSchema()
+      type.isString -> StringSchema(format = type.stringFormat)
       type.isBoolean -> BooleanSchema
       type.isInteger -> IntegerSchema
       type.isArray -> {
@@ -140,7 +147,7 @@ class Generator {
    * Is this something we should represent as a string?
    */
   private val KType.isString: Boolean
-    get() = javaType == String::class.java
+    get() = javaType == String::class.java || jvmErasure in formattedTypes.keys
 
   /**
    * Is this something we should represent as a boolean?
@@ -205,6 +212,22 @@ class Generator {
       }
       return checkNotNull(arguments[1].type) { "unhandled generic type: ${arguments[1]}" }
     }
+
+  private val formattedTypes = mapOf(
+    Duration::class to "duration",
+    Instant::class to "date-time",
+    ZonedDateTime::class to "date-time",
+    OffsetDateTime::class to "date-time",
+    LocalDateTime::class to "date-time",
+    LocalDate::class to "date",
+    LocalTime::class to "time"
+  )
+
+  /**
+   * The `format` for a string schema, if any.
+   */
+  private val KType.stringFormat: String?
+    get() = formattedTypes[jvmErasure]
 }
 
 inline fun <reified TYPE : Any> Generator.generateSchema() = generateSchema(TYPE::class)

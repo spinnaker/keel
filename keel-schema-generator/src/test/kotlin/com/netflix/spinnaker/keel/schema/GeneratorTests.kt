@@ -23,6 +23,12 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import strikt.assertions.one
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import kotlin.reflect.jvm.jvmErasure
 
 internal class GeneratorTests {
 
@@ -373,6 +379,35 @@ internal class GeneratorTests {
         .get("arg0")
         .isA<StringSchema>()
     }
+  }
+
+  @Nested
+  @DisplayName("date and time types")
+  class DateAndTimeTypes {
+    data class Foo(
+      val instant: Instant,
+      val localDate: LocalDate,
+      val localTime: LocalTime,
+      val duration: Duration
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @TestFactory
+    fun dateAndTimeFormattedStringProperties() =
+      mapOf(
+        Foo::instant.name to "datetime",
+        Foo::localDate.name to "date",
+        Foo::localTime.name to "time",
+        Foo::duration.name to "duration"
+      ).map { (property, format) ->
+        dynamicTest("$property property is a string with '$format' format") {
+          expectThat(schema.properties[property])
+            .isA<StringSchema>()
+            .get { format }
+            .isEqualTo(format)
+        }
+      }
   }
 }
 
