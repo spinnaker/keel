@@ -198,6 +198,40 @@ internal class GeneratorTests {
         .isA<StringProperty>()
     }
   }
+
+  @Nested
+  @DisplayName("sealed classes")
+  class SealedClasses {
+    data class Foo(
+      val bar: Bar
+    )
+
+    sealed class Bar {
+      abstract val str: String
+
+      data class Bar1(override val str: String) : Bar()
+      data class Bar2(override val str: String) : Bar()
+    }
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `sealed class property is a reference to the base type`() {
+      expectThat(schema.properties[Foo::bar.name])
+        .isA<Ref>()
+        .get { `$ref` }
+        .isEqualTo("#/definitions/Bar")
+    }
+
+    @Test
+    fun `sealed class definition is one of the sub-types`() {
+      expectThat(schema.`$defs`[Bar::class.java.simpleName])
+        .isA<OneOf>()
+        .get { oneOf }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar1::class.java.simpleName}") }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar2::class.java.simpleName}") }
+    }
+  }
 }
 
 inline fun <reified T : Any> generateSchema() =

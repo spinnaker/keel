@@ -11,13 +11,13 @@ import kotlin.reflect.jvm.javaType
 class Generator {
 
   private data class Context(
-    val definitions: MutableMap<String, Schema> = mutableMapOf()
+    val definitions: MutableMap<String, Node> = mutableMapOf()
   )
 
   fun <TYPE : Any> generateSchema(type: KClass<TYPE>): RootSchema {
     val context = Context()
 
-    val schema = context.buildSchema(type)
+    val schema = context.buildSchema(type) as Schema
 
     return RootSchema(
       `$id` = "http://keel.spinnaker.io/${type.simpleName}",
@@ -28,16 +28,28 @@ class Generator {
     )
   }
 
-  private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Schema =
-    Schema(
-      properties = type.memberProperties.associate {
-        it.name to buildProperty(it)
-      },
-      required = type.memberProperties.filter { property ->
-        !type.findConstructorParamFor(property).isOptional
-      }
-        .map { it.name }
-    )
+  private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Node =
+    if (type.isSealed) {
+      OneOf(
+        oneOf = type.sealedSubclasses.map {
+          definitions[it.simpleName!!] = buildSchema(it)
+          Ref("#/definitions/${it.simpleName}")
+        }
+      )
+    } else {
+      Schema(
+        properties = type.candidateProperties.associate {
+          it.name to buildProperty(it)
+        },
+        required = type.candidateProperties.filter { property ->
+          !type.findConstructorParamFor(property).isOptional
+        }
+          .map { it.name }
+      )
+    }
+
+  private val <TYPE : Any> KClass<TYPE>.candidateProperties: Collection<KProperty1<TYPE, *>>
+    get() = memberProperties.filter { !it.isAbstract }
 
   private fun <TYPE : Any> KClass<TYPE>.findConstructorParamFor(property: KProperty1<TYPE, *>) =
     primaryConstructor
@@ -45,7 +57,7 @@ class Generator {
       ?.find { it.name == property.name }
       ?: TODO("handle property with no constructor param")
 
-  private fun Context.buildProperty(property: KProperty1<*, *>): Property {
+  private fun Context.buildProperty(property: KProperty1<*, *>): Node {
     val javaType = property.returnType.javaType
     return when {
       property.returnType.isMarkedNullable -> OneOf(
@@ -55,7 +67,7 @@ class Generator {
     }
   }
 
-  private fun Context.buildProperty(type: Type): Property =
+  private fun Context.buildProperty(type: Type): Node =
     when {
       type.isEnum -> EnumProperty(type.enumNames)
       type == String::class.java -> StringProperty()
