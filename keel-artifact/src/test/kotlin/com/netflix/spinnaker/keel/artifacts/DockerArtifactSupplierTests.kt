@@ -12,10 +12,13 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSupplierTests.Fixture.artifactMetadata
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
+import dev.minutest.experimental.SKIP
+import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.coEvery as every
@@ -116,13 +119,13 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       }
 
       //TODO[gyardeni]: enable this test once will have docker build number + commit id
-//      test("returns artifact metadata based on ci provider") {
-//        val results = runBlocking {
-//          dockerArtifactSupplier.getArtifactMetadata(latestArtifact)
-//        }
-//        expectThat(results)
-//          .isEqualTo(artifactMetadata)
-//      }
+      SKIP - test("returns artifact metadata based on ci provider") {
+        val results = runBlocking {
+          dockerArtifactSupplier.getArtifactMetadata(latestArtifact)
+        }
+        expectThat(results)
+          .isEqualTo(artifactMetadata)
+      }
     }
   }
 }

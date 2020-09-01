@@ -5,6 +5,8 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.model.Build
+import com.netflix.spinnaker.model.GenericGitRevision
+import com.netflix.spinnaker.model.Result
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.coEvery
@@ -29,6 +31,13 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
         building = false,
         fullDisplayName = "job bla bla",
         url = "jenkins.com",
+        result = Result.SUCCESS,
+        scm = listOf(
+          GenericGitRevision(
+            message = "this is a commit message",
+            committer = "keel-user"
+          )
+        ),
         properties = mapOf(
           "startedAt" to "yesterday",
           "completedAt" to "today",
@@ -67,14 +76,15 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
                 startedAt = "yesterday",
                 completedAt = "today",
                 jobUrl = "jenkins.com",
-                number = "1"
+                number = "1",
+                result = Result.SUCCESS.toString()
               ),
               GitMetadata(
                 commit = "a15p0",
                 author = "keel-user",
                 commitMessage = "this is a commit message",
-                linkToCommit = "",
                 projectName = "spkr",
+                linkToCommit = "",
                 repoName = "keel"
               )
             )
@@ -103,7 +113,8 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
                 startedAt = "yesterday",
                 completedAt = "today",
                 jobUrl = "jenkins.com",
-                number = "1"
+                number = "1",
+                result = Result.SUCCESS.toString()
               ),
               GitMetadata(
                 commit = "a15p0",

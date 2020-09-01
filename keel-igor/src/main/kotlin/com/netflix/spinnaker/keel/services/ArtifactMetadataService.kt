@@ -18,7 +18,11 @@ class ArtifactMetadataService(
   private val buildService: BuildService
 ) {
 
-  @Retry(name = "getArtifactMetadata", fallbackMethod = "getFallback")
+  /**
+   * Returns additional metadata about the specified build and commit, if available. This call is configured
+   * to auto-retry as it's not on a code path where any external retries would happen.
+   */
+  @Retry(name = "getArtifactMetadata", fallbackMethod = "fallback")
   suspend fun getArtifactMetadata(
     buildNumber: String,
     commitId: String
@@ -52,17 +56,29 @@ class ArtifactMetadataService(
         startedAt = properties?.get("startedAt") as String?,
         completedAt = properties?.get("completedAt") as String?,
         jobUrl = url,
-        number = number.toString()
+        number = number.toString(),
+        result = result.toString(),
+        duration = duration
       ),
       GitMetadata(
         commit = commitId,
-        author = properties?.get("author") as String?,
-        commitMessage = properties?.get("message") as String?,
-        linkToCommit = "",
+        author = scm?.first()?.committer,
+        commitMessage = scm?.first()?.message,
+        branchName = scm?.first()?.branch,
         projectName = properties?.get("projectKey") as String?,
-        repoName = properties?.get("repoSlug") as String?
+        repoName = properties?.get("repoSlug") as String?,
+        pullRequestNumber = properties?.get("pullRequestNumber") as String?,
+        pullRequestUrl = properties?.get("pullRequestUrl") as String?,
+        linkToCommit = ""
       )
     )
+
+
+  //this method will be invoked whenever the retry will fail
+  protected fun fallback( buildNumber: String, commitId: String, e: Exception) {
+    log.error("received an error while calling artifact service for build number $buildNumber and commit id $commitId", e)
+    throw e
+  }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

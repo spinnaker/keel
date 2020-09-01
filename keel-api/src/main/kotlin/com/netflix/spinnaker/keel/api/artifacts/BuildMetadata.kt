@@ -10,5 +10,9 @@ data class BuildMetadata(
   val jobUrl: String? = null,
   val jobName: String? = null,
   val completedAt: String? = null,
-  val startedAt: String? = null
+  val startedAt: String? = null,
+  val startedTs: String? = null,
+  val completedTs: String? = null,
+  val duration: Int? = null,
+  val result: String? = null
 )

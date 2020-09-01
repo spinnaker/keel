@@ -56,4 +56,4 @@ data class ArtifactCheckTimedOut(
 data class ArtifactSaved(
   val artifact: PublishedArtifact,
   val artifactStatus: ArtifactStatus?
-) : TelemetryEvent()
+)

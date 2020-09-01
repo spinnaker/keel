@@ -20,6 +20,8 @@ class ArtifactStoredListener(
     val artifactMetadata = runBlocking {
       artifactSupplier.getArtifactMetadata(event.artifact)
     }
-    repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+    if (artifactMetadata != null) {
+      repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+    }
   }
 }
