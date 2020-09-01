@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.schema
 
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KVisibility.PUBLIC
@@ -42,30 +43,25 @@ class Generator {
     } else {
       ObjectSchema(
         properties = type.candidateProperties.associate {
-          it.name to buildProperty(it)
+          checkNotNull(it.name) to buildProperty(it)
         },
-        required = type.candidateProperties.filter { property ->
-          !type.findConstructorParamFor(property).isOptional
+        required = type.candidateProperties.filter {
+          !it.isOptional
         }
-          .map { it.name }
+          .map { checkNotNull(it.name) }
       )
     }
 
-  private val <TYPE : Any> KClass<TYPE>.candidateProperties: Collection<KProperty1<TYPE, *>>
-    get() = memberProperties.filter { !it.isAbstract && it.visibility == PUBLIC }
+  private val <TYPE : Any> KClass<TYPE>.candidateProperties: List<KParameter>
+    get() = checkNotNull(primaryConstructor) { "${this.qualifiedName} has no primary constructor" }
+      .parameters
 
-  private fun <TYPE : Any> KClass<TYPE>.findConstructorParamFor(property: KProperty1<TYPE, *>) =
-    primaryConstructor
-      ?.parameters
-      ?.find { it.name == property.name }
-      ?: error("property with no equivalent constructor param")
-
-  private fun Context.buildProperty(property: KProperty1<*, *>): Schema =
+  private fun Context.buildProperty(property: KParameter): Schema =
     when {
-      property.returnType.isMarkedNullable -> OneOf(
-        listOf(NullSchema, buildProperty(property.returnType.withNullability(false)))
+      property.type.isMarkedNullable -> OneOf(
+        listOf(NullSchema, buildProperty(property.type.withNullability(false)))
       )
-      else -> buildProperty(property.returnType)
+      else -> buildProperty(property.type)
     }
 
   private fun Context.buildProperty(type: KType): Schema =

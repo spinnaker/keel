@@ -269,21 +269,34 @@ internal class GeneratorTests {
   }
 
   @Nested
-  @DisplayName("non-public properties")
-  class NonPublicProperties {
-    @Suppress("ProtectedInFinal")
-    data class Foo(
-      val publicString: String,
-      protected val protectedString: String,
-      private val privateString: String
-    )
+  @DisplayName("non-data classes")
+  class NonDataClasses {
+    class Foo(
+      val constructorProperty: String,
+      constructorParameter: String
+    ) {
+      val nonConstructorProperty: String
+        get() = javaClass.canonicalName
+    }
 
     val schema = generateSchema<Foo>()
 
     @Test
-    fun `non-public properties are not documented`() {
-      expectThat(schema.properties.keys)
-        .containsExactly(Foo::publicString.name)
+    fun `properties that are part of the constructor are documented`() {
+      expectThat(schema.properties[Foo::constructorProperty.name])
+        .isA<StringSchema>()
+    }
+
+    @Test
+    fun `constructor parameters not backed by properties are documented`() {
+      expectThat(schema.properties["constructorParameter"])
+        .isA<StringSchema>()
+    }
+
+    @Test
+    fun `properties that are not part of the constructor are not documented`() {
+      expectThat(schema.properties[Foo::nonConstructorProperty.name])
+        .isNull()
     }
   }
 }
