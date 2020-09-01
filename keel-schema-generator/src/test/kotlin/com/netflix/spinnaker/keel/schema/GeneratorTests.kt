@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
@@ -145,7 +148,7 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::bar.name])
         .isA<Ref>()
         .get { `$ref` }
-        .isEqualTo("#/definitions/${Bar::class.java.simpleName}")
+        .isEqualTo("#/\$defs/${Bar::class.java.simpleName}")
     }
 
     @Test
@@ -186,7 +189,7 @@ internal class GeneratorTests {
         .get(Bar::baz.name)
         .isA<Ref>()
         .get { `$ref` }
-        .isEqualTo("#/definitions/${Baz::class.java.simpleName}")
+        .isEqualTo("#/\$defs/${Baz::class.java.simpleName}")
     }
 
     @Test
@@ -224,7 +227,7 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::bar.name])
         .isA<Ref>()
         .get { `$ref` }
-        .isEqualTo("#/definitions/Bar")
+        .isEqualTo("#/\$defs/Bar")
     }
 
     @Test
@@ -232,30 +235,40 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`[Bar::class.java.simpleName])
         .isA<OneOf>()
         .get { oneOf }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar1::class.java.simpleName}") }
-        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar2::class.java.simpleName}") }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar1::class.java.simpleName}") }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar2::class.java.simpleName}") }
     }
   }
 
   @Nested
-  @DisplayName("array properties")
-  class ArrayProperties {
+  @DisplayName("array like properties")
+  class ArrayLikeProperties {
     data class Foo(
       val listOfStrings: List<String>,
-      val setOfStrings: Set<String>
+      val setOfStrings: Set<String>,
+      val listOfObjects: List<Baz>,
+      @Suppress("ArrayInDataClass") val arrayOfStrings: Array<String>
+    )
+
+    data class Baz(
+      val string: String
     )
 
     val schema = generateSchema<Foo>()
 
-    @Test
-    fun `list property is an array of strings`() {
-      expectThat(schema.properties[Foo::listOfStrings.name])
-        .isA<ArraySchema>()
-        .and {
-          get { items }.isA<StringSchema>()
-          get { uniqueItems }.isNull()
+    @TestFactory
+    fun arrayAndListProperties() =
+      mapOf("list" to Foo::listOfStrings, "array" to Foo::arrayOfStrings)
+        .map { (type, property) ->
+          dynamicTest("$type property is an array of strings") {
+            expectThat(schema.properties[property.name])
+              .isA<ArraySchema>()
+              .and {
+                get { items }.isA<StringSchema>()
+                get { uniqueItems }.isNull()
+              }
+          }
         }
-    }
 
     @Test
     fun `set property is an array of strings with unique items`() {
@@ -265,6 +278,54 @@ internal class GeneratorTests {
           get { items }.isA<StringSchema>()
           get { uniqueItems }.isTrue()
         }
+    }
+
+    @Test
+    fun `list of objects property is an array of refs`() {
+      expectThat(schema.properties[Foo::listOfObjects.name])
+        .isA<ArraySchema>()
+        .and {
+          get { items }.isA<Ref>()
+        }
+    }
+
+    @Test
+    fun `referenced schemas are defined`() {
+      expectThat(schema.`$defs`[Baz::class.java.simpleName])
+        .isA<ObjectSchema>()
+    }
+  }
+
+  @Nested
+  @DisplayName("map properties")
+  class MapProperties {
+    data class Foo(
+      val mapOfStrings: Map<String, String>,
+      val mapOfObjects: Map<String, Bar>
+    )
+
+    data class Bar(
+      val string: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `map property is represented as an object with additional properties according to its value type`() {
+      expectThat(schema.properties[Foo::mapOfStrings.name])
+        .isA<MapSchema>()
+        .get { additionalProperties }
+        .isA<StringSchema>()
+    }
+
+    @Test
+    fun `map property with object values uses refs`() {
+      expectThat(schema.properties[Foo::mapOfObjects.name])
+        .isA<MapSchema>()
+        .get { additionalProperties }
+        .isA<Ref>()
+        .get { `$ref` }
+        .isEqualTo("#/\$defs/${Bar::class.java.simpleName}")
     }
   }
 
@@ -322,5 +383,6 @@ inline fun <reified T : Any> generateSchema() =
       jacksonObjectMapper()
         .setSerializationInclusion(NON_NULL)
         .enable(INDENT_OUTPUT)
-        .writeValueAsString(it).also(::println)
+        .writeValueAsString(it)
+        .also(::println)
     }

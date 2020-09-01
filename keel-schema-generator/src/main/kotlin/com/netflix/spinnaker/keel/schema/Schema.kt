@@ -8,16 +8,18 @@ sealed class TypedProperty(
 
 data class RootSchema(
   val `$id`: String,
+  val title: String,
   val description: String,
   val properties: Map<String, Schema>,
   val required: List<String>,
   val `$defs`: Map<String, Schema>
 ) {
-  val `$schema`: String = "http://json-schema.org/draft-07/schema#"
+  val `$schema`: String = "https://json-schema.org/draft/2019-09/schema"
   val type: String = "object"
 }
 
 data class ObjectSchema(
+  val title: String,
   val properties: Map<String, Schema>,
   val required: List<String>
 ) : TypedProperty("object")
@@ -33,6 +35,10 @@ data class ArraySchema(
   val uniqueItems: Boolean? = null,
   val minItems: Int? = null
 ) : TypedProperty("array")
+
+data class MapSchema(
+  val additionalProperties: Schema
+) : TypedProperty("object")
 
 data class StringSchema(
   val format: String? = null

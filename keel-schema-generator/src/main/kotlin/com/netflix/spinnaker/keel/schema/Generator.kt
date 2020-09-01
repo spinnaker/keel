@@ -11,10 +11,19 @@ import kotlin.reflect.jvm.jvmErasure
 
 class Generator {
 
+  /**
+   * Contains linked schemas that we find along the way.
+   */
   private data class Context(
     val definitions: MutableMap<String, Schema> = mutableMapOf()
   )
 
+  /**
+   * Generate a schema for [type].
+   *
+   * @return a full schema document including `$defs` of all linked schemas required to fully
+   * specify [type].
+   */
   fun <TYPE : Any> generateSchema(type: KClass<TYPE>): RootSchema {
     val context = Context()
 
@@ -22,6 +31,7 @@ class Generator {
 
     return RootSchema(
       `$id` = "http://keel.spinnaker.io/${type.simpleName}",
+      title = checkNotNull(type.simpleName),
       description = "The schema for delivery configs in Keel",
       properties = schema.properties,
       required = schema.required,
@@ -29,18 +39,20 @@ class Generator {
     )
   }
 
+  /**
+   * Build a schema for [type]. Any referenced schemas not already defined will be added to
+   * the [Context] as they are discovered.
+   */
   private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Schema =
     if (type.isSealed) {
       OneOf(
-        oneOf = type.sealedSubclasses.map {
-          definitions[it.simpleName!!] = buildSchema(it)
-          Ref("#/definitions/${it.simpleName}")
-        }
+        oneOf = type.sealedSubclasses.map { define(it) }
       )
     } else {
       ObjectSchema(
+        title = checkNotNull(type.simpleName),
         properties = type.candidateProperties.associate {
-          checkNotNull(it.name) to buildProperty(it)
+          checkNotNull(it.name) to buildProperty(it.type)
         },
         required = type.candidateProperties.filter {
           !it.isOptional
@@ -49,20 +61,30 @@ class Generator {
       )
     }
 
-  private val <TYPE : Any> KClass<TYPE>.candidateProperties: List<KParameter>
-    get() = checkNotNull(primaryConstructor ?: constructors.first()) { "${this.qualifiedName} has no primary constructor" }
+  /**
+   * The properties of as type that we will want to document in it's schema. Unless otherwise
+   * specified this means the parameters of its primary constructor.
+   */
+  private val KClass<*>.candidateProperties: List<KParameter>
+    get() = checkNotNull(primaryConstructor
+      ?: constructors.first()) { "${this.qualifiedName} has no primary constructor" }
       .parameters
 
-  private fun Context.buildProperty(property: KParameter): Schema =
-    when {
-      property.type.isMarkedNullable -> OneOf(
-        listOf(NullSchema, buildProperty(property.type.withNullability(false)))
-      )
-      else -> buildProperty(property.type)
-    }
-
+  /**
+   * Build the property schema for [type].
+   *
+   * - In the case of a nullable property, this is [OneOf] `null` and the non-null type.
+   * - In the case of a string, integer, boolean, or enum this is a [TypedProperty].
+   * - In the case of an array-like type this is an [ArraySchema].
+   * - In the case of a [Map] this is a [MapSchema].
+   * - Otherwise this is is a [Ref] to the schema for the type, which will be added to this
+   * [Context] if not already defined.r
+   */
   private fun Context.buildProperty(type: KType): Schema =
     when {
+      type.isMarkedNullable -> OneOf(
+        listOf(NullSchema, buildProperty(type.withNullability(false)))
+      )
       type.isEnum -> EnumSchema(type.enumNames)
       type.isString -> StringSchema()
       type.isBoolean -> BooleanSchema
@@ -73,37 +95,116 @@ class Generator {
           uniqueItems = if (type.isUniqueItems) true else null
         )
       }
-      else -> {
-        val javaClass = type.javaType as? Class<*> ?: error("unhandled type: $type")
-        definitions[javaClass.simpleName] = buildSchema(javaClass.kotlin)
-        Ref("#/definitions/${javaClass.simpleName}")
+      type.isMap -> {
+        MapSchema(
+          additionalProperties = buildProperty(type.valueType)
+        )
       }
+      else -> define(type)
     }
 
-  @Suppress("UNCHECKED_CAST")
-  private val KType.enumNames: List<String>
-    get() = (javaType as? Class<Enum<*>>)?.enumConstants?.map { it.name } ?: emptyList()
+  /**
+   * If a schema for [type] is not yet defined, define it now.
+   *
+   * @return a [Ref] to the schema for [type].
+   */
+  private fun Context.define(type: KType): Ref =
+    define(type.jvmErasure)
 
+  /**
+   * If a schema for [type] is not yet defined, define it now.
+   *
+   * @return a [Ref] to the schema for [type].
+   */
+  private fun Context.define(type: KClass<*>): Ref {
+    val name = checkNotNull(type.simpleName)
+    if (!definitions.containsKey(name)) {
+      definitions[name] = buildSchema(type)
+    }
+    return type.buildRef()
+  }
+
+  /**
+   * Build a `$ref` URL to the schema for this type.
+   */
+  private fun KClass<*>.buildRef() =
+    Ref("#/${RootSchema::`$defs`.name}/${simpleName}")
+
+  /**
+   * Is this something we should represent as an enum?
+   */
   private val KType.isEnum: Boolean
-    get() = (javaType as? Class<*>)?.isEnum ?: false
+    get() = jvmErasure.java.isEnum
 
+  /**
+   * Is this something we should represent as a string?
+   */
   private val KType.isString: Boolean
     get() = javaType == String::class.java
 
+  /**
+   * Is this something we should represent as a boolean?
+   */
   private val KType.isBoolean: Boolean
     get() = javaType == Boolean::class.java
 
+  /**
+   * Is this something we should represent as an integer?
+   */
   private val KType.isInteger: Boolean
     get() = javaType == Int::class.java
 
+  /**
+   * Is this something we should represent as an array?
+   */
   private val KType.isArray: Boolean
-    get() = jvmErasure.isSubclassOf(Collection::class)
+    get() = jvmErasure.isSubclassOf(Collection::class) || (javaType as? Class<*>)?.isArray ?: false
 
+  /**
+   * Is this something we should represent as a key-value hash?
+   */
+  private val KType.isMap: Boolean
+    get() = jvmErasure.isSubclassOf(Map::class)
+
+  /**
+   * Is this an array-like type with unique values?
+   */
   private val KType.isUniqueItems: Boolean
     get() = jvmErasure.isSubclassOf(Set::class)
 
+  /**
+   * The names of all the values of an enum as they should appear in the schema.
+   */
+  @Suppress("UNCHECKED_CAST")
+  private val KType.enumNames: List<String>
+    get() {
+      require(isEnum) {
+        "enumNames is only valid on enum types"
+      }
+      return (jvmErasure.java as Class<Enum<*>>).enumConstants.map { it.name }
+    }
+
+  /**
+   * The element type for a [Collection].
+   */
   private val KType.elementType: KType
-    get() = checkNotNull(arguments.first().type) { "unhandled generic type: ${arguments.first()}" }
+    get() {
+      require(jvmErasure.isSubclassOf(Collection::class) || jvmErasure.java.isArray) {
+        "elementType is only valid on Collections"
+      }
+      return checkNotNull(arguments.first().type) { "unhandled generic type: ${arguments.first()}" }
+    }
+
+  /**
+   * The value type for a [Collection].
+   */
+  private val KType.valueType: KType
+    get() {
+      require(jvmErasure.isSubclassOf(Map::class)) {
+        "valueType is only valid on Maps"
+      }
+      return checkNotNull(arguments[1].type) { "unhandled generic type: ${arguments[1]}" }
+    }
 }
 
 inline fun <reified TYPE : Any> Generator.generateSchema() = generateSchema(TYPE::class)
