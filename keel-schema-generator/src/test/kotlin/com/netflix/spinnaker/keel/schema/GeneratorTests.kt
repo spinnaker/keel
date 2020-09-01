@@ -32,7 +32,7 @@ internal class GeneratorTests {
         .get { properties }
         .containsKey(Foo::str.name)
         .get(Foo::str.name)
-        .isA<StringProperty>()
+        .isA<StringSchema>()
     }
   }
 
@@ -50,9 +50,9 @@ internal class GeneratorTests {
     @Test
     fun `applies correct property types`() {
       expectThat(schema.properties) {
-        get(Foo::string.name).isA<StringProperty>()
-        get(Foo::boolean.name).isA<BooleanProperty>()
-        get(Foo::integer.name).isA<IntegerProperty>()
+        get(Foo::string.name).isA<StringSchema>()
+        get(Foo::boolean.name).isA<BooleanSchema>()
+        get(Foo::integer.name).isA<IntegerSchema>()
       }
     }
   }
@@ -74,7 +74,7 @@ internal class GeneratorTests {
     fun `applies correct property types`() {
       expectThat(schema.properties)
         .get(Foo::size.name)
-        .isA<EnumProperty>()
+        .isA<EnumSchema>()
         .get { enum }
         .containsExactly(Size.values().map { it.name })
     }
@@ -118,8 +118,8 @@ internal class GeneratorTests {
         .isA<OneOf>()
         .get { oneOf }
         .hasSize(2)
-        .one { isA<NullProperty>() }
-        .one { isA<StringProperty>() }
+        .one { isA<NullSchema>() }
+        .one { isA<StringSchema>() }
     }
   }
 
@@ -149,10 +149,10 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`)
         .hasSize(1)
         .get(Bar::class.java.simpleName)
-        .isA<Schema>()
+        .isA<ObjectSchema>()
         .get { properties }
         .get(Bar::str.name)
-        .isA<StringProperty>()
+        .isA<StringSchema>()
     }
   }
 
@@ -177,7 +177,7 @@ internal class GeneratorTests {
     fun `nested complex property is defined as a $ref`() {
       expectThat(schema.`$defs`)
         .get(Bar::class.java.simpleName)
-        .isA<Schema>()
+        .isA<ObjectSchema>()
         .get { properties }
         .get(Bar::baz.name)
         .isA<Ref>()
@@ -192,10 +192,10 @@ internal class GeneratorTests {
         .containsKey(Bar::class.java.simpleName)
         .containsKey(Baz::class.java.simpleName)
         .get(Baz::class.java.simpleName)
-        .isA<Schema>()
+        .isA<ObjectSchema>()
         .get { properties }
         .get(Baz::str.name)
-        .isA<StringProperty>()
+        .isA<StringSchema>()
     }
   }
 

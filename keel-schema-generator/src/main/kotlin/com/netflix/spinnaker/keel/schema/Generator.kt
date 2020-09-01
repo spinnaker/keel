@@ -11,13 +11,13 @@ import kotlin.reflect.jvm.javaType
 class Generator {
 
   private data class Context(
-    val definitions: MutableMap<String, Node> = mutableMapOf()
+    val definitions: MutableMap<String, Schema> = mutableMapOf()
   )
 
   fun <TYPE : Any> generateSchema(type: KClass<TYPE>): RootSchema {
     val context = Context()
 
-    val schema = context.buildSchema(type) as Schema
+    val schema = context.buildSchema(type) as ObjectSchema
 
     return RootSchema(
       `$id` = "http://keel.spinnaker.io/${type.simpleName}",
@@ -28,7 +28,7 @@ class Generator {
     )
   }
 
-  private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Node =
+  private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Schema =
     if (type.isSealed) {
       OneOf(
         oneOf = type.sealedSubclasses.map {
@@ -37,7 +37,7 @@ class Generator {
         }
       )
     } else {
-      Schema(
+      ObjectSchema(
         properties = type.candidateProperties.associate {
           it.name to buildProperty(it)
         },
@@ -57,22 +57,22 @@ class Generator {
       ?.find { it.name == property.name }
       ?: TODO("handle property with no constructor param")
 
-  private fun Context.buildProperty(property: KProperty1<*, *>): Node {
+  private fun Context.buildProperty(property: KProperty1<*, *>): Schema {
     val javaType = property.returnType.javaType
     return when {
       property.returnType.isMarkedNullable -> OneOf(
-        listOf(NullProperty, buildProperty(property.returnType.withNullability(false).javaType))
+        listOf(NullSchema, buildProperty(property.returnType.withNullability(false).javaType))
       )
       else -> buildProperty(javaType)
     }
   }
 
-  private fun Context.buildProperty(type: Type): Node =
+  private fun Context.buildProperty(type: Type): Schema =
     when {
-      type.isEnum -> EnumProperty(type.enumNames)
-      type == String::class.java -> StringProperty()
-      type == Boolean::class.java -> BooleanProperty
-      type == Int::class.java -> IntegerProperty
+      type.isEnum -> EnumSchema(type.enumNames)
+      type == String::class.java -> StringSchema()
+      type == Boolean::class.java -> BooleanSchema
+      type == Int::class.java -> IntegerSchema
       else -> {
         val javaClass = type as? Class<*> ?: TODO("handle primitives, I guess")
         definitions[javaClass.simpleName] = buildSchema(javaClass.kotlin)
