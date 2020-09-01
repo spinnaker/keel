@@ -1,5 +1,11 @@
 package com.netflix.spinnaker.keel.schema
 
+interface Schema
+
+sealed class TypedProperty(
+  val type: String
+) : Schema
+
 data class RootSchema(
   val `$id`: String,
   val description: String,
@@ -11,26 +17,22 @@ data class RootSchema(
   val type: String = "object"
 }
 
-interface Schema
-
-sealed class TypedProperty(
-  val type: String
-) : Schema
-
 data class ObjectSchema(
   val properties: Map<String, Schema>,
   val required: List<String>
 ) : TypedProperty("object")
-
-data class OneOf(
-  val oneOf: List<Schema>
-) : Schema
 
 object NullSchema : TypedProperty("null")
 
 object BooleanSchema : TypedProperty("boolean")
 
 object IntegerSchema : TypedProperty("integer")
+
+data class ArraySchema(
+  val items: Schema,
+  val uniqueItems: Boolean? = null,
+  val minItems: Int? = null
+) : TypedProperty("array")
 
 data class StringSchema(
   val format: String? = null
@@ -42,4 +44,8 @@ data class EnumSchema(
 
 data class Ref(
   val `$ref`: String
+) : Schema
+
+data class OneOf(
+  val oneOf: List<Schema>
 ) : Schema

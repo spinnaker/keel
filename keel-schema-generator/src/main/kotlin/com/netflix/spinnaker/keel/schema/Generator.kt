@@ -1,12 +1,14 @@
 package com.netflix.spinnaker.keel.schema
 
-import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.KType
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.jvmErasure
 
 class Generator {
 
@@ -55,37 +57,59 @@ class Generator {
     primaryConstructor
       ?.parameters
       ?.find { it.name == property.name }
-      ?: TODO("handle property with no constructor param")
+      ?: error("property with no equivalent constructor param")
 
-  private fun Context.buildProperty(property: KProperty1<*, *>): Schema {
-    val javaType = property.returnType.javaType
-    return when {
+  private fun Context.buildProperty(property: KProperty1<*, *>): Schema =
+    when {
       property.returnType.isMarkedNullable -> OneOf(
-        listOf(NullSchema, buildProperty(property.returnType.withNullability(false).javaType))
+        listOf(NullSchema, buildProperty(property.returnType.withNullability(false)))
       )
-      else -> buildProperty(javaType)
+      else -> buildProperty(property.returnType)
     }
-  }
 
-  private fun Context.buildProperty(type: Type): Schema =
+  private fun Context.buildProperty(type: KType): Schema =
     when {
       type.isEnum -> EnumSchema(type.enumNames)
-      type == String::class.java -> StringSchema()
-      type == Boolean::class.java -> BooleanSchema
-      type == Int::class.java -> IntegerSchema
+      type.isString -> StringSchema()
+      type.isBoolean -> BooleanSchema
+      type.isInteger -> IntegerSchema
+      type.isArray -> {
+        ArraySchema(
+          items = buildProperty(type.elementType),
+          uniqueItems = if (type.isUniqueItems) true else null
+        )
+      }
       else -> {
-        val javaClass = type as? Class<*> ?: TODO("handle primitives, I guess")
+        val javaClass = type.javaType as? Class<*> ?: error("unhandled type: $type")
         definitions[javaClass.simpleName] = buildSchema(javaClass.kotlin)
         Ref("#/definitions/${javaClass.simpleName}")
       }
     }
 
   @Suppress("UNCHECKED_CAST")
-  private val Type.enumNames: List<String>
-    get() = (this as? Class<Enum<*>>)?.enumConstants?.map { it.name } ?: emptyList()
+  private val KType.enumNames: List<String>
+    get() = (javaType as? Class<Enum<*>>)?.enumConstants?.map { it.name } ?: emptyList()
 
-  private val Type.isEnum: Boolean
-    get() = (this as? Class<*>)?.isEnum ?: false
+  private val KType.isEnum: Boolean
+    get() = (javaType as? Class<*>)?.isEnum ?: false
+
+  private val KType.isString: Boolean
+    get() = javaType == String::class.java
+
+  private val KType.isBoolean: Boolean
+    get() = javaType == Boolean::class.java
+
+  private val KType.isInteger: Boolean
+    get() = javaType == Int::class.java
+
+  private val KType.isArray: Boolean
+    get() = jvmErasure.isSubclassOf(Collection::class)
+
+  private val KType.isUniqueItems: Boolean
+    get() = jvmErasure.isSubclassOf(Set::class)
+
+  private val KType.elementType: KType
+    get() = checkNotNull(arguments.first().type) { "unhandled generic type: ${arguments.first()}" }
 }
 
 inline fun <reified TYPE : Any> Generator.generateSchema() = generateSchema(TYPE::class)

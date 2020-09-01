@@ -1,3 +1,5 @@
+@file:Suppress("JUnit5MalformedNestedClass")
+
 package com.netflix.spinnaker.keel.schema
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
@@ -15,6 +17,8 @@ import strikt.assertions.get
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
+import strikt.assertions.isTrue
 import strikt.assertions.one
 
 internal class GeneratorTests {
@@ -230,6 +234,37 @@ internal class GeneratorTests {
         .get { oneOf }
         .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar1::class.java.simpleName}") }
         .one { isA<Ref>().get { `$ref` }.isEqualTo("#/definitions/${Bar.Bar2::class.java.simpleName}") }
+    }
+  }
+
+  @Nested
+  @DisplayName("array properties")
+  class ArrayProperties {
+    data class Foo(
+      val listOfStrings: List<String>,
+      val setOfStrings: Set<String>
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `list property is an array of strings`() {
+      expectThat(schema.properties[Foo::listOfStrings.name])
+        .isA<ArraySchema>()
+        .and {
+          get { items }.isA<StringSchema>()
+          get { uniqueItems }.isNull()
+        }
+    }
+
+    @Test
+    fun `set property is an array of strings with unique items`() {
+      expectThat(schema.properties[Foo::setOfStrings.name])
+        .isA<ArraySchema>()
+        .and {
+          get { items }.isA<StringSchema>()
+          get { uniqueItems }.isTrue()
+        }
     }
   }
 }
