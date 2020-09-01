@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.schema
 
+import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -16,7 +17,9 @@ import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 
-class Generator {
+class Generator(
+  private val extensionRegistry: ExtensionRegistry
+) {
 
   /**
    * Contains linked schemas that we find along the way.
@@ -50,22 +53,32 @@ class Generator {
    * Build a schema for [type]. Any referenced schemas not already defined will be added to
    * the [Context] as they are discovered.
    */
-  private fun <TYPE : Any> Context.buildSchema(type: KClass<TYPE>): Schema =
-    if (type.isSealed) {
-      OneOf(
-        oneOf = type.sealedSubclasses.map { define(it) }
-      )
-    } else {
-      ObjectSchema(
-        title = checkNotNull(type.simpleName),
-        properties = type.candidateProperties.associate {
-          checkNotNull(it.name) to buildProperty(it.type)
-        },
-        required = type.candidateProperties.filter {
-          !it.isOptional
-        }
-          .map { checkNotNull(it.name) }
-      )
+  private fun Context.buildSchema(type: KClass<*>): Schema =
+    when {
+      type.isSealed ->
+        OneOf(
+          oneOf = type.sealedSubclasses.map { define(it) }
+        )
+      extensionRegistry.baseTypes().contains(type.java) ->
+        OneOf(
+          oneOf = extensionRegistry.extensionsOf(type.java).map { define(it.value.kotlin) },
+          discriminator = Discriminator(
+            mapping = extensionRegistry.extensionsOf(type.java).mapValues {
+              it.value.kotlin.buildRef().`$ref`
+            }
+          )
+        )
+      else ->
+        ObjectSchema(
+          title = checkNotNull(type.simpleName),
+          properties = type.candidateProperties.associate {
+            checkNotNull(it.name) to buildProperty(it.type)
+          },
+          required = type.candidateProperties.filter {
+            !it.isOptional
+          }
+            .map { checkNotNull(it.name) }
+        )
     }
 
   /**
@@ -73,9 +86,13 @@ class Generator {
    * specified this means the parameters of its primary constructor.
    */
   private val KClass<*>.candidateProperties: List<KParameter>
-    get() = checkNotNull(primaryConstructor
-      ?: constructors.first()) { "${this.qualifiedName} has no primary constructor" }
-      .parameters
+    get() = if (isAbstract) {
+      emptyList()
+    } else {
+      checkNotNull(primaryConstructor
+        ?: constructors.firstOrNull()) { "${this.qualifiedName} has no primary constructor" }
+        .parameters
+    }
 
   /**
    * Build the property schema for [type].

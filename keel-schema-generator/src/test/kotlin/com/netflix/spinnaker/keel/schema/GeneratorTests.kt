@@ -5,8 +5,9 @@ package com.netflix.spinnaker.keel.schema
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -17,9 +18,11 @@ import strikt.assertions.containsExactly
 import strikt.assertions.containsKey
 import strikt.assertions.doesNotContain
 import strikt.assertions.get
+import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import strikt.assertions.one
@@ -27,14 +30,28 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZonedDateTime
-import kotlin.reflect.jvm.jvmErasure
 
 internal class GeneratorTests {
 
+  abstract class GeneratorTestBase {
+    protected val extensionRegistry = DefaultExtensionRegistry(emptyList())
+    private val generator = Generator(extensionRegistry)
+
+    inline fun <reified T : Any> generateSchema() =
+      generator
+        .generateSchema<T>()
+        .also {
+          jacksonObjectMapper()
+            .setSerializationInclusion(NON_NULL)
+            .enable(INDENT_OUTPUT)
+            .writeValueAsString(it)
+            .also(::println)
+        }
+  }
+
   @Nested
   @DisplayName("a simple data class")
-  class SimpleDataClass {
+  class SimpleDataClass : GeneratorTestBase() {
     data class Foo(val string: String)
 
     val schema = generateSchema<Foo>()
@@ -51,7 +68,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("simple property types")
-  class SimplePropertyTypes {
+  class SimplePropertyTypes : GeneratorTestBase() {
     data class Foo(
       val string: String,
       val integer: Int,
@@ -72,7 +89,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("enum properties")
-  class EnumProperties {
+  class EnumProperties : GeneratorTestBase() {
     data class Foo(
       val size: Size
     )
@@ -95,7 +112,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("properties with default values")
-  class OptionalProperties {
+  class OptionalProperties : GeneratorTestBase() {
     data class Foo(
       val optionalString: String = "default value",
       val requiredString: String
@@ -118,7 +135,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("nullable properties")
-  class NullableProperties {
+  class NullableProperties : GeneratorTestBase() {
     data class Foo(
       val nullableString: String?
     )
@@ -138,7 +155,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("complex properties")
-  class ComplexProperties {
+  class ComplexProperties : GeneratorTestBase() {
     data class Foo(
       val bar: Bar
     )
@@ -171,7 +188,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("nested complex properties")
-  class NestedComplexProperties {
+  class NestedComplexProperties : GeneratorTestBase() {
     data class Foo(
       val bar: Bar
     )
@@ -214,7 +231,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("sealed classes")
-  class SealedClasses {
+  class SealedClasses : GeneratorTestBase() {
     data class Foo(
       val bar: Bar
     )
@@ -248,7 +265,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("array like properties")
-  class ArrayLikeProperties {
+  class ArrayLikeProperties : GeneratorTestBase() {
     data class Foo(
       val listOfStrings: List<String>,
       val setOfStrings: Set<String>,
@@ -304,7 +321,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("map properties")
-  class MapProperties {
+  class MapProperties : GeneratorTestBase() {
     data class Foo(
       val mapOfStrings: Map<String, String>,
       val mapOfObjects: Map<String, Bar>
@@ -337,7 +354,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("non-data classes")
-  class NonDataClasses {
+  class NonDataClasses : GeneratorTestBase() {
     class Foo(
       val constructorProperty: String,
       constructorParameter: String
@@ -369,7 +386,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("Java POJOs")
-  class JavaPojos {
+  class JavaPojos : GeneratorTestBase() {
     val schema = generateSchema<JavaPojo>()
 
     @Test
@@ -383,7 +400,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("date and time types")
-  class DateAndTimeTypes {
+  class DateAndTimeTypes : GeneratorTestBase() {
     data class Foo(
       val instant: Instant,
       val localDate: LocalDate,
@@ -409,15 +426,56 @@ internal class GeneratorTests {
         }
       }
   }
-}
 
-inline fun <reified T : Any> generateSchema() =
-  Generator()
-    .generateSchema<T>()
-    .also {
-      jacksonObjectMapper()
-        .setSerializationInclusion(NON_NULL)
-        .enable(INDENT_OUTPUT)
-        .writeValueAsString(it)
-        .also(::println)
+  @Nested
+  @DisplayName("polymorphic types")
+  class PolymorphicTypes : GeneratorTestBase() {
+    data class Foo(
+      val wrapper: Wrapper<*>
+    )
+
+    interface Wrapper<T> {
+      val value: T
     }
+
+    data class StringWrapper(override val value: String) : Wrapper<String>
+    data class IntegerWrapper(override val value: Int) : Wrapper<Int>
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @BeforeEach
+    fun registerSubTypes() {
+      with(extensionRegistry) {
+        register(Wrapper::class.java, StringWrapper::class.java, "string")
+        register(Wrapper::class.java, IntegerWrapper::class.java, "integer")
+      }
+    }
+
+    @Test
+    fun `polymorphic properties are a reference to the base type`() {
+      expectThat(schema.properties[Foo::wrapper.name])
+        .isA<Ref>()
+        .get { `$ref` }
+        .isEqualTo("#/\$defs/${Wrapper::class.java.simpleName}")
+    }
+
+    @Test
+    fun `base type are one of the registered sub-types`() {
+      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
+        .isA<OneOf>()
+        .get { oneOf }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${StringWrapper::class.java.simpleName}") }
+        .one { isA<Ref>().get { `$ref` }.isEqualTo("#/\$defs/${IntegerWrapper::class.java.simpleName}") }
+    }
+
+    @Test
+    fun `discriminator mappings tie values to references`() {
+      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
+        .isA<OneOf>()
+        .get { discriminator?.mapping }
+        .isNotNull()
+        .hasEntry("string", "#/\$defs/${StringWrapper::class.java.simpleName}")
+        .hasEntry("integer", "#/\$defs/${IntegerWrapper::class.java.simpleName}")
+    }
+  }
+}

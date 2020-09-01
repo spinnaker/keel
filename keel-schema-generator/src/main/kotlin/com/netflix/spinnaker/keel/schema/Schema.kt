@@ -53,5 +53,10 @@ data class Ref(
 ) : Schema
 
 data class OneOf(
-  val oneOf: List<Schema>
+  val oneOf: List<Schema>,
+  val discriminator: Discriminator? = null
 ) : Schema
+
+data class Discriminator(
+  val mapping: Map<String, String>
+)
