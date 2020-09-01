@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.schema
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
+import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -10,14 +12,16 @@ import strikt.assertions.containsExactly
 import strikt.assertions.containsKey
 import strikt.assertions.doesNotContain
 import strikt.assertions.get
+import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.one
 
 internal class GeneratorTests {
 
   @Nested
   @DisplayName("a simple data class")
   class SimpleDataClass {
-    data class Foo(val str: String?)
+    data class Foo(val str: String)
 
     val schema = generateSchema<Foo>()
 
@@ -74,28 +78,48 @@ internal class GeneratorTests {
         .containsExactly(Size.values().map { it.name })
     }
   }
-}
 
-@Nested
-@DisplayName("properties with default values")
-class OptionalProperties {
-  data class Foo(
-    val optionalString: String = "default value",
-    val requiredString: String
-  )
+  @Nested
+  @DisplayName("properties with default values")
+  class OptionalProperties {
+    data class Foo(
+      val optionalString: String = "default value",
+      val requiredString: String
+    )
 
-  val schema = generateSchema<Foo>()
+    val schema = generateSchema<Foo>()
 
-  @Test
-  fun `properties with defaults are optional`() {
-    expectThat(schema.required)
-      .doesNotContain(Foo::optionalString.name)
+    @Test
+    fun `properties with defaults are optional`() {
+      expectThat(schema.required)
+        .doesNotContain(Foo::optionalString.name)
+    }
+
+    @Test
+    fun `properties without defaults are required`() {
+      expectThat(schema.required)
+        .contains(Foo::requiredString.name)
+    }
   }
 
-  @Test
-  fun `properties without defaults are required`() {
-    expectThat(schema.required)
-      .contains(Foo::requiredString.name)
+  @Nested
+  @DisplayName("nullable properties")
+  class NullableProperties {
+    data class Foo(
+      val nullableString: String?
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `nullable properties are defined as one-of null or the regular type`() {
+      expectThat(schema.properties[Foo::nullableString.name])
+        .isA<OneOf>()
+        .get { oneOf }
+        .hasSize(2)
+        .one { isA<NullProperty>() }
+        .one { isA<StringProperty>() }
+    }
   }
 }
 
@@ -103,5 +127,8 @@ inline fun <reified T : Any> generateSchema() =
   Generator()
     .generateSchema<T>()
     .also {
-      jacksonObjectMapper().writeValueAsString(it)
+      jacksonObjectMapper()
+        .setSerializationInclusion(NON_NULL)
+        .enable(INDENT_OUTPUT)
+        .writeValueAsString(it).also(::println)
     }

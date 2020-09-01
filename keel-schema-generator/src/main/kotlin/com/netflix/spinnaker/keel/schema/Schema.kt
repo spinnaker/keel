@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.schema
 data class RootSchema(
   val `$id`: String,
   val description: String,
-  val properties: Map<String, Property>,
+  val properties: Map<String, PropertyOrOneOf>,
   val required: List<String>,
   val definitions: Map<String, Schema>
 ) {
@@ -12,15 +12,23 @@ data class RootSchema(
 }
 
 data class Schema(
-  val properties: Map<String, Property>,
+  val properties: Map<String, PropertyOrOneOf>,
   val required: List<String>
 ) {
   val type: String = "object"
 }
 
+interface PropertyOrOneOf
+
+data class OneOf(
+  val oneOf: List<PropertyOrOneOf>
+) : PropertyOrOneOf
+
 sealed class Property(
   val type: String
-)
+) : PropertyOrOneOf
+
+object NullProperty : Property("null")
 
 object BooleanProperty : Property("boolean")
 
@@ -32,4 +40,4 @@ data class StringProperty(
 
 data class EnumProperty(
   val enum: List<String>
-) : Property("string")
+) : PropertyOrOneOf

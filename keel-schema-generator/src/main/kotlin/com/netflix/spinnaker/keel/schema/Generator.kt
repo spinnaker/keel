@@ -5,6 +5,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
 
 class Generator {
@@ -29,13 +30,22 @@ class Generator {
       ?.find { it.name == property.name }
       ?: TODO("handle property with no constructor param")
 
-  private fun buildProperty(it: KProperty1<*, *>): Property {
-    val javaType = it.returnType.javaType
+  private fun buildProperty(property: KProperty1<*, *>): PropertyOrOneOf {
+    val javaType = property.returnType.javaType
     return when {
-      javaType.isEnum -> EnumProperty(javaType.enumNames)
-      javaType == String::class.java -> StringProperty()
-      javaType == Boolean::class.java -> BooleanProperty
-      javaType == Int::class.java -> IntegerProperty
+      property.returnType.isMarkedNullable -> OneOf(
+        listOf(NullProperty, buildProperty(property.returnType.withNullability(false).javaType))
+      )
+      else -> buildProperty(javaType)
+    }
+  }
+
+  private fun buildProperty(type: Type): PropertyOrOneOf {
+    return when {
+      type.isEnum -> EnumProperty(type.enumNames)
+      type == String::class.java -> StringProperty()
+      type == Boolean::class.java -> BooleanProperty
+      type == Int::class.java -> IntegerProperty
       else -> TODO()
     }
   }
