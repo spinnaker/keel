@@ -91,11 +91,12 @@ class Generator(
    * specified this means the parameters of its primary constructor.
    */
   private val KClass<*>.candidateProperties: List<KParameter>
-    get() = if (isAbstract) {
-      emptyList()
-    } else {
-      checkNotNull(primaryConstructor
-        ?: constructors.firstOrNull()) { "${this.qualifiedName} has no primary constructor" }
+    get() = when {
+      isAbstract -> emptyList()
+      isObject -> emptyList()
+      else -> checkNotNull(primaryConstructor ?: constructors.firstOrNull()) {
+        "$qualifiedName has no primary constructor"
+      }
         .parameters
     }
 
@@ -243,6 +244,12 @@ class Generator(
       }
       return checkNotNull(arguments[1].type) { "unhandled generic type: ${arguments[1]}" }
     }
+
+  /**
+   * Is this class a singleton object?
+   */
+  private val KClass<*>.isObject: Boolean
+    get() = objectInstance != null
 
   private val formattedTypes = mapOf(
     Duration::class to "duration",

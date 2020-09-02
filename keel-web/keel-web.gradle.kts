@@ -18,6 +18,7 @@ dependencies {
   implementation(project(":keel-bakery-plugin"))
   implementation(project(":keel-ec2-plugin"))
   implementation(project(":keel-titus-plugin"))
+  implementation(project(":keel-schema-generator"))
 
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   implementation("com.netflix.spinnaker.kork:kork-web")
