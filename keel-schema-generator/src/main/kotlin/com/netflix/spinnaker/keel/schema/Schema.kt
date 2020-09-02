@@ -30,6 +30,11 @@ object BooleanSchema : TypedProperty("boolean")
 
 object IntegerSchema : TypedProperty("integer")
 
+object AnySchema : TypedProperty("object") {
+  @Suppress("MayBeConstant") // TODO: doesn't serialize if declared as const
+  val additionalProperties: Boolean = true
+}
+
 data class ArraySchema(
   val items: Schema,
   val uniqueItems: Boolean? = null,
@@ -61,3 +66,7 @@ data class OneOf(
     val mapping: Map<String, String>
   )
 }
+
+data class AllOf(
+  val allOf: List<Schema>
+) : Schema

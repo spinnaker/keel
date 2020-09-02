@@ -16,12 +16,15 @@ import org.junit.jupiter.api.TestFactory
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
+import strikt.assertions.containsKeys
 import strikt.assertions.doesNotContain
 import strikt.assertions.get
 import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
@@ -151,6 +154,22 @@ internal class GeneratorTests {
         .hasSize(2)
         .one { isA<NullSchema>() }
         .one { isA<StringSchema>() }
+    }
+  }
+
+  @Nested
+  @DisplayName("properties that are type Any")
+  class AnyProperties : GeneratorTestBase() {
+    data class Foo(
+      val any: Any
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `any properties are just plain extensible objects`() {
+      expectThat(schema.properties[Foo::any.name])
+        .isA<AnySchema>()
     }
   }
 
@@ -429,20 +448,23 @@ internal class GeneratorTests {
   }
 
   @Nested
-  @DisplayName("polymorphic types")
-  class PolymorphicTypes : GeneratorTestBase() {
+  @DisplayName("non-generic polymorphic types")
+  class NonGenericPolymorphicTypes : GeneratorTestBase() {
+    // yes Wrapper is generic but Foo isn't
     data class Foo(
       val wrapper: Wrapper<*>
     )
 
     interface Wrapper<T> {
-      @Discriminator val type: String
+      @Discriminator
+      val type: String
       val value: T
     }
 
     data class StringWrapper(override val value: String) : Wrapper<String> {
       override val type = "string"
     }
+
     data class IntegerWrapper(override val value: Int) : Wrapper<Int> {
       override val type = "integer"
     }
@@ -490,6 +512,58 @@ internal class GeneratorTests {
         .isNotNull()
         .hasEntry("string", "#/\$defs/${StringWrapper::class.java.simpleName}")
         .hasEntry("integer", "#/\$defs/${IntegerWrapper::class.java.simpleName}")
+    }
+  }
+
+  @Nested
+  @DisplayName("generic polymorphic types")
+  class GenericPolymorphicTypes : GeneratorTestBase() {
+    data class Foo<T : Thing>(
+      val normalProperty: String,
+      @Discriminator val type: String,
+      val genericProperty: T
+    )
+
+    interface Thing
+
+    data class Bar(val bar: String) : Thing
+    data class Baz(val baz: String) : Thing
+
+    val schema by lazy { generateSchema<Foo<*>>() }
+
+    @BeforeEach
+    fun registerSubTypes() {
+      with(extensionRegistry) {
+        register(Thing::class.java, Bar::class.java, "bar")
+        register(Thing::class.java, Baz::class.java, "baz")
+      }
+    }
+
+    @Test
+    fun `base definition contains only common properties`() {
+      expectThat(schema.properties.keys)
+        .containsExactlyInAnyOrder(
+          Foo<*>::normalProperty.name,
+          Foo<*>::type.name
+        )
+    }
+
+    @Test
+    fun `$defs exist for types with each generic sub-type`() {
+      expectThat(schema.`$defs`)
+        .containsKeys(
+          "${Bar::class.java.simpleName}${Foo::class.java.simpleName}",
+          "${Baz::class.java.simpleName}${Foo::class.java.simpleName}"
+        )
+    }
+
+    @Test
+    fun `generic sub-types contain all of the base type properties and their own`() {
+      expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
+        .isA<AllOf>()
+        .get { allOf }
+        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Foo::class.java.simpleName}") }
+        .one { isA<ObjectSchema>().get { properties.keys }.containsExactly(Foo<*>::genericProperty.name) }
     }
   }
 }

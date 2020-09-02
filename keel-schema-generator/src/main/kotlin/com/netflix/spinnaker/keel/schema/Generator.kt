@@ -12,6 +12,9 @@ import java.time.ZonedDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
+import kotlin.reflect.KTypeProjection
+import kotlin.reflect.KTypeProjection.Companion.invariant
+import kotlin.reflect.full.createType
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
@@ -73,15 +76,58 @@ class Generator(
           )
         )
       }
+      type.typeParameters.isNotEmpty() ->
+        ObjectSchema(
+          title = checkNotNull(type.simpleName),
+          properties = type
+            .candidateProperties
+            .filter {
+              // filter out properties of the generic type as they will be specified in extended types
+              it.type.classifier !in type.typeParameters
+            }
+            .associate {
+              checkNotNull(it.name) to buildProperty(it.type)
+            },
+          required = type.candidateProperties.filter { !it.isOptional }
+            .map { checkNotNull(it.name) }
+        )
+          .also {
+            extensionRegistry.extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
+              .forEach { (_, subType) ->
+                type.createType(
+                  arguments = listOf(invariant(subType.kotlin.createType()))
+                )
+                  .also { invariantType ->
+                    val name = "${subType.simpleName}${type.simpleName}"
+                    if (!definitions.containsKey(name)) {
+                      val genericProperties = type.candidateProperties.filter {
+                        it.type.classifier in type.typeParameters
+                      }
+                      definitions[name] = AllOf(
+                        listOf(
+                          Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
+                          ObjectSchema(
+                            title = name,
+                            properties = genericProperties
+                              .associate {
+                                checkNotNull(it.name) to buildProperty(subType.kotlin.createType())
+                              },
+                            required = genericProperties.filter { !it.isOptional }
+                              .map { checkNotNull(it.name) }
+                          )
+                        )
+                      )
+                    }
+                  }
+              }
+          }
       else ->
         ObjectSchema(
           title = checkNotNull(type.simpleName),
           properties = type.candidateProperties.associate {
             checkNotNull(it.name) to buildProperty(it.type)
           },
-          required = type.candidateProperties.filter {
-            !it.isOptional
-          }
+          required = type.candidateProperties.filter { !it.isOptional }
             .map { checkNotNull(it.name) }
         )
     }
@@ -139,6 +185,7 @@ class Generator(
           additionalProperties = buildProperty(type.valueType)
         )
       }
+      type.jvmErasure == Any::class -> AnySchema
       else -> define(type)
     }
 
