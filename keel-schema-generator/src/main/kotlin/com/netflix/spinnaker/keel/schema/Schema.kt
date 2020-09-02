@@ -12,6 +12,7 @@ data class RootSchema(
   val description: String,
   val properties: Map<String, Schema>,
   val required: List<String>,
+  val discriminator: OneOf.Discriminator? = null,
   val `$defs`: Map<String, Schema>
 ) {
   val `$schema`: String = "https://json-schema.org/draft/2019-09/schema"
@@ -21,7 +22,8 @@ data class RootSchema(
 data class ObjectSchema(
   val title: String,
   val properties: Map<String, Schema>,
-  val required: List<String>
+  val required: List<String>,
+  val discriminator: OneOf.Discriminator? = null
 ) : TypedProperty("object")
 
 object NullSchema : TypedProperty("null")

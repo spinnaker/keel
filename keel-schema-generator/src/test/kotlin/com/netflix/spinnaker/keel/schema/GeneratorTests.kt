@@ -278,8 +278,8 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`[Bar::class.java.simpleName])
         .isA<OneOf>()
         .get { oneOf }
-        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar1::class.java.simpleName}") }
-        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Bar.Bar2::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Bar.Bar1::class.java.simpleName}" }
+        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Bar.Bar2::class.java.simpleName}" }
     }
   }
 
@@ -492,8 +492,8 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
         .isA<OneOf>()
         .get { oneOf }
-        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${StringWrapper::class.java.simpleName}") }
-        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${IntegerWrapper::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${StringWrapper::class.java.simpleName}" }
+        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${IntegerWrapper::class.java.simpleName}" }
     }
 
     @Test
@@ -562,8 +562,18 @@ internal class GeneratorTests {
       expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
         .isA<AllOf>()
         .get { allOf }
-        .one { isA<Reference>().get { `$ref` }.isEqualTo("#/\$defs/${Foo::class.java.simpleName}") }
+        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Foo::class.java.simpleName}" }
         .one { isA<ObjectSchema>().get { properties.keys }.containsExactly(Foo<*>::genericProperty.name) }
+    }
+
+    @Test
+    fun `the discriminator is based on the annotated property in the base class`() {
+      expectThat(schema.discriminator)
+        .isNotNull()
+        .and {
+          get { propertyName } isEqualTo Foo<*>::type.name
+          get { mapping }.containsKeys("bar", "baz")
+        }
     }
   }
 }

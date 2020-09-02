@@ -51,6 +51,7 @@ class Generator(
       description = "The schema for delivery configs in Keel",
       properties = schema.properties,
       required = schema.required,
+      discriminator = schema.discriminator,
       `$defs` = context.definitions.toSortedMap(String.CASE_INSENSITIVE_ORDER)
     )
   }
@@ -76,7 +77,8 @@ class Generator(
           )
         )
       }
-      type.typeParameters.isNotEmpty() ->
+      type.typeParameters.isNotEmpty() -> {
+        val invariantTypes = extensionRegistry.extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
         ObjectSchema(
           title = checkNotNull(type.simpleName),
           properties = type
@@ -89,10 +91,16 @@ class Generator(
               checkNotNull(it.name) to buildProperty(it.type)
             },
           required = type.candidateProperties.filter { !it.isOptional }
-            .map { checkNotNull(it.name) }
+            .map { checkNotNull(it.name) },
+          discriminator = OneOf.Discriminator(
+            propertyName = type.discriminatorPropertyName,
+            mapping = invariantTypes.mapValues {
+              it.value.kotlin.buildRef().`$ref`
+            }
+          )
         )
           .also {
-            extensionRegistry.extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
+            invariantTypes
               .forEach { (_, subType) ->
                 type.createType(
                   arguments = listOf(invariant(subType.kotlin.createType()))
@@ -121,6 +129,7 @@ class Generator(
                   }
               }
           }
+      }
       else ->
         ObjectSchema(
           title = checkNotNull(type.simpleName),
