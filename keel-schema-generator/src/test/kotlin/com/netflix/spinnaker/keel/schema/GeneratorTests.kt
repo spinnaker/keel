@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
+import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
@@ -24,7 +25,6 @@ import strikt.assertions.get
 import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isA
-import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
@@ -141,19 +141,53 @@ internal class GeneratorTests {
   @DisplayName("nullable properties")
   class NullableProperties : GeneratorTestBase() {
     data class Foo(
+      val nullableAny: Any?,
+      val nullableBoolean: Boolean?,
+      val nullableInteger: Int?,
+      val nullableObject: Bar?,
       val nullableString: String?
+    )
+
+    data class Bar(
+      val string: String
     )
 
     val schema = generateSchema<Foo>()
 
     @Test
-    fun `nullable properties are defined as one-of null or the regular type`() {
-      expectThat(schema.properties[Foo::nullableString.name])
-        .isA<OneOf>()
-        .get { oneOf }
-        .hasSize(2)
-        .one { isA<NullSchema>() }
-        .one { isA<StringSchema>() }
+    fun `nullable object properties are one of null or an object`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableAny.name)
+        .isOneOfNullOr<AnySchema>()
+    }
+
+    @Test
+    fun `nullable boolean properties are one of null or a boolean`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableBoolean.name)
+        .isOneOfNullOr<BooleanSchema>()
+    }
+
+    @Test
+    fun `nullable integer properties are one of null or an integer`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableInteger.name)
+        .isOneOfNullOr<IntegerSchema>()
+    }
+
+    @Test
+    fun `nullable object properties are one of null or a reference`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableObject.name)
+        .isOneOfNullOr<Reference>()
+
+    }
+
+    @Test
+    fun `nullable string properties are one of null or a string`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableString.name)
+        .isOneOfNullOr<StringSchema>()
     }
   }
 
@@ -576,4 +610,12 @@ internal class GeneratorTests {
         }
     }
   }
+}
+
+inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {
+  isA<OneOf>()
+    .get { oneOf }
+    .hasSize(2)
+    .one { isA<NullSchema>() }
+    .one { isA<T>() }
 }

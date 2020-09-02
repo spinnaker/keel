@@ -150,7 +150,6 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
       }
 
       val api = generator.generateSchema<SubmittedDeliveryConfig>()
-        .let { jacksonObjectMapper().valueToTree<JsonNode>(it) }
         .also {
           jacksonObjectMapper()
             .setSerializationInclusion(JsonInclude.Include.NON_NULL)
@@ -158,6 +157,7 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
             .writeValueAsString(it)
             .also(::println)
         }
+        .let { jacksonObjectMapper().valueToTree<JsonNode>(it) }
       expectThat(api).describedAs("API Docs response")
     }
 

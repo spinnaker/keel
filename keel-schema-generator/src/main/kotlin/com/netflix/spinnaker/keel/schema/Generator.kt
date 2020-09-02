@@ -235,19 +235,19 @@ class Generator(
    * Is this something we should represent as a string?
    */
   private val KType.isString: Boolean
-    get() = javaType == String::class.java || jvmErasure in formattedTypes.keys
+    get() = jvmErasure == String::class || jvmErasure in formattedTypes.keys
 
   /**
    * Is this something we should represent as a boolean?
    */
   private val KType.isBoolean: Boolean
-    get() = javaType == Boolean::class.java
+    get() = jvmErasure == Boolean::class
 
   /**
    * Is this something we should represent as an integer?
    */
   private val KType.isInteger: Boolean
-    get() = javaType == Int::class.java
+    get() = jvmErasure == Int::class
 
   /**
    * Is this something we should represent as an array?
