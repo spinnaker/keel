@@ -757,7 +757,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("artifact metadata exists") {
       before {
         subject.register(artifact1)
-        subject.store(artifact1, artifact1.type, SNAPSHOT)
+        subject.store(artifact1.name, artifact1.type, version1, SNAPSHOT)
       }
       test ("save and retrieves successfully") {
         subject.updateArtifactMetadata(artifact1.name, artifact1.type, version1, SNAPSHOT, artifactMetadata)
