@@ -313,11 +313,11 @@ class CombinedRepository(
   override fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
     artifactRepository.getAll(type)
 
-  override fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean =
-    artifactRepository.store(name, type, version, status, artifactMetadata)
+  override fun storeArtifact(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean =
+    artifactRepository.store(name, type, version, status)
 
-  override fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean =
-    artifactRepository.store(artifact, version, status, artifactMetadata)
+  override fun storeArtifact(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
+    artifactRepository.store(artifact, version, status)
 
   override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata) {
     artifactRepository.updateArtifactMetadata(name, type, version, status, artifactMetadata)

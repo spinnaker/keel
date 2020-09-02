@@ -60,7 +60,7 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
     with(subject) {
       register(artifact)
       setOf(version1, version2).forEach {
-        store(artifact, it, RELEASE, null)
+        store(artifact, it, RELEASE)
       }
     }
     persist(manifest)

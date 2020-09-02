@@ -171,10 +171,10 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean =
-    store(artifact.name, artifact.type, version, status, artifactMetadata)
+  override fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean =
+    store(artifact.name, artifact.type, version, status)
 
-  override fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean {
+  override fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean {
     if (!isRegistered(name, type)) {
       throw NoSuchArtifactException(name, type)
     }
@@ -185,8 +185,6 @@ class SqlArtifactRepository(
         .set(ARTIFACT_VERSIONS.TYPE, type)
         .set(ARTIFACT_VERSIONS.VERSION, version)
         .set(ARTIFACT_VERSIONS.RELEASE_STATUS, status?.toString())
-        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata?.buildMetadata))
-        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata?.gitMetadata))
         .onDuplicateKeyIgnore()
         .execute()
     } == 1
@@ -199,8 +197,8 @@ class SqlArtifactRepository(
 
     return sqlRetry.withRetry(WRITE) {
       jooq.update(ARTIFACT_VERSIONS)
-        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata?.buildMetadata))
-        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata?.gitMetadata))
+        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata.buildMetadata))
+        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata.gitMetadata))
         .where(ARTIFACT_VERSIONS.NAME.eq(name))
         .and(ARTIFACT_VERSIONS.TYPE.eq(type))
         .and(ARTIFACT_VERSIONS.VERSION.eq(version))

@@ -81,7 +81,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       }
 
       test("the event is ignored") {
-        verify(exactly = 0) { repository.storeArtifact(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { repository.storeArtifact(any(), any(), any(), any()) }
       }
 
       test("no telemetry is recorded") {
@@ -98,7 +98,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("the version was already known") {
         before {
-          every { repository.storeArtifact(any(), any(), any(), any(), any()) } returns false
+          every { repository.storeArtifact(any(), any(), any(), any()) } returns false
 
           listener.onArtifactPublished(event)
         }
@@ -110,14 +110,14 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("the version is new") {
         before {
-          every { repository.storeArtifact(any(), any(), any(), any(), any()) } returns true
+          every { repository.storeArtifact(any(), any(), any(), any()) } returns true
 
           listener.onArtifactPublished(event)
         }
 
         test("a new artifact version is stored") {
           verify {
-            repository.storeArtifact(artifact.name, artifact.type, "fnord-0.156.0-h58.f67fe09", FINAL, null)
+            repository.storeArtifact(artifact.name, artifact.type, "fnord-0.156.0-h58.f67fe09", FINAL)
           }
         }
 
@@ -185,7 +185,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("there are versions of the artifact") {
         before {
-          every { repository.storeArtifact(any(), any(), any(), any(), any()) } returns false
+          every { repository.storeArtifact(any(), any(), any(), any()) } returns false
           every { repository.artifactVersions(any()) } returns emptyList()
           coEvery { artifactService.getVersions("fnord", emptyList(), DEBIAN) } returns
             listOf(
@@ -203,7 +203,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("the newest version is saved") {
           verify(exactly = 1) {
-            repository.storeArtifact("fnord", DEBIAN, "fnord-0.227.0-h141.bd97556", FINAL, null)
+            repository.storeArtifact("fnord", DEBIAN, "fnord-0.227.0-h141.bd97556", FINAL)
           }
         }
 
@@ -283,14 +283,14 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           clouddriverService.findDockerImages("*", dockerArtifact.name, "master-h5.blahblah", any(), any())
         } returns listOf(DockerImage("test", dockerArtifact.name, "master-h5.blahblah", "abcd1234"))
         coEvery { artifactService.getArtifact(debArtifact.name, "0.161.0-h61.116f116", DEBIAN) } returns newerPublishedDeb
-        every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) } returns true
-        every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null, null) } returns true
+        every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) } returns true
+        every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null) } returns true
       }
 
       test("new version is stored") {
         listener.syncArtifactVersions()
-        verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) }
-        verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null, null) }
+        verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) }
+        verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h5.blahblah", null) }
         verify { publisher.publishEvent(any<ArtifactSaved>()) }
       }
     }
@@ -310,14 +310,14 @@ internal class ArtifactListenerTests : JUnit5Minutests {
             clouddriverService.findDockerImages("*", dockerArtifact.name, "master-h6.hehehe", any(), any())
           } returns listOf(DockerImage("test", dockerArtifact.name, "master-h6.hehehe", "abcd1234"))
           coEvery { artifactService.getArtifact(debArtifact.name, "0.161.0-h61.116f116", DEBIAN) } returns newerPublishedDeb
-          every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) } returns true
-          every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null, null) } returns true
+          every { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) } returns true
+          every { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null) } returns true
         }
 
         test("new version stored") {
           listener.syncArtifactVersions()
-          verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL, null) }
-          verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null, null) }
+          verify { repository.storeArtifact(debArtifact.name, debArtifact.type, "${debArtifact.name}-0.161.0-h61.116f116", FINAL) }
+          verify { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, "master-h6.hehehe", null) }
           verify { publisher.publishEvent(any<ArtifactSaved>()) }
         }
       }
@@ -336,8 +336,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("store not called") {
           listener.syncArtifactVersions()
-          verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL, null) }
-          verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL, null) }
+          verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL) }
+          verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL) }
           verify(exactly = 0) { publisher.publishEvent(any<ArtifactSaved>()) }
 
         }
@@ -351,8 +351,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("store not called") {
           listener.syncArtifactVersions()
-          verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL, null) }
-          verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL, null) }
+          verify(exactly = 0) { repository.storeArtifact(debArtifact.name, debArtifact.type, any(), FINAL) }
+          verify(exactly = 0) { repository.storeArtifact(dockerArtifact.name, dockerArtifact.type, any(), FINAL) }
           verify(exactly = 0) { publisher.publishEvent(any<ArtifactSaved>()) }
         }
       }

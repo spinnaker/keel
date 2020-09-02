@@ -37,9 +37,9 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
-  fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean
+  fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean
 
-  fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata?): Boolean
+  fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
 
   fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata)
 

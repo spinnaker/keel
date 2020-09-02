@@ -128,21 +128,21 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     with(subject) {
       register(artifact1)
       setOf(version1, version2, version3).forEach {
-        store(artifact1, it, SNAPSHOT, null)
+        store(artifact1, it, SNAPSHOT)
       }
       setOf(version4, version5).forEach {
-        store(artifact1, it, RELEASE, null)
+        store(artifact1, it, RELEASE)
       }
       register(artifact2)
       setOf(version1, version2, version3).forEach {
-        store(artifact2, it, SNAPSHOT, null)
+        store(artifact2, it, SNAPSHOT)
       }
       setOf(version4, version5).forEach {
-        store(artifact2, it, RELEASE, null)
+        store(artifact2, it, RELEASE)
       }
       register(artifact3)
       setOf(version6, versionBad).forEach {
-        store(artifact3, it, null, null)
+        store(artifact3, it, null)
       }
     }
     persist(manifest)
@@ -178,7 +178,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       test("storing a new version throws an exception") {
         expectThrows<NoSuchArtifactException> {
-          subject.store(artifact1, version1, SNAPSHOT, null)
+          subject.store(artifact1, version1, SNAPSHOT)
         }
       }
 
@@ -217,17 +217,17 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       context("an artifact version already exists") {
         before {
-          subject.store(artifact1, version1, SNAPSHOT, null)
+          subject.store(artifact1, version1, SNAPSHOT)
         }
 
         test("registering the same version is a no-op") {
-          val result = subject.store(artifact1, version1, SNAPSHOT, null)
+          val result = subject.store(artifact1, version1, SNAPSHOT)
           expectThat(result).isFalse()
           expectThat(subject.versions(artifact1)).hasSize(1)
         }
 
         test("adding a new version adds it to the list") {
-          val result = subject.store(artifact1, version2, SNAPSHOT, null)
+          val result = subject.store(artifact1, version2, SNAPSHOT)
 
           expectThat(result).isTrue()
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
@@ -235,7 +235,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
         test("querying the list for returns both artifacts") {
           // status is stored on the artifact
-          subject.store(artifact1, version2, SNAPSHOT, null)
+          subject.store(artifact1, version2, SNAPSHOT)
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
         }
       }
@@ -246,9 +246,9 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             .shuffled()
             .forEach {
               if (it == version4 || it == version5) {
-                subject.store(artifact1, it, RELEASE, null)
+                subject.store(artifact1, it, RELEASE)
               } else {
-                subject.store(artifact1, it, SNAPSHOT, null)
+                subject.store(artifact1, it, SNAPSHOT)
               }
             }
         }
@@ -670,8 +670,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("getting all filters by type") {
       before {
         persist()
-        subject.store(artifact1, version4, FINAL, null)
-        subject.store(artifact3, version6, FINAL, null)
+        subject.store(artifact1, version4, FINAL)
+        subject.store(artifact3, version6, FINAL)
       }
 
       test("querying works") {
@@ -757,9 +757,10 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("artifact metadata exists") {
       before {
         subject.register(artifact1)
+        subject.store(artifact1, artifact1.type, SNAPSHOT)
       }
       test ("save and retrieves successfully") {
-        subject.store(artifact1, version1, SNAPSHOT, artifactMetadata)
+        subject.updateArtifactMetadata(artifact1.name, artifact1.type, version1, SNAPSHOT, artifactMetadata)
 
         expectThat(subject.getArtifactBuildMetadata(artifact1.name, artifact1.type, version1, SNAPSHOT))
           .isEqualTo(artifactMetadata.buildMetadata)
