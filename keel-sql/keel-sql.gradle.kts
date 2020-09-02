@@ -6,7 +6,6 @@ val buildingInDocker = project.properties["buildingInDocker"]?.toString().let { 
 plugins {
   `java-library`
   id("kotlin-spring")
-  id("nu.studer.jooq") version "5.0.1"
   id("org.liquibase.gradle") version "2.0.4"
 }
 
@@ -27,6 +26,8 @@ sourceSets {
 tasks.getByName<Delete>("clean") {
   delete.add("$projectDir/src/generated/java")
 }
+
+val jooqGenerator by configurations.creating
 
 dependencies {
   implementation(project(":keel-core"))
@@ -55,7 +56,8 @@ dependencies {
 
   jooqGenerator(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
   jooqGenerator("mysql:mysql-connector-java")
-  jooqGenerator("org.jooq:jooq-meta-extensions")
+  jooqGenerator("org.jooq:jooq-codegen:3.13.2")
+  jooqGenerator("org.jooq:jooq-meta-extensions:3.13.2")
   jooqGenerator("ch.qos.logback:logback-classic")
 
   liquibaseRuntime(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
@@ -65,16 +67,37 @@ dependencies {
   liquibaseRuntime("mysql:mysql-connector-java")
 }
 
-tasks.register<Exec>("runMysql") {
-  commandLine("docker run --name mysqlJooq -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:5.7".split(" "))
-  doLast {
-    // Wait for the DB server to come up...
-    sleep(15 * 1000)
-  }
+tasks.register<Exec>("startMysql") {
+  commandLine("sh", "-c",
+    "docker stop mysqlJooq || " +
+      "docker run --name mysqlJooq -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:5.7 && " +
+      "sleep 15"
+  )
+  enabled = false
+  dependsOn("mysqlSwitch")
 }
 
 tasks.register<Exec>("stopMysql") {
   commandLine("docker stop mysqlJooq".split(" "))
+  enabled = false
+  dependsOn("mysqlSwitch")
+}
+
+tasks.register("mysqlSwitch") {
+  inputs.dir("$projectDir/src/main/resources/db")
+  outputs.cacheIf { true }
+  outputs.dir("$projectDir/src/generated/java")
+
+  doLast {
+    tasks.named("startMysql").get().enabled = true
+    tasks.named("stopMysql").get().enabled = true
+  }
+}
+
+tasks.named("liquibaseUpdate") {
+  inputs.dir("$projectDir/src/main/resources/db")
+  outputs.cacheIf { true }
+  outputs.dir("$projectDir/src/generated/java")
 }
 
 // Task used when building in Docker in place of jooqModelator (see Dockerfile.compile)
@@ -84,10 +107,16 @@ tasks.register<JavaExec>("jooqGenerate") {
   classpath = configurations.named("jooqGenerator").get()
   main = "org.jooq.codegen.GenerationTool"
   args = listOf("$buildDir/resources/main/jooqConfig.xml")
+
+  inputs.dir("$projectDir/src/main/resources/db")
+  outputs.cacheIf { true }
+  outputs.dir("$projectDir/src/generated/java")
+
   dependsOn("processResources")
+
   if (!buildingInDocker) {
-    dependsOn("runMysql")
-    dependsOn("liquibaseUpdate").mustRunAfter("runMysql")
+    dependsOn("startMysql")
+    dependsOn("liquibaseUpdate").mustRunAfter("startMysql")
     finalizedBy("stopMysql")
   } else {
     dependsOn("liquibaseUpdate")
