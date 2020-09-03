@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -29,7 +28,7 @@ class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
+) : BaseArtifactSupplier<DebianArtifact, NetflixSemVerVersioningStrategy>(artifactMetadataService) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)
@@ -97,9 +96,6 @@ class DebianArtifactSupplier(
     return null
   }
 
-  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
-    return super.getArtifactMetadataInternal(artifact)
-  }
 
   // Debian Artifacts should contain a releaseStatus in the metadata
   private fun PublishedArtifact.hasReleaseStatus() =

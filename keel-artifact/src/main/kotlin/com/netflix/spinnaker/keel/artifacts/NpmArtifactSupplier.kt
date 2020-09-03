@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -27,7 +26,7 @@ class NpmArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
+) : BaseArtifactSupplier<NpmArtifact, NetflixSemVerVersioningStrategy>(artifactMetadataService) {
 
   override val supportedArtifact = SupportedArtifact(NPM, NpmArtifact::class.java)
 
@@ -79,9 +78,6 @@ class NpmArtifactSupplier(
       ?.let { GitMetadata(it) }
   }
 
-  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
-    return super.getArtifactMetadataInternal(artifact)
-  }
 
   // The API requires colons in place of slashes to avoid path pattern conflicts
   private val DeliveryArtifact.nameForQuery: String

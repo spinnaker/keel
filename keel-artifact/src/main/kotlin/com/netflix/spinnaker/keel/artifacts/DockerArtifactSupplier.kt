@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -28,7 +27,7 @@ class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
   override val artifactMetadataService: ArtifactMetadataService
-) : ArtifactSupplier<DockerArtifact, DockerVersioningStrategy>, BaseArtifactSupplier(artifactMetadataService) {
+) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
   override val supportedVersioningStrategy =
@@ -93,10 +92,6 @@ class DockerArtifactSupplier(
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
     return null
-  }
-
-  override suspend fun getArtifactMetadata(artifact: PublishedArtifact): ArtifactMetadata? {
-    return super.getArtifactMetadataInternal(artifact)
   }
 
   private fun VersioningStrategy.hasBuild(): Boolean {
