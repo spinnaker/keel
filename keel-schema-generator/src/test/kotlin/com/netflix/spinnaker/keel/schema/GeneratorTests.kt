@@ -2,6 +2,7 @@
 
 package com.netflix.spinnaker.keel.schema
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -621,9 +622,33 @@ internal class GeneratorTests {
     }
   }
 
+  @Nested
+  @DisplayName("types with @JsonCreator annotated factories")
+  class JsonCreatorFactories : GeneratorTestBase() {
+    data class Foo(
+      val bar: Bar
+    ) {
+      @Suppress("unused")
+      @JsonCreator
+      constructor(string: String) : this(Bar(string))
+    }
+
+    data class Bar(
+      val string: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `schema is derived from the annotated constructor rather than the default one`() {
+      expectThat(schema.properties)
+        .containsKey(Bar::string.name)
+        .not()
+        .containsKey(Foo::bar.name)
+    }
+  }
   // TODO: handle objects which should probably ust be an enum
   // TODO: title should not appear inside an allOf
-  // TODO: handle @JsonCreator constructors
 }
 
 inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {

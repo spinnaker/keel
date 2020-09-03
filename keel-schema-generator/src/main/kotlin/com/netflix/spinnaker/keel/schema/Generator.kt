@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.schema
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
@@ -10,6 +11,7 @@ import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeProjection.Companion.invariant
@@ -157,11 +159,19 @@ class Generator(
     get() = when {
       isAbstract -> emptyList()
       isObject -> emptyList()
-      else -> checkNotNull(primaryConstructor ?: constructors.firstOrNull()) {
-        "$qualifiedName has no primary constructor"
-      }
-        .parameters
+      else -> preferredConstructor.parameters
     }
+
+  private val KClass<*>.preferredConstructor: KFunction<Any>
+    get() = (
+      constructors.firstOrNull { it.hasAnnotation<JsonCreator>() }
+        ?: primaryConstructor
+        ?: constructors.firstOrNull()
+      ).let {
+        checkNotNull(it) {
+          "$qualifiedName has no candidate constructor"
+        }
+      }
 
   /**
    * The name of the property annotated with `@[Discriminator]`
