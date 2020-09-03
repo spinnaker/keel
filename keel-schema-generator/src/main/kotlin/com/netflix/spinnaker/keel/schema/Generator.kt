@@ -12,7 +12,6 @@ import java.time.ZonedDateTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
-import kotlin.reflect.KTypeProjection
 import kotlin.reflect.KTypeProjection.Companion.invariant
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.hasAnnotation
@@ -64,16 +63,17 @@ class Generator(
     when {
       type.isSealed ->
         OneOf(
-          oneOf = type.sealedSubclasses.map { define(it) }
+          oneOf = type.sealedSubclasses.map { define(it) }.toSet()
         )
       extensionRegistry.baseTypes().contains(type.java) -> {
         OneOf(
-          oneOf = extensionRegistry.extensionsOf(type.java).map { define(it.value.kotlin) },
+          oneOf = extensionRegistry.extensionsOf(type.java).map { define(it.value.kotlin) }.toSet(),
           discriminator = OneOf.Discriminator(
             propertyName = type.discriminatorPropertyName,
-            mapping = extensionRegistry.extensionsOf(type.java).mapValues {
-              it.value.kotlin.buildRef().`$ref`
-            }
+            mapping = extensionRegistry
+              .extensionsOf(type.java)
+              .mapValues { it.value.kotlin.buildRef().`$ref` }
+              .toSortedMap(String.CASE_INSENSITIVE_ORDER)
           )
         )
       }
@@ -90,13 +90,16 @@ class Generator(
             .associate {
               checkNotNull(it.name) to buildProperty(it.type)
             },
-          required = type.candidateProperties.filter { !it.isOptional }
-            .map { checkNotNull(it.name) },
+          required = type
+            .candidateProperties
+            .filter { !it.isOptional }
+            .map { checkNotNull(it.name) }
+            .toSortedSet(String.CASE_INSENSITIVE_ORDER),
           discriminator = OneOf.Discriminator(
             propertyName = type.discriminatorPropertyName,
-            mapping = invariantTypes.mapValues {
-              it.value.kotlin.buildRef().`$ref`
-            }
+            mapping = invariantTypes
+              .mapValues { it.value.kotlin.buildRef().`$ref` }
+              .toSortedMap(String.CASE_INSENSITIVE_ORDER)
           )
         )
           .also {
@@ -105,7 +108,7 @@ class Generator(
                 type.createType(
                   arguments = listOf(invariant(subType.kotlin.createType()))
                 )
-                  .also { invariantType ->
+                  .also { _ ->
                     val name = "${subType.simpleName}${type.simpleName}"
                     if (!definitions.containsKey(name)) {
                       val genericProperties = type.candidateProperties.filter {
@@ -120,8 +123,10 @@ class Generator(
                               .associate {
                                 checkNotNull(it.name) to buildProperty(subType.kotlin.createType())
                               },
-                            required = genericProperties.filter { !it.isOptional }
+                            required = genericProperties
+                              .filter { !it.isOptional }
                               .map { checkNotNull(it.name) }
+                              .toSortedSet(String.CASE_INSENSITIVE_ORDER)
                           )
                         )
                       )
@@ -136,8 +141,11 @@ class Generator(
           properties = type.candidateProperties.associate {
             checkNotNull(it.name) to buildProperty(it.type)
           },
-          required = type.candidateProperties.filter { !it.isOptional }
+          required = type
+            .candidateProperties
+            .filter { !it.isOptional }
             .map { checkNotNull(it.name) }
+            .toSortedSet(String.CASE_INSENSITIVE_ORDER)
         )
     }
 
@@ -177,12 +185,13 @@ class Generator(
   private fun Context.buildProperty(type: KType): Schema =
     when {
       type.isMarkedNullable -> OneOf(
-        listOf(NullSchema, buildProperty(type.withNullability(false)))
+        setOf(NullSchema, buildProperty(type.withNullability(false)))
       )
       type.isEnum -> EnumSchema(type.enumNames)
       type.isString -> StringSchema(format = type.stringFormat)
       type.isBoolean -> BooleanSchema
       type.isInteger -> IntegerSchema
+      type.isNumber -> NumberSchema
       type.isArray -> {
         ArraySchema(
           items = buildProperty(type.elementType),
@@ -247,7 +256,13 @@ class Generator(
    * Is this something we should represent as an integer?
    */
   private val KType.isInteger: Boolean
-    get() = jvmErasure == Int::class
+    get() = jvmErasure == Int::class || jvmErasure == Short::class || jvmErasure == Long::class
+
+  /**
+   * Is this something we should represent as a number?
+   */
+  private val KType.isNumber: Boolean
+    get() = jvmErasure == Float::class || jvmErasure == Double::class
 
   /**
    * Is this something we should represent as an array?

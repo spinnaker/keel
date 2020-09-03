@@ -74,9 +74,10 @@ internal class GeneratorTests {
   @DisplayName("simple property types")
   class SimplePropertyTypes : GeneratorTestBase() {
     data class Foo(
-      val string: String,
-      val integer: Int,
       val boolean: Boolean,
+      val double: Double,
+      val integer: Int,
+      val string: String
     )
 
     val schema = generateSchema<Foo>()
@@ -84,9 +85,10 @@ internal class GeneratorTests {
     @Test
     fun `applies correct property types`() {
       expectThat(schema.properties) {
-        get(Foo::string.name).isA<StringSchema>()
         get(Foo::boolean.name).isA<BooleanSchema>()
+        get(Foo::double.name).isA<NumberSchema>()
         get(Foo::integer.name).isA<IntegerSchema>()
+        get(Foo::string.name).isA<StringSchema>()
       }
     }
   }
@@ -143,6 +145,7 @@ internal class GeneratorTests {
     data class Foo(
       val nullableAny: Any?,
       val nullableBoolean: Boolean?,
+      val nullableDouble: Double?,
       val nullableInteger: Int?,
       val nullableObject: Bar?,
       val nullableString: String?
@@ -166,6 +169,13 @@ internal class GeneratorTests {
       expectThat(schema.properties)
         .get(Foo::nullableBoolean.name)
         .isOneOfNullOr<BooleanSchema>()
+    }
+
+    @Test
+    fun `nullable double properties are one of null or a number`() {
+      expectThat(schema.properties)
+        .get(Foo::nullableDouble.name)
+        .isOneOfNullOr<NumberSchema>()
     }
 
     @Test
@@ -610,6 +620,10 @@ internal class GeneratorTests {
         }
     }
   }
+
+  // TODO: handle objects which should probably ust be an enum
+  // TODO: title should not appear inside an allOf
+  // TODO: handle @JsonCreator constructors
 }
 
 inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {
