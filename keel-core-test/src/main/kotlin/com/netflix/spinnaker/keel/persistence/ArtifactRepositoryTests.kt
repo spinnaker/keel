@@ -7,10 +7,14 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Job
+import com.netflix.spinnaker.keel.api.artifacts.PullRequest
+import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
@@ -25,8 +29,6 @@ import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import java.time.Clock
-import java.time.Duration
 import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
@@ -44,6 +46,8 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
+import java.time.Clock
+import java.time.Duration
 
 abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests {
   abstract fun factory(clock: Clock): T
@@ -104,24 +108,36 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     )
 
     val artifactMetadata = ArtifactMetadata(
-        BuildMetadata(
-          id = 1,
-          jobName = "job bla bla",
-          uid = "1234",
-          startedAt = "yesterday",
-          completedAt = "today",
-          jobUrl = "jenkins.com",
-          number = "1"
+      BuildMetadata(
+        id = 1,
+        uid = "1234",
+        startedAt = "yesterday",
+        completedAt = "today",
+        job = Job(
+          name = "job bla bla",
+          link = "enkins.com"
         ),
-        GitMetadata(
-          commit = "a15p0",
-          author = "keel-user",
-          commitMessage = "this is a commit message",
-          linkToCommit = "",
-          projectName = "spkr",
-          repoName = "keel"
-        )
+        number = "1"
+      ),
+      GitMetadata(
+        commit = "a15p0",
+        author = "keel-user",
+        repo = Repo(
+          name = "keel",
+          link = ""
+        ),
+        pullRequest = PullRequest(
+          number = "111",
+          url = "www.github.com/pr/111"
+        ),
+        commitInfo = Commit(
+          sha = "a15p0",
+          message = "this is a commit message",
+          link = ""
+        ),
+        project = "spkr",
       )
+    )
   }
 
   open fun Fixture<T>.persist() {

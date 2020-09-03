@@ -136,7 +136,6 @@ class ApplicationServiceTests : JUnit5Minutests {
     val buildMetadata = BuildMetadata(
       id = 1,
       number = "1",
-      jobName = "this is a jenkins job"
     )
 
     val gitMetadata = GitMetadata (

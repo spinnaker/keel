@@ -3,7 +3,11 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.igor.BuildService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Job
+import com.netflix.spinnaker.keel.api.artifacts.PullRequest
+import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.model.Build
 import com.netflix.spinnaker.model.GenericGitRevision
 import com.netflix.spinnaker.model.Result
@@ -34,6 +38,7 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
         result = Result.SUCCESS,
         scm = listOf(
           GenericGitRevision(
+            sha1 = "a15p0",
             message = "this is a commit message",
             committer = "keel-user"
           )
@@ -44,7 +49,9 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
           "projectKey" to "spkr",
           "repoSlug" to "keel",
           "author" to "keel-user",
-          "message" to "this is a commit message"
+          "message" to "this is a commit message",
+          "pullRequestNumber" to "111",
+          "pullRequestUrl" to "www.github.com/pr/111"
         )
       )
     )
@@ -71,58 +78,33 @@ class ArtifactMetadataServiceTests : JUnit5Minutests {
             ArtifactMetadata(
               BuildMetadata(
                 id = 1,
-                jobName = "job bla bla",
                 uid = "1234",
                 startedAt = "yesterday",
                 completedAt = "today",
-                jobUrl = "jenkins.com",
+                job = Job(
+                  name = "job bla bla",
+                  link = "jenkins.com"
+                ),
                 number = "1",
-                result = Result.SUCCESS.toString()
+                status = Result.SUCCESS.toString()
               ),
               GitMetadata(
                 commit = "a15p0",
                 author = "keel-user",
-                commitMessage = "this is a commit message",
-                projectName = "spkr",
-                linkToCommit = "",
-                repoName = "keel"
-              )
-            )
-          )
-        }
-      }
-
-      context("with valid commit id and build number") {
-        before {
-          coEvery {
-            buildService.getArtifactMetadata(any(), any())
-          } returns buildsList
-        }
-
-        test("succeeds and converted the results correctly") {
-          val results = runBlocking {
-            artifactMetadataService.getArtifactMetadata("1", "a15p0")
-          }
-
-          expectThat(results).isEqualTo(
-            ArtifactMetadata(
-              BuildMetadata(
-                id = 1,
-                jobName = "job bla bla",
-                uid = "1234",
-                startedAt = "yesterday",
-                completedAt = "today",
-                jobUrl = "jenkins.com",
-                number = "1",
-                result = Result.SUCCESS.toString()
-              ),
-              GitMetadata(
-                commit = "a15p0",
-                author = "keel-user",
-                commitMessage = "this is a commit message",
-                linkToCommit = "",
-                projectName = "spkr",
-                repoName = "keel"
+                repo = Repo(
+                  name = "keel",
+                  link = ""
+                ),
+                pullRequest = PullRequest(
+                  number = "111",
+                  url = "www.github.com/pr/111"
+                ),
+                commitInfo = Commit(
+                  sha = "a15p0",
+                  message = "this is a commit message",
+                  link = ""
+                ),
+                project = "spkr"
               )
             )
           )

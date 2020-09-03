@@ -5,9 +5,13 @@ import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.PullRequest
+import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
@@ -49,20 +53,32 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
     val artifactMetadata = ArtifactMetadata(
       BuildMetadata(
         id = 1,
-        jobName = "job bla bla",
         uid = "1234",
         startedAt = "yesterday",
         completedAt = "today",
-        jobUrl = "jenkins.com",
+        job = Job(
+          name = "job bla bla",
+          link = "enkins.com"
+        ),
         number = "1"
       ),
       GitMetadata(
         commit = "a15p0",
         author = "keel-user",
-        commitMessage = "this is a commit message",
-        linkToCommit = "",
-        projectName = "spkr",
-        repoName = "keel"
+        repo = Repo(
+          name = "keel",
+          link = ""
+        ),
+        pullRequest = PullRequest(
+          number = "111",
+          url = "www.github.com/pr/111"
+        ),
+        commitInfo = Commit(
+          sha = "a15p0",
+          message = "this is a commit message",
+          link = ""
+        ),
+        project = "spkr"
       )
     )
     val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService)

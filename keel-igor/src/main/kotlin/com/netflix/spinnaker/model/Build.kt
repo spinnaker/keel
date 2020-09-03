@@ -19,7 +19,6 @@ data class Build(
    val timestamp: String? = null,
 
   val result: Result? = null,
-//  val artifacts: List<Any>? = null,
   val url: String? = null,
   val id: String? = null,
 

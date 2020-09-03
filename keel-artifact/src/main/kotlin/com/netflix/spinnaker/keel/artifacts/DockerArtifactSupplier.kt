@@ -58,7 +58,17 @@ class DockerArtifactSupplier(
               name = dockerImage.repository,
               type = DOCKER,
               reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
-              version = dockerImage.tag
+              version = dockerImage.tag,
+              metadata = let {
+                if (dockerImage.commitId != null && dockerImage.buildNumber != null) {
+                  mapOf(
+                    "commitId" to dockerImage.commitId,
+                    "buildNumber" to dockerImage.buildNumber
+                  )
+                } else {
+                  emptyMap()
+                }
+              }
             )
           }
       }

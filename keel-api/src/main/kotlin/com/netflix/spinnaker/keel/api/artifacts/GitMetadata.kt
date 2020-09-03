@@ -6,12 +6,25 @@ package com.netflix.spinnaker.keel.api.artifacts
 data class GitMetadata(
   val commit: String, // commit hash, can be short or long sha
   val author: String? = null,
-  val linkToCommit: String? = null,
-  val repoName: String? = null, // the repository name, like "myApp"
-  val projectName: String? = null, // the project name, like SPKR
-  val commitMessage: String? = null,
-  val branchName: String? = null,
-  val pullRequestNumber: String? = null,
-  val pullRequestUrl: String? = null,
-  val repoLink: String? = null
+  val project: String? = null, // the project name, like SPKR
+  val branch: String? = null,
+  val repo: Repo? = null,
+  val pullRequest: PullRequest? = null,
+  val commitInfo: Commit? = null
+)
+
+data class Repo(
+  val name: String? = null,
+  val link: String? = null
+)
+
+data class PullRequest(
+  val number: String? = null,
+  val url: String? = null
+)
+
+data class Commit(
+  val sha: String? = null,
+  val link: String? = null,
+  val message: String? = null
 )

@@ -47,6 +47,17 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       reference = dockerArtifact.reference,
       version = versions.last()
     )
+
+    val latestArtifactWithMetadata = PublishedArtifact(
+      name = dockerArtifact.name,
+      type = dockerArtifact.type,
+      reference = dockerArtifact.reference,
+      version = versions.last(),
+      metadata = mapOf(
+        "buildNumber" to "1",
+        "commitId" to "a15p0"
+      )
+    )
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 
@@ -117,15 +128,23 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         expectThat(dockerArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
       }
+    }
 
-      //TODO[gyardeni]: enable this test once will have docker build number + commit id
-      SKIP - test("returns artifact metadata based on ci provider") {
+    context("DockerArtifactSupplier with metadata") {
+      before {
+        every {
+          artifactMetadataService.getArtifactMetadata("1", "a15p0")
+        } returns artifactMetadata
+      }
+
+       test("returns artifact metadata based on ci provider") {
         val results = runBlocking {
-          dockerArtifactSupplier.getArtifactMetadata(latestArtifact)
+          dockerArtifactSupplier.getArtifactMetadata(latestArtifactWithMetadata)
         }
         expectThat(results)
           .isEqualTo(artifactMetadata)
       }
+
     }
   }
 }
