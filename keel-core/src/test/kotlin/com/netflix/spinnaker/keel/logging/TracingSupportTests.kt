@@ -7,10 +7,12 @@ import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingCo
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.slf4j.MDC
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -77,6 +79,19 @@ class TracingSupportTests : JUnit5Minutests {
         }
       }
 
+      test("propagates X-SPINNAKER-RESOURCE-ID through nested coroutine contexts") {
+        runBlocking {
+          withTracingContext(resource) {
+            launch {
+              withContext(Dispatchers.IO) {
+                expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
+                  .isEqualTo(resource.id)
+              }
+            }
+          }
+        }
+      }
+
       test("does not mix up X-SPINNAKER-RESOURCE-ID between parallel coroutines") {
         val anotherResource = resource()
         val resources = (1..1000).associate { "resource-$it" to resource(id="resource-$it") }
@@ -84,7 +99,7 @@ class TracingSupportTests : JUnit5Minutests {
           GlobalScope.launch {
             withTracingContext(resource) {
               sleep(Random.nextLong(0, 50))
-              println("X-SPINNAKER-RESOURCE-ID: ${MDC.get(X_SPINNAKER_RESOURCE_ID)}")
+              println("[${Thread.currentThread().name}] X-SPINNAKER-RESOURCE-ID: ${MDC.get(X_SPINNAKER_RESOURCE_ID)}")
               expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
                 .isEqualTo(resource.id)
             }
