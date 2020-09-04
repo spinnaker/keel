@@ -7,13 +7,16 @@ import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingCo
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import kotlinx.coroutines.async
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.MDC
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNull
+import java.lang.Thread.sleep
+import kotlin.random.Random
 
 class TracingSupportTests : JUnit5Minutests {
   val resource = resource()
@@ -38,8 +41,8 @@ class TracingSupportTests : JUnit5Minutests {
     context("running with tracing context") {
       test("injects X-SPINNAKER-RESOURCE-ID to MDC in the coroutine context from resource") {
         runBlocking {
-          launch {
-            withTracingContext(resource) {
+          withTracingContext(resource) {
+            launch {
               expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
                 .isEqualTo(resource.id)
             }
@@ -49,8 +52,8 @@ class TracingSupportTests : JUnit5Minutests {
 
       test("injects X-SPINNAKER-RESOURCE-ID to MDC in the coroutine context from exportable") {
         runBlocking {
-          launch {
-            withTracingContext(exportable) {
+          withTracingContext(exportable) {
+            launch {
               expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
                 .isEqualTo(exportable.toResourceId())
             }
@@ -61,8 +64,8 @@ class TracingSupportTests : JUnit5Minutests {
       test("removes X-SPINNAKER-RESOURCE-ID from MDC after block executes") {
         runBlocking {
           MDC.put("foo", "bar")
-          launch {
-            withTracingContext(resource) {
+          withTracingContext(resource) {
+            launch {
               expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
                 .isEqualTo(resource.id)
             }
@@ -75,24 +78,20 @@ class TracingSupportTests : JUnit5Minutests {
       }
 
       test("does not mix up X-SPINNAKER-RESOURCE-ID between parallel coroutines") {
-        runBlocking {
-          val coroutine1 = async {
+        val anotherResource = resource()
+        val resources = (1..1000).associate { "resource-$it" to resource(id="resource-$it") }
+        val coroutines = resources.map { (id, resource) ->
+          GlobalScope.launch {
             withTracingContext(resource) {
+              sleep(Random.nextLong(0, 50))
               println("X-SPINNAKER-RESOURCE-ID: ${MDC.get(X_SPINNAKER_RESOURCE_ID)}")
               expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
                 .isEqualTo(resource.id)
             }
           }
-          val coroutine2 = async {
-            val anotherResource = resource()
-            withTracingContext(anotherResource) {
-              println("X-SPINNAKER-RESOURCE-ID: ${MDC.get(X_SPINNAKER_RESOURCE_ID)}")
-              expectThat(MDC.get(X_SPINNAKER_RESOURCE_ID))
-                .isEqualTo(anotherResource.id)
-            }
-          }
-          coroutine1.await()
-          coroutine2.await()
+        }
+        runBlocking {
+          coroutines.joinAll()
         }
       }
     }
