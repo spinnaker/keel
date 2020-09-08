@@ -11,7 +11,7 @@ sealed class TypedProperty(
 
 data class RootSchema(
   val `$id`: String,
-  val title: String,
+  val title: String?,
   val description: String,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
@@ -23,7 +23,7 @@ data class RootSchema(
 }
 
 data class ObjectSchema(
-  val title: String,
+  val title: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
   val discriminator: OneOf.Discriminator? = null

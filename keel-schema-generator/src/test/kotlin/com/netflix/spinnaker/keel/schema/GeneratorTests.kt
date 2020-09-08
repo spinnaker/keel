@@ -22,6 +22,8 @@ import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
 import strikt.assertions.containsKeys
 import strikt.assertions.doesNotContain
+import strikt.assertions.filterIsInstance
+import strikt.assertions.first
 import strikt.assertions.get
 import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
@@ -612,6 +614,17 @@ internal class GeneratorTests {
     }
 
     @Test
+    fun `title is omitted on allOf elements`() {
+      expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
+        .isA<AllOf>()
+        .get { allOf }
+        .filterIsInstance<ObjectSchema>()
+        .first()
+        .get { title }
+        .isNull()
+    }
+
+    @Test
     fun `the discriminator is based on the annotated property in the base class`() {
       expectThat(schema.discriminator)
         .isNotNull()
@@ -647,8 +660,8 @@ internal class GeneratorTests {
         .containsKey(Foo::bar.name)
     }
   }
-  // TODO: handle objects which should probably ust be an enum
-  // TODO: title should not appear inside an allOf
+  // TODO: handle objects which should probably just be an enum
+  // TODO: types with custom deserialization
 }
 
 inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {

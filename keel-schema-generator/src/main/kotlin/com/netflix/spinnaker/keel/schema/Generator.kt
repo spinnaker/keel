@@ -120,7 +120,7 @@ class Generator(
                         listOf(
                           Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
                           ObjectSchema(
-                            title = name,
+                            title = null,
                             properties = genericProperties
                               .associate {
                                 checkNotNull(it.name) to buildProperty(subType.kotlin.createType())
