@@ -9,9 +9,15 @@ import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.api.artifacts.PullRequest
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.model.Build
-import io.github.resilience4j.retry.annotation.Retry
-import org.slf4j.LoggerFactory
+import io.github.resilience4j.retry.Retry
+import io.github.resilience4j.retry.RetryConfig
+import io.vavr.control.Try
+import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
+import retrofit2.HttpException
+import java.time.Duration
+import java.util.function.Supplier
+
 
 /**
  * Provides functionality to convert build metadata, which is coming from internal service, to artifact metadata (via igor).
@@ -25,20 +31,28 @@ class ArtifactMetadataService(
    * Returns additional metadata about the specified build and commit, if available. This call is configured
    * to auto-retry as it's not on a code path where any external retries would happen.
    */
-  @Retry(name = "getArtifactMetadata", fallbackMethod = "fallback")
   suspend fun getArtifactMetadata(
     buildNumber: String,
     commitId: String
   ): ArtifactMetadata? {
 
-      val builds =
-        buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
+    val retry = Retry.of(
+      "get artifact metadata",
+      RetryConfig.custom<List<Build>?>()
+        .maxAttempts(2)
+        .waitDuration(Duration.ofMillis(100))
+        .retryOnException { e: Throwable? -> e is HttpException }
+        .build()
+    )
+    val buildList =
+      Try.ofSupplier(Retry.decorateSupplier(retry, builds(commitId,buildNumber)))
+        .get()
 
-      if (builds.isNullOrEmpty()) {
-        return null
-      }
+    if (buildList.isNullOrEmpty()) {
+      return null
+    }
 
-      return builds.first().toArtifactMetadata(commitId)
+    return buildList.first().toArtifactMetadata(commitId)
   }
 
   private fun Build.toArtifactMetadata(commitId: String) =
@@ -78,12 +92,12 @@ class ArtifactMetadataService(
     )
 
 
-  // this method will be invoked whenever the retry will fail
-  suspend fun fallback( buildNumber: String, commitId: String, cause: Throwable)
-  : ArtifactMetadata? {
-    log.error("fallback: received an error while calling artifact service for build number $buildNumber and commit id $commitId", cause)
-    throw cause
+
+  private fun builds(commitId: String, buildNumber: String): Supplier<List<Build>?> =
+    Supplier {
+    runBlocking {
+      buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
+    }
   }
 
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
