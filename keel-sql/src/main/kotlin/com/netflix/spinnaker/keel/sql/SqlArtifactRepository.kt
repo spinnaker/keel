@@ -565,7 +565,7 @@ class SqlArtifactRepository(
           .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
           .filter { isOlder(artifact, it, version) }
 
-        log.debug("# of approvedButOld: ${approvedButOld.size}. approvedButOld: $approvedButOld. ${artifact.name}. version: $version. env: $targetEnvironment")
+        log.debug("# of approvedButOld: ${approvedButOld.size}. ${artifact.name}. version: $version. env: $targetEnvironment")
 
         val skippedUpdates = txn
           .update(ENVIRONMENT_ARTIFACT_VERSIONS)
