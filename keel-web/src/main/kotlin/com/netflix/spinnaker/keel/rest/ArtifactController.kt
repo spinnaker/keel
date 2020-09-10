@@ -70,6 +70,7 @@ class ArtifactController(
   ): List<String> =
     repository.artifactVersions(name, type)
 
+  // This endpoint is calling Igor (and then the CI provider) under the covers.
   @GetMapping(
     path = ["/build/{buildNumber}/commit/{commitId}"],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]

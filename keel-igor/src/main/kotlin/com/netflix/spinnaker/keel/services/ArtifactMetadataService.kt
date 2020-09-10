@@ -16,8 +16,6 @@ import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
 import retrofit2.HttpException
 import java.time.Duration
-import java.util.function.Supplier
-
 
 /**
  * Provides functionality to convert build metadata, which is coming from internal service, to artifact metadata (via igor).
@@ -36,17 +34,7 @@ class ArtifactMetadataService(
     commitId: String
   ): ArtifactMetadata? {
 
-    val retry = Retry.of(
-      "get artifact metadata",
-      RetryConfig.custom<List<Build>?>()
-        .maxAttempts(2)
-        .waitDuration(Duration.ofMillis(100))
-        .retryOnException { e: Throwable? -> e is HttpException }
-        .build()
-    )
-    val buildList =
-      Try.ofSupplier(Retry.decorateSupplier(retry, builds(commitId,buildNumber)))
-        .get()
+    val buildList = getArtifactMetadataWithRetries(commitId, buildNumber)
 
     if (buildList.isNullOrEmpty()) {
       return null
@@ -93,11 +81,20 @@ class ArtifactMetadataService(
 
 
 
-  private fun builds(commitId: String, buildNumber: String): Supplier<List<Build>?> =
-    Supplier {
-    runBlocking {
-      buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
-    }
+  private fun getArtifactMetadataWithRetries(commitId: String, buildNumber: String): List<Build>? {
+    val retry = Retry.of(
+      "get artifact metadata",
+      RetryConfig.custom<List<Build>?>()
+        .maxAttempts(3)
+        .waitDuration(Duration.ofMillis(100))
+        .retryOnException { e: Throwable? -> e is HttpException }
+        .build()
+    )
+    return Try.ofSupplier(Retry.decorateSupplier(retry
+    ) {
+      runBlocking {
+        buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
+      }
+    }).get()
   }
-
 }
