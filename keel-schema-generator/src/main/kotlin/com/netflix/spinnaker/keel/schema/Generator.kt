@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.schema
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.netflix.spinnaker.keel.api.schema.Discriminator
+import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
 import java.time.Instant
@@ -25,8 +26,13 @@ import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 
 class Generator(
-  private val extensionRegistry: ExtensionRegistry
+  private val extensionRegistry: ExtensionRegistry,
+  private val options: Options = Options()
 ) {
+
+  data class Options(
+    val nullableAsOneOf: Boolean = false
+  )
 
   /**
    * Contains linked schemas that we find along the way.
@@ -146,6 +152,7 @@ class Generator(
           required = type
             .candidateProperties
             .filter { !it.isOptional }
+            .filter { options.nullableAsOneOf || !it.type.isMarkedNullable }
             .map { checkNotNull(it.name) }
             .toSortedSet(String.CASE_INSENSITIVE_ORDER)
         )
@@ -164,7 +171,8 @@ class Generator(
 
   private val KClass<*>.preferredConstructor: KFunction<Any>
     get() = (
-      constructors.firstOrNull { it.hasAnnotation<JsonCreator>() }
+      constructors.firstOrNull { it.hasAnnotation<Factory>() }
+        ?: constructors.firstOrNull { it.hasAnnotation<JsonCreator>() }
         ?: primaryConstructor
         ?: constructors.firstOrNull()
       ).let {
@@ -194,9 +202,13 @@ class Generator(
    */
   private fun Context.buildProperty(type: KType): Schema =
     when {
-      type.isMarkedNullable -> OneOf(
-        setOf(NullSchema, buildProperty(type.withNullability(false)))
-      )
+      type.isMarkedNullable -> if (options.nullableAsOneOf) {
+        OneOf(
+          setOf(NullSchema, buildProperty(type.withNullability(false)))
+        )
+      } else {
+        buildProperty(type.withNullability(false))
+      }
       type.isEnum -> EnumSchema(type.enumNames)
       type.isString -> StringSchema(format = type.stringFormat)
       type.isBoolean -> BooleanSchema

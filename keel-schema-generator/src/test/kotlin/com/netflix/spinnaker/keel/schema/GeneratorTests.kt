@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.schema.Discriminator
+import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -29,6 +30,7 @@ import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
@@ -40,9 +42,11 @@ import java.time.LocalTime
 
 internal class GeneratorTests {
 
-  abstract class GeneratorTestBase {
+  abstract class GeneratorTestBase(
+    options: Generator.Options = Generator.Options()
+  ) {
     protected val extensionRegistry = DefaultExtensionRegistry(emptyList())
-    private val generator = Generator(extensionRegistry)
+    private val generator = Generator(extensionRegistry, options)
 
     inline fun <reified T : Any> generateSchema() =
       generator
@@ -158,49 +162,68 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    @Nested
+    @DisplayName("with nulls-as-one-of option set")
+    class NullablesAsOneOfOn : GeneratorTestBase(Generator.Options(nullableAsOneOf = true)) {
 
-    @Test
-    fun `nullable object properties are one of null or an object`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableAny.name)
-        .isOneOfNullOr<AnySchema>()
+      val schema = generateSchema<Foo>()
+
+      @Test
+      fun `nullable properties are one of null or the usual type`() {
+        expectThat(schema.properties) {
+          get(Foo::nullableAny.name).isOneOfNullOr<AnySchema>()
+          get(Foo::nullableBoolean.name).isOneOfNullOr<BooleanSchema>()
+          get(Foo::nullableDouble.name).isOneOfNullOr<NumberSchema>()
+          get(Foo::nullableInteger.name).isOneOfNullOr<IntegerSchema>()
+          get(Foo::nullableObject.name).isOneOfNullOr<Reference>()
+          get(Foo::nullableString.name).isOneOfNullOr<StringSchema>()
+        }
+      }
+
+      @Test
+      fun `nullable properties are required`() {
+        expectThat(schema.required)
+          .containsExactlyInAnyOrder(
+            Foo::nullableAny.name,
+            Foo::nullableBoolean.name,
+            Foo::nullableDouble.name,
+            Foo::nullableInteger.name,
+            Foo::nullableObject.name,
+            Foo::nullableString.name
+          )
+      }
     }
 
-    @Test
-    fun `nullable boolean properties are one of null or a boolean`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableBoolean.name)
-        .isOneOfNullOr<BooleanSchema>()
-    }
+    @Nested
+    @DisplayName("with nulls-as-one-of option unset")
+    class NullablesAsOneOfOff : GeneratorTestBase() {
 
-    @Test
-    fun `nullable double properties are one of null or a number`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableDouble.name)
-        .isOneOfNullOr<NumberSchema>()
-    }
+      val schema = generateSchema<Foo>()
 
-    @Test
-    fun `nullable integer properties are one of null or an integer`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableInteger.name)
-        .isOneOfNullOr<IntegerSchema>()
-    }
+      @Test
+      fun `nullable properties are not one-of elements`() {
+        expectThat(schema.properties) {
+          get(Foo::nullableAny.name).isA<AnySchema>()
+          get(Foo::nullableBoolean.name).isA<BooleanSchema>()
+          get(Foo::nullableDouble.name).isA<NumberSchema>()
+          get(Foo::nullableInteger.name).isA<IntegerSchema>()
+          get(Foo::nullableObject.name).isA<Reference>()
+          get(Foo::nullableString.name).isA<StringSchema>()
+        }
+      }
 
-    @Test
-    fun `nullable object properties are one of null or a reference`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableObject.name)
-        .isOneOfNullOr<Reference>()
-
-    }
-
-    @Test
-    fun `nullable string properties are one of null or a string`() {
-      expectThat(schema.properties)
-        .get(Foo::nullableString.name)
-        .isOneOfNullOr<StringSchema>()
+      @Test
+      fun `nullable properties are optional`() {
+        expectThat(schema.required)
+          .doesNotContain(
+            Foo::nullableAny.name,
+            Foo::nullableBoolean.name,
+            Foo::nullableDouble.name,
+            Foo::nullableInteger.name,
+            Foo::nullableObject.name,
+            Foo::nullableString.name
+          )
+      }
     }
   }
 
@@ -660,8 +683,35 @@ internal class GeneratorTests {
         .containsKey(Foo::bar.name)
     }
   }
+
+  @Nested
+  @DisplayName("types with @Factory annotated factories")
+  class FactoryFactories : GeneratorTestBase() {
+    data class Foo(
+      val bar: Bar
+    ) {
+      @Suppress("unused")
+      @Factory
+      constructor(string: String) : this(Bar(string))
+    }
+
+    data class Bar(
+      val string: String
+    )
+
+    val schema = generateSchema<Foo>()
+
+    @Test
+    fun `schema is derived from the annotated constructor rather than the default one`() {
+      expectThat(schema.properties)
+        .containsKey(Bar::string.name)
+        .not()
+        .containsKey(Foo::bar.name)
+    }
+  }
   // TODO: handle objects which should probably just be an enum
   // TODO: types with custom deserialization
+  // TODO: handle @JacksonInject
 }
 
 inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {
