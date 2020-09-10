@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.schema
 
+import com.fasterxml.jackson.annotation.JsonValue
 import java.util.SortedMap
 import java.util.SortedSet
 
@@ -57,7 +58,7 @@ data class ArraySchema(
 
 data class MapSchema(
   override val description: String?,
-  val additionalProperties: Schema
+  val additionalProperties: Either<Schema, Boolean>
 ) : TypedProperty("object")
 
 data class StringSchema(
@@ -91,4 +92,12 @@ data class AllOf(
   val allOf: List<Schema>
 ) : Schema {
   override val description: String? = null
+}
+
+/**
+ * Yes, I really had to implement an either monad to get this all to work.
+ */
+sealed class Either<L, R> {
+  data class Left<L, R>(@JsonValue val value: L) : Either<L, R>()
+  data class Right<L, R>(@JsonValue val value: R) : Either<L, R>()
 }

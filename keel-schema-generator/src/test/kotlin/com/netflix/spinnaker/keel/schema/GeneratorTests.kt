@@ -415,7 +415,8 @@ internal class GeneratorTests {
   class MapProperties : GeneratorTestBase() {
     data class Foo(
       val mapOfStrings: Map<String, String>,
-      val mapOfObjects: Map<String, Bar>
+      val mapOfObjects: Map<String, Bar>,
+      val mapOfAny: Map<String, Any>
     )
 
     data class Bar(
@@ -429,7 +430,7 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::mapOfStrings.name])
         .isA<MapSchema>()
         .get { additionalProperties }
-        .isA<StringSchema>()
+        .isA<Either.Left<StringSchema, *>>()
     }
 
     @Test
@@ -437,9 +438,19 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::mapOfObjects.name])
         .isA<MapSchema>()
         .get { additionalProperties }
-        .isA<Reference>()
-        .get { `$ref` }
+        .isA<Either.Left<Reference, *>>()
+        .get { value.`$ref` }
         .isEqualTo("#/\$defs/${Bar::class.java.simpleName}")
+    }
+
+    @Test
+    fun `map property with any values uses additionalProperties`() {
+      expectThat(schema.properties[Foo::mapOfAny.name])
+        .isA<MapSchema>()
+        .get { additionalProperties }
+        .isA<Either.Right<*, Boolean>>()
+        .get { value }
+        .isTrue()
     }
   }
 

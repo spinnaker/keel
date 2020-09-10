@@ -16,8 +16,6 @@ import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
-import kotlin.reflect.KProperty
-import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeProjection.Companion.invariant
 import kotlin.reflect.full.createType
@@ -261,7 +259,13 @@ class Generator(
       type.isMap -> {
         MapSchema(
           description = description,
-          additionalProperties = buildProperty(type.valueType)
+          additionalProperties = buildProperty(type.valueType).let {
+            if (it is AnySchema) {
+              Either.Right(true)
+            } else {
+              Either.Left(it)
+            }
+          }
         )
       }
       type.jvmErasure == Any::class -> AnySchema(description = description)

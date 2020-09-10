@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.apidocs
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.Locatable
@@ -56,8 +57,10 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
+import strikt.assertions.isTrue
 import strikt.jackson.at
 import strikt.jackson.booleanValue
 import strikt.jackson.findValuesAsText
@@ -400,9 +403,10 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
       }
 
     test("property with type Map<String, Any?> does not restrict the value type to object") {
-      at("/\$defs/SubmittedResource/properties/metadata")
-        .not()
-        .has("additionalProperties")
+      at("/\$defs/SubmittedResource/properties/metadata/additionalProperties")
+        .isA<BooleanNode>()
+        .booleanValue()
+        .isTrue()
     }
   }
 }
