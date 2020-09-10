@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.apidocs
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.Constraint
@@ -61,6 +62,7 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
+import strikt.assertions.one
 import strikt.jackson.at
 import strikt.jackson.booleanValue
 import strikt.jackson.findValuesAsText
@@ -382,11 +384,10 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
     test("IngressPorts are either an enum or an object") {
       at("/\$defs/IngressPorts/oneOf")
         .isArray()
-        .findValuesAsText("\$ref")
-        .containsExactlyInAnyOrder("#/\$defs/AllPorts", "#/\$defs/PortRange")
-      at("/\$defs/AllPorts")
-        .and {
-          path("type").textValue().isEqualTo("string")
+        .one {
+          path("\$ref").textValue().isEqualTo("#/\$defs/PortRange")
+        }
+        .one {
           path("enum").isArray().textValues().containsExactly("ALL")
         }
     }

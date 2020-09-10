@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
+import com.netflix.spinnaker.keel.api.schema.Literal
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -66,7 +67,7 @@ internal class GeneratorTests {
   class SimpleDataClass : GeneratorTestBase() {
     data class Foo(val string: String)
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `documents all properties`() {
@@ -88,7 +89,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `applies correct property types`() {
@@ -112,7 +113,7 @@ internal class GeneratorTests {
       tall, grande, venti
     }
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `applies correct property types`() {
@@ -132,7 +133,7 @@ internal class GeneratorTests {
       val requiredString: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `properties with defaults are optional`() {
@@ -167,7 +168,7 @@ internal class GeneratorTests {
     @DisplayName("with nulls-as-one-of option set")
     class NullablesAsOneOfOn : GeneratorTestBase(Generator.Options(nullableAsOneOf = true)) {
 
-      val schema = generateSchema<Foo>()
+      val schema by lazy { generateSchema<Foo>() }
 
       @Test
       fun `nullable properties are one of null or the usual type`() {
@@ -199,7 +200,7 @@ internal class GeneratorTests {
     @DisplayName("with nulls-as-one-of option unset")
     class NullablesAsOneOfOff : GeneratorTestBase() {
 
-      val schema = generateSchema<Foo>()
+      val schema by lazy { generateSchema<Foo>() }
 
       @Test
       fun `nullable properties are not one-of elements`() {
@@ -235,7 +236,7 @@ internal class GeneratorTests {
       val any: Any
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `any properties are just plain extensible objects`() {
@@ -255,7 +256,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `complex property is defined as a $ref`() {
@@ -292,7 +293,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `nested complex property is defined as a $ref`() {
@@ -334,7 +335,7 @@ internal class GeneratorTests {
       data class Bar2(override val string: String) : Bar()
     }
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `sealed class property is a reference to the base type`() {
@@ -368,7 +369,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @TestFactory
     fun arrayAndListProperties() =
@@ -423,7 +424,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `map property is represented as an object with additional properties according to its value type`() {
@@ -465,7 +466,7 @@ internal class GeneratorTests {
         get() = javaClass.canonicalName
     }
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `properties that are part of the constructor are documented`() {
@@ -489,7 +490,7 @@ internal class GeneratorTests {
   @Nested
   @DisplayName("Java POJOs")
   class JavaPojos : GeneratorTestBase() {
-    val schema = generateSchema<JavaPojo>()
+    val schema by lazy { generateSchema<JavaPojo>() }
 
     @Test
     fun `constructor parameters are documented`() {
@@ -510,7 +511,7 @@ internal class GeneratorTests {
       val duration: Duration
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @TestFactory
     fun dateAndTimeFormattedStringProperties() =
@@ -685,7 +686,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `schema is derived from the annotated constructor rather than the default one`() {
@@ -711,7 +712,7 @@ internal class GeneratorTests {
       val string: String
     )
 
-    val schema = generateSchema<Foo>()
+    val schema by lazy { generateSchema<Foo>() }
 
     @Test
     fun `schema is derived from the annotated constructor rather than the default one`() {
@@ -749,7 +750,8 @@ internal class GeneratorTests {
 
     @Description("base type description")
     interface Fnord {
-      @Discriminator val type: String
+      @Discriminator
+      val type: String
     }
 
     class FnordImpl : Fnord {
@@ -806,7 +808,62 @@ internal class GeneratorTests {
         .isEqualTo("base type description")
     }
   }
-  // TODO: handle objects which should probably just be an enum
+
+  @Nested
+  @DisplayName("properties with @Literal annotation")
+  class LiteralAnnotationOnProperty : GeneratorTestBase() {
+    data class Foo(
+      val bar: Bar
+    )
+
+    @Literal(value = "BAR")
+    object Bar
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @Test
+    fun `literals are represented as enum with a single value`() {
+      expectThat(schema.properties[Foo::bar.name])
+        .isA<EnumSchema>()
+        .get { enum }
+        .containsExactly("BAR")
+    }
+  }
+
+  @Nested
+  @DisplayName("types with @Literal annotation")
+  class LiteralAnnotationOnSubtype : GeneratorTestBase() {
+    data class Foo(
+      val bar: Bar
+    )
+
+    sealed class Bar {
+      @Literal(value = "BAR")
+      object Bar1 : Bar()
+
+      data class Bar2(val string: String) : Bar()
+    }
+
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @Test
+    fun `literals are represented as enum with a single value`() {
+      expectThat(schema.`$defs`[Bar::class.simpleName])
+        .isA<OneOf>()
+        .get { oneOf }
+        .one {
+          isA<EnumSchema>()
+            .get { enum }
+            .containsExactly("BAR")
+        }
+        .one {
+          isA<Reference>()
+            .get { `$ref` }
+            .isEqualTo("#/\$defs/${Bar.Bar2::class.simpleName}")
+        }
+    }
+  }
   // TODO: types with custom deserialization
   // TODO: handle @JacksonInject
 }

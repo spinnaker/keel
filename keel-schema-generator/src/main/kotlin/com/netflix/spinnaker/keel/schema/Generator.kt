@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
+import com.netflix.spinnaker.keel.api.schema.Literal
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
 import java.time.Instant
@@ -73,6 +74,10 @@ class Generator(
    */
   private fun Context.buildSchema(type: KClass<*>): Schema =
     when {
+      type.isSingleton -> EnumSchema(
+        description = type.description,
+        enum = listOf(type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName))
+      )
       type.isSealed ->
         OneOf(
           description = type.description,
@@ -181,7 +186,7 @@ class Generator(
   private val KClass<*>.candidateProperties: List<KParameter>
     get() = when {
       isAbstract -> emptyList()
-      isObject -> emptyList()
+      isSingleton -> emptyList()
       else -> preferredConstructor.parameters
     }
 
@@ -244,6 +249,7 @@ class Generator(
           description = description
         )
       }
+      type.isSingleton -> buildSchema(type.jvmErasure)
       type.isEnum -> EnumSchema(description = description, enum = type.enumNames)
       type.isString -> StringSchema(description = description, format = type.stringFormat)
       type.isBoolean -> BooleanSchema(description = description)
@@ -277,7 +283,7 @@ class Generator(
    *
    * @return a [Reference] to the schema for [type].
    */
-  private fun Context.define(type: KType): Reference =
+  private fun Context.define(type: KType): Schema =
     define(type.jvmErasure)
 
   /**
@@ -285,13 +291,16 @@ class Generator(
    *
    * @return a [Reference] to the schema for [type].
    */
-  private fun Context.define(type: KClass<*>): Reference {
-    val name = checkNotNull(type.simpleName)
-    if (!definitions.containsKey(name)) {
-      definitions[name] = buildSchema(type)
+  private fun Context.define(type: KClass<*>): Schema =
+    if (type.isSingleton) {
+      buildSchema(type)
+    } else {
+      val name = checkNotNull(type.simpleName)
+      if (!definitions.containsKey(name)) {
+        definitions[name] = buildSchema(type)
+      }
+      type.buildRef()
     }
-    return type.buildRef()
-  }
 
   /**
    * Build a `$ref` URL to the schema for this type.
@@ -388,9 +397,15 @@ class Generator(
     get() = findAnnotation<Description>()?.value
 
   /**
+   * Is this type a singleton object?
+   */
+  private val KType.isSingleton: Boolean
+    get() = jvmErasure.isSingleton
+
+  /**
    * Is this class a singleton object?
    */
-  private val KClass<*>.isObject: Boolean
+  private val KClass<*>.isSingleton: Boolean
     get() = objectInstance != null
 
   private val formattedTypes = mapOf(
