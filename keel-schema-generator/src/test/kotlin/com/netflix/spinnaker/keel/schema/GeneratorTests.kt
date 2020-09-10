@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
@@ -707,6 +708,91 @@ internal class GeneratorTests {
         .containsKey(Bar::string.name)
         .not()
         .containsKey(Foo::bar.name)
+    }
+  }
+
+  @Nested
+  @DisplayName("@Description annotated elements")
+  class DescriptionAnnotations : GeneratorTestBase() {
+    @Description("type description")
+    data class Foo(
+      @Description("property description")
+      val string: String,
+      @Description("nullable property description")
+      val nullableString: String?,
+      val bar: Bar,
+      val baz: Baz,
+      val fnord: Fnord
+    )
+
+    @Description("linked type description")
+    data class Bar(
+      val string: String
+    )
+
+    @Description("sealed type description")
+    sealed class Baz {
+      object Baz1 : Baz()
+      object Baz2 : Baz()
+    }
+
+    @Description("base type description")
+    interface Fnord {
+      @Discriminator val type: String
+    }
+
+    class FnordImpl : Fnord {
+      override val type = "fnord"
+    }
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @BeforeEach
+    fun registerSubTypes() {
+      with(extensionRegistry) {
+        register(Fnord::class.java, FnordImpl::class.java, "fnord")
+      }
+    }
+
+    @Test
+    fun `type description is derived from the annotation`() {
+      expectThat(schema.description)
+        .isNotNull()
+        .isEqualTo("type description")
+    }
+
+    @Test
+    fun `linked type description is derived from the annotation`() {
+      expectThat(schema.`$defs`[Bar::class.simpleName]?.description)
+        .isNotNull()
+        .isEqualTo("linked type description")
+    }
+
+    @Test
+    fun `property description is derived from the annotation`() {
+      expectThat(schema.properties[Foo::string.name]?.description)
+        .isNotNull()
+        .isEqualTo("property description")
+    }
+
+    @Test
+    fun `nullable properties can have a description`() {
+      expectThat(schema.properties[Foo::nullableString.name])
+        .isA<StringSchema>()
+        .get { description }
+        .isEqualTo("nullable property description")
+    }
+
+    @Test
+    fun `sealed types can have a description`() {
+      expectThat(schema.`$defs`[Baz::class.simpleName]?.description)
+        .isEqualTo("sealed type description")
+    }
+
+    @Test
+    fun `extension base types can have a description`() {
+      expectThat(schema.`$defs`[Fnord::class.simpleName]?.description)
+        .isEqualTo("base type description")
     }
   }
   // TODO: handle objects which should probably just be an enum

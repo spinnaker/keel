@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
@@ -37,7 +36,6 @@ import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
@@ -50,12 +48,8 @@ import com.netflix.spinnaker.keel.schema.generateSchema
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.titus.TITUS_CLUSTER_V1
 import com.netflix.spinnaker.keel.titus.jackson.KeelTitusApiModule
-import dev.minutest.experimental.SKIP
-import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import io.swagger.v3.core.util.RefUtils.constructRef
-import kotlin.reflect.KClass
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -64,7 +58,6 @@ import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
-import strikt.assertions.isTrue
 import strikt.jackson.at
 import strikt.jackson.booleanValue
 import strikt.jackson.findValuesAsText
@@ -76,6 +69,7 @@ import strikt.jackson.isTextual
 import strikt.jackson.path
 import strikt.jackson.textValue
 import strikt.jackson.textValues
+import kotlin.reflect.KClass
 
 class ApiDocWithNewGeneratorTests : JUnit5Minutests {
 
@@ -363,7 +357,7 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
     }
 
     test("a class annotated with @Description can have a description") {
-      at("/\$defs/SubmittedDeliveryConfig/description")
+      at("/description")
         .isTextual()
     }
 
@@ -373,7 +367,7 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
     }
 
     test("a property annotated with @Description can have a description") {
-      at("/\$defs/SubmittedDeliveryConfig/properties/serviceAccount/description")
+      at("/properties/serviceAccount/description")
         .isTextual()
     }
 

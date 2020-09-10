@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.schema
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
@@ -11,16 +12,21 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
+import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeProjection.Companion.invariant
 import kotlin.reflect.full.createType
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.starProjectedType
 import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
@@ -55,7 +61,7 @@ class Generator(
     return RootSchema(
       `$id` = "http://keel.spinnaker.io/${type.simpleName}",
       title = checkNotNull(type.simpleName),
-      description = "The schema for delivery configs in Keel",
+      description = type.description,
       properties = schema.properties,
       required = schema.required,
       discriminator = schema.discriminator,
@@ -71,11 +77,16 @@ class Generator(
     when {
       type.isSealed ->
         OneOf(
+          description = type.description,
           oneOf = type.sealedSubclasses.map { define(it) }.toSet()
         )
       extensionRegistry.baseTypes().contains(type.java) -> {
         OneOf(
-          oneOf = extensionRegistry.extensionsOf(type.java).map { define(it.value.kotlin) }.toSet(),
+          description = type.description,
+          oneOf = extensionRegistry
+            .extensionsOf(type.java)
+            .map { define(it.value.kotlin) }
+            .toSet(),
           discriminator = OneOf.Discriminator(
             propertyName = type.discriminatorPropertyName,
             mapping = extensionRegistry
@@ -89,6 +100,7 @@ class Generator(
         val invariantTypes = extensionRegistry.extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
         ObjectSchema(
           title = checkNotNull(type.simpleName),
+          description = type.description,
           properties = type
             .candidateProperties
             .filter {
@@ -96,7 +108,7 @@ class Generator(
               it.type.classifier !in type.typeParameters
             }
             .associate {
-              checkNotNull(it.name) to buildProperty(it.type)
+              checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
             },
           required = type
             .candidateProperties
@@ -127,9 +139,14 @@ class Generator(
                           Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
                           ObjectSchema(
                             title = null,
+                            description = null,
                             properties = genericProperties
                               .associate {
-                                checkNotNull(it.name) to buildProperty(subType.kotlin.createType())
+                                checkNotNull(it.name) to buildProperty(
+                                  owner = type.starProjectedType,
+                                  parameter = it,
+                                  type = subType.kotlin.starProjectedType
+                                )
                               },
                             required = genericProperties
                               .filter { !it.isOptional }
@@ -146,8 +163,9 @@ class Generator(
       else ->
         ObjectSchema(
           title = checkNotNull(type.simpleName),
+          description = type.description,
           properties = type.candidateProperties.associate {
-            checkNotNull(it.name) to buildProperty(it.type)
+            checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
           },
           required = type
             .candidateProperties
@@ -191,7 +209,7 @@ class Generator(
       .name
 
   /**
-   * Build the property schema for [type].
+   * Build the property schema for [parameter].
    *
    * - In the case of a nullable property, this is [OneOf] `null` and the non-null type.
    * - In the case of a string, integer, boolean, or enum this is a [TypedProperty].
@@ -200,32 +218,53 @@ class Generator(
    * - Otherwise this is is a [Reference] to the schema for the type, which will be added to this
    * [Context] if not already defined.r
    */
-  private fun Context.buildProperty(type: KType): Schema =
+  private fun Context.buildProperty(
+    owner: KType,
+    parameter: KParameter,
+    type: KType = parameter.type
+  ): Schema =
+    buildProperty(
+      type,
+      owner
+        .jvmErasure
+        .memberProperties.find { it.name == parameter.name } // this is a pretty heinous assumption
+        ?.description
+    )
+
+  private fun Context.buildProperty(type: KType, description: String? = null): Schema =
     when {
       type.isMarkedNullable -> if (options.nullableAsOneOf) {
         OneOf(
-          setOf(NullSchema, buildProperty(type.withNullability(false)))
+          description = description,
+          oneOf = setOf(NullSchema, buildProperty(
+            type = type.withNullability(false),
+          ))
         )
       } else {
-        buildProperty(type.withNullability(false))
+        buildProperty(
+          type = type.withNullability(false),
+          description = description
+        )
       }
-      type.isEnum -> EnumSchema(type.enumNames)
-      type.isString -> StringSchema(format = type.stringFormat)
-      type.isBoolean -> BooleanSchema
-      type.isInteger -> IntegerSchema
-      type.isNumber -> NumberSchema
+      type.isEnum -> EnumSchema(description = description, enum = type.enumNames)
+      type.isString -> StringSchema(description = description, format = type.stringFormat)
+      type.isBoolean -> BooleanSchema(description = description)
+      type.isInteger -> IntegerSchema(description = description)
+      type.isNumber -> NumberSchema(description = description)
       type.isArray -> {
         ArraySchema(
+          description = description,
           items = buildProperty(type.elementType),
           uniqueItems = if (type.isUniqueItems) true else null
         )
       }
       type.isMap -> {
         MapSchema(
+          description = description,
           additionalProperties = buildProperty(type.valueType)
         )
       }
-      type.jvmErasure == Any::class -> AnySchema
+      type.jvmErasure == Any::class -> AnySchema(description = description)
       else -> define(type)
     }
 
@@ -337,6 +376,12 @@ class Generator(
       }
       return checkNotNull(arguments[1].type) { "unhandled generic type: ${arguments[1]}" }
     }
+
+  /**
+   * The description for this element if it has a [Description] annotation.
+   */
+  private val KAnnotatedElement.description: String?
+    get() = findAnnotation<Description>()?.value
 
   /**
    * Is this class a singleton object?
