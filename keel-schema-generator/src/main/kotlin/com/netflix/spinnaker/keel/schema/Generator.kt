@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.api.schema.Literal
+import com.netflix.spinnaker.keel.api.schema.Optional
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import java.time.Duration
 import java.time.Instant
@@ -13,10 +14,12 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
+import java.util.SortedSet
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeProjection.Companion.invariant
 import kotlin.reflect.full.createType
@@ -116,11 +119,7 @@ class Generator(
             .associate {
               checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
             },
-          required = type
-            .candidateProperties
-            .filter { !it.isOptional }
-            .map { checkNotNull(it.name) }
-            .toSortedSet(String.CASE_INSENSITIVE_ORDER),
+          required = type.candidateProperties.toRequiredPropertyNames(),
           discriminator = OneOf.Discriminator(
             propertyName = type.discriminatorPropertyName,
             mapping = invariantTypes
@@ -154,10 +153,7 @@ class Generator(
                                   type = subType.kotlin.starProjectedType
                                 )
                               },
-                            required = genericProperties
-                              .filter { !it.isOptional }
-                              .map { checkNotNull(it.name) }
-                              .toSortedSet(String.CASE_INSENSITIVE_ORDER)
+                            required = genericProperties.toRequiredPropertyNames()
                           )
                         )
                       )
@@ -173,12 +169,7 @@ class Generator(
           properties = type.candidateProperties.associate {
             checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
           },
-          required = type
-            .candidateProperties
-            .filter { !it.isOptional }
-            .filter { options.nullableAsOneOf || !it.type.isMarkedNullable }
-            .map { checkNotNull(it.name) }
-            .toSortedSet(String.CASE_INSENSITIVE_ORDER)
+          required = type.candidateProperties.toRequiredPropertyNames()
         )
     }
 
@@ -233,7 +224,7 @@ class Generator(
       type,
       owner
         .jvmErasure
-        .memberProperties.find { it.name == parameter.name } // this is a pretty heinous assumption
+        .backingPropertyFor(parameter)
         ?.description
     )
 
@@ -410,6 +401,23 @@ class Generator(
    */
   private val KClass<*>.isSingleton: Boolean
     get() = objectInstance != null
+
+  /**
+   * Reduces a list of parameters to the names of those that are required.
+   */
+  private fun Iterable<KParameter>.toRequiredPropertyNames(): SortedSet<String> =
+    asSequence()
+      .filter { !it.isOptional }
+      .filter { !it.hasAnnotation<Optional>() }
+      .filter { options.nullableAsOneOf || !it.type.isMarkedNullable }
+      .map { checkNotNull(it.name) }
+      .toSortedSet(String.CASE_INSENSITIVE_ORDER)
+
+  /**
+   * Tries to get the property that is the assignment target of a constructor parameter.
+   */
+  private fun KClass<*>.backingPropertyFor(param: KParameter): KProperty<*>? =
+    memberProperties.find { it.name == param.name } // this is a pretty heinous assumption
 
   private val formattedTypes = mapOf(
     Duration::class to "duration",

@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
+import com.netflix.spinnaker.keel.api.schema.Optional
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
@@ -42,7 +43,7 @@ import java.time.Duration
 data class TitusClusterSpec(
   override val moniker: Moniker,
   val deployWith: ClusterDeployStrategy = RedBlack(),
-  override val locations: SimpleLocations,
+  @param:Optional override val locations: SimpleLocations,
   private val _defaults: TitusServerGroupSpec,
   val overrides: Map<String, TitusServerGroupSpec> = emptyMap(),
   override val artifactType: ArtifactType? = DOCKER,

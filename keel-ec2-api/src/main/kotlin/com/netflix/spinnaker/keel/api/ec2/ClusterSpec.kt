@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.Health
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.LaunchConfiguration
 import com.netflix.spinnaker.keel.api.schema.Factory
+import com.netflix.spinnaker.keel.api.schema.Optional
 import java.time.Duration
 
 /**
@@ -130,7 +131,7 @@ data class ClusterSpec(
     moniker: Moniker,
     imageProvider: ImageProvider? = null,
     deployWith: ClusterDeployStrategy = RedBlack(),
-    locations: SubnetAwareLocations,
+    @Optional locations: SubnetAwareLocations,
     launchConfiguration: LaunchConfigurationSpec? = null,
     capacity: Capacity? = null,
     dependencies: ClusterDependencies? = null,

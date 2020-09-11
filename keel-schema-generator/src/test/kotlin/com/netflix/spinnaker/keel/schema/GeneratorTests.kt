@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.api.schema.Literal
+import com.netflix.spinnaker.keel.api.schema.Optional
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -898,7 +899,22 @@ internal class GeneratorTests {
         .isEqualTo("custom schema")
     }
   }
-  // TODO: handle @JacksonInject
+
+  @Nested
+  @DisplayName("forced optional properties")
+  class OptionalAnnotations : GeneratorTestBase() {
+    data class Foo(
+      @param:Optional val string: String
+    )
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @Test
+    fun `properties annotated with @Optional are not required even if they normally would be`() {
+      expectThat(schema.required)
+        .doesNotContain(Foo::string.name)
+    }
+  }
 }
 
 inline fun <reified T> Assertion.Builder<Schema?>.isOneOfNullOr() {
