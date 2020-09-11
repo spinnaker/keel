@@ -41,7 +41,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
 
-  fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata)
+  fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata) : Boolean
 
     /**
    * @return Build and Git metadata for a given artifact version

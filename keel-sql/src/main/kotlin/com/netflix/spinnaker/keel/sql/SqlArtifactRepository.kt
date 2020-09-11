@@ -190,21 +190,25 @@ class SqlArtifactRepository(
     } == 1
   }
 
-  override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata) {
+  override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata) : Boolean {
     if (!isRegistered(name, type)) {
       throw NoSuchArtifactException(name, type)
     }
 
-    return sqlRetry.withRetry(WRITE) {
+    val changed =  sqlRetry.withRetry(WRITE) {
       jooq.update(ARTIFACT_VERSIONS)
         .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata.buildMetadata))
         .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata.gitMetadata))
-        .where(ARTIFACT_VERSIONS.NAME.eq(name))
-        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
-        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+
+        .where(
+          ARTIFACT_VERSIONS.NAME.eq(name),
+          ARTIFACT_VERSIONS.TYPE.eq(type),
+          ARTIFACT_VERSIONS.VERSION.contains(version))
         .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
         .execute()
     }
+
+    return changed == 1
   }
 
   override fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata? {
