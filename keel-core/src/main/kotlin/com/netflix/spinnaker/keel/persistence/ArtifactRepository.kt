@@ -1,9 +1,12 @@
 package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
@@ -38,6 +41,15 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
 
+  fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata)
+
+    /**
+   * @return Build and Git metadata for a given artifact version
+   */
+  fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata?
+
+  fun getArtifactGitMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): GitMetadata?
+
   /**
    * Deletes an artifact from a delivery config.
    * Does not remove the registration of an artifact.
@@ -62,6 +74,11 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
     name: String,
     type: ArtifactType
   ): List<String>
+
+  /**
+   * Returns the release status for the specified [version] of the [artifact], if available.
+   */
+  fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus?
 
   /**
    * @return the latest version of [artifact] approved for use in [targetEnvironment]

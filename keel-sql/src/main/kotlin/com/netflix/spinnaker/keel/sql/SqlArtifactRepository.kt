@@ -2,11 +2,15 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
+import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -186,6 +190,55 @@ class SqlArtifactRepository(
     } == 1
   }
 
+  override fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata) {
+    if (!isRegistered(name, type)) {
+      throw NoSuchArtifactException(name, type)
+    }
+
+    return sqlRetry.withRetry(WRITE) {
+      jooq.update(ARTIFACT_VERSIONS)
+        .set(ARTIFACT_VERSIONS.BUILD_METADATA, objectMapper.writeValueAsString(artifactMetadata.buildMetadata))
+        .set(ARTIFACT_VERSIONS.GIT_METADATA, objectMapper.writeValueAsString(artifactMetadata.gitMetadata))
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .execute()
+    }
+  }
+
+  override fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(ARTIFACT_VERSIONS.BUILD_METADATA)
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .fetchOne(ARTIFACT_VERSIONS.BUILD_METADATA)
+        ?.let { metadata ->
+          objectMapper.readValue<BuildMetadata>(metadata)
+        }
+    }
+  }
+
+  override fun getArtifactGitMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): GitMetadata? {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(ARTIFACT_VERSIONS.GIT_METADATA)
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
+        .fetchOne(ARTIFACT_VERSIONS.GIT_METADATA)
+        ?.let { metadata ->
+          objectMapper.readValue<GitMetadata>(metadata)
+        }
+    }
+  }
+
   override fun delete(artifact: DeliveryArtifact) {
     requireNotNull(artifact.deliveryConfigName) { "Error removing artifact - it has no delivery config!" }
     val deliveryConfigId = select(DELIVERY_CONFIG.UID)
@@ -258,6 +311,23 @@ class SqlArtifactRepository(
             versions
           }
         }
+    } else {
+      throw NoSuchArtifactException(artifact)
+    }
+
+  override fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus? =
+    if (isRegistered(artifact.name, artifact.type)) {
+      sqlRetry.withRetry(READ) {
+        jooq
+          .select(ARTIFACT_VERSIONS.RELEASE_STATUS)
+          .from(ARTIFACT_VERSIONS)
+          .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
+          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
+          .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+          .fetchOne(ARTIFACT_VERSIONS.RELEASE_STATUS)
+      }?.let {
+        ArtifactStatus.valueOf(it)
+      }
     } else {
       throw NoSuchArtifactException(artifact)
     }
@@ -459,7 +529,8 @@ class SqlArtifactRepository(
     sqlRetry.withRetry(WRITE) {
       jooq.transaction { config ->
         val txn = DSL.using(config)
-        txn
+        log.debug("markAsSuccessfullyDeployedTo: start transaction. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+        val currentUpdates = txn
           .insertInto(ENVIRONMENT_ARTIFACT_VERSIONS)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, environmentUid)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
@@ -470,8 +541,11 @@ class SqlArtifactRepository(
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, clock.timestamp())
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT.name)
           .execute()
+
+        log.debug("markAsSuccessfullyDeployedTo: # of records marked CURRENT: $currentUpdates. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+
         // update old "CURRENT" to "PREVIOUS
-        txn
+        val previousUpdates = txn
           .update(ENVIRONMENT_ARTIFACT_VERSIONS)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, PREVIOUS.name)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, version)
@@ -481,26 +555,41 @@ class SqlArtifactRepository(
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.ne(version))
           .execute()
+
+        log.debug("markAsSuccessfullyDeployedTo: # of records marked PREVIOUS: $previousUpdates. name: ${artifact.name}. version: $version. env: $targetEnvironment")
         // update any past artifacts that were "APPROVED" to be "SKIPPED"
         // because the new version takes precedence
-        val approvedButOld = txn.select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        val approved = txn.select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
           .from(ENVIRONMENT_ARTIFACT_VERSIONS)
-          .where(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(APPROVED.name))
-          .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
-          .filter { isOlder(artifact, it, version) }
-
-        txn
-          .update(ENVIRONMENT_ARTIFACT_VERSIONS)
-          .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
-          .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, version)
-          .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_AT, clock.timestamp())
           .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(APPROVED.name))
-          .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.`in`(*approvedButOld.toTypedArray()))
-          .execute()
+          .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+
+        log.debug("markAsSuccessfullyDeployedTo: # of records marked APPROVED: ${approved.size}. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+
+        val approvedButOld = approved.filter { isOlder(artifact, it, version) }
+
+        log.debug("markAsSuccessfullyDeployedTo: # of approvedButOld: ${approvedButOld.size}. ${artifact.name}. version: $version. env: $targetEnvironment")
+
+        if(approvedButOld.isNotEmpty()) {
+          val skippedUpdates = txn
+            .update(ENVIRONMENT_ARTIFACT_VERSIONS)
+            .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, SKIPPED.name)
+            .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY, version)
+            .set(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_AT, clock.timestamp())
+            .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
+            .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+            .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(APPROVED.name))
+            .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.`in`(*approvedButOld.toTypedArray()))
+            .execute()
+
+          log.debug("markAsSuccessfullyDeployedTo: # of records marked SKIPPED: $skippedUpdates. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+        }
       }
     }
+
+    log.debug("markAsSuccessfullyDeployedTo complete. name: ${artifact.name}. version: $version. env: $targetEnvironment")
   }
 
   override fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes> {
