@@ -203,7 +203,7 @@ class SqlArtifactRepository(
         .where(
           ARTIFACT_VERSIONS.NAME.eq(name),
           ARTIFACT_VERSIONS.TYPE.eq(type),
-          ARTIFACT_VERSIONS.VERSION.contains(version))
+          ARTIFACT_VERSIONS.VERSION.eq(version).or(ARTIFACT_VERSIONS.VERSION.eq("$name-$version"))
         .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
         .execute()
     }
