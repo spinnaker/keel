@@ -32,9 +32,9 @@ import kotlin.reflect.jvm.jvmErasure
 
 class Generator(
   private val extensionRegistry: ExtensionRegistry,
-  private val options: Options = Options()
+  private val options: Options = Options(),
+  private val schemaCustomizers: Collection<SchemaCustomizer> = emptyList()
 ) {
-
   data class Options(
     val nullableAsOneOf: Boolean = false
   )
@@ -74,6 +74,9 @@ class Generator(
    */
   private fun Context.buildSchema(type: KClass<*>): Schema =
     when {
+      schemaCustomizers.any { it.supports(type) } -> schemaCustomizers
+        .first { it.supports(type) }
+        .buildSchema()
       type.isSingleton -> EnumSchema(
         description = type.description,
         enum = listOf(type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName))

@@ -41,14 +41,18 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlin.reflect.full.starProjectedType
 
 internal class GeneratorTests {
 
   abstract class GeneratorTestBase(
-    options: Generator.Options = Generator.Options()
+    options: Generator.Options = Generator.Options(),
+    schemaCustomizers: Collection<SchemaCustomizer> = emptyList()
   ) {
     protected val extensionRegistry = DefaultExtensionRegistry(emptyList())
-    private val generator = Generator(extensionRegistry, options)
+    private val generator = Generator(extensionRegistry, options, schemaCustomizers)
 
     inline fun <reified T : Any> generateSchema() =
       generator
@@ -864,7 +868,36 @@ internal class GeneratorTests {
         }
     }
   }
-  // TODO: types with custom deserialization
+
+  @Nested
+  @DisplayName("types with custom schemas")
+  class CustomSchemas : GeneratorTestBase(
+    schemaCustomizers = listOf(
+      object : SchemaCustomizer {
+        override fun supports(type: KClass<*>): Boolean = type == Bar::class
+
+        override fun buildSchema(): Schema = StringSchema(description = "custom schema")
+      }
+    )
+  ) {
+    data class Foo(
+      val bar: Bar
+    )
+
+    data class Bar(
+      val string: String
+    )
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @Test
+    fun `custom schema overrides default`() {
+      expectThat(schema.`$defs`[Bar::class.simpleName])
+        .isA<StringSchema>()
+        .get { description }
+        .isEqualTo("custom schema")
+    }
+  }
   // TODO: handle @JacksonInject
 }
 

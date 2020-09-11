@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.apidocs
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.api.Constraint
@@ -46,6 +45,7 @@ import com.netflix.spinnaker.keel.ec2.jackson.KeelEc2ApiModule
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import com.netflix.spinnaker.keel.jackson.KeelApiModule
 import com.netflix.spinnaker.keel.schema.Generator
+import com.netflix.spinnaker.keel.schema.ResourceKindSchemaCustomizer
 import com.netflix.spinnaker.keel.schema.generateSchema
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.titus.TITUS_CLUSTER_V1
@@ -80,7 +80,21 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
 
   val mapper = configuredObjectMapper()
   val extensionRegistry: ExtensionRegistry = DefaultExtensionRegistry(listOf(mapper))
-  val generator = Generator(extensionRegistry)
+  val generator = Generator(
+    extensionRegistry = extensionRegistry,
+    schemaCustomizers = listOf(
+      ResourceKindSchemaCustomizer(
+        listOf(
+          EC2_CLUSTER_V1,
+          EC2_SECURITY_GROUP_V1,
+          EC2_CLASSIC_LOAD_BALANCER_V1,
+          EC2_APPLICATION_LOAD_BALANCER_V1,
+          EC2_APPLICATION_LOAD_BALANCER_V1_1,
+          TITUS_CLUSTER_V1
+        )
+      )
+    )
+  )
 
   val resourceKinds
     get() = extensionRegistry.extensionsOf<ResourceSpec>().keys
@@ -150,7 +164,11 @@ class ApiDocWithNewGeneratorTests : JUnit5Minutests {
 
     test("Does not contain a schema for ResourceKind") {
       at("/\$defs/ResourceKind")
-        .isMissing()
+        .isObject()
+        .get{get("enum")}
+        .isArray()
+        .textValues()
+        .containsExactlyInAnyOrder(resourceKinds)
     }
 
     test("Resource is defined as one of the possible resource sub-types") {
