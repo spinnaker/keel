@@ -95,6 +95,7 @@ val NETFLIX_SEMVER_COMPARATOR: Comparator<String> = object : Comparator<String> 
   private val debComparator = NullSafeComparator(DebianVersionComparator(), true)
 
   private fun String.toVersion(): String? = run {
+    // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
     val appVersion = AppVersion.parseName(this)
     if (appVersion == null) {
       log.warn("Unparseable artifact version \"{}\" encountered", this)
