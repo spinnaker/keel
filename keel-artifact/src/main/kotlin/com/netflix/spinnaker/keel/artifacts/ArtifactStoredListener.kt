@@ -18,12 +18,13 @@ class ArtifactStoredListener(
   @EventListener(ArtifactSaved::class)
   fun onArtifactSaved(event: ArtifactSaved) {
     val artifactSupplier = artifactSuppliers.supporting(event.artifact.type)
-    val artifactMetadata = runBlocking {
-      artifactSupplier.getArtifactMetadata(event.artifact)
-    }
-    if (artifactMetadata != null) {
-      log.debug("storing artifact metadata for name $event.artifact.name and version $event.artifact.version")
-      repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+    runBlocking {
+      val artifactMetadata =  artifactSupplier.getArtifactMetadata(event.artifact)
+      //TODO: check the run blocking thing
+      if (artifactMetadata != null) {
+        log.debug("storing artifact metadata for name $event.artifact.name and version $event.artifact.version")
+        repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+      }
     }
   }
 
