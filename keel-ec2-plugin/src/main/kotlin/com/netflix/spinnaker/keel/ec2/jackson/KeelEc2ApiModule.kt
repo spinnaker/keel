@@ -106,7 +106,6 @@ internal object KeelEc2ApiDeserializers : Deserializers.Base() {
   override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
     when (type.rawClass) {
       ActiveServerGroupImage::class.java -> ActiveServerGroupImageDeserializer()
-//      ClusterSpec::class.java -> ClusterSpecDeserializer()
       ImageProvider::class.java -> ImageProviderDeserializer()
       IngressPorts::class.java -> IngressPortsDeserializer()
       SecurityGroupRule::class.java -> SecurityGroupRuleDeserializer()
