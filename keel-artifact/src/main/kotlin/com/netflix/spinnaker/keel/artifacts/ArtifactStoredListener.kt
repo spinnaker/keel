@@ -19,11 +19,17 @@ class ArtifactStoredListener(
   fun onArtifactSaved(event: ArtifactSaved) {
     val artifactSupplier = artifactSuppliers.supporting(event.artifact.type)
     runBlocking {
-      val artifactMetadata =  artifactSupplier.getArtifactMetadata(event.artifact)
-      //TODO: check the run blocking thing
-      if (artifactMetadata != null) {
-        log.debug("storing artifact metadata for name $event.artifact.name and version $event.artifact.version")
-        repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+      try {
+        val artifactMetadata = artifactSupplier.getArtifactMetadata(event.artifact)
+        //TODO[gyardeni]: remove this statement when done debugging
+        log.debug("received artifact metadata $artifactMetadata from artifactSupplier for name $event.artifact.name and version $event.artifact.version")
+
+        if (artifactMetadata != null) {
+          log.debug("storing artifact metadata for name $event.artifact.name and version $event.artifact.version")
+          repository.updateArtifactMetadata(event.artifact.name, event.artifact.type, event.artifact.version, event.artifactStatus, artifactMetadata)
+        }
+      } catch (ex: Exception) {
+          log.error("Could not fetch artifact metadata for name $event.artifact.name and version $event.artifact.version", ex)
       }
     }
   }
