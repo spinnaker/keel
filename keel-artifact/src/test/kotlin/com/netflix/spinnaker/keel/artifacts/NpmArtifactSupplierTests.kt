@@ -36,13 +36,13 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
       deliveryConfigName = deliveryConfig.name,
       statuses = setOf(CANDIDATE)
     )
-    val versions = listOf("1.0.0-rc", "1.0.0-rc.1", "1.0.0", "1.0.1-5", "1.0.2-h6", "1.0.3-rc-h7.gc0c60369")
+    val versions = listOf("1.0.0-rc", "1.0.0-rc.1", "1.0.0", "1.0.1-5", "1.0.2-h6", "1.0.3-rc-h7.gc0c603")
     val latestArtifact = PublishedArtifact(
       name = npmArtifact.name,
       type = npmArtifact.type,
       reference = npmArtifact.reference,
       version = versions.last(),
-      metadata = mapOf("releaseStatus" to CANDIDATE, "buildNumber" to "7", "commitId" to "gc0c60369")
+      metadata = mapOf("releaseStatus" to CANDIDATE, "buildNumber" to "7", "commitId" to "gc0c603")
     )
     val npmArtifactSupplier = NpmArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
 
@@ -59,7 +59,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         number = "7"
       ),
       GitMetadata(
-        commit = "gc0c60369",
+        commit = "gc0c603",
         author = "keel-user",
         repo = Repo(
           name = "keel",
@@ -70,7 +70,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
           url = "www.github.com/pr/111"
         ),
         commitInfo = Commit(
-          sha = "gc0c60369",
+          sha = "gc0c603",
           message = "this is a commit message",
           link = ""
         ),
@@ -91,7 +91,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
           artifactService.getArtifact(npmArtifact.name, versions.last(), NPM)
         } returns latestArtifact
         every {
-          artifactMetadataService.getArtifactMetadata("7", "gc0c60369")
+          artifactMetadataService.getArtifactMetadata("7", "gc0c603")
         } returns artifactMetadata
       }
 
