@@ -601,6 +601,30 @@ internal class GeneratorTests {
         .hasEntry("string", "#/\$defs/${StringWrapper::class.java.simpleName}")
         .hasEntry("integer", "#/\$defs/${IntegerWrapper::class.java.simpleName}")
     }
+
+    @TestFactory
+    fun `the discriminator property in the sub-type is an enum with a single value`() =
+      mapOf(
+        "string" to StringWrapper::class,
+        "integer" to IntegerWrapper::class
+      )
+        .map { (discriminatorValue, type) ->
+          dynamicTest("the discriminator property of ${type.simpleName} is an enum with the single value \"$discriminatorValue\"") {
+            expectThat(schema.`$defs`[type.simpleName])
+              .isA<ObjectSchema>()
+              .get { properties[Wrapper<*>::type.name] }
+              .isA<EnumSchema>()
+              .get(EnumSchema::enum)
+              .containsExactly(discriminatorValue)
+          }
+
+          dynamicTest("the discriminator property of ${type.simpleName} is required") {
+            expectThat(schema.`$defs`[type.simpleName])
+              .isA<ObjectSchema>()
+              .get(ObjectSchema::required)
+              .contains(Wrapper<*>::type.name)
+          }
+        }
   }
 
   @Nested

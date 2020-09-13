@@ -75,7 +75,7 @@ class Generator(
    * Build a schema for [type]. Any referenced schemas not already defined will be added to
    * the [Context] as they are discovered.
    */
-  private fun Context.buildSchema(type: KClass<*>): Schema =
+  private fun Context.buildSchema(type: KClass<*>, discriminator: Pair<KProperty<String>, String>? = null): Schema =
     when {
       schemaCustomizers.any { it.supports(type) } -> schemaCustomizers
         .first { it.supports(type) }
@@ -94,10 +94,10 @@ class Generator(
           description = type.description,
           oneOf = extensionRegistry
             .extensionsOf(type.java)
-            .map { define(it.value.kotlin) }
+            .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
             .toSet(),
           discriminator = OneOf.Discriminator(
-            propertyName = type.discriminatorPropertyName,
+            propertyName = type.discriminatorProperty.name,
             mapping = extensionRegistry
               .extensionsOf(type.java)
               .mapValues { it.value.kotlin.buildRef().`$ref` }
@@ -121,7 +121,7 @@ class Generator(
             },
           required = type.candidateProperties.toRequiredPropertyNames(),
           discriminator = OneOf.Discriminator(
-            propertyName = type.discriminatorPropertyName,
+            propertyName = type.discriminatorProperty.name,
             mapping = invariantTypes
               .mapValues { it.value.kotlin.buildRef().`$ref` }
               .toSortedMap(String.CASE_INSENSITIVE_ORDER)
@@ -152,8 +152,14 @@ class Generator(
                                   parameter = it,
                                   type = subType.kotlin.starProjectedType
                                 )
-                              },
-                            required = genericProperties.toRequiredPropertyNames()
+                              } + discriminator.toDiscriminatorEnum(),
+                            required = genericProperties.toRequiredPropertyNames().let {
+                              if (discriminator != null) {
+                                (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+                              } else {
+                                it
+                              }
+                            }
                           )
                         )
                       )
@@ -168,9 +174,22 @@ class Generator(
           description = type.description,
           properties = type.candidateProperties.associate {
             checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-          },
-          required = type.candidateProperties.toRequiredPropertyNames()
+          } + discriminator.toDiscriminatorEnum(),
+          required = type.candidateProperties.toRequiredPropertyNames().let {
+            if (discriminator != null) {
+              (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+            } else {
+              it
+            }
+          }
         )
+    }
+
+  private fun Pair<KProperty<String>, String>?.toDiscriminatorEnum() =
+    if (this != null) {
+      mapOf(first.name to EnumSchema(description = null, enum = listOf(second)))
+    } else {
+      emptyMap()
     }
 
   /**
@@ -199,11 +218,10 @@ class Generator(
   /**
    * The name of the property annotated with `@[Discriminator]`
    */
-  private val KClass<*>.discriminatorPropertyName: String
+  private val KClass<*>.discriminatorProperty: KProperty<String>
     get() = checkNotNull(memberProperties.find { it.hasAnnotation<Discriminator>() }) {
       "$simpleName has no property annotated with @Discriminator but is registered as an extension base type"
-    }
-      .name
+    } as KProperty<String>
 
   /**
    * Build the property schema for [parameter].
@@ -285,13 +303,13 @@ class Generator(
    *
    * @return a [Reference] to the schema for [type].
    */
-  private fun Context.define(type: KClass<*>): Schema =
+  private fun Context.define(type: KClass<*>, discriminator: Pair<KProperty<String>, String>? = null): Schema =
     if (type.isSingleton) {
-      buildSchema(type)
+      buildSchema(type, discriminator)
     } else {
       val name = checkNotNull(type.simpleName)
       if (!definitions.containsKey(name)) {
-        definitions[name] = buildSchema(type)
+        definitions[name] = buildSchema(type, discriminator)
       }
       type.buildRef()
     }
