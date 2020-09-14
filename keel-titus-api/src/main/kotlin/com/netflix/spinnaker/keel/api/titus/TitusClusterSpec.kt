@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
+import com.netflix.spinnaker.keel.api.schema.Factory
 import com.netflix.spinnaker.keel.api.schema.Optional
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.docker.DigestProvider
@@ -54,6 +55,45 @@ data class TitusClusterSpec(
   // Once clusters go unhappy, only retry when the diff changes, or if manually unvetoed
   override val unhappyWaitTime: Duration? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SimpleLocations>, UnhappyControl {
+
+  @Factory
+  constructor(
+    moniker: Moniker,
+    deployWith: ClusterDeployStrategy = RedBlack(),
+    locations: SimpleLocations,
+    container: ContainerProvider,
+    capacity: Capacity?,
+    constraints: TitusServerGroup.Constraints?,
+    env: Map<String, String>?,
+    containerAttributes: Map<String, String>?,
+    resources: ResourcesSpec?,
+    iamProfile: String?,
+    entryPoint: String?,
+    capacityGroup: String?,
+    migrationPolicy: TitusServerGroup.MigrationPolicy?,
+    dependencies: ClusterDependencies?,
+    tags: Map<String, String>?,
+    overrides: Map<String, TitusServerGroupSpec> = emptyMap()
+  ) : this(
+    moniker = moniker,
+    deployWith = deployWith,
+    locations = locations,
+    _defaults = TitusServerGroupSpec(
+      capacity = capacity,
+      capacityGroup = capacityGroup,
+      constraints = constraints,
+      dependencies = dependencies,
+      entryPoint = entryPoint,
+      env = env,
+      containerAttributes = containerAttributes,
+      iamProfile = iamProfile,
+      migrationPolicy = migrationPolicy,
+      resources = resources,
+      tags = tags
+    ),
+    overrides = overrides,
+    container = container
+  )
 
   override val id = "${locations.account}:$moniker"
 
