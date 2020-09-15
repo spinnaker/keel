@@ -39,6 +39,11 @@ class Generator(
   private val schemaCustomizers: Collection<SchemaCustomizer> = emptyList()
 ) {
   data class Options(
+    /**
+     * If `true`, Kotlin nullable properties get represented as one of null / whatever the non-null
+     * type is. If `false` nullable properties are treated as optional (because omitting them in the
+     * JSON maps to `null` when Jackson parses it).
+     */
     val nullableAsOneOf: Boolean = false
   )
 
@@ -77,113 +82,156 @@ class Generator(
    */
   private fun Context.buildSchema(type: KClass<*>, discriminator: Pair<KProperty<String>, String>? = null): Schema =
     when {
+      // If we have a schema customizer for this type, just use that
       schemaCustomizers.any { it.supports(type) } -> schemaCustomizers
         .first { it.supports(type) }
         .buildSchema()
-      type.isSingleton -> EnumSchema(
-        description = type.description,
-        enum = listOf(type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName))
-      )
-      type.isSealed ->
-        OneOf(
-          description = type.description,
-          oneOf = type.sealedSubclasses.map { define(it) }.toSet()
-        )
-      extensionRegistry.baseTypes().contains(type.java) -> {
-        OneOf(
-          description = type.description,
-          oneOf = extensionRegistry
-            .extensionsOf(type.java)
-            .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
-            .toSet(),
-          discriminator = OneOf.Discriminator(
-            propertyName = type.discriminatorProperty.name,
-            mapping = extensionRegistry
-              .extensionsOf(type.java)
-              .mapValues { it.value.kotlin.buildRef().`$ref` }
-              .toSortedMap(String.CASE_INSENSITIVE_ORDER)
-          )
-        )
+      type.isSingleton -> buildSchemaForKotlinSingleton(type)
+      type.isSealed -> buildSchemaForSealedClass(type)
+      extensionRegistry.baseTypes().contains(type.java) -> buildSchemaForTypeHierarchy(type)
+      type.typeParameters.isNotEmpty() -> buildSchemaForGenericTypeHierarchy(type, discriminator)
+      // Otherwise this is just a regular object schema
+      else -> buildSchemaForRegularClass(type, discriminator)
+    }
+
+  /**
+   * A regular class is just represented as an [ObjectSchema].
+   *
+   * @param discriminator required if this is a leaf type of a type hierarchy.
+   */
+  private fun Context.buildSchemaForRegularClass(
+    type: KClass<*>,
+    discriminator: Pair<KProperty<String>, String>?
+  ) =
+    ObjectSchema(
+      title = checkNotNull(type.simpleName),
+      description = type.description,
+      properties = type.candidateProperties.associate {
+        checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
+      } + discriminator.toDiscriminatorEnum(),
+      required = type.candidateProperties.toRequiredPropertyNames().let {
+        if (discriminator != null) {
+          (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+        } else {
+          it
+        }
       }
-      type.typeParameters.isNotEmpty() -> {
-        val invariantTypes = extensionRegistry.extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
-        ObjectSchema(
-          title = checkNotNull(type.simpleName),
-          description = type.description,
-          properties = type
-            .candidateProperties
-            .filter {
-              // filter out properties of the generic type as they will be specified in extended types
-              it.type.classifier !in type.typeParameters
-            }
-            .associate {
-              checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-            },
-          required = type.candidateProperties.toRequiredPropertyNames(),
-          discriminator = OneOf.Discriminator(
-            propertyName = type.discriminatorProperty.name,
-            mapping = invariantTypes
-              .mapValues { it.value.kotlin.buildRef().`$ref` }
-              .toSortedMap(String.CASE_INSENSITIVE_ORDER)
-          )
-        )
-          .also {
-            invariantTypes
-              .forEach { (_, subType) ->
-                type.createType(
-                  arguments = listOf(invariant(subType.kotlin.createType()))
-                )
-                  .also { _ ->
-                    val name = "${subType.simpleName}${type.simpleName}"
-                    if (!definitions.containsKey(name)) {
-                      val genericProperties = type.candidateProperties.filter {
-                        it.type.classifier in type.typeParameters
-                      }
-                      definitions[name] = AllOf(
-                        listOf(
-                          Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
-                          ObjectSchema(
-                            title = null,
-                            description = null,
-                            properties = genericProperties
-                              .associate {
-                                checkNotNull(it.name) to buildProperty(
-                                  owner = type.starProjectedType,
-                                  parameter = it,
-                                  type = subType.kotlin.starProjectedType
-                                )
-                              } + discriminator.toDiscriminatorEnum(),
-                            required = genericProperties.toRequiredPropertyNames().let {
-                              if (discriminator != null) {
-                                (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
-                              } else {
-                                it
-                              }
-                            }
-                          )
-                        )
-                      )
-                    }
+    )
+
+  /**
+   * Types that are registered base types in [ExtensionRegistry] are treated as [OneOf] the known
+   * sub-types.
+   */
+  private fun Context.buildSchemaForTypeHierarchy(type: KClass<*>) =
+    OneOf(
+      description = type.description,
+      oneOf = extensionRegistry
+        .extensionsOf(type.java)
+        .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
+        .toSet(),
+      discriminator = OneOf.Discriminator(
+        propertyName = type.discriminatorProperty.name,
+        mapping = extensionRegistry
+          .extensionsOf(type.java)
+          .mapValues { it.value.kotlin.buildRef().`$ref` }
+          .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+      )
+    )
+
+  /**
+   * Base types with a generic parameter are represented as an [ObjectSchema] with the common
+   * properties and a variant for every sub-type of the generic upper bound. Each variant will be
+   * [AllOf] the base type and the generic properties.
+   *
+   * @param discriminator required if this is a leaf type of a type hierarchy.
+   */
+  private fun Context.buildSchemaForGenericTypeHierarchy(
+    type: KClass<*>,
+    discriminator: Pair<KProperty<String>, String>?
+  ): ObjectSchema {
+    val invariantTypes = extensionRegistry
+      .extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
+    return ObjectSchema(
+      title = checkNotNull(type.simpleName),
+      description = type.description,
+      properties = type
+        .candidateProperties
+        .filter {
+          // filter out properties of the generic type as they will be specified in extended types
+          it.type.classifier !in type.typeParameters
+        }
+        .associate {
+          checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
+        },
+      required = type.candidateProperties.toRequiredPropertyNames(),
+      discriminator = OneOf.Discriminator(
+        propertyName = type.discriminatorProperty.name,
+        mapping = invariantTypes
+          .mapValues { it.value.kotlin.buildRef().`$ref` }
+          .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+      )
+    )
+      .also {
+        invariantTypes
+          .forEach { (_, subType) ->
+            type.createType(
+              arguments = listOf(invariant(subType.kotlin.createType()))
+            )
+              .also { _ ->
+                val name = "${subType.simpleName}${type.simpleName}"
+                if (!definitions.containsKey(name)) {
+                  val genericProperties = type.candidateProperties.filter {
+                    it.type.classifier in type.typeParameters
                   }
+                  definitions[name] = AllOf(
+                    listOf(
+                      // reference to the base type
+                      Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
+                      // any generic properties of the base type with the invariant type applied
+                      ObjectSchema(
+                        title = null,
+                        description = null,
+                        properties = genericProperties
+                          .associate {
+                            checkNotNull(it.name) to buildProperty(
+                              owner = type.starProjectedType,
+                              parameter = it,
+                              type = subType.kotlin.starProjectedType
+                            )
+                          } + discriminator.toDiscriminatorEnum(),
+                        required = genericProperties.toRequiredPropertyNames().let {
+                          if (discriminator != null) {
+                            (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
+                          } else {
+                            it
+                          }
+                        }
+                      )
+                    )
+                  )
+                }
               }
           }
       }
-      else ->
-        ObjectSchema(
-          title = checkNotNull(type.simpleName),
-          description = type.description,
-          properties = type.candidateProperties.associate {
-            checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-          } + discriminator.toDiscriminatorEnum(),
-          required = type.candidateProperties.toRequiredPropertyNames().let {
-            if (discriminator != null) {
-              (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
-            } else {
-              it
-            }
-          }
-        )
-    }
+  }
+
+  /**
+   * Kotlin singleton objects are represented as a single-value enum.
+   */
+  private fun buildSchemaForKotlinSingleton(type: KClass<*>) =
+    EnumSchema(
+      description = type.description,
+      enum = listOf(type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName))
+    )
+
+  /**
+   * The root of a sealed class hierarchy is represented as [OneOf] the sub-type schemas.
+   */
+  private fun Context.buildSchemaForSealedClass(type: KClass<*>) =
+    OneOf(
+      description = type.description,
+      oneOf = type.sealedSubclasses.map { define(it) }.toSet()
+    )
 
   private fun Pair<KProperty<String>, String>?.toDiscriminatorEnum() =
     if (this != null) {
