@@ -317,7 +317,10 @@ class Generator(
         .first { it.supports(type.jvmErasure) }
         .buildSchema()
       type.isSingleton -> buildSchema(type.jvmErasure)
-      type.isEnum -> EnumSchema(description = description, enum = type.enumNames)
+      type.isEnum -> EnumSchema(
+        description = description,
+        enum = type.enumNames
+      )
       type.isString -> StringSchema(description = description, format = type.stringFormat)
       type.isBoolean -> BooleanSchema(description = description)
       type.isInteger -> IntegerSchema(description = description)
