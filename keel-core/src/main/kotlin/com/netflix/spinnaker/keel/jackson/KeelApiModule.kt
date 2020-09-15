@@ -43,13 +43,6 @@ import com.netflix.spinnaker.keel.jackson.mixins.ResourceMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ResourceSpecMixin
 import com.netflix.spinnaker.keel.jackson.mixins.StaggeredRegionMixin
 import com.netflix.spinnaker.keel.jackson.mixins.SubnetAwareRegionSpecMixin
-import kotlin.reflect.full.hasAnnotation
-import kotlin.reflect.jvm.kotlinFunction
-import com.netflix.spinnaker.keel.api.schema.Factory
-import com.fasterxml.jackson.databind.introspect.Annotated
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.PROPERTIES
 
 fun ObjectMapper.registerKeelApiModule(): ObjectMapper = registerModule(KeelApiModule)
 
@@ -70,14 +63,7 @@ object KeelApiModule : SimpleModule("Keel API") {
       setMixInAnnotations<SubnetAwareRegionSpec, SubnetAwareRegionSpecMixin>()
       setMixInAnnotations<Resource<*>, ResourceMixin>()
       setMixInAnnotations<ResourceSpec, ResourceSpecMixin>()
-      insertAnnotationIntrospector(object : NopAnnotationIntrospector() {
-        override fun findCreatorAnnotation(config: MapperConfig<*>, a: Annotated): JsonCreator.Mode? =
-          when {
-            a.hasAnnotation(Factory::class.java) -> PROPERTIES
-            a.rawType.constructors.any { it.isAnnotationPresent(Factory::class.java) } -> DISABLED
-            else -> super.findCreatorAnnotation(config, a)
-          }
-      })
+      insertAnnotationIntrospector(FactoryAnnotationIntrospector())
     }
   }
 }
