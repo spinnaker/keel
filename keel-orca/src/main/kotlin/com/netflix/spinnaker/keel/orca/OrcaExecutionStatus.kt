@@ -27,6 +27,7 @@ enum class OrcaExecutionStatus {
   CANCELED,
   REDIRECT,
   STOPPED,
+  BUFFERED,
   SKIPPED;
 
   fun isFailure() = listOf(TERMINAL, FAILED_CONTINUE, STOPPED, CANCELED).contains(this)
