@@ -17,11 +17,11 @@
  */
 package com.netflix.spinnaker.keel.core
 
-import com.netflix.frigga.ami.AppVersion
-import com.netflix.rocket.semver.shaded.NetflixVersionComparator
+import com.netflix.rocket.semver.shaded.DebianVersionComparator
 import com.netflix.spinnaker.keel.api.artifacts.SortType.INCREASING
 import com.netflix.spinnaker.keel.api.artifacts.SortType.SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
+import com.netflix.spinnaker.keel.artifacts.NetflixSemVerVersioningStrategy
 import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import net.swiftzer.semver.SemVer
 import org.slf4j.LoggerFactory
@@ -92,15 +92,15 @@ val NETFLIX_SEMVER_COMPARATOR: Comparator<String> = object : Comparator<String> 
   override fun compare(s1: String, s2: String) =
     debComparator.compare(s2.toVersion(), s1.toVersion())
 
-  private val debComparator = NullSafeComparator(NetflixVersionComparator(), true)
+  private val debComparator = NullSafeComparator(DebianVersionComparator(), true)
 
   private fun String.toVersion(): String? = run {
-    val appVersion = AppVersion.parseName(this)
+    val appVersion = NetflixSemVerVersioningStrategy.extractVersion(this)
     if (appVersion == null) {
-      log.warn("Unparseable artifact version \"{}\" encountered", this)
+      log.warn("Unparseable artifact version \"{}\" encountered. Sorting results will be unpredictable.", this)
       null
     } else {
-      removePrefix(appVersion.packageName).removePrefix("-")
+      appVersion
     }
   }
 
