@@ -113,7 +113,9 @@ subprojects {
         "com.squareup.okhttp3:okhttp-urlconnection:$okHttpVersion",
         "com.squareup.okhttp3:okhttp-sse:$okHttpVersion",
         "com.squareup.okhttp3:mockwebserver:$okHttpVersion",
-        "com.squareup.okhttp3:logging-interceptor:$okHttpVersion")
+        "com.squareup.okhttp3:logging-interceptor:$okHttpVersion",
+        "io.github.resilience4j:resilience4j-kotlin:1.5.0",
+        "io.github.resilience4j:resilience4j-retry:1.5.0")
     }
   }
 }

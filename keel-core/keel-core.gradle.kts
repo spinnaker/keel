@@ -37,6 +37,9 @@ dependencies {
 
   implementation("org.springframework:spring-tx")
 
+  implementation ("io.github.resilience4j:resilience4j-kotlin:1.5.0")
+  implementation ("io.github.resilience4j:resilience4j-retry:1.5.0")
+
   testImplementation(project(":keel-test"))
   testImplementation(project(":keel-core-test"))
   testImplementation("io.strikt:strikt-jackson")
