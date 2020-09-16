@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 
 /**
- * A [VersioningStrategy] that for Debian packages..
+ * A [VersioningStrategy] for Debian packages.
  */
 object DebianVersioningStrategy : VersioningStrategy {
   override val type: String = "debian"
