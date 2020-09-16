@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 
 /**
- * A [VersioningStrategy] that for NPM packages.
+ * A [VersioningStrategy] for NPM packages.
  */
 object NpmVersioningStrategy : VersioningStrategy {
   override val type: String = "npm"
