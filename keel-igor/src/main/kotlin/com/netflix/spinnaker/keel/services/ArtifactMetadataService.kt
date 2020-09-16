@@ -89,7 +89,6 @@ class ArtifactMetadataService(
 
 
   private suspend fun getArtifactMetadataWithRetries(commitId: String, buildNumber: String): List<Build>? {
-
     val retry = Retry.of(
       "get artifact metadata",
       RetryConfig.custom<List<Build>?>()
@@ -99,11 +98,11 @@ class ArtifactMetadataService(
         .build()
     )
 
-    val function = retry.decorateSuspendFunction {
+    //decorate the suspended function and execute it
+    return retry.decorateSuspendFunction {
       buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
-    }
+    } ()
 
-    return function()
   }
 
 
