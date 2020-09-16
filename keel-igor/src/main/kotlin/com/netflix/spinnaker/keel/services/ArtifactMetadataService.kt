@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PullRequest
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.model.Build
 import io.github.resilience4j.kotlin.retry.decorateSuspendFunction
+import io.github.resilience4j.kotlin.retry.executeSuspendFunction
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import org.slf4j.LoggerFactory
@@ -98,10 +99,9 @@ class ArtifactMetadataService(
         .build()
     )
 
-    //decorate the suspended function and execute it
-    return retry.decorateSuspendFunction {
+    return retry.executeSuspendFunction {
       buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
-    } ()
+    }
 
   }
 
