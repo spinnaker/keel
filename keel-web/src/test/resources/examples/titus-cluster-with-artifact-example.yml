@@ -5,7 +5,7 @@ artifacts:
 - name: fnord
   type: docker
   reference: fnord
-  tagVersionStrategy: branch_job_commit_by_job
+  tagVersionStrategy: branch-job-commit-by-job
 environments:
 - name: test
   locations:
