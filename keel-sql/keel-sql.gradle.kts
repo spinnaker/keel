@@ -80,10 +80,10 @@ tasks.getByName<LiquibaseTask>("liquibaseUpdate") {
   doFirst {
     if (!buildingInDocker) {
       exec {
-        commandLine("sh", "-c", "for PS in \$(docker ps -q --filter name=mysqlJooq); do docker stop \$PS; done")
+        commandLine("sh", "-c", "docker stop mysqlJooq >/dev/null 2>&1 || true")
       }
       exec {
-        commandLine("sh", "-c", "docker run --name mysqlJooq --health-cmd='mysqladmin ping -s' -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:5.7; while STATUS=\$(docker inspect --format \"{{.State.Health.Status}}\" mysqlJooq); [ \$STATUS != \"healthy\" ]; do if [ \$STATUS = \"unhealthy\" ]; then echo \"Docker failed to start\"; exit -1; fi; sleep 1; done")
+        commandLine("sh", "-c", "docker run --name mysqlJooq --health-cmd='mysqladmin ping -s' -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:5.7 >/dev/null 2>&1; while STATUS=\$(docker inspect --format \"{{.State.Health.Status}}\" mysqlJooq); [ \$STATUS != \"healthy\" ]; do if [ \$STATUS = \"unhealthy\" ]; then echo \"Docker failed to start\"; exit -1; fi; sleep 1; done")
       }
     }
   }
@@ -107,7 +107,7 @@ tasks.register("jooqGenerate") {
     }
     if (!buildingInDocker) {
       exec {
-        commandLine("sh", "-c", "for PS in \$(docker ps -q --filter name=mysqlJooq); do docker stop \$PS; done")
+        commandLine("sh", "-c", "docker stop mysqlJooq >/dev/null 2>&1 || true")
       }
     }
   }
