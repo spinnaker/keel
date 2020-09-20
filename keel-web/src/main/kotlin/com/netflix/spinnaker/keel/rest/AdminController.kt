@@ -63,9 +63,9 @@ class AdminController(
   }
 
   //This endpoint will update old artifact version records with their metadata, if exists, by type [deb/docker/npm].
-  //Please note: it's an admin endpoint and is not intent to be used more than once per environment for now.
+  //Please note: this is an admin endpoint and is not intent to be used more than once per environment for now.
   @PostMapping(
-    path = ["/backfillArtifacts/{type}"]
+    path = ["/artifacts/{type}/metadata/backfill"]
   )
   fun backfillOldArtifactVersions(
     @PathVariable("type") type: String

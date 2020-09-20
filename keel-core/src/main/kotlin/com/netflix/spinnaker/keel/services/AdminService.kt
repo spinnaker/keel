@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactSaved
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -79,17 +80,18 @@ class AdminService(
         val status = repository.getReleaseStatus(artifact, version)
         //don't update if metadata is already exists
         if (repository.getArtifactBuildMetadata(artifact.name, type, version, status) == null) {
-          runBlocking {
-            try {
-              //3. for each version, get information commit and build number from artifact supplier
-              val publishedArtifact = artifactSupplier.getArtifactByVersion(artifact, version)
-              //4. send an ArtifactSaved event, which is responsible for getting artifact metadata and storing it
-              if (publishedArtifact != null) {
-                publisher.publishEvent(ArtifactSaved(publishedArtifact, status))
+            runBlocking {
+              launch {
+              try {
+                //3. for each version, get information commit and build number from artifact supplier
+                val publishedArtifact = artifactSupplier.getArtifactByVersion(artifact, version)
+                //4. send an ArtifactSaved event, which is responsible for getting artifact metadata and storing it
+                if (publishedArtifact != null) {
+                  publisher.publishEvent(ArtifactSaved(publishedArtifact, status))
+                }
+              } catch (ex: Exception) {
+                log.error("error trying to get artifact by version or its metadata for artifact ${artifact.name} and version $version", ex)
               }
-            } catch (ex: Exception) {
-              log.error("error has accrued while trying to get artifact by version or it's metadata for artifact ${artifact.name}" +
-                "version $version", ex)
             }
           }
         }
