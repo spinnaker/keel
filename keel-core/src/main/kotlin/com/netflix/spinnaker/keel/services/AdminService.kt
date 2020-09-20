@@ -90,7 +90,7 @@ class AdminService(
                   publisher.publishEvent(ArtifactSaved(publishedArtifact, status))
                 }
               } catch (ex: Exception) {
-                log.error("error trying to get artifact by version or its metadata for artifact ${artifact.name} and version $version", ex)
+                log.error("error trying to get artifact by version or its metadata for artifact ${artifact.name}, and version $version", ex)
               }
             }
           }
