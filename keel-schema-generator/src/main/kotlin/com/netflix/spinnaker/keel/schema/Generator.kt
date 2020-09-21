@@ -155,19 +155,23 @@ class Generator(
   ): ObjectSchema {
     val invariantTypes = extensionRegistry
       .extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
+    val baseProperties = type
+      .candidateProperties
+      .filter {
+        // filter out properties of the generic type as they will be specified in extended types
+        it.type.classifier !in type.typeParameters
+      }
+      .filter {
+        // the discriminator property should appear only at the sub-level where it is restricted to a single value
+        it.name != type.discriminatorProperty.name
+      }
     return ObjectSchema(
       title = checkNotNull(type.simpleName),
       description = type.description,
-      properties = type
-        .candidateProperties
-        .filter {
-          // filter out properties of the generic type as they will be specified in extended types
-          it.type.classifier !in type.typeParameters
-        }
-        .associate {
-          checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-        },
-      required = type.candidateProperties.toRequiredPropertyNames(),
+      properties = baseProperties.associate {
+        checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
+      },
+      required = baseProperties.toRequiredPropertyNames(),
       discriminator = OneOf.Discriminator(
         propertyName = type.discriminatorProperty.name,
         mapping = invariantTypes
@@ -177,7 +181,7 @@ class Generator(
     )
       .also {
         invariantTypes
-          .forEach { (_, subType) ->
+          .forEach { (discriminatorValue, subType) ->
             type.createType(
               arguments = listOf(invariant(subType.kotlin.createType()))
             )
@@ -202,14 +206,13 @@ class Generator(
                               parameter = it,
                               type = subType.kotlin.starProjectedType
                             )
-                          } + discriminator.toDiscriminatorEnum(),
-                        required = genericProperties.toRequiredPropertyNames().let {
-                          if (discriminator != null) {
-                            (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
-                          } else {
-                            it
-                          }
-                        }
+                          } + (type.discriminatorProperty to discriminatorValue).toDiscriminatorEnum(),
+                        required = (
+                          genericProperties.toRequiredPropertyNames()
+                            // we can assume the discriminator property is required
+                            + type.discriminatorProperty.name
+                          )
+                          .toSortedSet(String.CASE_INSENSITIVE_ORDER)
                       )
                     )
                   )
@@ -521,10 +524,10 @@ class Generator(
   private val KType.stringFormat: String?
     get() = formattedTypes[jvmErasure]
 
-  private val KType.hasCustomizer:Boolean
+  private val KType.hasCustomizer: Boolean
     get() = jvmErasure.hasCustomizer
 
-  private val KClass<*>.hasCustomizer:Boolean
+  private val KClass<*>.hasCustomizer: Boolean
     get() = schemaCustomizers.any { it.supports(this) }
 
 }

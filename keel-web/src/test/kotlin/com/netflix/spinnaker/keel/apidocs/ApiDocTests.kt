@@ -109,11 +109,8 @@ class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var extensionRegistry: ExtensionRegistry
 
-  val resourceKinds
-    get() = extensionRegistry.extensionsOf<ResourceSpec>().keys
-
   val resourceSpecTypes
-    get() = extensionRegistry.extensionsOf<ResourceSpec>().values.toList()
+    get() = extensionRegistry.extensionsOf<ResourceSpec>()
 
   val constraintTypes
     get() = extensionRegistry.extensionsOf<Constraint>().values.toList()
@@ -143,11 +140,7 @@ class ApiDocTests : JUnit5Minutests {
 
     test("Does not contain a schema for ResourceKind") {
       at("/\$defs/ResourceKind")
-        .isObject()
-        .get{get("enum")}
-        .isArray()
-        .textValues()
-        .containsExactlyInAnyOrder(resourceKinds)
+        .isMissing()
     }
 
     test("Resource is defined as one of the possible resource sub-types") {
@@ -162,6 +155,7 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     resourceSpecTypes
+      .values
       .map(Class<*>::getSimpleName)
       .forEach { specSubType ->
         test("contains a parameterized version of schema for SubmittedResource with a spec of $specSubType") {
@@ -174,18 +168,25 @@ class ApiDocTests : JUnit5Minutests {
       }
 
     resourceSpecTypes
-      .map(Class<*>::getSimpleName)
-      .forEach { type ->
-        test("spec property of Resource subtype $type is required") {
-          at("/\$defs/${type}SubmittedResource/allOf/1/required")
-            .isArray()
-            .textValues()
-            .containsExactly("spec")
-        }
-
+      .mapValues { it.value.simpleName }
+      .forEach { (kind, type) ->
         test("ResourceSpec sub-type $type has its own schema") {
           at("/\$defs/$type")
             .isObject()
+        }
+
+        test("kind and spec properties of Resource subtype $type are required") {
+          at("/\$defs/${type}SubmittedResource/allOf/1/required")
+            .isArray()
+            .textValues()
+            .containsExactlyInAnyOrder("kind", "spec")
+        }
+
+        test("resource sub-type $type has a unique kind enum") {
+          at("/\$defs/${type}SubmittedResource/allOf/1/properties/kind/enum")
+            .isArray()
+            .textValues()
+            .containsExactly(kind)
         }
       }
 
@@ -305,10 +306,10 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     test("data class parameters without default values are required") {
-      at("/\$defs/SubmittedResource/required")
+      at("/\$defs/ClusterSpecSubmittedResource/allOf/1/required")
         .isArray()
         .textValues()
-        .contains("kind")
+        .containsExactlyInAnyOrder("kind", "spec")
     }
 
     test("data class parameters with default values are not required") {
@@ -388,6 +389,7 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     resourceSpecTypes
+      .values
       .filter { Locatable::class.java.isAssignableFrom(it) }
       .map(Class<*>::getSimpleName)
       .forEach { locatableType ->

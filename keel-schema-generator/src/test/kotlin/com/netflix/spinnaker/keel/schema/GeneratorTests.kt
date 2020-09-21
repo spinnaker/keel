@@ -672,11 +672,10 @@ internal class GeneratorTests {
 
     @Test
     fun `base definition contains only common properties`() {
-      expectThat(schema.properties.keys)
-        .containsExactlyInAnyOrder(
-          Foo<*>::normalProperty.name,
-          Foo<*>::type.name
-        )
+      expectThat(schema) {
+        get { properties.keys }.containsExactly(Foo<*>::normalProperty.name)
+        get { required }.containsExactly(Foo<*>::normalProperty.name)
+      }
     }
 
     @Test
@@ -688,14 +687,46 @@ internal class GeneratorTests {
         )
     }
 
-    @Test
-    fun `generic sub-types contain all of the base type properties and their own`() {
-      expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
-        .isA<AllOf>()
-        .get { allOf }
-        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Foo::class.java.simpleName}" }
-        .one { isA<ObjectSchema>().get { properties.keys }.containsExactly(Foo<*>::genericProperty.name) }
-    }
+    @TestFactory
+    fun genericSubTypes() =
+      listOf(Bar::class.java, Baz::class.java)
+        .flatMap { subType ->
+          val subTypeName = "${subType.simpleName}${Foo::class.java.simpleName}"
+
+          listOf(
+            dynamicTest("generic sub-type $subTypeName contains all of the base type properties") {
+              expectThat(schema.`$defs`[subTypeName])
+                .isA<AllOf>()
+                .get { allOf }
+                .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Foo::class.java.simpleName}" }
+            },
+
+            dynamicTest("generic sub-type $subTypeName contains the generic properties and discriminator") {
+              expectThat(schema.`$defs`[subTypeName])
+                .isA<AllOf>()
+                .get { allOf }
+                .one {
+                  isA<ObjectSchema>().get { properties.keys }
+                    .containsExactlyInAnyOrder(
+                      Foo<*>::type.name,
+                      Foo<*>::genericProperty.name,
+                    )
+                }
+            },
+
+            dynamicTest("generic sub-type discriminator in $subTypeName is a single value enums") {
+              expectThat(schema.`$defs`[subTypeName])
+                .isA<AllOf>()
+                .get { allOf }
+                .filterIsInstance<ObjectSchema>()
+                .first()
+                .get { properties[Foo<*>::type.name] }
+                .isA<EnumSchema>()
+                .get { enum }
+                .containsExactly(subType.simpleName.toLowerCase())
+            }
+          )
+        }
 
     @Test
     fun `title is omitted on allOf elements`() {
