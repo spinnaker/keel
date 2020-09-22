@@ -131,7 +131,7 @@ class Generator(
         .extensionsOf(type.java)
         .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
         .toSet()
-      )
+    )
 
   /**
    * Base types with a generic parameter are represented as an [ObjectSchema] with the common
@@ -168,9 +168,7 @@ class Generator(
       allOf = invariantTypes.map { (discriminatorValue, subType) ->
         ConditionalSubschema(
           `if` = Condition(
-            properties = mapOf(
-              discriminatorName to ConstSchema(const = discriminatorValue, description = null)
-            )
+            properties = (type.discriminatorProperty to discriminatorValue).toDiscriminatorConst()
           ),
           then = Subschema(
             properties = genericProperties.associate {
@@ -201,6 +199,11 @@ class Generator(
       oneOf = type.sealedSubclasses.map { define(it) }.toSet()
     )
 
+  /**
+   * If the receiver is non-null, returns a map whose key is the discriminator property name, and
+   * whose value is the [ConstSchema] representing the value for the sub-type.
+   * If the receiver is null, returns an empty map.
+   */
   private fun Pair<KProperty<String>, String>?.toDiscriminatorConst() =
     if (this != null) {
       mapOf(first.name to ConstSchema(description = null, const = second))
@@ -219,6 +222,10 @@ class Generator(
       else -> preferredConstructor.parameters
     }
 
+  /**
+   * Heuristic to find the best constructor to use to find properties required in order to
+   * deserialize an instance of the class.
+   */
   private val KClass<*>.preferredConstructor: KFunction<Any>
     get() = (
       constructors.firstOrNull { it.hasAnnotation<Factory>() }
