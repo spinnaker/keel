@@ -19,6 +19,7 @@ data class RootSchema(
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
   val discriminator: OneOf.Discriminator? = null,
+  val allOf: List<ConditionalSubschema>? = null,
   val `$defs`: SortedMap<String, Schema>
 ) {
   @Suppress("unused", "PropertyName")
@@ -31,7 +32,8 @@ data class ObjectSchema(
   override val description: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
-  val discriminator: OneOf.Discriminator? = null
+  val discriminator: OneOf.Discriminator? = null,
+  val allOf: List<ConditionalSubschema>? = null
 ) : TypedProperty("object")
 
 object NullSchema : TypedProperty("null") {
@@ -71,6 +73,11 @@ data class EnumSchema(
   val enum: List<String>
 ) : Schema
 
+data class ConstSchema(
+  override val description: String?,
+  val const: String
+) : Schema
+
 data class Reference(
   val `$ref`: String
 ) : Schema {
@@ -93,6 +100,20 @@ data class AllOf(
 ) : Schema {
   override val description: String? = null
 }
+
+data class ConditionalSubschema(
+  val `if`: Condition,
+  val then: Subschema
+)
+
+data class Condition(
+  val properties: Map<String, ConstSchema>
+)
+
+data class Subschema(
+  val properties: Map<String, Schema>,
+  val required: SortedSet<String> = emptySet<String>().toSortedSet()
+)
 
 /**
  * Yes, I really had to implement an either monad to get this all to work.

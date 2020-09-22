@@ -76,6 +76,7 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
+import strikt.assertions.map
 import strikt.assertions.one
 import strikt.jackson.at
 import strikt.jackson.booleanValue
@@ -143,50 +144,41 @@ class ApiDocTests : JUnit5Minutests {
         .isMissing()
     }
 
-    test("Resource is defined as one of the possible resource sub-types") {
-      at("/\$defs/SubmittedResource/discriminator/mapping")
-        .isObject()
-        .and {
-          extensionRegistry.extensionsOf<ResourceSpec>().forEach { (kind, type) ->
-            has(kind)
-            get { get(kind).textValue() }.isEqualTo("#/\$defs/${type.simpleName}")
-          }
-        }
+    test("SubmittedResource kind is defined as one of the possible resource kinds") {
+      at("/\$defs/SubmittedResource/properties/kind/enum")
+        .isArray()
+        .textValues()
+        .containsExactlyInAnyOrder(extensionRegistry.extensionsOf<ResourceSpec>().keys)
     }
 
     resourceSpecTypes
-      .values
-      .map(Class<*>::getSimpleName)
-      .forEach { specSubType ->
-        test("contains a parameterized version of schema for SubmittedResource with a spec of $specSubType") {
-          at("/\$defs/${specSubType}SubmittedResource/allOf/1/properties")
-            .isObject()
-            .and {
-              path("spec").isObject().path("\$ref").textValue().isEqualTo("#/\$defs/${specSubType}")
+      .mapValues{ it.value.simpleName }
+      .forEach { (kind, specSubType) ->
+        test("contains a sub-schema for SubmittedResource predicated on a kind of $kind") {
+          at("/\$defs/SubmittedResource/allOf")
+            .isArray()
+            .one {
+              path("if")
+                .path("properties")
+                .path("kind")
+                .path("const")
+                .textValue()
+                .isEqualTo(kind)
             }
         }
-      }
 
-    resourceSpecTypes
-      .mapValues { it.value.simpleName }
-      .forEach { (kind, type) ->
-        test("ResourceSpec sub-type $type has its own schema") {
-          at("/\$defs/$type")
-            .isObject()
-        }
-
-        test("kind and spec properties of Resource subtype $type are required") {
-          at("/\$defs/${type}SubmittedResource/allOf/1/required")
+        test("contains a sub-schema for SubmittedResource with a spec of $specSubType") {
+          at("/\$defs/SubmittedResource/allOf")
             .isArray()
-            .textValues()
-            .containsExactlyInAnyOrder("kind", "spec")
-        }
-
-        test("resource sub-type $type has a unique kind enum") {
-          at("/\$defs/${type}SubmittedResource/allOf/1/properties/kind/enum")
-            .isArray()
-            .textValues()
-            .containsExactly(kind)
+            .one {
+              path("then")
+                .path("properties")
+                .path("spec")
+                .isObject()
+                .path("\$ref")
+                .textValue()
+                .isEqualTo("#/\$defs/${specSubType}")
+            }
         }
       }
 
@@ -306,10 +298,10 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     test("data class parameters without default values are required") {
-      at("/\$defs/ClusterSpecSubmittedResource/allOf/1/required")
+      at("/\$defs/SubmittedResource/required")
         .isArray()
         .textValues()
-        .containsExactlyInAnyOrder("kind", "spec")
+        .containsExactlyInAnyOrder("kind")
     }
 
     test("data class parameters with default values are not required") {
