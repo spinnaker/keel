@@ -604,23 +604,21 @@ internal class GeneratorTests {
         .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${IntegerWrapper::class.java.simpleName}" }
     }
 
-    @Test
-    fun `the discriminator property is based on the presence of the @Discriminator annotation`() {
-      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
-        .isA<OneOf>()
-        .get { discriminator?.propertyName }
-        .isEqualTo(Wrapper<*>::type.name)
-    }
-
-    @Test
-    fun `discriminator mappings tie values to references`() {
-      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
-        .isA<OneOf>()
-        .get { discriminator?.mapping }
-        .isNotNull()
-        .hasEntry("string", "#/\$defs/${StringWrapper::class.java.simpleName}")
-        .hasEntry("integer", "#/\$defs/${IntegerWrapper::class.java.simpleName}")
-    }
+    @TestFactory
+    fun subTypeDiscriminatorConst() =
+      mapOf(
+        "string" to StringWrapper::class.java.simpleName,
+        "integer" to IntegerWrapper::class.java.simpleName
+      ).map { (fixedValue, subType) ->
+        dynamicTest("the sub-type discriminator property for $subType is an const with the fixed value") {
+          expectThat(schema.`$defs`[subType])
+            .isA<ObjectSchema>()
+            .get { properties[Wrapper<*>::type.name] }
+            .isA<ConstSchema>()
+            .get { const }
+            .isEqualTo(fixedValue)
+        }
+      }
 
     @TestFactory
     fun `the discriminator property in the sub-type is an enum with a single value`() =

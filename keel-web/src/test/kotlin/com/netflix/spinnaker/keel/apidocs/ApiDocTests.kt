@@ -283,18 +283,13 @@ class ApiDocTests : JUnit5Minutests {
         )
     }
 
-    test("schema for DeliveryArtifact has a discriminator") {
-      at("/\$defs/DeliveryArtifact")
-        .isObject()
-        .path("discriminator")
-        .and {
-          path("propertyName").textValue().isEqualTo("type")
-        }
-        .path("mapping")
-        .and {
-          path("deb").textValue().isEqualTo("#/\$defs/DebianArtifact")
-          path("docker").textValue().isEqualTo("#/\$defs/DockerArtifact")
-        }
+    test("schemas for DeliveryArtifact sub-types specify the fixed discriminator value") {
+      at("/\$defs/DebianArtifact/properties/type/const")
+        .textValue()
+        .isEqualTo("deb")
+      at("/\$defs/DockerArtifact/properties/type/const")
+        .textValue()
+        .isEqualTo("docker")
     }
 
     test("data class parameters without default values are required") {

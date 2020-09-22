@@ -75,7 +75,6 @@ class Generator(
       description = type.description,
       properties = schema.properties,
       required = schema.required,
-      discriminator = schema.discriminator,
       allOf = schema.allOf,
       `$defs` = context.definitions.toSortedMap(String.CASE_INSENSITIVE_ORDER)
     )
@@ -111,7 +110,7 @@ class Generator(
       description = type.description,
       properties = type.candidateProperties.associate {
         checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-      } + discriminator.toDiscriminatorEnum(),
+      } + discriminator.toDiscriminatorConst(),
       required = type.candidateProperties.toRequiredPropertyNames().let {
         if (discriminator != null) {
           (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
@@ -131,15 +130,8 @@ class Generator(
       oneOf = extensionRegistry
         .extensionsOf(type.java)
         .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
-        .toSet(),
-      discriminator = OneOf.Discriminator(
-        propertyName = type.discriminatorProperty.name,
-        mapping = extensionRegistry
-          .extensionsOf(type.java)
-          .mapValues { it.value.kotlin.buildRef().`$ref` }
-          .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+        .toSet()
       )
-    )
 
   /**
    * Base types with a generic parameter are represented as an [ObjectSchema] with the common
@@ -209,9 +201,9 @@ class Generator(
       oneOf = type.sealedSubclasses.map { define(it) }.toSet()
     )
 
-  private fun Pair<KProperty<String>, String>?.toDiscriminatorEnum() =
+  private fun Pair<KProperty<String>, String>?.toDiscriminatorConst() =
     if (this != null) {
-      mapOf(first.name to EnumSchema(description = null, enum = listOf(second)))
+      mapOf(first.name to ConstSchema(description = null, const = second))
     } else {
       emptyMap()
     }
@@ -242,10 +234,11 @@ class Generator(
   /**
    * The name of the property annotated with `@[Discriminator]`
    */
+  @Suppress("UNCHECKED_CAST")
   private val KClass<*>.discriminatorProperty: KProperty<String>
     get() = checkNotNull(memberProperties.find { it.hasAnnotation<Discriminator>() }) {
       "$simpleName has no property annotated with @Discriminator but is registered as an extension base type"
-    } as KProperty<String>
+    } as KProperty<String> // currently only string discriminators are allowed
 
   /**
    * Build the property schema for [parameter].

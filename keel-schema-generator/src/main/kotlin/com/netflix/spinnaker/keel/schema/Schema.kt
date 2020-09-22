@@ -18,7 +18,6 @@ data class RootSchema(
   val description: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
-  val discriminator: OneOf.Discriminator? = null,
   val allOf: List<ConditionalSubschema>? = null,
   val `$defs`: SortedMap<String, Schema>
 ) {
@@ -32,7 +31,6 @@ data class ObjectSchema(
   override val description: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
-  val discriminator: OneOf.Discriminator? = null,
   val allOf: List<ConditionalSubschema>? = null
 ) : TypedProperty("object")
 
@@ -86,14 +84,8 @@ data class Reference(
 
 data class OneOf(
   override val description: String?,
-  val oneOf: Set<Schema>,
-  val discriminator: Discriminator? = null
-) : Schema {
-  data class Discriminator(
-    val propertyName: String,
-    val mapping: SortedMap<String, String>
-  )
-}
+  val oneOf: Set<Schema>
+) : Schema
 
 data class AllOf(
   val allOf: List<Schema>
