@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactVersion
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -169,7 +169,7 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun storeArtifactVersion(artifact: PublishedArtifact): Boolean {
+  override fun storeArtifactVersion(artifact: ArtifactVersion): Boolean {
     with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)
@@ -190,7 +190,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? {
+  override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): ArtifactVersion? {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(
@@ -209,7 +209,7 @@ class SqlArtifactRepository(
         .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
         .fetchOne()
         ?.let { (name, type, version, status, createdAt, gitMetadata, buildMetadata) ->
-          PublishedArtifact(
+          ArtifactVersion(
             name = name,
             type = type,
             version = version,

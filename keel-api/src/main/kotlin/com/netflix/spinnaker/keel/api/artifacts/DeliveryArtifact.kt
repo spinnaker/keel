@@ -32,8 +32,8 @@ abstract class DeliveryArtifact {
   abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
   open val statuses: Set<ArtifactStatus> = emptySet()
 
-  fun toPublishedArtifact(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
-    PublishedArtifact(
+  fun toArtifactVersion(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
+    ArtifactVersion(
       name = name,
       type = type,
       reference = reference,
