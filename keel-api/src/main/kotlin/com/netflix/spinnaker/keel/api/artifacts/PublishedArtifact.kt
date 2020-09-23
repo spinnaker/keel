@@ -50,9 +50,14 @@ data class PublishedArtifact(
   val status: ArtifactStatus? = metadata["releaseStatus"]?.toString()
     ?.let { ArtifactStatus.valueOf(it) }
 
-  val createdAt = (metadata["createdAt"] as? Long)
-    ?.let { Instant.ofEpochMilli(it) }
+  val createdAt = metadata["createdAt"]
+    ?.let {
+      when (it) {
+        is Long -> Instant.ofEpochMilli(it) // to accommodate for artifact events from CI integration
+        is Instant -> it
+        else -> null
+      }
+    }
 
-  // FIXME: it's silly that we're prepending the artifact name for Debian only...
   fun normalized() = copy(version = if (type == DEBIAN && !version.startsWith(name)) "$name-$version" else version)
 }

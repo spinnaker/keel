@@ -181,6 +181,7 @@ class SqlArtifactRepository(
           .set(ARTIFACT_VERSIONS.TYPE, type)
           .set(ARTIFACT_VERSIONS.VERSION, version)
           .set(ARTIFACT_VERSIONS.RELEASE_STATUS, status?.toString())
+          .set(ARTIFACT_VERSIONS.CREATED_AT, createdAt?.toTimestamp())
           .set(ARTIFACT_VERSIONS.GIT_METADATA, gitMetadata?.let { objectMapper.writeValueAsString(it) })
           .set(ARTIFACT_VERSIONS.BUILD_METADATA, buildMetadata?.let { objectMapper.writeValueAsString(it) })
           .onDuplicateKeyIgnore()
@@ -192,23 +193,30 @@ class SqlArtifactRepository(
   override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? {
     return sqlRetry.withRetry(READ) {
       jooq
-        // TODO: add CREATED_AT
-        .select(ARTIFACT_VERSIONS.NAME, ARTIFACT_VERSIONS.TYPE, ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS, ARTIFACT_VERSIONS.GIT_METADATA, ARTIFACT_VERSIONS.BUILD_METADATA)
+        .select(
+          ARTIFACT_VERSIONS.NAME,
+          ARTIFACT_VERSIONS.TYPE,
+          ARTIFACT_VERSIONS.VERSION,
+          ARTIFACT_VERSIONS.RELEASE_STATUS,
+          ARTIFACT_VERSIONS.CREATED_AT,
+          ARTIFACT_VERSIONS.GIT_METADATA,
+          ARTIFACT_VERSIONS.BUILD_METADATA
+        )
         .from(ARTIFACT_VERSIONS)
         .where(ARTIFACT_VERSIONS.NAME.eq(name))
         .and(ARTIFACT_VERSIONS.TYPE.eq(type))
         .and(ARTIFACT_VERSIONS.VERSION.eq(version))
         .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
         .fetchOne()
-        ?.let { (name, type, version, status, gitMetadata, buildMetadata) ->
+        ?.let { (name, type, version, status, createdAt, gitMetadata, buildMetadata) ->
           PublishedArtifact(
             name = name,
             type = type,
             version = version,
             status = status?.let { ArtifactStatus.valueOf(it) },
-            // TODO: createdAt
-            gitMetadata = objectMapper.readValue(gitMetadata),
-            buildMetadata = objectMapper.readValue(buildMetadata),
+            createdAt = createdAt?.toInstant(UTC),
+            gitMetadata = gitMetadata?.let { objectMapper.readValue(it) },
+            buildMetadata = buildMetadata?.let { objectMapper.readValue(it) },
           )
         }
     }

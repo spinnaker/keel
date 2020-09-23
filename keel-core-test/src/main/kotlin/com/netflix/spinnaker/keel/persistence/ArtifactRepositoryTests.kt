@@ -48,6 +48,7 @@ import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 
 abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests {
   abstract fun factory(clock: Clock): T
@@ -784,7 +785,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         ))
       }
 
-      test ("retrieves successfully") {
+      test("retrieves successfully") {
         val publishedArtifact = subject.getArtifactVersion(artifact1.name, artifact1.type, version1, SNAPSHOT)!!
 
         expectThat(publishedArtifact.buildMetadata)
@@ -807,6 +808,20 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
         expectThat(publishedArtifact.gitMetadata)
           .isEqualTo(artifactMetadata.gitMetadata)
+      }
+    }
+
+    context("artifact creation timestamp exists") {
+      val createdAt = Instant.now()
+
+      before {
+        subject.register(artifact1)
+        subject.storeVersion(artifact1.toPublishedArtifact(version1, SNAPSHOT, createdAt = createdAt))
+      }
+
+      test("retrieves timestamp successfully") {
+        val publishedArtifact = subject.getArtifactVersion(artifact1.name, artifact1.type, version1, SNAPSHOT)!!
+        expectThat(publishedArtifact.createdAt).isEqualTo(createdAt)
       }
     }
   }
