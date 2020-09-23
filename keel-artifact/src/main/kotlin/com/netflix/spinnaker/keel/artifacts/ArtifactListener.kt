@@ -79,14 +79,14 @@ class ArtifactListener(
     if (repository.artifactVersions(artifact).isEmpty()) {
       val artifactSupplier = artifactSuppliers.supporting(artifact.type)
 
-      val latestVersion = runBlocking {
+      val latestArtifact = runBlocking {
         log.debug("Retrieving latest version of registered artifact {}", artifact)
         artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
       }
 
-      if (latestVersion != null) {
-        log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion.version, latestVersion.status, artifact)
-        val enrichedArtifact = artifactSupplier.addMetadata(latestVersion.normalized())
+      if (latestArtifact != null) {
+        log.debug("Storing latest version {} (status={}) for registered artifact {}", latestArtifact.version, latestArtifact.status, artifact)
+        val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
         repository.storeArtifactVersion(enrichedArtifact)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
@@ -117,21 +117,21 @@ class ArtifactListener(
             log.debug("Last recorded version of $artifact: $lastRecordedVersion")
 
             val artifactSupplier = artifactSuppliers.supporting(artifact.type)
-            val latestVersion = artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
-            log.debug("Latest available version of $artifact: ${latestVersion?.version}")
+            val latestArtifact = artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
+            log.debug("Latest available version of $artifact: ${latestArtifact?.version}")
 
-            if (latestVersion != null) {
+            if (latestArtifact != null) {
               val hasNew = when {
                 lastRecordedVersion == null -> true
-                latestVersion.version != lastRecordedVersion -> {
-                  artifact.versioningStrategy.comparator.compare(lastRecordedVersion, latestVersion.version) > 0
+                latestArtifact.version != lastRecordedVersion -> {
+                  artifact.versioningStrategy.comparator.compare(lastRecordedVersion, latestArtifact.version) > 0
                 }
                 else -> false
               }
 
               if (hasNew) {
-                log.debug("$artifact has a missing version ${latestVersion.version}, persisting.")
-                val enrichedArtifact = artifactSupplier.addMetadata(latestVersion.normalized())
+                log.debug("$artifact has a missing version ${latestArtifact.version}, persisting.")
+                val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
                 repository.storeArtifactVersion(enrichedArtifact)
               } else {
                 log.debug("No new versions to persist for $artifact")
