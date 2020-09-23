@@ -13,9 +13,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.telemetry.ArtifactSaved
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
@@ -23,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 class ArtifactListener(
@@ -30,6 +29,8 @@ class ArtifactListener(
   private val publisher: ApplicationEventPublisher,
   private val artifactSuppliers: List<ArtifactSupplier<*, *>>
 ) {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   private val enabled = AtomicBoolean(false)
 
   @EventListener(ApplicationUp::class)
@@ -53,15 +54,15 @@ class ArtifactListener(
       .forEach { artifact ->
         if (repository.isRegistered(artifact.name, artifact.artifactType)) {
           val artifactSupplier = artifactSuppliers.supporting(artifact.artifactType)
-          val version = artifactSupplier.getFullVersionString(artifact)
-          var status = artifactSupplier.getReleaseStatus(artifact)
-          log.info("Registering version {} ({}) of {} {}", version, status, artifact.name, artifact.type)
-          repository.storeArtifact(artifact.name, artifact.artifactType, version, status)
+          val enrichedArtifact = artifactSupplier.addMetadata(artifact.normalized())
+
+          log.info("Registering version {} (status={}) of {} artifact {}",
+            artifact.version, artifact.status, artifact.type, artifact.name)
+
+          repository.storeArtifactVersion(enrichedArtifact)
             .also { wasAdded ->
               if (wasAdded) {
                 publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
-                // send an event when the artifact is stored, so we can fetch its metadata
-                publisher.publishEvent(ArtifactSaved(artifact.copy(version = version), status))
               }
             }
         }
@@ -77,17 +78,16 @@ class ArtifactListener(
 
     if (repository.artifactVersions(artifact).isEmpty()) {
       val artifactSupplier = artifactSuppliers.supporting(artifact.type)
-      val latestArtifact = runBlocking {
+
+      val latestVersion = runBlocking {
         log.debug("Retrieving latest version of registered artifact {}", artifact)
         artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
       }
-      val latestVersion = latestArtifact?.let { artifactSupplier.getFullVersionString(it) }
+
       if (latestVersion != null) {
-        var status = artifactSupplier.getReleaseStatus(latestArtifact)
-        log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion, status, artifact)
-        repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
-        // send an event when the artifact is stored, so we can fetch its metadata
-        publisher.publishEvent(ArtifactSaved(latestArtifact, status))
+        log.debug("Storing latest version {} (status={}) for registered artifact {}", latestVersion.version, latestVersion.status, artifact)
+        val enrichedArtifact = artifactSupplier.addMetadata(latestVersion.normalized())
+        repository.storeArtifactVersion(enrichedArtifact)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
       }
@@ -115,26 +115,24 @@ class ArtifactListener(
           launch {
             val lastRecordedVersion = getLatestStoredVersion(artifact)
             log.debug("Last recorded version of $artifact: $lastRecordedVersion")
+
             val artifactSupplier = artifactSuppliers.supporting(artifact.type)
-            val latestArtifact = artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
-            val latestVersion = latestArtifact?.let { artifactSupplier.getFullVersionString(it) }
-            log.debug("Latest available version of $artifact: $latestVersion")
+            val latestVersion = artifactSupplier.getLatestArtifact(artifact.deliveryConfig, artifact)
+            log.debug("Latest available version of $artifact: ${latestVersion?.version}")
 
             if (latestVersion != null) {
               val hasNew = when {
                 lastRecordedVersion == null -> true
-                latestVersion != lastRecordedVersion -> {
-                  artifact.versioningStrategy.comparator.compare(lastRecordedVersion, latestVersion) > 0
+                latestVersion.version != lastRecordedVersion -> {
+                  artifact.versioningStrategy.comparator.compare(lastRecordedVersion, latestVersion.version) > 0
                 }
                 else -> false
               }
 
               if (hasNew) {
-                log.debug("$artifact has a missing version $latestVersion, persisting.")
-                val status = artifactSupplier.getReleaseStatus(latestArtifact)
-                repository.storeArtifact(artifact.name, artifact.type, latestVersion, status)
-                // send an event when the artifact is stored, so we can fetch its metadata
-                publisher.publishEvent(ArtifactSaved(latestArtifact, status))
+                log.debug("$artifact has a missing version ${latestVersion.version}, persisting.")
+                val enrichedArtifact = artifactSupplier.addMetadata(latestVersion.normalized())
+                repository.storeArtifactVersion(enrichedArtifact)
               } else {
                 log.debug("No new versions to persist for $artifact")
               }
@@ -147,6 +145,21 @@ class ArtifactListener(
 
   private fun getLatestStoredVersion(artifact: DeliveryArtifact): String? =
     repository.artifactVersions(artifact).sortedWith(artifact.versioningStrategy.comparator).firstOrNull()
+
+  /**
+   * Returns a copy of the [PublishedArtifact] with the git and build metadata populated, if available.
+   */
+  private fun ArtifactSupplier<*,*>.addMetadata(artifact: PublishedArtifact): PublishedArtifact {
+    val artifactMetadata = runBlocking {
+      try {
+        getArtifactMetadata(artifact)
+      } catch (ex: Exception) {
+        log.error("Could not fetch artifact metadata for name ${artifact.name} and version ${artifact.version}", ex)
+        null
+      }
+    }
+    return artifact.copy(gitMetadata = artifactMetadata?.gitMetadata, buildMetadata = artifactMetadata?.buildMetadata)
+  }
 
   private val DeliveryArtifact.deliveryConfig: DeliveryConfig
     get() = this.deliveryConfigName
@@ -161,6 +174,4 @@ class ArtifactListener(
   private val artifactTypeNames by lazy {
     artifactSuppliers.map { it.supportedArtifact.name }
   }
-
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
