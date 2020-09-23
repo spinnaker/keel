@@ -36,7 +36,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
-  fun storeVersion(artifact: PublishedArtifact): Boolean
+  fun storeArtifactVersion(artifact: PublishedArtifact): Boolean
 
   /**
    * @return The given artifact version as a [PublishedArtifact]

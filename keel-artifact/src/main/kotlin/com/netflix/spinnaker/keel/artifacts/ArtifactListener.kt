@@ -65,6 +65,8 @@ class ArtifactListener(
                 publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
               }
             }
+        } else {
+          log.debug("Artifact $artifact is not registered. Ignoring new artifact version.")
         }
       }
   }

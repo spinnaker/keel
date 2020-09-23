@@ -169,7 +169,7 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun storeVersion(artifact: PublishedArtifact): Boolean {
+  override fun storeArtifactVersion(artifact: PublishedArtifact): Boolean {
     with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)

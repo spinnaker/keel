@@ -9,7 +9,6 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
@@ -313,7 +312,7 @@ class CombinedRepository(
     artifactRepository.getAll(type)
 
   override fun storeArtifactVersion(artifact: PublishedArtifact): Boolean =
-    artifactRepository.storeVersion(artifact)
+    artifactRepository.storeArtifactVersion(artifact)
 
   override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? =
     artifactRepository.getArtifactVersion(name, type, version, status)
