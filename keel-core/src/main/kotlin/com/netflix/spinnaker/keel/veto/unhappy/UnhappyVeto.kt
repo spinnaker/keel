@@ -45,6 +45,7 @@ class UnhappyVeto(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
+  //todo eb: how do we ignore diffs if the resource is unhappy?
   override suspend fun check(resource: Resource<*>): VetoResponse {
     val resourceId = resource.id
     val application = resource.application
