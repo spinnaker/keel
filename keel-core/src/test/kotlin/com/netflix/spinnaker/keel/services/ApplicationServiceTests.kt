@@ -122,6 +122,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       }
       every { parseDefaultBuildMetadata(any(), any()) } returns null
       every { parseDefaultGitMetadata(any(), any()) } returns null
+      every { getReleaseStatus(any()) } returns null
     }
 
     // subject
@@ -129,7 +130,8 @@ class ApplicationServiceTests : JUnit5Minutests {
       repository,
       resourceStatusService,
       listOf(dependsOnEvaluator),
-      listOf(artifactSupplier)
+      listOf(artifactSupplier),
+      configuredTestObjectMapper()
     )
 
     val buildMetadata = BuildMetadata(
@@ -152,10 +154,12 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { repository.getDeliveryConfigForApplication(application) } returns deliveryConfig
 
       every {
-        repository.getArtifactVersion(any(), any(), any(), any())
-      } answers {
-        PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2))
-      }
+        repository.getArtifactGitMetadata(any(), any(), any(), any())
+      } returns null
+
+      every {
+        repository.getArtifactBuildMetadata(any(), any(), any(), any())
+      } returns null
 
       every {
         repository.getReleaseStatus(artifact, any())
@@ -164,6 +168,7 @@ class ApplicationServiceTests : JUnit5Minutests {
 
     context("artifact summaries by application") {
       before {
+        // repository.artifactVersions(artifact)
         every { repository.artifactVersions(artifact) } returns versions
       }
 
@@ -188,10 +193,12 @@ class ApplicationServiceTests : JUnit5Minutests {
           } returns false
 
           every {
-            repository.getArtifactVersion(any(), any(), any(), any())
-          } answers {
-            PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
-          }
+            repository.getArtifactGitMetadata(any(), any(), any(), any())
+          } returns gitMetadata
+
+          every {
+            repository.getArtifactBuildMetadata(any(), any(), any(), any())
+          } returns buildMetadata
         }
 
         test("artifact summary shows all versions pending in all environments") {

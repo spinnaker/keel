@@ -50,6 +50,7 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
    */
   fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact?
 
+
   /**
    * Returns the published artifact [DeliveryArtifact] by version, represented
    * as a [PublishedArtifact].
@@ -59,10 +60,22 @@ interface ArtifactSupplier<A : DeliveryArtifact, V : VersioningStrategy> : Spinn
   fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact?
 
   /**
+   * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the full representation of
+   * a version string, if different from [PublishedArtifact.version].
+   */
+  fun getFullVersionString(artifact: PublishedArtifact): String = artifact.version
+
+  /**
    * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the display name for the
    * artifact version, if different from [PublishedArtifact.version].
    */
   fun getVersionDisplayName(artifact: PublishedArtifact): String = artifact.version
+
+  /**
+   * Given a [PublishedArtifact] supported by this [ArtifactSupplier], return the [ArtifactStatus] for
+   * the artifact, if applicable.
+   */
+  fun getReleaseStatus(artifact: PublishedArtifact): ArtifactStatus? = null
 
   /**
    * Given a [PublishedArtifact] and a [VersioningStrategy] supported by this [ArtifactSupplier],

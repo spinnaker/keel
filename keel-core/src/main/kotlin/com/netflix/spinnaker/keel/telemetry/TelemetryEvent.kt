@@ -52,3 +52,8 @@ data class ArtifactCheckTimedOut(
   val name: String,
   val deliveryConfigName: String?
 ) : TelemetryEvent()
+
+data class ArtifactSaved(
+  val artifact: PublishedArtifact,
+  val artifactStatus: ArtifactStatus?
+)
