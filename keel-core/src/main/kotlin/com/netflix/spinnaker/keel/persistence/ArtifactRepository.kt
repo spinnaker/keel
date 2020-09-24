@@ -4,9 +4,8 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
@@ -34,23 +33,6 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun getAll(type: ArtifactType? = null): List<DeliveryArtifact>
 
   /**
-   * @return `true` if a new version is persisted, `false` if the specified version was already
-   * known (in which case this method is a no-op).
-   */
-  fun store(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): Boolean
-
-  fun store(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): Boolean
-
-  fun updateArtifactMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?, artifactMetadata: ArtifactMetadata)
-
-    /**
-   * @return Build and Git metadata for a given artifact version
-   */
-  fun getArtifactBuildMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): BuildMetadata?
-
-  fun getArtifactGitMetadata(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): GitMetadata?
-
-  /**
    * Deletes an artifact from a delivery config.
    * Does not remove the registration of an artifact.
    */
@@ -74,6 +56,23 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
     name: String,
     type: ArtifactType
   ): List<String>
+
+  /**
+   * @return `true` if a new version is persisted, `false` if the specified version was already
+   * known (in which case this method is a no-op).
+   */
+  fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean
+
+  /**
+   * @return The [PublishedArtifact] matching the specified name, type, version and (optionally) status, or `null`
+   * if not found.
+   */
+  fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+
+  /**
+   * Update metadata for the specified [PublishedArtifact].
+   */
+  fun updateArtifactMetadata(artifactVersion: PublishedArtifact, artifactMetadata: ArtifactMetadata)
 
   /**
    * Returns the release status for the specified [version] of the [artifact], if available.
