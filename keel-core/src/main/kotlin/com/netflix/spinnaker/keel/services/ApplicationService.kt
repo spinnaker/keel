@@ -319,6 +319,7 @@ class ApplicationService(
       version = version,
       environments = environments,
       displayName = artifactSupplier.getVersionDisplayName(artifactVersion),
+      createdAt = artifactVersion.createdAt,
 
       // first attempt to use the artifact metadata fetched from the DB, then fallback to the default if not found
       build = artifactVersion.buildMetadata
