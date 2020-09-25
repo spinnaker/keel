@@ -8,8 +8,6 @@ import com.netflix.spinnaker.keel.exceptions.NoSuchEnvironmentException
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -79,7 +77,7 @@ class AdminService(
         sleep(5000) // sleep a little in-between versions to cut the instance where this runs some slack
         log.debug("Evaluating $artifact version $version as candidate to back-fill metadata")
         val status = repository.getReleaseStatus(artifact, version)
-        val artifactVersion = repository.getArtifactVersion(artifact.name, type, version, status)
+        val artifactVersion = repository.getArtifactInstance(artifact.name, type, version, status)
         // don't update if metadata is already exists
         if (artifactVersion != null && (artifactVersion.gitMetadata == null || artifactVersion.buildMetadata == null)) {
           runBlocking {

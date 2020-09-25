@@ -246,8 +246,8 @@ class SqlArtifactRepository(
       throw NoSuchArtifactException(artifact)
     }
 
-  override fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean {
-    with(artifactVersion) {
+  override fun storeArtifactInstance(artifact: PublishedArtifact): Boolean {
+    with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)
       }
@@ -267,7 +267,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? {
+  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(
@@ -299,8 +299,8 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun updateArtifactMetadata(artifactVersion: PublishedArtifact, artifactMetadata: ArtifactMetadata) {
-    with(artifactVersion) {
+  override fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata) {
+    with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)
       }

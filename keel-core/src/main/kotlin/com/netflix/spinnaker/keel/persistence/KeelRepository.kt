@@ -143,11 +143,11 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun getAllArtifacts(type: ArtifactType? = null): List<DeliveryArtifact>
 
-  fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean
+  fun storeArtifactInstance(artifact: PublishedArtifact): Boolean
 
-  fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
 
-  fun updateArtifactMetadata(artifactVersion: PublishedArtifact, artifactMetadata: ArtifactMetadata)
+  fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata)
 
   fun deleteArtifact(artifact: DeliveryArtifact)
 

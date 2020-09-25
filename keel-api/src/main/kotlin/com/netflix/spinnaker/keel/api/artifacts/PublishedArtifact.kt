@@ -10,6 +10,7 @@ import java.time.Instant
  * key fields without which it doesn't make sense for an artifact to exist in Managed Delivery terms. It also adds
  * a couple of keel-specific fields to store artifact metadata.
  */
+// TODO: rename to `Artifact` or `ArtifactInstance`
 data class PublishedArtifact(
   val name: String,
   val type: String,

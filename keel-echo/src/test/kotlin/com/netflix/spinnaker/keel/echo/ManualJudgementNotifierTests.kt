@@ -107,7 +107,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         } returns DeliveryConfig("test", "test", "test@acme.net")
 
         every {
-          repository.getArtifactVersion("mypkg", DEBIAN, "v1.0.0", any())
+          repository.getArtifactInstance("mypkg", DEBIAN, "v1.0.0", any())
         } returns null
       }
 
@@ -203,7 +203,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
       context("when git metadata is available for the artifact") {
         before {
           every {
-            repository.getArtifactVersion("mypkg", DEBIAN, "v1.0.0", any())
+            repository.getArtifactInstance("mypkg", DEBIAN, "v1.0.0", any())
           } returns PublishedArtifact(
             name = "mypkg",
             type = DEBIAN,

@@ -59,7 +59,7 @@ class ArtifactListener(
           log.info("Registering version {} (status={}) of {} artifact {}",
             artifact.version, artifact.status, artifact.type, artifact.name)
 
-          repository.storeArtifactVersion(enrichedArtifact)
+          repository.storeArtifactInstance(enrichedArtifact)
             .also { wasAdded ->
               if (wasAdded) {
                 publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
@@ -89,7 +89,7 @@ class ArtifactListener(
       if (latestArtifact != null) {
         log.debug("Storing latest version {} (status={}) for registered artifact {}", latestArtifact.version, latestArtifact.status, artifact)
         val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
-        repository.storeArtifactVersion(enrichedArtifact)
+        repository.storeArtifactInstance(enrichedArtifact)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
       }
@@ -134,7 +134,7 @@ class ArtifactListener(
               if (hasNew) {
                 log.debug("$artifact has a missing version ${latestArtifact.version}, persisting.")
                 val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
-                repository.storeArtifactVersion(enrichedArtifact)
+                repository.storeArtifactInstance(enrichedArtifact)
               } else {
                 log.debug("No new versions to persist for $artifact")
               }

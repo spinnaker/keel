@@ -58,21 +58,23 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   ): List<String>
 
   /**
+   * Persists the specified instance of the artifact.
+   *
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
-  fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean
+  fun storeArtifactInstance(artifact: PublishedArtifact): Boolean
 
   /**
    * @return The [PublishedArtifact] matching the specified name, type, version and (optionally) status, or `null`
    * if not found.
    */
-  fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
 
   /**
    * Update metadata for the specified [PublishedArtifact].
    */
-  fun updateArtifactMetadata(artifactVersion: PublishedArtifact, artifactMetadata: ArtifactMetadata)
+  fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata)
 
   /**
    * Returns the release status for the specified [version] of the [artifact], if available.

@@ -24,6 +24,7 @@ enum class ArtifactStatus {
  * (i.e. the output of a build that is published to an artifact repository), but rather the high-level properties
  * that allow keel and [ArtifactSupplier] plugins to find/process the actual artifacts.
  */
+// TODO: rename to `ArtifactSpec`
 abstract class DeliveryArtifact {
   abstract val name: String
   @Discriminator abstract val type: ArtifactType
@@ -32,7 +33,7 @@ abstract class DeliveryArtifact {
   abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
   open val statuses: Set<ArtifactStatus> = emptySet()
 
-  fun toArtifactVersion(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
+  fun toArtifactInstance(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
     PublishedArtifact(
       name = name,
       type = type,

@@ -18,7 +18,6 @@ import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
-import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.DependOnConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -37,7 +36,6 @@ import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
-import com.netflix.spinnaker.kork.exceptions.SystemException
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -312,7 +310,7 @@ class ApplicationService(
   ): ArtifactVersionSummary {
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
     val releaseStatus = repository.getReleaseStatus(artifact, version)
-    val artifactVersion = repository.getArtifactVersion(artifact.name, artifact.type, version, releaseStatus)
+    val artifactVersion = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
       ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
 
     return ArtifactVersionSummary(

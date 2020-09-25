@@ -151,7 +151,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { repository.getDeliveryConfigForApplication(application) } returns deliveryConfig
 
       every {
-        repository.getArtifactVersion(any(), any(), any(), any())
+        repository.getArtifactInstance(any(), any(), any(), any())
       } answers {
         PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2))
       }
@@ -187,7 +187,7 @@ class ApplicationServiceTests : JUnit5Minutests {
           } returns false
 
           every {
-            repository.getArtifactVersion(any(), any(), any(), any())
+            repository.getArtifactInstance(any(), any(), any(), any())
           } answers {
             PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
           }

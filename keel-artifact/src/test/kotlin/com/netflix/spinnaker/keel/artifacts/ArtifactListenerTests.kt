@@ -107,7 +107,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       }
 
       test("the event is ignored") {
-        verify(exactly = 0) { repository.storeArtifactVersion(any()) }
+        verify(exactly = 0) { repository.storeArtifactInstance(any()) }
       }
 
       test("no telemetry is recorded") {
@@ -128,7 +128,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("the version was already known") {
         before {
-          every { repository.storeArtifactVersion(any()) } returns false
+          every { repository.storeArtifactInstance(any()) } returns false
 
           listener.onArtifactPublished(event)
         }
@@ -144,7 +144,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
             debianArtifactSupplier.getArtifactMetadata(newerPublishedDeb)
           } returns artifactMetadata
 
-          every { repository.storeArtifactVersion(any()) } returns true
+          every { repository.storeArtifactInstance(any()) } returns true
 
           listener.onArtifactPublished(
             event.copy(artifacts = listOf(newerPublishedDeb))
@@ -152,7 +152,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         }
 
         test("a new artifact version is stored") {
-          verify {repository.storeArtifactVersion(capture(artifactVersion)) }
+          verify {repository.storeArtifactInstance(capture(artifactVersion)) }
 
           with(artifactVersion.captured) {
             expectThat(name).isEqualTo(artifact.name)
@@ -212,7 +212,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       }
 
       test("nothing is done") {
-        verify(exactly = 0) { repository.storeArtifactVersion(any()) }
+        verify(exactly = 0) { repository.storeArtifactInstance(any()) }
       }
     }
 
@@ -223,7 +223,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
       context("there are available versions of the artifact") {
         before {
-          every { repository.storeArtifactVersion(any()) } returns false
+          every { repository.storeArtifactInstance(any()) } returns false
           every {
             debianArtifactSupplier.getLatestArtifact(deliveryConfig, artifact)
           } returns publishedDeb
@@ -236,7 +236,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("the newest version is saved") {
           verify(exactly = 1) {
-            repository.storeArtifactVersion(capture(artifactVersion))
+            repository.storeArtifactInstance(capture(artifactVersion))
           }
           with(artifactVersion.captured) {
             expectThat(name).isEqualTo(artifact.name)
@@ -269,7 +269,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("no versions are persisted") {
           verify(exactly = 0) {
-            repository.storeArtifactVersion(any())
+            repository.storeArtifactInstance(any())
           }
         }
       }
@@ -295,7 +295,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifact::class.java)
       every { debianArtifactSupplier.getArtifactMetadata(any()) } returns artifactMetadata
       every { dockerArtifactSupplier.getArtifactMetadata(any()) } returns artifactMetadata
-      every { repository.storeArtifactVersion(any()) } returns true
+      every { repository.storeArtifactInstance(any()) } returns true
       listener.onApplicationUp()
     }
 
@@ -323,7 +323,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           val artifactVersions = mutableListOf<PublishedArtifact>()
 
           verify (exactly = 2) {
-            repository.storeArtifactVersion(capture(artifactVersions))
+            repository.storeArtifactInstance(capture(artifactVersions))
           }
 
           with(artifactVersions[0]) {
@@ -366,7 +366,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
         test("store not called") {
           listener.syncArtifactVersions()
-          verify(exactly = 0) { repository.storeArtifactVersion(any()) }
+          verify(exactly = 0) { repository.storeArtifactInstance(any()) }
         }
       }
 
@@ -387,7 +387,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           val artifactVersions = mutableListOf<PublishedArtifact>()
 
           verify (exactly = 2) {
-            repository.storeArtifactVersion(capture(artifactVersions))
+            repository.storeArtifactInstance(capture(artifactVersions))
           }
 
           with(artifactVersions[0]) {

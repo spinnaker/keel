@@ -312,14 +312,14 @@ class CombinedRepository(
   override fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
     artifactRepository.getAll(type)
 
-  override fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean =
-    artifactRepository.storeArtifactVersion(artifactVersion)
+  override fun storeArtifactInstance(artifact: PublishedArtifact): Boolean =
+    artifactRepository.storeArtifactInstance(artifact)
 
-  override fun getArtifactVersion(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? =
-    artifactRepository.getArtifactVersion(name, type, version, status)
+  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? =
+    artifactRepository.getArtifactInstance(name, type, version, status)
 
-  override fun updateArtifactMetadata(artifactVersion: PublishedArtifact, artifactMetadata: ArtifactMetadata) =
-    artifactRepository.updateArtifactMetadata(artifactVersion, artifactMetadata)
+  override fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata) =
+    artifactRepository.updateArtifactMetadata(artifact, artifactMetadata)
 
   override fun deleteArtifact(artifact: DeliveryArtifact) =
     artifactRepository.delete(artifact)
