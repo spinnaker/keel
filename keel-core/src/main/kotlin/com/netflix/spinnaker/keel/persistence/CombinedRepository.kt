@@ -327,6 +327,9 @@ class CombinedRepository(
   override fun artifactVersions(artifact: DeliveryArtifact): List<String> =
     artifactRepository.versions(artifact)
 
+  override fun artifactVersions(artifact: DeliveryArtifact, limit: Int): List<String> =
+    artifactRepository.versions(artifact, limit)
+
   override fun artifactVersions(name: String, type: ArtifactType): List<String> =
     artifactRepository.versions(name, type)
 

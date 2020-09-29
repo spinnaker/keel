@@ -221,7 +221,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun versions(artifact: DeliveryArtifact): List<String> =
+  override fun versions(artifact: DeliveryArtifact, limit: Int): List<String> =
     if (isRegistered(artifact.name, artifact.type)) {
       sqlRetry.withRetry(READ) {
         jooq
@@ -230,6 +230,7 @@ class SqlArtifactRepository(
           .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
           .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
           .apply { if (artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
+          .limit(limit)
           .fetch()
           .getValues(ARTIFACT_VERSIONS.VERSION)
       }

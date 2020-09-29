@@ -49,6 +49,8 @@ interface KeelReadOnlyRepository {
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
+  fun artifactVersions(artifact: DeliveryArtifact, limit: Int): List<String>
+
   fun artifactVersions(artifact: DeliveryArtifact): List<String>
 
   fun artifactVersions(name: String, type: ArtifactType): List<String>
