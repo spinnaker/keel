@@ -69,7 +69,7 @@ class AdminService(
   /**
    * For each artifact type [deb/docker/npm], run back-fill script to in case there's some missing data
    */
-  @Scheduled(fixedDelayString = "\${keel.artifact-metadata-backfill.frequency:PT6H}")
+  @Scheduled(fixedDelayString = "\${keel.artifact-metadata-backfill.frequency:PT1H}")
   fun periodicallyBackFillArtifactMetadata(){
     listOf(DEBIAN, NPM, DOCKER)
       .forEach{
