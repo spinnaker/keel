@@ -234,13 +234,12 @@ class SqlArtifactRepository(
           .getValues(ARTIFACT_VERSIONS.VERSION)
       }
         .sortedWith(artifact.versioningStrategy.comparator)
-        .subList(0, limit)
         .also { versions ->
           // FIXME: remove special handling for Docker
           return if (artifact is DockerArtifact) {
-            filterDockerVersions(artifact, versions)
+            filterDockerVersions(artifact, versions, limit)
           } else {
-            versions
+            versions.subList(0, Math.min(versions.size, limit))
           }
         }
     } else {
@@ -343,8 +342,13 @@ class SqlArtifactRepository(
    *
    * This means that this will filter out tags like "latest" from the list.
    */
-  private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>): List<String> =
+  private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>, limit: Int): List<String> =
     versions.filter { shouldInclude(it, artifact) }
+      .also {
+        filteredVersions->
+        return filteredVersions.subList(0, Math.min(filteredVersions.size, limit))
+      }
+
 
   /**
    * Returns true if a docker tag is not latest and the regex produces exactly one capture group on the tag, false otherwise.
