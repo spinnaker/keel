@@ -236,6 +236,7 @@ class SqlArtifactRepository(
         .sortedWith(artifact.versioningStrategy.comparator)
         .also { versions ->
           // FIXME: remove special handling for Docker
+          // FIXME: limit the sql query, not the returned list (once we'll have a native sorting mechanism)
           return if (artifact is DockerArtifact) {
             filterDockerVersions(artifact, versions, limit)
           } else {

@@ -324,9 +324,6 @@ class CombinedRepository(
   override fun deleteArtifact(artifact: DeliveryArtifact) =
     artifactRepository.delete(artifact)
 
-  override fun artifactVersions(artifact: DeliveryArtifact): List<String> =
-    artifactRepository.versions(artifact)
-
   override fun artifactVersions(artifact: DeliveryArtifact, limit: Int): List<String> =
     artifactRepository.versions(artifact, limit)
 
