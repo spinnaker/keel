@@ -1,14 +1,11 @@
 package com.netflix.spinnaker.keel.services
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Locatable
-import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -21,12 +18,12 @@ import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
-import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.DependOnConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
+import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
@@ -35,6 +32,7 @@ import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
+import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -51,8 +49,7 @@ class ApplicationService(
   private val repository: KeelRepository,
   private val resourceStatusService: ResourceStatusService,
   private val constraintEvaluators: List<ConstraintEvaluator<*>>,
-  private val artifactSuppliers: List<ArtifactSupplier<*, *>>,
-  private val objectMapper: ObjectMapper
+  private val artifactSuppliers: List<ArtifactSupplier<*, *>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
   private val statelessEvaluators: List<ConstraintEvaluator<*>> =
@@ -187,59 +184,68 @@ class ApplicationService(
 
     val environmentSummaries = getEnvironmentSummariesFor(application)
 
-    return deliveryConfig.artifacts.map { artifact ->
+    val artifactSummaries = deliveryConfig.artifacts.map { artifact ->
       val artifactVersionSummaries = repository.artifactVersions(artifact).map { version ->
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         environmentSummaries.forEach { environmentSummary ->
           val environment = deliveryConfig.environments.find { it.name == environmentSummary.name }!!
-          environmentSummary.getArtifactPromotionStatus(artifact, version)?.let { status ->
-            var artEnvSummary = when (status) {
-              PENDING -> ArtifactSummaryInEnvironment(
-                environment = environmentSummary.name,
-                version = version,
-                state = status.name.toLowerCase()
-              )
-              SKIPPED -> {
-                // some environments contain relevant info for skipped artifacts, so
-                // try and find that summary before defaulting to less information
-                val potentialSummary = repository.getArtifactSummaryInEnvironment(
-                  deliveryConfig = deliveryConfig,
-                  environmentName = environmentSummary.name,
-                  artifactReference = artifact.reference,
-                  version = version
-                )
-                if (potentialSummary == null || potentialSummary.state == "pending") {
-                  ArtifactSummaryInEnvironment(
-                    environment = environmentSummary.name,
-                    version = version,
-                    state = status.name.toLowerCase()
+          environmentSummary.getArtifactPromotionStatus(artifact, version)
+            ?.let { status ->
+              buildArtifactSummaryInEnvironment(deliveryConfig, environment.name, artifact, version, status)
+                ?.also {
+                  artifactSummariesInEnvironments.add(
+                    it.addStatefulConstraintSummaries(deliveryConfig, environment, version)
+                      .addStatelessConstraintSummaries(deliveryConfig, environment, version, artifact)
                   )
-                } else {
-                  potentialSummary
                 }
-              }
-              else -> repository.getArtifactSummaryInEnvironment(
-                deliveryConfig = deliveryConfig,
-                environmentName = environmentSummary.name,
-                artifactReference = artifact.reference,
-                version = version
-              )
             }
-            if (artEnvSummary != null) {
-              artEnvSummary = addStatefulConstraintSummaries(artEnvSummary, deliveryConfig, environment, version)
-              artEnvSummary = addStatelessConstraintSummaries(artEnvSummary, deliveryConfig, environment, version, artifact)
-              artifactSummariesInEnvironments.add(artEnvSummary)
-            }
-          }
         }
-        return@map versionToSummary(artifact, version, artifactSummariesInEnvironments.toSet())
+
+        buildArtifactVersionSummary(artifact, version, artifactSummariesInEnvironments)
       }
-      return@map ArtifactSummary(
+      ArtifactSummary(
         name = artifact.name,
         type = artifact.type,
         reference = artifact.reference,
         versions = artifactVersionSummaries.toSet()
+      )
+    }
+
+    return artifactSummaries
+  }
+
+  private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
+    return when (status) {
+      PENDING -> ArtifactSummaryInEnvironment(
+        environment = environmentName,
+        version = version,
+        state = status.name.toLowerCase()
+      )
+      SKIPPED -> {
+        // some environments contain relevant info for skipped artifacts, so
+        // try and find that summary before defaulting to less information
+        val potentialSummary = repository.getArtifactSummaryInEnvironment(
+          deliveryConfig = deliveryConfig,
+          environmentName = environmentName,
+          artifactReference = artifact.reference,
+          version = version
+        )
+        if (potentialSummary == null || potentialSummary.state == "pending") {
+          ArtifactSummaryInEnvironment(
+            environment = environmentName,
+            version = version,
+            state = status.name.toLowerCase()
+          )
+        } else {
+          potentialSummary
+        }
+      }
+      else -> repository.getArtifactSummaryInEnvironment(
+        deliveryConfig = deliveryConfig,
+        environmentName = environmentName,
+        artifactReference = artifact.reference,
+        version = version
       )
     }
   }
@@ -249,8 +255,7 @@ class ApplicationService(
    * For each constraint type, if it's not yet been evaluated, creates a synthetic constraint summary object
    * with a [ConstraintStatus.NOT_EVALUATED] status.
    */
-  private fun addStatefulConstraintSummaries(
-    artifactSummaryInEnvironment: ArtifactSummaryInEnvironment,
+  private fun ArtifactSummaryInEnvironment.addStatefulConstraintSummaries(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String
@@ -264,7 +269,7 @@ class ApplicationService(
         status = NOT_EVALUATED
       )
     }
-    return artifactSummaryInEnvironment.copy(
+    return this.copy(
       statefulConstraints = constraintStates
         .map { it.toConstraintSummary() } +
         notEvaluatedConstraints
@@ -274,8 +279,7 @@ class ApplicationService(
   /**
    * Adds details about any stateless constraints in the given environment to the [ArtifactSummaryInEnvironment].
    */
-  private fun addStatelessConstraintSummaries(
-    artifactSummaryInEnvironment: ArtifactSummaryInEnvironment,
+  private fun ArtifactSummaryInEnvironment.addStatelessConstraintSummaries(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String,
@@ -299,58 +303,41 @@ class ApplicationService(
       }
     }
 
-    return artifactSummaryInEnvironment.copy(
+    return this.copy(
       statelessConstraints = statelessConstraints
     )
   }
 
   /**
    * Takes an artifact version, plus information about the type of artifact, and constructs a summary view.
-   * This should be supplemented/re-written to use actual data from stash/git/etc instead of parsing everything
-   * from the version string.
    */
-  private fun versionToSummary(
+  private fun buildArtifactVersionSummary(
     artifact: DeliveryArtifact,
     version: String,
     environments: Set<ArtifactSummaryInEnvironment>
   ): ArtifactVersionSummary {
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
-    val publishedArtifact = artifact.toSpinnakerArtifact(version)
-    val artifactStatus = artifactSupplier.getReleaseStatus(publishedArtifact)
-    val buildMetadata = repository.getArtifactBuildMetadata(artifact.name, artifact.type, version, artifactStatus)
-    val gitMetadata = repository.getArtifactGitMetadata(artifact.name, artifact.type, version, artifactStatus)
+    val releaseStatus = repository.getReleaseStatus(artifact, version)
+    val artifactInstance = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
+      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
+
     return ArtifactVersionSummary(
       version = version,
       environments = environments,
-      displayName = artifactSupplier.getVersionDisplayName(publishedArtifact),
+      displayName = artifactSupplier.getVersionDisplayName(artifactInstance),
+      createdAt = artifactInstance.createdAt,
 
-      // first attempt to fetch the artifact metadata from the DB, then fallback to the default if not found
-      build = when (buildMetadata) {
-        null -> artifactSupplier.parseDefaultBuildMetadata(publishedArtifact, artifact.versioningStrategy)
-        else -> buildMetadata
-      },
-      git = when (gitMetadata) {
-        null -> artifactSupplier.parseDefaultGitMetadata(publishedArtifact, artifact.versioningStrategy)
-        else -> gitMetadata
-      }
+      // first attempt to use the artifact metadata fetched from the DB, then fallback to the default if not found
+      build = artifactInstance.buildMetadata
+        ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.versioningStrategy),
+      git = artifactInstance.gitMetadata
+        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.versioningStrategy)
     )
   }
 
   fun getApplicationEventHistory(application: String, limit: Int) =
     repository.applicationEventHistory(application, limit)
 
-  private val ArtifactVersions.key: String
-    get() = "$type:$name"
-
   private fun ConstraintState.toConstraintSummary() =
     StatefulConstraintSummary(type, status, createdAt, judgedBy, judgedAt, comment, attributes)
-
-  private fun DeliveryArtifact.toSpinnakerArtifact(version: String): PublishedArtifact =
-    objectMapper.convertValue(this, Map::class.java)
-      .toMutableMap()
-      .let {
-        it["version"] = version
-        it["metadata"] = mapOf("releaseStatus" to repository.getReleaseStatus(this, version))
-        objectMapper.convertValue(it, PublishedArtifact::class.java)
-      }
 }

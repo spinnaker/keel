@@ -19,6 +19,7 @@ environments:
       description: Managed Security Group for keeldemo example
       inboundRules:
       - protocol: tcp
+        blockRange: "2600:1f1f:4b2:3a00::/56"
         portRange:
           startPort: 7001
           endPort: 7001
