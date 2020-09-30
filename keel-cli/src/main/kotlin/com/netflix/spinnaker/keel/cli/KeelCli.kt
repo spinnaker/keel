@@ -6,12 +6,15 @@ import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.WebApplicationType.NONE
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.builder.SpringApplicationBuilder
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.FilterType
+import org.springframework.core.env.Environment
 import java.lang.annotation.ElementType.TYPE
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy.RUNTIME
 import java.lang.annotation.Target
+import kotlin.system.exitProcess
 
 
 private val DEFAULT_PROPS = mapOf(
@@ -33,9 +36,15 @@ private val DEFAULT_PROPS = mapOf(
 @KeelCliComponentScan
 @SpringBootApplication
 class KeelCli(
+  val springEnv: Environment,
   val dataGenCommand: DataGenCommand
 ) : CommandLineRunner {
   override fun run(args: Array<String>) {
+    if (springEnv.activeProfiles.none { it == "local" }) {
+      println("You must enable the 'local' Spring profile to run this tool.")
+      return
+    }
+
     val parser = ArgParser("keel-cli")
     parser.subcommands(dataGenCommand)
     parser.parse(args)
