@@ -207,11 +207,11 @@ class ClusterHandler(
         }
         when {
           diff.shouldDeployAndModifyScalingPolicies() -> {
-            stages.add(createServerGroupOrcaJob(diff, refId, resource))
+            stages.add(diff.createServerGroupJob(refId, resource))
             refId++
             stages.addAll(diff.modifyScalingPolicyJob(refId))
           }
-          else -> stages.add(createServerGroupOrcaJob(diff, refId, resource))
+          else -> stages.add(diff.createServerGroupJob(refId, resource))
         }
 
         if (stages.isEmpty()) {
@@ -268,7 +268,7 @@ class ClusterHandler(
           refId++
         }
 
-        val stage = createServerGroupOrcaJob(diff, refId, resource).toMutableMap()
+        val stage = diff.createServerGroupJob(refId, resource).toMutableMap()
 
         refId++
 
@@ -328,9 +328,6 @@ class ClusterHandler(
 
       return@coroutineScope tasks
     }
-
-  private fun createServerGroupOrcaJob(diff: ResourceDiff<ServerGroup>, refId: Int, resource: Resource<ClusterSpec>): Map<String, Any?> =
-    diff.createServerGroupJob(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon")
 
   override suspend fun export(exportable: Exportable): ClusterSpec {
     // Get existing infrastructure
@@ -602,7 +599,10 @@ class ClusterHandler(
     )
   }
 
-  private fun ResourceDiff<ServerGroup>.createServerGroupJob(startingRefId: Int = 0): Map<String, Any?> =
+  private fun ResourceDiff<ServerGroup>.createServerGroupJob(refId: Int, resource: Resource<ClusterSpec>): Map<String, Any?> =
+    createServerGroupJobBase(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon")
+
+  private fun ResourceDiff<ServerGroup>.createServerGroupJobBase(startingRefId: Int = 0): Map<String, Any?> =
     with(desired) {
       mutableMapOf(
         "application" to moniker.app,
