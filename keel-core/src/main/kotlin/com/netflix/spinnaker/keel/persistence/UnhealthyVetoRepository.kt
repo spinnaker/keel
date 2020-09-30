@@ -22,16 +22,18 @@ abstract class UnhealthyVetoRepository(
     application: String
   )
 
-  abstract fun getUnhealthyTime(
+  abstract fun markAllowed(
+    resourceId: String
+  )
+
+  abstract fun getLastALlowedTime(
     resourceId: String
   ) : Instant?
-
-  abstract fun markHealthy(resourceId: String)
 
   /**
    * Clears unhealthy marking for [resourceId]
    */
-  abstract fun delete(resourceId: String)
+  abstract fun markHealthy(resourceId: String)
 
   /**
    * Returns all currently vetoed resources

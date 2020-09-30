@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.events.NotifierMessage
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
 import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
 import com.netflix.spinnaker.keel.notifications.Notifier.UNHEALTHY
+import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.UnhealthyVetoRepository
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
@@ -30,36 +31,32 @@ class UnhealthyVeto(
   private val ignoreDuration: String,
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
-  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
+  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
+  private val diffFingerprintRepository: DiffFingerprintRepository
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  /*
-  What if the version is unhealthy because we made an out of band change
-  (like adding a load balancer that doesn't work)?
-  in that case, we will mark it as unhappy and veto the version
-  that's not great.
-  we should not veto the version here
-  what's the right action?
-   */
   override suspend fun check(resource: Resource<*>): VetoResponse {
     val resourceId = resource.id
+    val hasDiff = diffFingerprintRepository.diffCount(resourceId) > 0
 
-    if (unhealthyVetoRepository.isHealthy(resourceId)) {
+    if (unhealthyVetoRepository.isHealthy(resourceId) || hasDiff) {
+      // we want keel to take action if there's a diff
       return allowedResponse()
     }
 
-    val unhealthyStartTime = unhealthyVetoRepository.getUnhealthyTime(resourceId) ?: return allowedResponse()
+    val lastAllowedTime = unhealthyVetoRepository.getLastALlowedTime(resourceId) ?: return allowedResponse()
     val now = clock.instant()
-    val stillUnhealthy = now.minus(Duration.parse(ignoreDuration)) < unhealthyStartTime
+    val shouldAllow = now.minus(Duration.parse(ignoreDuration)) > lastAllowedTime
 
-    return if (stillUnhealthy) {
-      publisher.publishEvent(ResourceNotificationEvent(resourceId, UNHEALTHY, message(resource)))
-      deniedResponse(message = "Resource is unhealthy, waiting ${friendlyTime(ignoreDuration)} before rechecking.", vetoArtifact = false)
-    } else {
+    return if (shouldAllow) {
       log.debug("Resource $resourceId has been ignored for ${friendlyTime(ignoreDuration)}, allowing a recheck.")
+      unhealthyVetoRepository.markAllowed(resourceId)
       allowedResponse()
+    } else {
+      publisher.publishEvent(ResourceNotificationEvent(resourceId, UNHEALTHY, message(resource)))
+      deniedResponse(message = "Resource is unhealthy with no diff, waiting ${friendlyTime(ignoreDuration)} before rechecking.", vetoArtifact = false)
     }
   }
 
@@ -89,7 +86,7 @@ class UnhealthyVeto(
     val resourceUrl = "$spinnakerBaseUrl/#/applications/${resource.application}/clusters?${params.toURL()}"
     return NotifierMessage(
       subject = "${resource.spec.displayName} is unhealthy",
-      body = "<$resourceUrl|${resource.id}> is unhealthy. " +
+      body = "<$resourceUrl|${resource.id}> is unhealthy and there is not a diff. " +
         "Spinnaker cannot correct this problem automatically. " +
         "Please take manual action to fix it."
     )
@@ -105,7 +102,6 @@ class UnhealthyVeto(
     }
   }
 
-  // todo eb: if healthy, should we remove from the table? kinda weird that we don't...
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
     log.debug("Marking resource ${event.resourceId} as ${if (event.healthy) "healthy" else "unhealthy"}")

@@ -29,9 +29,8 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: should_recheck
-                  type: boolean
-                  defaultValue: false
+                  name: last_time_allowed
+                  type: bigint
                   constraints:
                     nullable: false
         - modifySql:

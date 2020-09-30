@@ -83,29 +83,7 @@ abstract class UnhealthyVetoRepositoryTests<T : UnhealthyVetoRepository> : JUnit
       }
 
       test("deleting works") {
-        subject.delete(resourceId)
-        expectThat(subject.getAll()).hasSize(0)
-      }
-    }
-
-    context("unhealthy to healthy") {
-      before {
-        subject.markUnhealthy(resourceId, application)
         subject.markHealthy(resourceId)
-      }
-
-      test("record is healthy") {
-          expectThat(subject.isHealthy(resourceId)).isTrue()
-      }
-    }
-
-
-    context("filtering") {
-      before {
-        subject.markUnhealthy(resourceId, application)
-        subject.markHealthy(resourceId)
-      }
-      test("filters out healthy resources") {
         expectThat(subject.getAll()).hasSize(0)
       }
     }
