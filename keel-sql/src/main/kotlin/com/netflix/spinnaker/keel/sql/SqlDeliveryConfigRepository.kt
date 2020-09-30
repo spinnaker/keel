@@ -51,8 +51,10 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.row
 import org.jooq.impl.DSL.select
+import org.jooq.impl.DSL.update
 import org.jooq.util.mysql.MySQLDSL
 import org.slf4j.LoggerFactory
+import java.net.InetAddress
 
 class SqlDeliveryConfigRepository(
   private val jooq: DSLContext,
@@ -594,18 +596,18 @@ class SqlDeliveryConfigRepository(
           }
         }
         .fetchOne { (
-          deliveryConfigName,
-          environmentName,
-          artifactVersion,
-          artifactReference,
-          constraintType,
-          status,
-          createdAt,
-          judgedBy,
-          judgedAt,
-          comment,
-          attributes
-        ) ->
+                      deliveryConfigName,
+                      environmentName,
+                      artifactVersion,
+                      artifactReference,
+                      constraintType,
+                      status,
+                      createdAt,
+                      judgedBy,
+                      judgedAt,
+                      comment,
+                      attributes
+                    ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
@@ -647,18 +649,18 @@ class SqlDeliveryConfigRepository(
         .and(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
         .and(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
         .fetchOne { (
-          deliveryConfigName,
-          environmentName,
-          artifactVersion,
-          artifactReference,
-          constraintType,
-          status,
-          createdAt,
-          judgedBy,
-          judgedAt,
-          comment,
-          attributes
-        ) ->
+                      deliveryConfigName,
+                      environmentName,
+                      artifactVersion,
+                      artifactReference,
+                      constraintType,
+                      status,
+                      createdAt,
+                      judgedBy,
+                      judgedAt,
+                      comment,
+                      attributes
+                    ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
@@ -763,17 +765,17 @@ class SqlDeliveryConfigRepository(
     }
 
     return constraintResult.mapNotNull { (
-      envId,
-      artifactVersion,
-      artifactReference,
-      type,
-      createdAt,
-      status,
-      judgedBy,
-      judgedAt,
-      comment,
-      attributes
-    ) ->
+                                           envId,
+                                           artifactVersion,
+                                           artifactReference,
+                                           type,
+                                           createdAt,
+                                           status,
+                                           judgedBy,
+                                           judgedAt,
+                                           comment,
+                                           attributes
+                                         ) ->
       if (deliveryConfigsByEnv.containsKey(envId) && environmentNames.containsKey(envId)) {
         ConstraintState(
           deliveryConfigsByEnv[envId]
@@ -832,18 +834,18 @@ class SqlDeliveryConfigRepository(
         .orderBy(ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT.desc())
         .limit(limit)
         .fetch { (
-          deliveryConfigName,
-          environmentName,
-          artifactVersion,
-          artifactReference,
-          constraintType,
-          status,
-          createdAt,
-          judgedBy,
-          judgedAt,
-          comment,
-          attributes
-        ) ->
+                   deliveryConfigName,
+                   environmentName,
+                   artifactVersion,
+                   artifactReference,
+                   constraintType,
+                   status,
+                   createdAt,
+                   judgedBy,
+                   judgedAt,
+                   comment,
+                   attributes
+                 ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
@@ -902,18 +904,18 @@ class SqlDeliveryConfigRepository(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(artifactVersion)
         )
         .fetch { (
-          deliveryConfigName,
-          environmentName,
-          artifactVersion,
-          artifactReference,
-          constraintType,
-          status,
-          createdAt,
-          judgedBy,
-          judgedAt,
-          comment,
-          attributes
-        ) ->
+                   deliveryConfigName,
+                   environmentName,
+                   artifactVersion,
+                   artifactReference,
+                   constraintType,
+                   status,
+                   createdAt,
+                   judgedBy,
+                   judgedAt,
+                   comment,
+                   attributes
+                 ) ->
           ConstraintState(
             deliveryConfigName,
             environmentName,
@@ -1042,6 +1044,7 @@ class SqlDeliveryConfigRepository(
         select(DELIVERY_CONFIG.UID, DELIVERY_CONFIG.NAME)
           .from(DELIVERY_CONFIG, DELIVERY_CONFIG_LAST_CHECKED)
           .where(DELIVERY_CONFIG.UID.eq(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID))
+          .and(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY.isNull)
           .and(DELIVERY_CONFIG_LAST_CHECKED.AT.lessOrEqual(cutoff))
           .orderBy(DELIVERY_CONFIG_LAST_CHECKED.AT)
           .limit(limit)
@@ -1049,11 +1052,9 @@ class SqlDeliveryConfigRepository(
           .fetch()
           .also {
             it.forEach { (uid, _) ->
-              insertInto(DELIVERY_CONFIG_LAST_CHECKED)
-                .set(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID, uid)
-                .set(DELIVERY_CONFIG_LAST_CHECKED.AT, now.toTimestamp())
-                .onDuplicateKeyUpdate()
-                .set(DELIVERY_CONFIG_LAST_CHECKED.AT, now.toTimestamp())
+              update(DELIVERY_CONFIG_LAST_CHECKED)
+                .set(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY, InetAddress.getLocalHost().hostName)
+                .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(uid))
                 .execute()
             }
           }
@@ -1061,6 +1062,21 @@ class SqlDeliveryConfigRepository(
             get(name)
           }
       }
+    }
+  }
+
+  override fun markCheckComplete(deliveryConfig: DeliveryConfig) {
+    sqlRetry.withRetry(WRITE) {
+      jooq
+        .update(DELIVERY_CONFIG_LAST_CHECKED)
+        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY)
+        .set(DELIVERY_CONFIG_LAST_CHECKED.AT, clock.instant().toTimestamp())
+        .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(
+          select(DELIVERY_CONFIG.UID)
+            .from(DELIVERY_CONFIG)
+            .where(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+        ))
+        .execute()
     }
   }
 
