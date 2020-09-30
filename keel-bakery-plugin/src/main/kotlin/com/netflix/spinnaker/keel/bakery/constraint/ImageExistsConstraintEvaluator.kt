@@ -50,16 +50,30 @@ class ImageExistsConstraintEvaluator(
     return image != null
   }
 
+  private data class CacheKey(
+    val appVersion: AppVersion,
+    val account: String,
+    val regions: Set<String>
+  )
+
+  private val cache = mutableMapOf<CacheKey, NamedImage?>()
+
   private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? {
-    log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
-    val appVersion = AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version")
-    return runBlocking {
-      imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        appVersion,
-        defaultImageAccount,
-        vmOptions.regions
-      )
+    val key = CacheKey(
+      // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
+      AppVersion.parseName(version),
+      defaultImageAccount,
+      vmOptions.regions
+    )
+    return cache.computeIfAbsent(key) { (appVersion, account, regions) ->
+      runBlocking {
+        log.debug("Searching for baked image for {} in {}", version, regions.joinToString())
+        imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+          appVersion,
+          account,
+          regions
+        )
+      }
     }
   }
 
