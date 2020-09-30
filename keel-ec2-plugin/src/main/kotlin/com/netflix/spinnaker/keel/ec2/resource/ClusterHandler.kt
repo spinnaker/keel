@@ -1174,7 +1174,6 @@ class ClusterHandler(
     )
 
     private const val REGION_PLACEHOLDER = "{{region}}"
-    private const val REGION_PATTERN = "([a-z]{2}(-gov)?)-([a-z]+)-\\d"
   }
 }
 
