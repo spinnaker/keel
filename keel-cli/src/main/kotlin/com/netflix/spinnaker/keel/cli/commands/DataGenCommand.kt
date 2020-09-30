@@ -127,8 +127,6 @@ class DataGenCommand(
     }
 
     println("Successfully generated test data. Happy testing!")
-
-    Thread.sleep(10 * 1000)
   }
 
   private fun makeFakeCommitHash() =
