@@ -35,7 +35,7 @@ class DataGenCommand(
     val TEST_ARTIFACT = DebianArtifact(
       deliveryConfigName = TEST_APP,
       name = TEST_DEB_PACKAGE,
-      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-weest-2")),
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       reference = TEST_APP
     )
     private val HEX_CHAR_POOL : List<Char> = ('0'..'9') + ('a'..'f')
