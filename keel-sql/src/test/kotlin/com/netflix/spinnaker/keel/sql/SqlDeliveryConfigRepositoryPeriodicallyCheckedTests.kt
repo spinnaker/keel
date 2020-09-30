@@ -1,14 +1,18 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepositoryPeriodicallyCheckedTests
 import com.netflix.spinnaker.keel.persistence.DummyResourceSpecIdentifier
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.defaultArtifactSuppliers
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
-import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
-import java.time.Clock
+import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
+import dev.minutest.rootContext
 import org.junit.jupiter.api.AfterAll
+import strikt.api.expectThat
+import strikt.assertions.hasSize
+import java.time.Clock
 
 internal object SqlDeliveryConfigRepositoryPeriodicallyCheckedTests :
   DeliveryConfigRepositoryPeriodicallyCheckedTests<SqlDeliveryConfigRepository>() {
@@ -24,12 +28,34 @@ internal object SqlDeliveryConfigRepositoryPeriodicallyCheckedTests :
   }
 
   override fun flush() {
-    SqlTestUtil.cleanupDb(jooq)
+    cleanupDb(jooq)
   }
 
   @JvmStatic
   @AfterAll
   fun shutdown() {
     testDatabase.dataSource.close()
+  }
+
+  fun pausedApplicationTests() = rootContext<Fixture<DeliveryConfig, SqlDeliveryConfigRepository>> {
+    fixture {
+      Fixture(factory, createAndStore, updateOne)
+    }
+
+    after { flush() }
+
+    context("an application is paused") {
+      before {
+        createAndStore(2)
+          .also {
+            SqlPausedRepository(jooq, sqlRetry, clock)
+              .pauseApplication(it.first().application, "fzlem@netflix.com")
+        }
+      }
+
+      test("delivery config is ignored") {
+        expectThat(nextResults()).hasSize(1)
+      }
+    }
   }
 }

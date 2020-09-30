@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -1046,6 +1047,12 @@ class SqlDeliveryConfigRepository(
           .where(DELIVERY_CONFIG.UID.eq(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID))
           .and(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY.isNull)
           .and(DELIVERY_CONFIG_LAST_CHECKED.AT.lessOrEqual(cutoff))
+          .andNotExists(
+            selectOne()
+              .from(PAUSED)
+              .where(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION))
+              .and(PAUSED.SCOPE.eq(APPLICATION.name))
+          )
           .orderBy(DELIVERY_CONFIG_LAST_CHECKED.AT)
           .limit(limit)
           .forUpdate()
