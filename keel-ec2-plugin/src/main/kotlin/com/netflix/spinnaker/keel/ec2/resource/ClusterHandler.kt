@@ -98,7 +98,8 @@ class ClusterHandler(
   private val clock: Clock,
   override val eventPublisher: EventPublisher,
   resolvers: List<Resolver<*>>,
-  private val clusterExportHelper: ClusterExportHelper
+  private val clusterExportHelper: ClusterExportHelper,
+  private val blockDeviceConfig: BlockDeviceConfig
 ) : BaseClusterHandler<ClusterSpec, ServerGroup>(resolvers) {
 
   private val debianArtifactParser = DebianArtifactParser()
@@ -683,6 +684,18 @@ class ClusterHandler(
             "asgName" to moniker.serverGroup
           )
           job["copySourceCustomBlockDeviceMappings"] = true
+          }
+
+        // pass block device info so that keel can specify the volume type
+        blockDeviceConfig.get(desired.launchConfiguration.instanceType)?.let { blockDevices ->
+          job["blockDevices"] = blockDevices.map {
+            mapOf(
+              "deviceName" to it.deviceName,
+              "size" to it.size,
+              "volumeType" to it.volumeType,
+              "deleteOnTermination" to it.deleteOnTermination
+            )
+          }
         }
       }
 
