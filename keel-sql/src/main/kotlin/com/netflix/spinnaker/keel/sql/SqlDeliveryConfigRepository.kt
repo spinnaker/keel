@@ -16,7 +16,6 @@ import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
-import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -41,10 +40,6 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_WITH_MET
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant.EPOCH
-import java.time.ZoneOffset
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Select
@@ -52,10 +47,14 @@ import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.row
 import org.jooq.impl.DSL.select
-import org.jooq.impl.DSL.update
 import org.jooq.util.mysql.MySQLDSL
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.Instant.EPOCH
+import java.time.ZoneOffset.UTC
 
 class SqlDeliveryConfigRepository(
   private val jooq: DSLContext,
@@ -616,11 +615,11 @@ class SqlDeliveryConfigRepository(
             artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
-            createdAt.toInstant(ZoneOffset.UTC),
+            createdAt.toInstant(UTC),
             judgedBy,
             when (judgedAt) {
               null -> null
-              else -> judgedAt.toInstant(ZoneOffset.UTC)
+              else -> judgedAt.toInstant(UTC)
             },
             comment,
             mapper.readValue(attributes)
@@ -669,11 +668,11 @@ class SqlDeliveryConfigRepository(
             artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
-            createdAt.toInstant(ZoneOffset.UTC),
+            createdAt.toInstant(UTC),
             judgedBy,
             when (judgedAt) {
               null -> null
-              else -> judgedAt.toInstant(ZoneOffset.UTC)
+              else -> judgedAt.toInstant(UTC)
             },
             comment,
             mapper.readValue(attributes)
@@ -786,11 +785,11 @@ class SqlDeliveryConfigRepository(
           artifactReference,
           type,
           ConstraintStatus.valueOf(status),
-          createdAt.toInstant(ZoneOffset.UTC),
+          createdAt.toInstant(UTC),
           judgedBy,
           when (judgedAt) {
             null -> null
-            else -> judgedAt.toInstant(ZoneOffset.UTC)
+            else -> judgedAt.toInstant(UTC)
           },
           comment,
           mapper.readValue(attributes)
@@ -854,11 +853,11 @@ class SqlDeliveryConfigRepository(
             artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
-            createdAt.toInstant(ZoneOffset.UTC),
+            createdAt.toInstant(UTC),
             judgedBy,
             when (judgedAt) {
               null -> null
-              else -> judgedAt.toInstant(ZoneOffset.UTC)
+              else -> judgedAt.toInstant(UTC)
             },
             comment,
             mapper.readValue(attributes)
@@ -924,11 +923,11 @@ class SqlDeliveryConfigRepository(
             artifactReference,
             constraintType,
             ConstraintStatus.valueOf(status),
-            createdAt.toInstant(ZoneOffset.UTC),
+            createdAt.toInstant(UTC),
             judgedBy,
             when (judgedAt) {
               null -> null
-              else -> judgedAt.toInstant(ZoneOffset.UTC)
+              else -> judgedAt.toInstant(UTC)
             },
             comment,
             mapper.readValue(attributes)
@@ -1147,6 +1146,18 @@ class SqlDeliveryConfigRepository(
           ApplicationSummary(deliveryConfigName = name, application = application, serviceAccount = serviceAccount, apiVersion = apiVersion, isPaused = paused != null)
         }
     }
+
+  override fun deliveryConfigLastChecked(deliveryConfig: DeliveryConfig): Instant {
+    return sqlRetry.withRetry(READ) {
+      jooq
+        .select(DELIVERY_CONFIG_LAST_CHECKED.AT)
+        .from(DELIVERY_CONFIG_LAST_CHECKED, DELIVERY_CONFIG)
+        .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
+        .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+        .fetchOne(DELIVERY_CONFIG_LAST_CHECKED.AT)
+        .toInstant(UTC)
+    }
+  }
 
   companion object {
     private const val DELETE_CHUNK_SIZE = 20
