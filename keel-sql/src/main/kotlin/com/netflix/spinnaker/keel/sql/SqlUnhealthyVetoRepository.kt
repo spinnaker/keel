@@ -14,14 +14,21 @@ class SqlUnhealthyVetoRepository(
   private val sqlRetry: SqlRetry
 ) : UnhealthyVetoRepository(clock){
 
+  /**
+   * Wait until we've seen this at least twice to take unhealthy action
+   */
   override fun isHealthy(resourceId: String): Boolean {
-    return sqlRetry.withRetry(RetryCategory.READ) {
-      jooq.selectCount()
+    val numTimesMarked = sqlRetry.withRetry(RetryCategory.READ) {
+      jooq.select(UNHEALTHY_VETO.NUM_TIMES_MARKED)
         .from(UNHEALTHY_VETO)
         .where(UNHEALTHY_VETO.RESOURCE_ID.eq(resourceId))
-        .fetchOne()
-        .value1()
-    } == 0
+        .fetchOne(UNHEALTHY_VETO.NUM_TIMES_MARKED)
+    }
+    return if (numTimesMarked == null) {
+      true
+    } else {
+      numTimesMarked <= 2
+    }
   }
 
   override fun markAllowed(resourceId: String) {
@@ -53,6 +60,16 @@ class SqlUnhealthyVetoRepository(
         .from(UNHEALTHY_VETO)
         .where(UNHEALTHY_VETO.RESOURCE_ID.eq(resourceId))
         .fetchOne(UNHEALTHY_VETO.LAST_TIME_ALLOWED)
+        ?.let { Instant.ofEpochMilli(it) }
+    }
+  }
+
+  override fun getNoticedTime(resourceId: String): Instant? {
+    return sqlRetry.withRetry(RetryCategory.READ) {
+      jooq.select(UNHEALTHY_VETO.TIME_DETECTED)
+        .from(UNHEALTHY_VETO)
+        .where(UNHEALTHY_VETO.RESOURCE_ID.eq(resourceId))
+        .fetchOne(UNHEALTHY_VETO.TIME_DETECTED)
         ?.let { Instant.ofEpochMilli(it) }
     }
   }

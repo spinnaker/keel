@@ -13,6 +13,13 @@ abstract class UnhealthyVetoRepository(
     log.info("Using ${javaClass.simpleName}")
   }
 
+  /**
+   * @return true if we don't have an unhealthy record, or if a resource has
+   * been marked as unhealthy only once.
+   *
+   * We want to see a bit of sustained unhealthy duration before we
+   * take any action.
+   */
   abstract fun isHealthy(
     resourceId: String
   ): Boolean
@@ -27,6 +34,10 @@ abstract class UnhealthyVetoRepository(
   )
 
   abstract fun getLastALlowedTime(
+    resourceId: String
+  ) : Instant?
+
+  abstract fun getNoticedTime(
     resourceId: String
   ) : Instant?
 

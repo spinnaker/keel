@@ -118,7 +118,6 @@ class ResourceNotifier(
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
     if (event.healthy) {
-      log.debug("Removing ${UNHEALTHY.name} message for ${event.resourceId}")
       notifierRepository.clearNotification(event.resourceId, UNHEALTHY)
     }
   }

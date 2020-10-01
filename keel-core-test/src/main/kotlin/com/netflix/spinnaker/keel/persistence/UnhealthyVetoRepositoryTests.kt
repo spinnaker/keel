@@ -75,9 +75,13 @@ abstract class UnhealthyVetoRepositoryTests<T : UnhealthyVetoRepository> : JUnit
         subject.markUnhealthy(resourceId, application)
       }
 
-      test("marking unhealthy works") {
+      test("marking unhealthy must be done three times for it to notify") {
+        expectThat(subject.isHealthy(resourceId)).isTrue()
+
+        subject.markUnhealthy(resourceId, application)
+        subject.markUnhealthy(resourceId, application)
         expect{
-          that(subject.isHealthy(resourceId)).isFalse()
+          expectThat(subject.isHealthy(resourceId)).isFalse()
           that(subject.getAll()).hasSize(1)
         }
       }

@@ -12,6 +12,8 @@ import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.UnhealthyVetoRepository
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
+import com.netflix.spinnaker.keel.veto.friendlyDuration
+import com.netflix.spinnaker.keel.veto.friendlyTime
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
@@ -19,6 +21,7 @@ import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 
 /**
  * A veto that stops keel from checking a resource while it's unhealthy,
@@ -55,7 +58,9 @@ class UnhealthyVeto(
       unhealthyVetoRepository.markAllowed(resourceId)
       allowedResponse()
     } else {
-      publisher.publishEvent(ResourceNotificationEvent(resourceId, UNHEALTHY, message(resource)))
+      // if we no longer have the resource marked as unhealthy, allow it to be checked
+      val timeNoticed = unhealthyVetoRepository.getNoticedTime(resource.id) ?: return allowedResponse()
+      publisher.publishEvent(ResourceNotificationEvent(resourceId, UNHEALTHY, message(resource, timeNoticed)))
       deniedResponse(message = "Resource is unhealthy with no diff, waiting ${friendlyTime(ignoreDuration)} before rechecking.", vetoArtifact = false)
     }
   }
@@ -64,7 +69,7 @@ class UnhealthyVeto(
    *  Assumption: health is only for clusters, and we have specific requirements
    *  about what the spec looks like in order to construct the notification link
    */
-  private fun message(resource: Resource<*>): NotifierMessage {
+  private fun message(resource: Resource<*>, timeNoticed: Instant): NotifierMessage {
     val spec = resource.spec
     if (spec !is Monikered) {
       throw UnsupportedResourceTypeException("Resource kind ${resource.kind} must be monikered to construct resource links")
@@ -84,30 +89,23 @@ class UnhealthyVeto(
       detail = spec.moniker.detail ?: "(none)"
     )
     val resourceUrl = "$spinnakerBaseUrl/#/applications/${resource.application}/clusters?${params.toURL()}"
+
+    val durationUnheathy = Duration.between(timeNoticed, clock.instant())
+
     return NotifierMessage(
       subject = "${resource.spec.displayName} is unhealthy",
-      body = "<$resourceUrl|${resource.id}> is unhealthy and there is not a diff. " +
-        "Spinnaker cannot correct this problem automatically. " +
-        "Please take manual action to fix it."
+      body = "<$resourceUrl|${resource.id}> has been unhealthy for ${friendlyDuration(durationUnheathy)}. " +
+        "Spinnaker does not detect any changes to this resource. " +
+        "Manual intervention might be required. Please check the History view to see more details."
     )
-  }
-
-
-  private fun friendlyTime(duration: String): String {
-    val time = duration.removePrefix("PT")
-    return when {
-      time.endsWith("M") -> time.removeSuffix("M") + " minutes"
-      time.endsWith("H") -> time.removeSuffix("H") + " hours"
-      else -> time
-    }
   }
 
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
-    log.debug("Marking resource ${event.resourceId} as ${if (event.healthy) "healthy" else "unhealthy"}")
     if (event.healthy) {
       unhealthyVetoRepository.markHealthy(event.resourceId)
     } else {
+      log.debug("Marking resource ${event.resourceId} as unhealthy")
       unhealthyVetoRepository.markUnhealthy(event.resourceId, event.application)
     }
   }
