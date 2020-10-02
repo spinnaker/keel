@@ -877,11 +877,7 @@ class ClusterHandler(
       it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
     }
 
-    if (healthy) {
-      eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, true))
-    } else {
-      eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, false))
-    }
+    eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, healthy))
 
     if (allSame && healthy) {
       // // only publish a successfully deployed event if the server group is healthy

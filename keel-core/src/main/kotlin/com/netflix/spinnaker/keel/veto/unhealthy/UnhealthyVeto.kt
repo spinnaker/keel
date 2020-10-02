@@ -7,8 +7,8 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.events.NotifierMessage
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
 import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
+import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
 import com.netflix.spinnaker.keel.notifications.Notifier.UNHEALTHY
-import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.UnhealthyVetoRepository
 import com.netflix.spinnaker.keel.veto.Veto
 import com.netflix.spinnaker.keel.veto.VetoResponse
@@ -35,21 +35,18 @@ class UnhealthyVeto(
   private val clock: Clock,
   private val publisher: ApplicationEventPublisher,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
-  private val diffFingerprintRepository: DiffFingerprintRepository
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override suspend fun check(resource: Resource<*>): VetoResponse {
     val resourceId = resource.id
-    val hasDiff = diffFingerprintRepository.diffCount(resourceId) > 0
 
-    if (unhealthyVetoRepository.isHealthy(resourceId) || hasDiff) {
-      // we want keel to take action if there's a diff
+    if (unhealthyVetoRepository.isHealthy(resourceId)) {
       return allowedResponse()
     }
 
-    val lastAllowedTime = unhealthyVetoRepository.getLastALlowedTime(resourceId) ?: return allowedResponse()
+    val lastAllowedTime = unhealthyVetoRepository.getLastAllowedTime(resourceId) ?: return allowedResponse()
     val now = clock.instant()
     val shouldAllow = now.minus(Duration.parse(ignoreDuration)) > lastAllowedTime
 
@@ -60,7 +57,7 @@ class UnhealthyVeto(
     } else {
       // if we no longer have the resource marked as unhealthy, allow it to be checked
       val timeNoticed = unhealthyVetoRepository.getNoticedTime(resource.id) ?: return allowedResponse()
-      publisher.publishEvent(ResourceNotificationEvent(resourceId, UNHEALTHY, message(resource, timeNoticed)))
+      publisher.publishEvent(ResourceNotificationEvent(RESOURCE, resourceId, UNHEALTHY, message(resource, timeNoticed)))
       deniedResponse(message = "Resource is unhealthy with no diff, waiting ${friendlyTime(ignoreDuration)} before rechecking.", vetoArtifact = false)
     }
   }

@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.veto
 
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
-import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.UnhealthyVetoRepository
 import com.netflix.spinnaker.keel.test.locatableResource
 import com.netflix.spinnaker.keel.veto.unhealthy.UnhealthyVeto
@@ -22,8 +21,7 @@ class UnhealthyVetoTests : JUnit5Minutests {
     val clock = MutableClock()
     val unhealthyRepository: UnhealthyVetoRepository = mockk(relaxUnitFun = true)
     val publisher: ApplicationEventPublisher = mockk(relaxUnitFun = true)
-    val diffRepository: DiffFingerprintRepository = mockk(relaxUnitFun = true)
-    val subject = UnhealthyVeto(unhealthyRepository, "PT5M", clock, publisher, "URL", diffRepository)
+    val subject = UnhealthyVeto(unhealthyRepository, "PT5M", clock, publisher, "URL")
 
     val r = locatableResource()
     var result: VetoResponse? = null
@@ -40,26 +38,9 @@ class UnhealthyVetoTests : JUnit5Minutests {
         every { unhealthyRepository.isHealthy(r.id) } returns true
       }
 
-      context("no diff"){
-        before {
-          every {diffRepository.diffCount(r.id) } returns 0
-        }
-
-        test("allowed") {
-          check()
-          expectThat(result).isNotNull().isAllowed()
-        }
-      }
-
-      context("diff"){
-        before {
-          every {diffRepository.diffCount(r.id) } returns 1
-        }
-
-        test("allowed") {
-          check()
-          expectThat(result).isNotNull().isAllowed()
-        }
+      test("allowed") {
+        check()
+        expectThat(result).isNotNull().isAllowed()
       }
     }
 
@@ -69,53 +50,38 @@ class UnhealthyVetoTests : JUnit5Minutests {
       }
 
 
-      context("diff") {
+      context("resource was marked unhealthy 1 minute ago") {
         before {
-          every { diffRepository.diffCount(r.id) } returns 1
+          every { unhealthyRepository.getLastAllowedTime(r.id) } returns clock.instant().minusSeconds(60)
+          every { unhealthyRepository.getNoticedTime(r.id) } returns clock.instant().minusSeconds(60)
+          check()
         }
 
-        test("allowed") {
-          check()
-          expectThat(result).isNotNull().isAllowed()
+        test("denied") {
+          expectThat(result).isNotNull().isNotAllowed()
         }
       }
 
-      context("no diff") {
+      context("resource was marked unhealthy 4 minute ago") {
         before {
-          every { diffRepository.diffCount(r.id) } returns 0
+          every { unhealthyRepository.getLastAllowedTime(r.id) } returns clock.instant().minusSeconds(60 * 4)
+          every { unhealthyRepository.getNoticedTime(r.id) } returns clock.instant().minusSeconds(60 * 4)
+          check()
         }
 
-        context("resource was marked unhealthy 1 minute ago") {
-          before {
-            every { unhealthyRepository.getLastALlowedTime(r.id) } returns clock.instant().minusSeconds(60)
-            check()
-          }
+        test("it is vetoed") {
+          expectThat(result).isNotNull().isNotAllowed()
+        }
+      }
 
-          test("denied") {
-            expectThat(result).isNotNull().isNotAllowed()
-          }
+      context("resource was marked unhealthy 6 minutes ago (more than the ignore duration)") {
+        before {
+          every { unhealthyRepository.getLastAllowedTime(r.id) } returns clock.instant().minusSeconds(60 * 6)
+          check()
         }
 
-        context("resource was marked unhealthy 4 minute ago") {
-          before {
-            every { unhealthyRepository.getLastALlowedTime(r.id) } returns clock.instant().minusSeconds(60 * 4)
-            check()
-          }
-
-          test("it is vetoed") {
-            expectThat(result).isNotNull().isNotAllowed()
-          }
-        }
-
-        context("resource was marked unhealthy 6 minutes ago") {
-          before {
-            every { unhealthyRepository.getLastALlowedTime(r.id) } returns clock.instant().minusSeconds(60 * 6)
-            check()
-          }
-
-          test("it is vetoed") {
-            expectThat(result).isNotNull().isAllowed()
-          }
+        test("it is not vetoed") {
+          expectThat(result).isNotNull().isAllowed()
         }
       }
     }
@@ -126,7 +92,7 @@ class UnhealthyVetoTests : JUnit5Minutests {
       }
 
       test("unhealthy") {
-        verify(exactly = 1) { unhealthyRepository.markUnhealthy(r.id, "hi")}
+        verify(exactly = 1) { unhealthyRepository.markUnhealthy(r.id, "hi") }
       }
     }
 
@@ -136,7 +102,7 @@ class UnhealthyVetoTests : JUnit5Minutests {
       }
 
       test("healthy") {
-        verify(exactly = 1) { unhealthyRepository.markHealthy(r.id)}
+        verify(exactly = 1) { unhealthyRepository.markHealthy(r.id) }
       }
     }
   }

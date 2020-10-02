@@ -54,7 +54,7 @@ class SqlUnhealthyVetoRepository(
       }
   }
 
-  override fun getLastALlowedTime(resourceId: String): Instant? {
+  override fun getLastAllowedTime(resourceId: String): Instant? {
     return sqlRetry.withRetry(RetryCategory.READ) {
       jooq.select(UNHEALTHY_VETO.LAST_TIME_ALLOWED)
         .from(UNHEALTHY_VETO)

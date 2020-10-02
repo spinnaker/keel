@@ -2,17 +2,15 @@ package com.netflix.spinnaker.keel.echo
 
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
-import com.netflix.spinnaker.keel.api.NotificationFrequency
 import com.netflix.spinnaker.keel.api.NotificationFrequency.quiet
-import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.api.NotificationType.email
 import com.netflix.spinnaker.keel.api.NotificationType.slack
 import com.netflix.spinnaker.keel.events.NotifierMessage
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
 import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
+import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
 import com.netflix.spinnaker.keel.notifications.Notifier.UNHEALTHY
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.NotifierRepository
 import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
@@ -25,7 +23,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import strikt.api.expectCatching
 import strikt.assertions.isSuccess
-import strikt.assertions.succeeded
 
 class ResourceNotifierTests : JUnit5Minutests {
 
@@ -47,6 +44,7 @@ class ResourceNotifierTests : JUnit5Minutests {
       constraints = setOf()
     )
     val event = ResourceNotificationEvent(
+      RESOURCE,
       r.id,
       UNHEALTHY,
       NotifierMessage("hi", "you")
@@ -66,10 +64,10 @@ class ResourceNotifierTests : JUnit5Minutests {
 
       context("new notification") {
         before {
-          every { notifierRepository.addNotification(event.resourceId, event.notifier)} returns true
+          every { notifierRepository.addNotification(event.scope, event.identifier, event.notifier)} returns true
         }
 
-        test("two notifications fire") {
+        test("two notifications fire (slack and email)") {
           subject.onResourceNotificationEvent(event)
           coVerify(exactly = 2) { echoService.sendNotification(any()) }
         }
@@ -77,7 +75,7 @@ class ResourceNotifierTests : JUnit5Minutests {
 
       context("notification already exists") {
         before {
-          every { notifierRepository.addNotification(event.resourceId, event.notifier)} returns false
+          every { notifierRepository.addNotification(event.scope, event.identifier, event.notifier)} returns false
         }
 
         test("no notifications fire") {
@@ -89,7 +87,7 @@ class ResourceNotifierTests : JUnit5Minutests {
 
     context("resource doesn't exist") {
       before {
-        every { notifierRepository.addNotification(event.resourceId, event.notifier)} returns true
+        every { notifierRepository.addNotification(event.scope, event.identifier, event.notifier)} returns true
         every { repository.getResource(r.id) } throws NoSuchResourceId(r.id)
       }
 
@@ -103,7 +101,7 @@ class ResourceNotifierTests : JUnit5Minutests {
 
     context("env doesn't exist") {
       before {
-        every { notifierRepository.addNotification(event.resourceId, event.notifier)} returns true
+        every { notifierRepository.addNotification(event.scope, event.identifier, event.notifier)} returns true
         every { repository.getResource(r.id) } returns r
         every { repository.environmentFor(r.id) } throws OrphanedResourceException(r.id)
       }
@@ -119,12 +117,12 @@ class ResourceNotifierTests : JUnit5Minutests {
     context("health events") {
       test("healthy triggers clear notification") {
         subject.onResourceHealthEvent(ResourceHealthEvent(r.id, r.application, true))
-        verify(exactly = 1) {notifierRepository.clearNotification(r.id, UNHEALTHY)}
+        verify(exactly = 1) {notifierRepository.clearNotification(RESOURCE, r.id, UNHEALTHY)}
       }
 
       test("unhealthy does nothing") {
         subject.onResourceHealthEvent(ResourceHealthEvent(r.id, r.application, false))
-        verify(exactly = 0) {notifierRepository.clearNotification(r.id, UNHEALTHY)}
+        verify(exactly = 0) {notifierRepository.clearNotification(RESOURCE, r.id, UNHEALTHY)}
       }
     }
   }

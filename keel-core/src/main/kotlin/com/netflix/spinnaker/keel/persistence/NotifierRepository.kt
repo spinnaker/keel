@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.keel.notifications.NotificationScope
 import com.netflix.spinnaker.keel.notifications.Notifier
 import org.springframework.beans.factory.annotation.Value
 import java.time.Clock
@@ -18,21 +19,21 @@ abstract class NotifierRepository(
    * Assumption: each notifier sends only one type of message
    * @return true if we should notify right now
    */
-  abstract fun addNotification(resourceId: String, notifier: Notifier): Boolean
+  abstract fun addNotification(scope: NotificationScope, identifier: String, notifier: Notifier): Boolean
 
   /**
    * Clears a notification from the list of ongoing notifications.
    * Does nothing if notification does not exist.
    */
-  abstract fun clearNotification(resourceId: String, notifier: Notifier)
+  abstract fun clearNotification(scope: NotificationScope, identifier: String, notifier: Notifier)
 
   /**
    * @return true if the notification should be sent
    */
-  abstract fun dueForNotification(resourceId: String, notifier: Notifier): Boolean
+  abstract fun dueForNotification(scope: NotificationScope, identifier: String, notifier: Notifier): Boolean
 
   /**
    * Marks notification as sent at the current time
    */
-  abstract fun markSent(resourceId: String, notifier: Notifier)
+  abstract fun markSent(scope: NotificationScope, identifier: String, notifier: Notifier)
 }

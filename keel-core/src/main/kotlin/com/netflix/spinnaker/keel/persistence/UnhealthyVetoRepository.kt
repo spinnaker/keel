@@ -33,7 +33,7 @@ abstract class UnhealthyVetoRepository(
     resourceId: String
   )
 
-  abstract fun getLastALlowedTime(
+  abstract fun getLastAllowedTime(
     resourceId: String
   ) : Instant?
 

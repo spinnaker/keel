@@ -185,3 +185,6 @@ databaseChangeLog:
   - include:
       file: changelog/20200928-add-unhealthy-veto.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20201001-diff-action-count.yml
+      relativeToChangelogFile: true

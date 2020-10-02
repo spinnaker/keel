@@ -7,13 +7,19 @@ databaseChangeLog:
             tableName: notifier
             columns:
               - column:
-                  name: resource_id
+                  name: scope
                   type: varchar(255)
                   constraints:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: notifier
+                  name: identifier
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: notifier_name
                   type: varchar(255)
                   constraints:
                     primaryKey: true

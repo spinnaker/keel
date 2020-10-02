@@ -165,6 +165,12 @@ class ResourceActuator(
 
         log.debug("Checking resource {}", id)
 
+        // todo eb: do we need a function on plugins to say "yes we should take action" / "no we shouldn't take action" here?
+        // if we had that, we could allow plugins the option to see a diff but also communicate that they
+        // couldn't do anything about it
+        // that could be handled generally here
+        // and we could appropriately veto it & send a message to users
+
         when {
           current == null -> {
             log.warn("Resource {} is missing", id)
@@ -173,6 +179,7 @@ class ResourceActuator(
             plugin.create(resource, diff)
               .also { tasks ->
                 publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                diffFingerprintRepository.markActionTaken(id)
               }
           }
           diff.hasChanges() -> {
@@ -183,6 +190,7 @@ class ResourceActuator(
             plugin.update(resource, diff)
               .also { tasks ->
                 publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                diffFingerprintRepository.markActionTaken(id)
               }
           }
           else -> {

@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.veto.unhealthy
 /**
  * Params for constructing a cluster view link
  * If you want to search for stuff without a stack or detail,
- * you must pass "none" for those
+ * you must pass "(none)" for those
  */
 data class ClusterViewParams(
   val acct: String,

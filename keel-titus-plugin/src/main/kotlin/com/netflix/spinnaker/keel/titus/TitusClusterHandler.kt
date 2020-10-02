@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.titus
 
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.netflix.spinnaker.keel.api.DeployHealth
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
@@ -132,6 +133,12 @@ class TitusClusterHandler(
         .map { diff ->
           val desired = diff.desired
           var tags: Set<String> = emptySet()
+
+          // todo eb: is there a case where there's a diff but we don't want to do anything about it?
+          //  maybe we could just have a veto for that, to pass info to the user
+          // this way we could not do anything if there was an active server group that was unhealth
+          // also, maybe we should make the disable job smarter...
+          // but then, we'd say we took ation on the diff when we really didn't.
 
           var tagToUse: String? = null
           val version = when {
@@ -498,11 +505,7 @@ class TitusClusterHandler(
       it.instanceCounts?.isHealthy(resource.spec.deployWith.health) == true
     }
 
-    if (healthy) {
-      eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, true))
-    } else {
-      eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, false))
-    }
+    eventPublisher.publishEvent(ResourceHealthEvent(resource.id, resource.application, healthy))
 
     if (sameContainer && healthy) {
       // only publish a successfully deployed event if the server group is healthy
