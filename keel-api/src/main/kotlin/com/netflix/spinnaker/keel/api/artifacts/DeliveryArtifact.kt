@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.api.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod.VERSION
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import java.time.Instant
 
@@ -18,6 +19,14 @@ enum class ArtifactStatus {
 }
 
 /**
+ * The ways in which artifacts can be sorted.
+ */
+enum class ArtifactSortByMethod(val type: String) {
+  VERSION("version"),
+  BRANCH_AND_TIMESTAMP("branch-and-timestamp")
+}
+
+/**
  * An artifact as defined in a [DeliveryConfig].
  *
  * Unlike other places within Spinnaker, this class does not describe a specific instance of a software artifact
@@ -32,6 +41,8 @@ abstract class DeliveryArtifact {
   abstract val reference: String // friendly reference to use within a delivery config
   abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
   open val statuses: Set<ArtifactStatus> = emptySet()
+  open val branch: String? = null
+  open val sortBy: ArtifactSortByMethod = VERSION
 
   fun toArtifactInstance(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
     PublishedArtifact(

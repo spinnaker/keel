@@ -6,6 +6,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod.BRANCH_AND_TIMESTAMP
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod.VERSION
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -32,6 +34,8 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.exceptions.InvalidArtifactReferenceException
+import com.netflix.spinnaker.keel.exceptions.InvalidArtifactSpecException
 import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
@@ -70,6 +74,12 @@ class SqlArtifactRepository(
   private val sqlRetry: SqlRetry,
   private val artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList()
 ) : ArtifactRepository {
+
+  companion object {
+    private val ARTIFACT_VERSIONS_BRANCH =
+      field<String?>("keel.artifact_versions.git_metadata->'$.branch'")
+  }
+
   override fun register(artifact: DeliveryArtifact) {
     val id: String = (
       sqlRetry.withRetry(READ) {
@@ -221,31 +231,53 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun versions(artifact: DeliveryArtifact, limit: Int): List<String> =
-    if (isRegistered(artifact.name, artifact.type)) {
-      sqlRetry.withRetry(READ) {
-        jooq
-          .select(ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS)
-          .from(ARTIFACT_VERSIONS)
-          .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-          .apply { if (artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray())) }
-          .fetch()
-          .getValues(ARTIFACT_VERSIONS.VERSION)
-      }
-        .sortedWith(artifact.versioningStrategy.comparator)
-        .also { versions ->
-          // FIXME: remove special handling for Docker
-          // FIXME: limit the sql query, not the returned list (once we'll have a native sorting mechanism)
-          return if (artifact is DockerArtifact) {
-            filterDockerVersions(artifact, versions, limit)
-          } else {
-            versions.subList(0, Math.min(versions.size, limit))
-          }
-        }
-    } else {
+  override fun versions(artifact: DeliveryArtifact, limit: Int): List<String> {
+    // sanity checks
+    if (!isRegistered(artifact.name, artifact.type)) {
       throw NoSuchArtifactException(artifact)
     }
+
+    if (artifact.sortBy == BRANCH_AND_TIMESTAMP && artifact.branch == null) {
+      throw InvalidArtifactSpecException(
+        "The ${artifact.type} artifact ${artifact.name} specifies sorting by branch and timestamp, but no branch is defined in the config.")
+    }
+
+    val versions = sqlRetry.withRetry(READ) {
+      jooq
+        .select(ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS)
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
+        .apply {
+          if (artifact.statuses.isNotEmpty()) {
+            and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray()))
+          }
+
+          // When sorting "natively" by branch and timestamp, delegate sorting and limiting to the database
+          if (artifact.sortBy == BRANCH_AND_TIMESTAMP) {
+            // TODO: should we also be comparing the repo with what's configured for the app in front50?
+            and(ARTIFACT_VERSIONS_BRANCH.eq(artifact.branch))
+              .and(ARTIFACT_VERSIONS.CREATED_AT.isNotNull)
+              .orderBy(ARTIFACT_VERSIONS.CREATED_AT.desc())
+              .limit(limit)
+          }
+        }
+        .fetch()
+        .getValues(ARTIFACT_VERSIONS.VERSION)
+    }
+
+    return if (artifact.sortBy == VERSION) {
+      val sortedVersions = versions.sortedWith(artifact.versioningStrategy.comparator)
+      if (artifact is DockerArtifact) {
+        // FIXME: remove special handling for Docker
+        filterDockerVersions(artifact, sortedVersions, limit)
+      } else {
+        sortedVersions.subList(0, Math.min(sortedVersions.size, limit))
+      }
+    } else {
+      versions
+    }
+  }
 
   override fun storeArtifactInstance(artifact: PublishedArtifact): Boolean {
     with(artifact) {

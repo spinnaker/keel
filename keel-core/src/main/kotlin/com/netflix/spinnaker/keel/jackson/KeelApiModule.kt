@@ -28,11 +28,13 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.StaggeredRegion
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
+import com.netflix.spinnaker.keel.jackson.mixins.ArtifactSortByMethodMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ClusterDeployStrategyMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ConstraintStateMixin
 import com.netflix.spinnaker.keel.jackson.mixins.DeliveryArtifactMixin
@@ -63,6 +65,7 @@ object KeelApiModule : SimpleModule("Keel API") {
       setMixInAnnotations<SubnetAwareRegionSpec, SubnetAwareRegionSpecMixin>()
       setMixInAnnotations<Resource<*>, ResourceMixin>()
       setMixInAnnotations<ResourceSpec, ResourceSpecMixin>()
+      setMixInAnnotations<ArtifactSortByMethod, ArtifactSortByMethodMixin>()
       insertAnnotationIntrospector(FactoryAnnotationIntrospector())
     }
   }

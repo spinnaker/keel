@@ -1,5 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSortByMethod.VERSION
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.NPM
@@ -13,7 +15,9 @@ data class NpmArtifact(
   override val deliveryConfigName: String? = null,
   override val reference: String = name,
   override val statuses: Set<ArtifactStatus> = emptySet(),
-  override val versioningStrategy: VersioningStrategy = NpmVersioningStrategy
+  override val versioningStrategy: VersioningStrategy = NpmVersioningStrategy,
+  override val sortBy: ArtifactSortByMethod = VERSION,
+  override val branch: String? = null
 ) : DeliveryArtifact() {
   override val type = NPM
   override fun toString(): String = super.toString()
