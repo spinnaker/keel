@@ -11,6 +11,11 @@ databaseChangeLog:
             type: varchar(64)
             constraints:
               nullable: true
+        - column:
+            name: locked_at
+            type: timestamp(3)
+            constraints:
+              nullable: true
     - dropIndex:
         tableName: delivery_config_last_checked
         indexName: delivery_config_last_checked_at_idx

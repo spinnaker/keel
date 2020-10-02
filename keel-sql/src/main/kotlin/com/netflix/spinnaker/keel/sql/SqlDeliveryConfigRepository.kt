@@ -1044,7 +1044,10 @@ class SqlDeliveryConfigRepository(
         select(DELIVERY_CONFIG.UID, DELIVERY_CONFIG.NAME)
           .from(DELIVERY_CONFIG, DELIVERY_CONFIG_LAST_CHECKED)
           .where(DELIVERY_CONFIG.UID.eq(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID))
-          .and(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY.isNull)
+          .and(
+            DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY.isNull
+              .or(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT.lessOrEqual(cutoff))
+          )
           .and(DELIVERY_CONFIG_LAST_CHECKED.AT.lessOrEqual(cutoff))
           .andNotExists(
             selectOne()
@@ -1060,6 +1063,7 @@ class SqlDeliveryConfigRepository(
             it.forEach { (uid, _) ->
               update(DELIVERY_CONFIG_LAST_CHECKED)
                 .set(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY, InetAddress.getLocalHost().hostName)
+                .set(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT, now.toTimestamp())
                 .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(uid))
                 .execute()
             }
@@ -1076,6 +1080,7 @@ class SqlDeliveryConfigRepository(
       jooq
         .update(DELIVERY_CONFIG_LAST_CHECKED)
         .setNull(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY)
+        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT)
         .set(DELIVERY_CONFIG_LAST_CHECKED.AT, clock.instant().toTimestamp())
         .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(
           select(DELIVERY_CONFIG.UID)
