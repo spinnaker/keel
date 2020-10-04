@@ -108,10 +108,10 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         )
       }
 
-      test("supports Debian semver versioning strategy") {
+      test("supports Debian versioning strategy") {
         expectThat(debianArtifactSupplier.supportedVersioningStrategy)
           .isEqualTo(
-            SupportedVersioningStrategy(DEBIAN, NetflixSemVerVersioningStrategy::class.java)
+            SupportedVersioningStrategy(DEBIAN, DebianVersioningStrategy::class.java)
           )
       }
 
@@ -124,16 +124,6 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
           artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
           artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
         }
-      }
-
-      test("returns full version string in the form {name}-{version}") {
-        expectThat(debianArtifactSupplier.getFullVersionString(latestArtifact))
-          .isEqualTo("${latestArtifact.name}-${latestArtifact.version}")
-      }
-
-      test("returns release status based on artifact metadata") {
-        expectThat(debianArtifactSupplier.getReleaseStatus(latestArtifact))
-          .isEqualTo(SNAPSHOT)
       }
 
       test("returns git metadata based on frigga parser") {

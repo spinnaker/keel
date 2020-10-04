@@ -1,9 +1,7 @@
 package com.netflix.spinnaker.keel.apidocs
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -12,51 +10,16 @@ import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
-import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
-import com.netflix.spinnaker.keel.api.constraints.DefaultConstraintAttributes
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
-import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1
-import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_1
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLASSIC_LOAD_BALANCER_V1
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.ec2.EC2_SECURITY_GROUP_V1
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
-import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
-import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.extensionsOf
-import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerVersioningStrategy
-import com.netflix.spinnaker.keel.artifacts.NetflixSemVerVersioningStrategy
-import com.netflix.spinnaker.keel.artifacts.NpmArtifact
-import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
-import com.netflix.spinnaker.keel.constraints.CanaryConstraintAttributes
-import com.netflix.spinnaker.keel.constraints.PipelineConstraintStateAttributes
-import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
-import com.netflix.spinnaker.keel.core.api.CanaryConstraint
-import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
-import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
-import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.docker.ContainerProvider
-import com.netflix.spinnaker.keel.docker.DigestProvider
-import com.netflix.spinnaker.keel.docker.ReferenceProvider
-import com.netflix.spinnaker.keel.docker.VersionedTagProvider
-import com.netflix.spinnaker.keel.ec2.jackson.KeelEc2ApiModule
-import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
-import com.netflix.spinnaker.keel.jackson.KeelApiModule
 import com.netflix.spinnaker.keel.schema.Generator
-import com.netflix.spinnaker.keel.schema.ResourceKindSchemaCustomizer
 import com.netflix.spinnaker.keel.schema.generateSchema
-import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
-import com.netflix.spinnaker.keel.titus.TITUS_CLUSTER_V1
-import com.netflix.spinnaker.keel.titus.jackson.KeelTitusApiModule
 import dev.minutest.experimental.SKIP
 import dev.minutest.experimental.minus
 import dev.minutest.junit.JUnit5Minutests
@@ -69,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import strikt.api.Assertion
 import strikt.api.expectThat
-import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.doesNotContain
@@ -110,11 +72,8 @@ class ApiDocTests : JUnit5Minutests {
   @Autowired
   lateinit var extensionRegistry: ExtensionRegistry
 
-  val resourceKinds
-    get() = extensionRegistry.extensionsOf<ResourceSpec>().keys
-
   val resourceSpecTypes
-    get() = extensionRegistry.extensionsOf<ResourceSpec>().values.toList()
+    get() = extensionRegistry.extensionsOf<ResourceSpec>()
 
   val constraintTypes
     get() = extensionRegistry.extensionsOf<Constraint>().values.toList()
@@ -144,49 +103,44 @@ class ApiDocTests : JUnit5Minutests {
 
     test("Does not contain a schema for ResourceKind") {
       at("/\$defs/ResourceKind")
-        .isObject()
-        .get{get("enum")}
+        .isMissing()
+    }
+
+    test("SubmittedResource kind is defined as one of the possible resource kinds") {
+      at("/\$defs/SubmittedResource/properties/kind/enum")
         .isArray()
         .textValues()
-        .containsExactlyInAnyOrder(resourceKinds)
-    }
-
-    test("Resource is defined as one of the possible resource sub-types") {
-      at("/\$defs/SubmittedResource/discriminator/mapping")
-        .isObject()
-        .and {
-          extensionRegistry.extensionsOf<ResourceSpec>().forEach { (kind, type) ->
-            has(kind)
-            get { get(kind).textValue() }.isEqualTo("#/\$defs/${type.simpleName}")
-          }
-        }
+        .containsExactlyInAnyOrder(extensionRegistry.extensionsOf<ResourceSpec>().keys)
     }
 
     resourceSpecTypes
-      .map(Class<*>::getSimpleName)
-      .forEach { specSubType ->
-        test("contains a parameterized version of schema for SubmittedResource with a spec of $specSubType") {
-          at("/\$defs/${specSubType}SubmittedResource/allOf/1/properties")
-            .isObject()
-            .and {
-              path("spec").isObject().path("\$ref").textValue().isEqualTo("#/\$defs/${specSubType}")
+      .mapValues{ it.value.simpleName }
+      .forEach { (kind, specSubType) ->
+        test("contains a sub-schema for SubmittedResource predicated on a kind of $kind") {
+          at("/\$defs/SubmittedResource/allOf")
+            .isArray()
+            .one {
+              path("if")
+                .path("properties")
+                .path("kind")
+                .path("const")
+                .textValue()
+                .isEqualTo(kind)
             }
         }
-      }
 
-    resourceSpecTypes
-      .map(Class<*>::getSimpleName)
-      .forEach { type ->
-        test("spec property of Resource subtype $type is required") {
-          at("/\$defs/${type}SubmittedResource/allOf/1/required")
+        test("contains a sub-schema for SubmittedResource with a spec of $specSubType") {
+          at("/\$defs/SubmittedResource/allOf")
             .isArray()
-            .textValues()
-            .containsExactly("spec")
-        }
-
-        test("ResourceSpec sub-type $type has its own schema") {
-          at("/\$defs/$type")
-            .isObject()
+            .one {
+              path("then")
+                .path("properties")
+                .path("spec")
+                .isObject()
+                .path("\$ref")
+                .textValue()
+                .isEqualTo("#/\$defs/${specSubType}")
+            }
         }
       }
 
@@ -291,25 +245,20 @@ class ApiDocTests : JUnit5Minutests {
         )
     }
 
-    test("schema for DeliveryArtifact has a discriminator") {
-      at("/\$defs/DeliveryArtifact")
-        .isObject()
-        .path("discriminator")
-        .and {
-          path("propertyName").textValue().isEqualTo("type")
-        }
-        .path("mapping")
-        .and {
-          path("deb").textValue().isEqualTo("#/\$defs/DebianArtifact")
-          path("docker").textValue().isEqualTo("#/\$defs/DockerArtifact")
-        }
+    test("schemas for DeliveryArtifact sub-types specify the fixed discriminator value") {
+      at("/\$defs/DebianArtifact/properties/type/const")
+        .textValue()
+        .isEqualTo("deb")
+      at("/\$defs/DockerArtifact/properties/type/const")
+        .textValue()
+        .isEqualTo("docker")
     }
 
     test("data class parameters without default values are required") {
       at("/\$defs/SubmittedResource/required")
         .isArray()
         .textValues()
-        .contains("kind")
+        .containsExactlyInAnyOrder("kind")
     }
 
     test("data class parameters with default values are not required") {
@@ -333,21 +282,17 @@ class ApiDocTests : JUnit5Minutests {
         .containsExactly("moniker")
     }
 
-    test("duration properties are duration format strings") {
-      at("/\$defs/RedBlack/properties/delayBeforeDisable")
-        .and {
-          path("type").textValue().isEqualTo("string")
-          path("format").textValue().isEqualTo("duration")
-          path("properties").isMissing()
-        }
+    test("duration properties are references to the duration schema") {
+      at("/\$defs/RedBlack/properties/delayBeforeDisable/\$ref")
+        .textValue()
+        .isEqualTo("#/\$defs/Duration")
     }
 
-    test("duration properties are duration format strings") {
-      at("/\$defs/ApplicationLoadBalancerSpec/properties/idleTimeout")
+    test("duration schema is a patterned string") {
+      at("/\$defs/Duration")
         .and {
           path("type").textValue().isEqualTo("string")
-          path("format").textValue().isEqualTo("duration")
-          path("properties").isMissing()
+          path("pattern").isTextual()
         }
     }
 
@@ -384,11 +329,12 @@ class ApiDocTests : JUnit5Minutests {
           path("\$ref").textValue().isEqualTo("#/\$defs/PortRange")
         }
         .one {
-          path("enum").isArray().textValues().containsExactly("ALL")
+          path("const").isTextual().textValue().isEqualTo("ALL")
         }
     }
 
     resourceSpecTypes
+      .values
       .filter { Locatable::class.java.isAssignableFrom(it) }
       .map(Class<*>::getSimpleName)
       .forEach { locatableType ->

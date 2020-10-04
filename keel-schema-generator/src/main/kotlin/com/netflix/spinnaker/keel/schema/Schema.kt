@@ -18,7 +18,8 @@ data class RootSchema(
   val description: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
-  val discriminator: OneOf.Discriminator? = null,
+  val allOf: List<ConditionalSubschema>? = null,
+  val additionalProperties: Boolean? = null,
   val `$defs`: SortedMap<String, Schema>
 ) {
   @Suppress("unused", "PropertyName")
@@ -31,7 +32,8 @@ data class ObjectSchema(
   override val description: String?,
   val properties: Map<String, Schema>,
   val required: SortedSet<String>,
-  val discriminator: OneOf.Discriminator? = null
+  val allOf: List<ConditionalSubschema>? = null,
+  val additionalProperties: Boolean? = null
 ) : TypedProperty("object")
 
 object NullSchema : TypedProperty("null") {
@@ -44,8 +46,16 @@ data class IntegerSchema(override val description: String?) : TypedProperty("int
 
 data class NumberSchema(override val description: String?) : TypedProperty("number")
 
+object DurationSchema : TypedProperty("string") {
+  override val description = "ISO 8601 duration"
+
+  @Suppress("MayBeConstant", "unused") // doesn't serialize if declared as const
+  // see https://rgxdb.com/r/MD2234J
+  val pattern: String = """^(-?)P(?=\d|T\d)(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)([DW]))?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$"""
+}
+
 data class AnySchema(override val description: String?) : TypedProperty("object") {
-  @Suppress("MayBeConstant") // TODO: doesn't serialize if declared as const
+  @Suppress("MayBeConstant") // doesn't serialize if declared as const
   val additionalProperties: Boolean = true
 }
 
@@ -63,12 +73,18 @@ data class MapSchema(
 
 data class StringSchema(
   override val description: String?,
-  val format: String? = null
+  val format: String? = null,
+  val pattern: String? = null
 ) : TypedProperty("string")
 
 data class EnumSchema(
   override val description: String?,
   val enum: List<String>
+) : Schema
+
+data class ConstSchema(
+  override val description: String?,
+  val const: String
 ) : Schema
 
 data class Reference(
@@ -79,20 +95,22 @@ data class Reference(
 
 data class OneOf(
   override val description: String?,
-  val oneOf: Set<Schema>,
-  val discriminator: Discriminator? = null
-) : Schema {
-  data class Discriminator(
-    val propertyName: String,
-    val mapping: SortedMap<String, String>
-  )
-}
+  val oneOf: Set<Schema>
+) : Schema
 
-data class AllOf(
-  val allOf: List<Schema>
-) : Schema {
-  override val description: String? = null
-}
+data class ConditionalSubschema(
+  val `if`: Condition,
+  val then: Subschema
+)
+
+data class Condition(
+  val properties: Map<String, ConstSchema>
+)
+
+data class Subschema(
+  val properties: Map<String, Schema>,
+  val required: SortedSet<String> = emptySet<String>().toSortedSet()
+)
 
 /**
  * Yes, I really had to implement an either monad to get this all to work.

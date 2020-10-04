@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.igor
 import com.netflix.spinnaker.model.Build
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Query
 
 interface BuildService {
@@ -15,10 +16,12 @@ interface BuildService {
    * @param buildNumber the build number .
    */
   @GET("/ci/builds")
+  @Headers("Accept: application/json")
   suspend fun getArtifactMetadata(
     @Query("commitId") commitId: String,
     @Query("buildNumber") buildNumber: String,
     @Query("projectKey") projectKey: String? = null,
-    @Query("repoSlug") repoSlug: String? = null
+    @Query("repoSlug") repoSlug: String? = null,
+    @Query("completionStatus") completionStatus: String? = null
   ): List<Build>?
 }

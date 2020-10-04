@@ -9,10 +9,11 @@ import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.api.artifacts.PullRequest
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.model.Build
+import com.netflix.spinnaker.model.CompletionStatus
+import io.github.resilience4j.kotlin.retry.executeSuspendFunction
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
-import io.vavr.control.Try
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.TimeoutCancellationException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import retrofit2.HttpException
@@ -89,23 +90,38 @@ class ArtifactMetadataService(
     )
 
 
-
-  private fun getArtifactMetadataWithRetries(commitId: String, buildNumber: String): List<Build>? {
+  //This will not be used for now, until we will figure out what is wrong!
+  private suspend fun getArtifactMetadataWithRetries(commitId: String, buildNumber: String): List<Build>? {
     val retry = Retry.of(
       "get artifact metadata",
       RetryConfig.custom<List<Build>?>()
-        .maxAttempts(3)
-        .waitDuration(Duration.ofMillis(100))
-        .retryOnException { e: Throwable? -> e is HttpException }
+        // retry 20 times over a total of 90 seconds
+        .maxAttempts(20)
+        .waitDuration(Duration.ofMillis(4500))
+        .retryOnResult{ result ->
+          if (result.isNullOrEmpty()) {
+            log.debug("Retrying artifact metadata retrieval due to empty response (commit=$commitId, build=$buildNumber)")
+          }
+          result.isNullOrEmpty()
+        }
+        .retryOnException { t: Throwable ->
+          // https://github.com/resilience4j/resilience4j/issues/688
+          val retryFilter = when (t) {
+            is TimeoutCancellationException -> true
+            else -> t is HttpException
+          }
+          log.debug(if (retryFilter) "Retrying " else "Not retrying " +
+            "artifact metadata retrieval (commit=$commitId, build=$buildNumber) on exception: ${t::class.java.name}")
+          retryFilter
+        }
         .build()
     )
-    return Try.ofSupplier(Retry.decorateSupplier(retry
-    ) {
-      runBlocking {
-        buildService.getArtifactMetadata(commitId = commitId, buildNumber = buildNumber)
-      }
-    }).get()
+
+    return retry.executeSuspendFunction {
+      buildService.getArtifactMetadata(commitId = commitId.trim(), buildNumber = buildNumber.trim(), completionStatus = CompletionStatus.values().joinToString { it.name })
+    }
   }
+
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

@@ -21,8 +21,6 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
-import kotlin.reflect.KTypeProjection.Companion.invariant
-import kotlin.reflect.full.createType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
@@ -44,7 +42,13 @@ class Generator(
      * type is. If `false` nullable properties are treated as optional (because omitting them in the
      * JSON maps to `null` when Jackson parses it).
      */
-    val nullableAsOneOf: Boolean = false
+    val nullableAsOneOf: Boolean = false,
+
+    /**
+     * If `true`, enum names are lower-cased in the schema. If `false` they are rendered as-is in
+     * the enum declaration.
+     */
+    val lowerCaseEnums: Boolean = false
   )
 
   /**
@@ -71,7 +75,8 @@ class Generator(
       description = type.description,
       properties = schema.properties,
       required = schema.required,
-      discriminator = schema.discriminator,
+      allOf = schema.allOf,
+      additionalProperties = schema.additionalProperties,
       `$defs` = context.definitions.toSortedMap(String.CASE_INSENSITIVE_ORDER)
     )
   }
@@ -83,13 +88,11 @@ class Generator(
   private fun Context.buildSchema(type: KClass<*>, discriminator: Pair<KProperty<String>, String>? = null): Schema =
     when {
       // If we have a schema customizer for this type, just use that
-      schemaCustomizers.any { it.supports(type) } -> schemaCustomizers
-        .first { it.supports(type) }
-        .buildSchema()
+      type.hasCustomizer -> schemaCustomizers.first { it.supports(type) }.buildSchema()
       type.isSingleton -> buildSchemaForKotlinSingleton(type)
       type.isSealed -> buildSchemaForSealedClass(type)
       extensionRegistry.baseTypes().contains(type.java) -> buildSchemaForTypeHierarchy(type)
-      type.typeParameters.isNotEmpty() -> buildSchemaForGenericTypeHierarchy(type, discriminator)
+      type.typeParameters.isNotEmpty() -> buildSchemaForGenericTypeHierarchy(type)
       // Otherwise this is just a regular object schema
       else -> buildSchemaForRegularClass(type, discriminator)
     }
@@ -108,14 +111,15 @@ class Generator(
       description = type.description,
       properties = type.candidateProperties.associate {
         checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-      } + discriminator.toDiscriminatorEnum(),
+      } + discriminator.toDiscriminatorConst(),
       required = type.candidateProperties.toRequiredPropertyNames().let {
         if (discriminator != null) {
           (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
         } else {
           it
         }
-      }
+      },
+      additionalProperties = false
     )
 
   /**
@@ -127,101 +131,68 @@ class Generator(
       description = type.description,
       oneOf = extensionRegistry
         .extensionsOf(type.java)
-        .map { define(it.value.kotlin, type.discriminatorProperty to it.key) }
-        .toSet(),
-      discriminator = OneOf.Discriminator(
-        propertyName = type.discriminatorProperty.name,
-        mapping = extensionRegistry
-          .extensionsOf(type.java)
-          .mapValues { it.value.kotlin.buildRef().`$ref` }
-          .toSortedMap(String.CASE_INSENSITIVE_ORDER)
-      )
+        .map { (discriminator, subType) ->
+          define(subType.kotlin, type.discriminatorProperty?.let { it to discriminator })
+        }
+        .toSet()
     )
 
   /**
    * Base types with a generic parameter are represented as an [ObjectSchema] with the common
-   * properties and a variant for every sub-type of the generic upper bound. Each variant will be
-   * [AllOf] the base type and the generic properties.
-   *
-   * @param discriminator required if this is a leaf type of a type hierarchy.
+   * properties and conditional sub-schemas for every sub-type of the generic upper bound.
    */
-  private fun Context.buildSchemaForGenericTypeHierarchy(
-    type: KClass<*>,
-    discriminator: Pair<KProperty<String>, String>?
-  ): ObjectSchema {
-    val invariantTypes = extensionRegistry
-      .extensionsOf(type.typeParameters.first().upperBounds.first().jvmErasure.java)
+  private fun Context.buildSchemaForGenericTypeHierarchy(type: KClass<*>): Schema {
+    val upperBoundType = type.typeParameters.first().upperBounds.first().jvmErasure
+    val invariantTypes = extensionRegistry.extensionsOf(upperBoundType.java).toSortedMap()
+    val genericProperties = type.candidateProperties.filter {
+      it.type.jvmErasure == upperBoundType
+    }
+    val discriminatorName = type.discriminatorProperty?.name
+    val commonProperties = type.candidateProperties - genericProperties
     return ObjectSchema(
       title = checkNotNull(type.simpleName),
       description = type.description,
-      properties = type
-        .candidateProperties
-        .filter {
-          // filter out properties of the generic type as they will be specified in extended types
-          it.type.classifier !in type.typeParameters
-        }
+      properties = commonProperties
         .associate {
-          checkNotNull(it.name) to buildProperty(owner = type.starProjectedType, parameter = it)
-        },
-      required = type.candidateProperties.toRequiredPropertyNames(),
-      discriminator = OneOf.Discriminator(
-        propertyName = type.discriminatorProperty.name,
-        mapping = invariantTypes
-          .mapValues { it.value.kotlin.buildRef().`$ref` }
-          .toSortedMap(String.CASE_INSENSITIVE_ORDER)
-      )
-    )
-      .also {
-        invariantTypes
-          .forEach { (_, subType) ->
-            type.createType(
-              arguments = listOf(invariant(subType.kotlin.createType()))
+          checkNotNull(it.name) to if (it.name == discriminatorName) {
+            EnumSchema(
+              enum = invariantTypes.keys.toList(),
+              description = checkNotNull(type.discriminatorProperty).description
             )
-              .also { _ ->
-                val name = "${subType.simpleName}${type.simpleName}"
-                if (!definitions.containsKey(name)) {
-                  val genericProperties = type.candidateProperties.filter {
-                    it.type.classifier in type.typeParameters
-                  }
-                  definitions[name] = AllOf(
-                    listOf(
-                      // reference to the base type
-                      Reference("#/${RootSchema::`$defs`.name}/${type.simpleName}"),
-                      // any generic properties of the base type with the invariant type applied
-                      ObjectSchema(
-                        title = null,
-                        description = null,
-                        properties = genericProperties
-                          .associate {
-                            checkNotNull(it.name) to buildProperty(
-                              owner = type.starProjectedType,
-                              parameter = it,
-                              type = subType.kotlin.starProjectedType
-                            )
-                          } + discriminator.toDiscriminatorEnum(),
-                        required = genericProperties.toRequiredPropertyNames().let {
-                          if (discriminator != null) {
-                            (it + discriminator.first.name).toSortedSet(String.CASE_INSENSITIVE_ORDER)
-                          } else {
-                            it
-                          }
-                        }
-                      )
-                    )
-                  )
-                }
-              }
+          } else {
+            buildProperty(
+              owner = type.starProjectedType,
+              parameter = it,
+              type = it.type
+            )
           }
+        },
+      additionalProperties = true,
+      required = commonProperties.toRequiredPropertyNames()
+        .toSortedSet(String.CASE_INSENSITIVE_ORDER),
+      allOf = invariantTypes.map { (discriminatorValue, subType) ->
+        ConditionalSubschema(
+          `if` = Condition(
+            properties = (checkNotNull(type.discriminatorProperty) to discriminatorValue).toDiscriminatorConst()
+          ),
+          then = Subschema(
+            properties = genericProperties.associate {
+              checkNotNull(it.name) to define(subType.kotlin)
+            },
+            required = genericProperties.toRequiredPropertyNames()
+          )
+        )
       }
+    )
   }
 
   /**
-   * Kotlin singleton objects are represented as a single-value enum.
+   * Kotlin singleton objects are represented as a const.
    */
   private fun buildSchemaForKotlinSingleton(type: KClass<*>) =
-    EnumSchema(
+    ConstSchema(
       description = type.description,
-      enum = listOf(type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName))
+      const = type.findAnnotation<Literal>()?.value ?: checkNotNull(type.simpleName)
     )
 
   /**
@@ -233,9 +204,14 @@ class Generator(
       oneOf = type.sealedSubclasses.map { define(it) }.toSet()
     )
 
-  private fun Pair<KProperty<String>, String>?.toDiscriminatorEnum() =
+  /**
+   * If the receiver is non-null, returns a map whose key is the discriminator property name, and
+   * whose value is the [ConstSchema] representing the value for the sub-type.
+   * If the receiver is null, returns an empty map.
+   */
+  private fun Pair<KProperty<String>, String>?.toDiscriminatorConst() =
     if (this != null) {
-      mapOf(first.name to EnumSchema(description = null, enum = listOf(second)))
+      mapOf(first.name to ConstSchema(description = null, const = second))
     } else {
       emptyMap()
     }
@@ -251,6 +227,10 @@ class Generator(
       else -> preferredConstructor.parameters
     }
 
+  /**
+   * Heuristic to find the best constructor to use to find properties required in order to
+   * deserialize an instance of the class.
+   */
   private val KClass<*>.preferredConstructor: KFunction<Any>
     get() = (
       constructors.firstOrNull { it.hasAnnotation<Factory>() }
@@ -266,10 +246,9 @@ class Generator(
   /**
    * The name of the property annotated with `@[Discriminator]`
    */
-  private val KClass<*>.discriminatorProperty: KProperty<String>
-    get() = checkNotNull(memberProperties.find { it.hasAnnotation<Discriminator>() }) {
-      "$simpleName has no property annotated with @Discriminator but is registered as an extension base type"
-    } as KProperty<String>
+  @Suppress("UNCHECKED_CAST")
+  private val KClass<*>.discriminatorProperty: KProperty<String>?
+    get() = memberProperties.find { it.hasAnnotation<Discriminator>() } as KProperty<String>? // currently only string discriminators are allowed
 
   /**
    * Build the property schema for [parameter].
@@ -294,8 +273,8 @@ class Generator(
         ?.description
     )
 
-  private fun Context.buildProperty(type: KType, description: String? = null): Schema =
-    when {
+  private fun Context.buildProperty(type: KType, description: String? = null): Schema {
+    return when {
       type.isMarkedNullable -> if (options.nullableAsOneOf) {
         OneOf(
           description = description,
@@ -309,12 +288,24 @@ class Generator(
           description = description
         )
       }
+      type.representInline && type.hasCustomizer -> schemaCustomizers
+        .first { it.supports(type.jvmErasure) }
+        .buildSchema()
       type.isSingleton -> buildSchema(type.jvmErasure)
-      type.isEnum -> EnumSchema(description = description, enum = type.enumNames)
+      type.isEnum -> EnumSchema(
+        description = description,
+        enum = type.enumNames
+      )
       type.isString -> StringSchema(description = description, format = type.stringFormat)
       type.isBoolean -> BooleanSchema(description = description)
       type.isInteger -> IntegerSchema(description = description)
       type.isNumber -> NumberSchema(description = description)
+      type.jvmErasure == Duration::class -> Duration::class.buildRef()
+        .also {
+          if (!definitions.containsKey(Duration::class.java.simpleName)) {
+            definitions[Duration::class.java.simpleName] = DurationSchema
+          }
+        }
       type.isArray -> {
         ArraySchema(
           description = description,
@@ -337,6 +328,7 @@ class Generator(
       type.jvmErasure == Any::class -> AnySchema(description = description)
       else -> define(type)
     }
+  }
 
   /**
    * If a schema for [type] is not yet defined, define it now.
@@ -417,6 +409,13 @@ class Generator(
     get() = jvmErasure.isSubclassOf(Set::class)
 
   /**
+   * `true` if this type should be represented in-line in the schema, `false` if it should be a
+   * [Reference].
+   */
+  private val KType.representInline: Boolean
+    get() = isSingleton || isEnum || isString || isBoolean || isInteger || isNumber
+
+  /**
    * The names of all the values of an enum as they should appear in the schema.
    */
   @Suppress("UNCHECKED_CAST")
@@ -425,7 +424,9 @@ class Generator(
       require(isEnum) {
         "enumNames is only valid on enum types"
       }
-      return (jvmErasure.java as Class<Enum<*>>).enumConstants.map { it.name }
+      return (jvmErasure.java as Class<Enum<*>>)
+        .enumConstants
+        .map { if (options.lowerCaseEnums) it.name.toLowerCase() else it.name }
     }
 
   /**
@@ -486,7 +487,6 @@ class Generator(
     memberProperties.find { it.name == param.name } // this is a pretty heinous assumption
 
   private val formattedTypes = mapOf(
-    Duration::class to "duration",
     Instant::class to "date-time",
     ZonedDateTime::class to "date-time",
     OffsetDateTime::class to "date-time",
@@ -500,6 +500,13 @@ class Generator(
    */
   private val KType.stringFormat: String?
     get() = formattedTypes[jvmErasure]
+
+  private val KType.hasCustomizer: Boolean
+    get() = jvmErasure.hasCustomizer
+
+  private val KClass<*>.hasCustomizer: Boolean
+    get() = schemaCustomizers.any { it.supports(this) }
+
 }
 
 inline fun <reified TYPE : Any> Generator.generateSchema() = generateSchema(TYPE::class)

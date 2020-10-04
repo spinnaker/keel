@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.apidocs
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
@@ -12,7 +14,9 @@ import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion.VersionFlag.V201909
 import com.networknt.schema.ValidationMessage
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration
@@ -38,35 +42,54 @@ class ApiDocCompatibilityTests {
   lateinit var generator: Generator
 
   val schemaFactory: JsonSchemaFactory = JsonSchemaFactory.getInstance(V201909)
-  val api by lazy { generator.generateSchema<SubmittedDeliveryConfig>() }
-  val schema: JsonSchema by lazy { schemaFactory.getSchema(jacksonObjectMapper().valueToTree<JsonNode>(api)) }
-
-//    context("resource definitions") {
-//      mapOf(
-//        "EC2 cluster" to "/examples/cluster-example.yml",
-//        "EC2 application load balancer" to "/examples/alb-example.yml",
-//        "EC2 classic load balancer" to "/examples/clb-example.yml",
-//        "EC2 cluster with auto-scaling" to "/examples/ec2-cluster-with-autoscaling-example.yml",
-//        "EC2 security group" to "/examples/security-group-example.yml",
-//        "Simple Titus cluster" to "/examples/simple-titus-cluster-example.yml",
-//        "Titus cluster" to "/examples/titus-cluster-example.yml",
-//        "Titus cluster with artifact" to "/examples/titus-cluster-with-artifact-example.yml"
-//      ).forEach { (description, path) ->
-//        test("$description example is valid") {
-//          expectThat(validate(path))
-//            .describedAs(description)
-//            .isValid()
-//        }
-//      }
-//    }
-
-  @Test
-  fun `example delivery config is valid`() {
-    val messages = schema.validate(loadExample("/examples/delivery-config-example.yml"))
-    expectThat(messages)
-      .describedAs("example delivery config")
-      .isValid()
+  val api by lazy {
+    generator.generateSchema<SubmittedDeliveryConfig>()
+      .also {
+        jacksonObjectMapper()
+          .setSerializationInclusion(NON_NULL)
+          .enable(INDENT_OUTPUT)
+          .writeValueAsString(it)
+          .also(::println)
+      }
   }
+  val schema: JsonSchema by lazy {
+    schemaFactory.getSchema(jacksonObjectMapper().valueToTree<JsonNode>(api))
+  }
+
+  @TestFactory
+  fun validConfigsAreValid(): List<DynamicTest> =
+    listOf(
+      "/examples/minimal.yml",
+      "/examples/cluster-example.yml",
+      "/examples/delivery-config-example.yml",
+      "/examples/alb-example.yml",
+      "/examples/clb-example.yml",
+      "/examples/ec2-cluster-with-autoscaling-example.yml",
+      "/examples/security-group-example.yml",
+      "/examples/security-group-with-cidr-rule-example.yml",
+      "/examples/titus-cluster-example.yml",
+      "/examples/titus-cluster-with-artifact-example.yml"
+    ).map {
+      dynamicTest("example delivery config ${it.substringAfterLast("/")} is valid") {
+        val messages = schema.validate(loadExample(it))
+        expectThat(messages)
+          .describedAs("validation messages for ${it.substringAfterLast("/")}")
+          .isValid()
+      }
+    }
+
+  @TestFactory
+  fun invalidConfigsAreInvalid(): List<DynamicTest> =
+    listOf(
+      "/examples/wrong-resource-kind.yml"
+    ).map {
+      dynamicTest("example delivery config ${it.substringAfterLast("/")} is invalid") {
+        val messages = schema.validate(loadExample(it))
+        expectThat(messages)
+          .describedAs("validation messages for ${it.substringAfterLast("/")}")
+          .isNotValid()
+      }
+    }
 
   private fun loadExample(path: String): JsonNode =
     javaClass.getResource(path)?.let { url ->
@@ -79,5 +102,13 @@ fun Assertion.Builder<Set<ValidationMessage>>.isValid() = assert("is valid") { s
     pass()
   } else {
     fail(subject, "found ${subject.size} validation errors: %s")
+  }
+}
+
+fun Assertion.Builder<Set<ValidationMessage>>.isNotValid() = assert("is not valid") { subject ->
+  if (subject.isEmpty()) {
+    fail(subject, "found no validation errors")
+  } else {
+    pass()
   }
 }

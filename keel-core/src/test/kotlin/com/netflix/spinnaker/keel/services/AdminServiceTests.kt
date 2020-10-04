@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.TimeWindow
@@ -9,6 +10,8 @@ import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.test.DummyArtifact
+import com.netflix.spinnaker.keel.test.DummyVersioningStrategy
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.every
@@ -20,6 +23,7 @@ class AdminServiceTests : JUnit5Minutests {
     val repository: KeelRepository = mockk(relaxed = true)
     val diffFingerprintRepository: DiffFingerprintRepository = mockk()
     val actuationPauser: ActuationPauser = mockk()
+    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact, DummyVersioningStrategy>>(relaxUnitFun = true)
 
     val application = "leapp"
 
@@ -43,7 +47,8 @@ class AdminServiceTests : JUnit5Minutests {
     val subject = AdminService(
       repository,
       actuationPauser,
-      diffFingerprintRepository
+      diffFingerprintRepository,
+      listOf(artifactSupplier)
     )
   }
 

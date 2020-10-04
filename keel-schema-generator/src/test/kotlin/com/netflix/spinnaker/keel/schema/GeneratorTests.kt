@@ -20,20 +20,18 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import strikt.api.Assertion
 import strikt.api.expectThat
+import strikt.assertions.all
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKey
 import strikt.assertions.containsKeys
 import strikt.assertions.doesNotContain
-import strikt.assertions.filterIsInstance
-import strikt.assertions.first
 import strikt.assertions.get
-import strikt.assertions.hasEntry
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
-import strikt.assertions.isNotEmpty
+import strikt.assertions.isFalse
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
@@ -43,8 +41,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.reflect.KClass
-import kotlin.reflect.KType
-import kotlin.reflect.full.starProjectedType
 
 internal class GeneratorTests {
 
@@ -82,6 +78,12 @@ internal class GeneratorTests {
         .get(Foo::string.name)
         .isA<StringSchema>()
     }
+
+    @Test
+    fun `additional properties are disallowed`() {
+      expectThat(schema.additionalProperties)
+        .isFalse()
+    }
   }
 
   @Nested
@@ -115,18 +117,37 @@ internal class GeneratorTests {
     )
 
     enum class Size {
-      tall, grande, venti
+      TALL, GRANDE, VENTI
     }
 
-    val schema by lazy { generateSchema<Foo>() }
+    @Nested
+    @DisplayName("with lower-case-enums set to true")
+    class LowerCaseEnumsOn : GeneratorTestBase(Generator.Options(lowerCaseEnums = true)) {
+      val schema by lazy { generateSchema<Foo>() }
 
-    @Test
-    fun `applies correct property types`() {
-      expectThat(schema.properties)
-        .get(Foo::size.name)
-        .isA<EnumSchema>()
-        .get { enum }
-        .containsExactly(Size.values().map { it.name })
+      @Test
+      fun `schema is an enum with all enum names lower-cased`() {
+        expectThat(schema.properties)
+          .get(Foo::size.name)
+          .isA<EnumSchema>()
+          .get { enum }
+          .containsExactly(Size.values().map { it.name.toLowerCase() })
+      }
+    }
+
+    @Nested
+    @DisplayName("with lower-case-enums set to false")
+    class LowerCaseEnumsFalse : GeneratorTestBase(Generator.Options(lowerCaseEnums = false)) {
+      val schema by lazy { generateSchema<Foo>() }
+
+      @Test
+      fun `schema is an enum with all enum names`() {
+        expectThat(schema.properties)
+          .get(Foo::size.name)
+          .isA<EnumSchema>()
+          .get { enum }
+          .containsExactly(Size.values().map { it.name })
+      }
     }
   }
 
@@ -280,6 +301,14 @@ internal class GeneratorTests {
         .get { properties }
         .get(Bar::string.name)
         .isA<StringSchema>()
+    }
+
+    @Test
+    fun `referenced schema does not allow additional properties`() {
+      expectThat(schema.`$defs`[Bar::class.java.simpleName])
+        .isA<ObjectSchema>()
+        .get { additionalProperties }
+        .isFalse()
     }
   }
 
@@ -490,6 +519,12 @@ internal class GeneratorTests {
       expectThat(schema.properties[Foo::nonConstructorProperty.name])
         .isNull()
     }
+
+    @Test
+    fun `additional properties are disallowed`() {
+      expectThat(schema.additionalProperties)
+        .isFalse()
+    }
   }
 
   @Nested
@@ -503,6 +538,12 @@ internal class GeneratorTests {
         .containsKey("arg0")
         .get("arg0")
         .isA<StringSchema>()
+    }
+
+    @Test
+    fun `additional properties are disallowed`() {
+      expectThat(schema.additionalProperties)
+        .isFalse()
     }
   }
 
@@ -523,8 +564,7 @@ internal class GeneratorTests {
       mapOf(
         Foo::instant.name to "datetime",
         Foo::localDate.name to "date",
-        Foo::localTime.name to "time",
-        Foo::duration.name to "duration"
+        Foo::localTime.name to "time"
       ).map { (property, format) ->
         dynamicTest("$property property is a string with '$format' format") {
           expectThat(schema.properties[property])
@@ -533,6 +573,20 @@ internal class GeneratorTests {
             .isEqualTo(format)
         }
       }
+
+    @Test
+    fun `duration property is a reference`() {
+      expectThat(schema.properties[Foo::duration.name])
+        .isA<Reference>()
+        .get { `$ref` }
+        .isEqualTo("#/${RootSchema::`$defs`.name}/${Duration::class.simpleName}")
+    }
+
+    @Test
+    fun `duration schema is a string schema with a regex pattern`() {
+      expectThat(schema.`$defs`[Duration::class.simpleName])
+        .isA<DurationSchema>()
+    }
   }
 
   @Nested
@@ -584,46 +638,37 @@ internal class GeneratorTests {
         .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${IntegerWrapper::class.java.simpleName}" }
     }
 
-    @Test
-    fun `the discriminator property is based on the presence of the @Discriminator annotation`() {
-      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
-        .isA<OneOf>()
-        .get { discriminator?.propertyName }
-        .isEqualTo(Wrapper<*>::type.name)
-    }
-
-    @Test
-    fun `discriminator mappings tie values to references`() {
-      expectThat(schema.`$defs`[Wrapper::class.java.simpleName])
-        .isA<OneOf>()
-        .get { discriminator?.mapping }
-        .isNotNull()
-        .hasEntry("string", "#/\$defs/${StringWrapper::class.java.simpleName}")
-        .hasEntry("integer", "#/\$defs/${IntegerWrapper::class.java.simpleName}")
-    }
-
     @TestFactory
-    fun `the discriminator property in the sub-type is an enum with a single value`() =
+    fun `the discriminator property in the sub-type is a const`() =
       mapOf(
         "string" to StringWrapper::class,
         "integer" to IntegerWrapper::class
       )
-        .map { (discriminatorValue, type) ->
-          dynamicTest("the discriminator property of ${type.simpleName} is an enum with the single value \"$discriminatorValue\"") {
-            expectThat(schema.`$defs`[type.simpleName])
-              .isA<ObjectSchema>()
-              .get { properties[Wrapper<*>::type.name] }
-              .isA<EnumSchema>()
-              .get(EnumSchema::enum)
-              .containsExactly(discriminatorValue)
-          }
+        .flatMap { (discriminatorValue, type) ->
+          listOf(
+            dynamicTest("the discriminator property of ${type.simpleName} is a const with the value \"$discriminatorValue\"") {
+              expectThat(schema.`$defs`[type.simpleName])
+                .isA<ObjectSchema>()
+                .get { properties[Wrapper<*>::type.name] }
+                .isA<ConstSchema>()
+                .get(ConstSchema::const)
+                .isEqualTo(discriminatorValue)
+            },
 
-          dynamicTest("the discriminator property of ${type.simpleName} is required") {
-            expectThat(schema.`$defs`[type.simpleName])
-              .isA<ObjectSchema>()
-              .get(ObjectSchema::required)
-              .contains(Wrapper<*>::type.name)
-          }
+            dynamicTest("the discriminator property of ${type.simpleName} is required") {
+              expectThat(schema.`$defs`[type.simpleName])
+                .isA<ObjectSchema>()
+                .get(ObjectSchema::required)
+                .contains(Wrapper<*>::type.name)
+            },
+
+            dynamicTest("additional properties are disallowed on ${type.simpleName}") {
+              expectThat(schema.`$defs`[type.simpleName])
+                .isA<ObjectSchema>()
+                .get { additionalProperties }
+                .isFalse()
+            }
+          )
         }
   }
 
@@ -653,51 +698,85 @@ internal class GeneratorTests {
 
     @Test
     fun `base definition contains only common properties`() {
-      expectThat(schema.properties.keys)
-        .containsExactlyInAnyOrder(
+      expectThat(schema) {
+        get { properties.keys }.containsExactlyInAnyOrder(
           Foo<*>::normalProperty.name,
           Foo<*>::type.name
         )
+        get { required }.containsExactlyInAnyOrder(
+          Foo<*>::normalProperty.name,
+          Foo<*>::type.name
+        )
+      }
     }
 
     @Test
-    fun `$defs exist for types with each generic sub-type`() {
-      expectThat(schema.`$defs`)
-        .containsKeys(
-          "${Bar::class.java.simpleName}${Foo::class.java.simpleName}",
-          "${Baz::class.java.simpleName}${Foo::class.java.simpleName}"
+    fun `discriminator property is an enum of the known sub-type identifiers`() {
+      expectThat(schema.properties[Foo<*>::type.name])
+        .isA<EnumSchema>()
+        .get { enum }
+        .containsExactlyInAnyOrder(
+          Bar::class.java.simpleName.toLowerCase(),
+          Baz::class.java.simpleName.toLowerCase()
         )
     }
 
     @Test
-    fun `generic sub-types contain all of the base type properties and their own`() {
-      expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
-        .isA<AllOf>()
-        .get { allOf }
-        .one { isA<Reference>().get { `$ref` } isEqualTo "#/\$defs/${Foo::class.java.simpleName}" }
-        .one { isA<ObjectSchema>().get { properties.keys }.containsExactly(Foo<*>::genericProperty.name) }
+    fun `$defs exist for each generic sub-type`() {
+      expectThat(schema.`$defs`)
+        .containsKeys(Bar::class.java.simpleName, Baz::class.java.simpleName)
     }
 
     @Test
-    fun `title is omitted on allOf elements`() {
-      expectThat(schema.`$defs`["${Bar::class.java.simpleName}${Foo::class.java.simpleName}"])
-        .isA<AllOf>()
-        .get { allOf }
-        .filterIsInstance<ObjectSchema>()
-        .first()
-        .get { title }
-        .isNull()
+    fun `the base type allows additional properties`() {
+      expectThat(schema.additionalProperties)
+        .isTrue()
     }
 
-    @Test
-    fun `the discriminator is based on the annotated property in the base class`() {
-      expectThat(schema.discriminator)
-        .isNotNull()
-        .and {
-          get { propertyName } isEqualTo Foo<*>::type.name
-          get { mapping }.containsKeys("bar", "baz")
+    @TestFactory
+    fun genericSubTypes() =
+      listOf(Bar::class.java, Baz::class.java)
+        .flatMap { subType ->
+          listOf(
+            dynamicTest("conditional sub-schema for ${subType.simpleName} contains the generic properties") {
+              expectThat(schema.allOf)
+                .isNotNull()
+                .one {
+                  get { then.properties[Foo<*>::genericProperty.name] }
+                    .isA<Reference>()
+                    .get { `$ref` }
+                    .isEqualTo("#/\$defs/${subType.simpleName}")
+                }
+            },
+
+            dynamicTest("condition for the ${subType.simpleName} sub-schema is a const on the discriminator property") {
+              expectThat(schema.allOf)
+                .isNotNull()
+                .one {
+                  get { `if`.properties[Foo<*>::type.name] }
+                    .isNotNull()
+                    .get { const }
+                    .isEqualTo(subType.simpleName.toLowerCase())
+                }
+            },
+
+            dynamicTest("generic sub-type properties may be required") {
+              expectThat(schema.allOf)
+                .isNotNull()
+                .all {
+                  get { then.required }
+                    .containsExactly(Foo<*>::genericProperty.name)
+                }
+            },
+
+            dynamicTest("additional properties are disallowed on ${subType.simpleName}") {
+              expectThat(schema.`$defs`[subType.simpleName])
+                .isA<ObjectSchema>()
+                .get { additionalProperties }
+                .isFalse()
+            }
+          )
         }
-    }
   }
 
   @Nested
@@ -851,11 +930,11 @@ internal class GeneratorTests {
     val schema by lazy { generateSchema<Foo>() }
 
     @Test
-    fun `literals are represented as enum with a single value`() {
+    fun `literals are represented as a const`() {
       expectThat(schema.properties[Foo::bar.name])
-        .isA<EnumSchema>()
-        .get { enum }
-        .containsExactly("BAR")
+        .isA<ConstSchema>()
+        .get { const }
+        .isEqualTo("BAR")
     }
   }
 
@@ -882,9 +961,9 @@ internal class GeneratorTests {
         .isA<OneOf>()
         .get { oneOf }
         .one {
-          isA<EnumSchema>()
-            .get { enum }
-            .containsExactly("BAR")
+          isA<ConstSchema>()
+            .get { const }
+            .isEqualTo("BAR")
         }
         .one {
           isA<Reference>()
@@ -896,7 +975,7 @@ internal class GeneratorTests {
 
   @Nested
   @DisplayName("types with custom schemas")
-  class CustomSchemas : GeneratorTestBase(
+  class CustomSchemaTypes : GeneratorTestBase(
     schemaCustomizers = listOf(
       object : SchemaCustomizer {
         override fun supports(type: KClass<*>): Boolean = type == Bar::class
@@ -921,6 +1000,39 @@ internal class GeneratorTests {
         .isA<StringSchema>()
         .get { description }
         .isEqualTo("custom schema")
+    }
+  }
+
+  @Nested
+  @DisplayName("properties with custom schemas")
+  class CustomSchemaProperties : GeneratorTestBase(
+    schemaCustomizers = listOf(
+      object : SchemaCustomizer {
+        override fun supports(type: KClass<*>): Boolean = type == Size::class
+
+        override fun buildSchema(): Schema = EnumSchema(
+          enum = Size.values().map { it.starbucks },
+          description = null
+        )
+      }
+    )
+  ) {
+    data class Foo(
+      val size: Size
+    )
+
+    enum class Size(val starbucks: String) {
+      SMALL("tall"), MEDIUM("grande"), LARGE("venti")
+    }
+
+    val schema by lazy { generateSchema<Foo>() }
+
+    @Test
+    fun `custom schema overrides default`() {
+      expectThat(schema.properties[Foo::size.name])
+        .isA<EnumSchema>()
+        .get { enum }
+        .containsExactlyInAnyOrder(Size.values().map { it.starbucks })
     }
   }
 

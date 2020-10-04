@@ -15,9 +15,8 @@
  * limitations under the License.
  *
  */
-package com.netflix.spinnaker.keel.core
+package com.netflix.spinnaker.keel.artifacts
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.semver.shaded.DebianVersionComparator
 import com.netflix.spinnaker.keel.api.artifacts.SortType.INCREASING
 import com.netflix.spinnaker.keel.api.artifacts.SortType.SEMVER
@@ -65,18 +64,6 @@ class TagComparator(
       }
     }
   }
-
-  /**
-   * Trims a leading "v" off of the semver if present
-   */
-  private fun parseSemver(input: String?): SemVer? {
-    input ?: return null
-    return try {
-      SemVer.parse(input.removePrefix("v"))
-    } catch (e: IllegalArgumentException) {
-      null
-    }
-  }
 }
 
 val SEMVER_COMPARATOR: Comparator<SemVer> = Comparator { a, b ->
@@ -88,22 +75,55 @@ val INCREASING_COMPARATOR: Comparator<Long> = Comparator { a, b ->
 }
 
 // descending by default
-val NETFLIX_SEMVER_COMPARATOR: Comparator<String> = object : Comparator<String> {
+val DEBIAN_VERSION_COMPARATOR: Comparator<String> = object : Comparator<String> {
   override fun compare(s1: String, s2: String) =
     debComparator.compare(s2.toVersion(), s1.toVersion())
 
   private val debComparator = NullSafeComparator(DebianVersionComparator(), true)
 
   private fun String.toVersion(): String? = run {
-    // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appVersion = AppVersion.parseName(this)
+    val appVersion = NetflixVersions.extractVersion(this)
     if (appVersion == null) {
-      log.warn("Unparseable artifact version \"{}\" encountered", this)
+      log.warn("Unparseable Debian artifact version \"{}\" encountered. Sorting results will be unpredictable.", this)
       null
     } else {
-      removePrefix(appVersion.packageName).removePrefix("-")
+      appVersion
     }
   }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
+
+// descending by default
+val NPM_VERSION_COMPARATOR: Comparator<String> = object : Comparator<String> {
+  override fun compare(s1: String, s2: String) =
+    semverComparator.compare(s1.toVersion(), s2.toVersion())
+
+  // SEMVER_COMPARATOR is already descending by default
+  private val semverComparator = NullSafeComparator(SEMVER_COMPARATOR, true)
+
+  private fun String.toVersion(): SemVer? = run {
+    val version = NetflixVersions.extractVersion(this)
+    if (version == null) {
+      log.warn("Unparseable NPM artifact version \"{}\" encountered. Sorting results will be unpredictable.", this)
+      null
+    } else {
+      parseSemver(version)
+    }
+  }
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+}
+
+/**
+ * Trims a leading "v" off of the semver if present
+ */
+private fun parseSemver(input: String?): SemVer? {
+  input ?: return null
+  return try {
+    SemVer.parse(input.removePrefix("v"))
+  } catch (e: IllegalArgumentException) {
+    null
+  }
+}
+

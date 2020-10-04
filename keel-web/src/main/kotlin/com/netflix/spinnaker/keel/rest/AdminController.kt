@@ -61,4 +61,15 @@ class AdminController(
   ) {
     adminService.forceConstraintReevaluation(application, environment, type)
   }
+
+  // This endpoint will update artifact version records with missing metadata, if available, by type [deb/docker/npm].
+  // Please note: this is an admin endpoint and is not intented to be used more than once per environment for now.
+  @PostMapping(
+    path = ["/artifacts/{type}/metadata/backfill"]
+  )
+  fun backFillArtifactMetadata(
+    @PathVariable("type") type: String
+  ) {
+    adminService.backFillArtifactMetadata(type)
+  }
 }
