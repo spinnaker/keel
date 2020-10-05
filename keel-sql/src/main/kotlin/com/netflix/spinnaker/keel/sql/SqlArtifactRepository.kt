@@ -6,8 +6,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
-import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.BRANCH_AND_TIMESTAMP
-import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.VERSION
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -77,6 +75,9 @@ class SqlArtifactRepository(
   companion object {
     private val ARTIFACT_VERSIONS_BRANCH =
       field<String?>("keel.artifact_versions.git_metadata->'$.branch'")
+    private val ARTIFACT_VERSIONS_PR_NUMBER =
+      field<String?>("keel.artifact_versions.git_metadata->'$.pullRequest.number'")
+    private const val EMPTY_PR_NUMBER = "\"\""
   }
 
   override fun register(artifact: DeliveryArtifact) {
@@ -235,12 +236,6 @@ class SqlArtifactRepository(
       throw NoSuchArtifactException(artifact)
     }
 
-    if (artifact.sortBy == BRANCH_AND_TIMESTAMP && artifact.branch == null) {
-      throw InvalidArtifactSpecException(
-        "Artifact ${artifact.reference} in delivery config ${artifact.deliveryConfigName} " +
-          "requires field 'branch' to sort by branch and timestamp.")
-    }
-
     val versions = sqlRetry.withRetry(READ) {
       jooq
         .select(ARTIFACT_VERSIONS.VERSION, ARTIFACT_VERSIONS.RELEASE_STATUS)
@@ -248,24 +243,33 @@ class SqlArtifactRepository(
         .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
         .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
         .apply {
-          if (artifact.statuses.isNotEmpty()) {
+          if (artifact.filteredByReleaseStatus) {
             and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray()))
-          }
+          } else {
+            if (artifact.filteredByPullRequest) {
+              and(ARTIFACT_VERSIONS_PR_NUMBER.isNotNull).and(ARTIFACT_VERSIONS_PR_NUMBER.ne(EMPTY_PR_NUMBER))
+            }
 
-          // When sorting "natively" by branch and timestamp, delegate sorting and limiting to the database
-          if (artifact.sortBy == BRANCH_AND_TIMESTAMP) {
-            // TODO: should we also be comparing the repo with what's configured for the app in front50?
-            and(ARTIFACT_VERSIONS_BRANCH.likeRegex(artifact.branch))
-              .and(ARTIFACT_VERSIONS.CREATED_AT.isNotNull)
-              .orderBy(ARTIFACT_VERSIONS.CREATED_AT.desc())
-              .limit(limit)
+            if (artifact.filteredByBranch) {
+              // TODO: should we also be comparing the repo with what's configured for the app in front50?
+              and(ARTIFACT_VERSIONS_BRANCH.likeRegex(artifact.fromBranch))
+            }
+
+            // With branches or pull requests, delegate sorting and limiting to the database
+            if (artifact.filteredByPullRequest || artifact.filteredByBranch) {
+              and(ARTIFACT_VERSIONS.CREATED_AT.isNotNull)
+                .orderBy(ARTIFACT_VERSIONS.CREATED_AT.desc())
+                .limit(limit)
+            }
           }
         }
         .fetch()
         .getValues(ARTIFACT_VERSIONS.VERSION)
     }
 
-    return if (artifact.sortBy == VERSION) {
+    return if (artifact.filteredByPullRequest || artifact.filteredByBranch) {
+      versions
+    } else {
       val sortedVersions = versions.sortedWith(artifact.versioningStrategy.comparator)
       if (artifact is DockerArtifact) {
         // FIXME: remove special handling for Docker
@@ -273,8 +277,6 @@ class SqlArtifactRepository(
       } else {
         sortedVersions.subList(0, Math.min(sortedVersions.size, limit))
       }
-    } else {
-      versions
     }
   }
 

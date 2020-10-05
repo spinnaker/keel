@@ -1,7 +1,5 @@
 package com.netflix.spinnaker.keel.api.artifacts
 
-import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.BRANCH_AND_TIMESTAMP
-import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.VERSION
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import java.time.Instant
 
@@ -20,14 +18,6 @@ enum class ArtifactStatus {
 }
 
 /**
- * The ways in which artifacts can be sorted.
- */
-enum class SortStrategy(val type: String) {
-  VERSION("version"),
-  BRANCH_AND_TIMESTAMP("branch-and-timestamp")
-}
-
-/**
  * An artifact as defined in a [DeliveryConfig].
  *
  * Unlike other places within Spinnaker, this class does not describe a specific instance of a software artifact
@@ -39,11 +29,25 @@ abstract class DeliveryArtifact {
   abstract val name: String
   @Discriminator abstract val type: ArtifactType
   abstract val versioningStrategy: VersioningStrategy
-  abstract val reference: String // friendly reference to use within a delivery config
-  abstract val deliveryConfigName: String? // the delivery config this artifact is a part of
+  /** A friendly reference to use within a delivery config. */
+  abstract val reference: String
+  /** The delivery config this artifact is a part of. */
+  abstract val deliveryConfigName: String?
+  /** A set of release statuses to filter by. Mutually exclusive with [fromBranch] and [fromPullRequest]. */
   open val statuses: Set<ArtifactStatus> = emptySet()
-  open val branch: String? = null
-  open val sortBy: SortStrategy = VERSION
+  /** A specific branch to filter by, or a regular expression like "feature-.*" */
+  open val fromBranch: String? = null
+  /** Whether to include only artifacts from pull requests. */
+  open val fromPullRequest: Boolean? = false
+
+  val filteredByBranch: Boolean
+    get() = fromBranch != null
+
+  val filteredByPullRequest: Boolean
+    get() = fromPullRequest == true
+
+  val filteredByReleaseStatus: Boolean
+    get() = statuses.isNotEmpty()
 
   fun toArtifactInstance(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
     PublishedArtifact(

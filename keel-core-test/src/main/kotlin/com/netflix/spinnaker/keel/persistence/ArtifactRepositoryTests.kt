@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
-import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.BRANCH_AND_TIMESTAMP
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
@@ -28,7 +27,6 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
-import com.netflix.spinnaker.keel.exceptions.InvalidArtifactSpecException
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -88,16 +86,25 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB
     )
 
-    val debianWithBranchSortedByTimestamp =  DebianArtifact(
+    val debianFilteredByBranch =  DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
-      sortBy = BRANCH_AND_TIMESTAMP,
-      branch = "my-feature-branch"
+      fromBranch = "my-feature-branch"
     )
 
-    val debianWithBranchPatternSortedByTimestamp =  debianWithBranchSortedByTimestamp.copy(branch = ".*feature.*")
+    val debianFilteredByBranchPattern =  debianFilteredByBranch.copy(fromBranch = ".*feature.*")
+
+    val debianFilteredByPullRequest =  DebianArtifact(
+      name = "keeldemo",
+      deliveryConfigName = "my-manifest",
+      reference = "pr",
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
+      fromPullRequest = true
+    )
+
+    val debianFilteredByPullRequestAndBranch =  debianFilteredByPullRequest.copy(fromBranch = "my-feature-branch")
 
     val featureBranchEnvironment = Environment("feature-branch")
     val testEnvironment = Environment("test")
@@ -106,7 +113,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       name = "my-manifest",
       application = "fnord",
       serviceAccount = "keel@spinnaker",
-      artifacts = setOf(versionedSnapshotDebian, versionedReleaseDebian, versionedDockerArtifact, debianWithBranchSortedByTimestamp),
+      artifacts = setOf(versionedSnapshotDebian, versionedReleaseDebian, versionedDockerArtifact, debianFilteredByBranch),
       environments = setOf(featureBranchEnvironment, testEnvironment, stagingEnvironment)
     )
     val version1 = "keeldemo-0.0.1~dev.8-h8.41595c4" // snapshot
@@ -179,7 +186,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       setOf(version6, versionBad).forEach {
         storeArtifactInstance(versionedDockerArtifact.toArtifactInstance(it))
       }
-      register(debianWithBranchSortedByTimestamp)
+      register(debianFilteredByBranch)
     }
     persist(manifest)
   }
@@ -865,23 +872,22 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       }
     }
 
-    context("artifact sorted by branch and timestamp") {
+    context("artifact filtered by branch") {
       context("with branch name specified in the artifact spec") {
         // registers versions backwards to check that sorting by timestamp takes precedence
         val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
 
         before {
-          subject.register(debianWithBranchSortedByTimestamp)
+          subject.register(debianFilteredByBranch)
           allVersions.forEachIndexed { index, version ->
             subject.storeArtifactInstance(
-              debianWithBranchSortedByTimestamp.toArtifactInstance(
+              debianFilteredByBranch.toArtifactInstance(
                 version = version,
-                status = SNAPSHOT,
                 // half of the versions doesn't have a timestamp
                 createdAt = if (index < 10) null else clock.tickMinutes(10)
               ).copy(
                 gitMetadata = artifactMetadata.gitMetadata?.copy(
-                  branch = debianWithBranchSortedByTimestamp.branch
+                  branch = debianFilteredByBranch.fromBranch
                 ),
                 buildMetadata = artifactMetadata.buildMetadata
               )
@@ -889,40 +895,27 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
         }
 
-        test("returns \"versions\" in the right order") {
-          val versions = subject.versions(debianWithBranchSortedByTimestamp, 5)
+        test("returns \"versions\" with matching branch sorted by timestamp") {
+          val versions = subject.versions(debianFilteredByBranch, 5)
           expectThat(versions).containsExactly(allVersions.reversed().subList(0, 5))
         }
 
         test("skips artifacts without a timestamp") {
-          val versions = subject.versions(debianWithBranchSortedByTimestamp, 20)
+          val versions = subject.versions(debianFilteredByBranch, 20)
           expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
         }
       }
-
-      context("with branch missing in the artifact spec") {
-        before {
-          subject.register(debianWithBranchSortedByTimestamp)
-        }
-
-        test("throws a validation exception") {
-          expectThrows<InvalidArtifactSpecException> {
-            subject.versions(debianWithBranchSortedByTimestamp.copy(branch = null))
-          }
-        }
-      }
-
+      
       context("with branch pattern specified in the artifact spec") {
         // registers versions backwards to check that sorting by timestamp takes precedence
         val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
 
         before {
-          subject.register(debianWithBranchPatternSortedByTimestamp)
+          subject.register(debianFilteredByBranchPattern)
           allVersions.forEachIndexed { index, version ->
             subject.storeArtifactInstance(
-              debianWithBranchPatternSortedByTimestamp.toArtifactInstance(
+              debianFilteredByBranchPattern.toArtifactInstance(
                 version = version,
-                status = SNAPSHOT,
                 createdAt = clock.tickMinutes(10)
               ).copy(
                 gitMetadata = artifactMetadata.gitMetadata?.copy(
@@ -939,11 +932,72 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
         }
 
-        test("returns \"versions\" in the right order") {
-          val versions = subject.versions(debianWithBranchPatternSortedByTimestamp, 20)
+        test("returns \"versions\" with matching branches sorted by timestamp") {
+          val versions = subject.versions(debianFilteredByBranchPattern, 20)
           // first 5 have "a-non-matching-branch"
           expectThat(versions).containsExactly(allVersions.reversed().subList(5, 20))
         }
+      }
+    }
+
+    context("artifact filtered by pull request") {
+      // registers versions backwards to check that sorting by timestamp takes precedence
+      val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
+
+      before {
+        subject.register(debianFilteredByPullRequest)
+        allVersions.forEachIndexed { index, version ->
+          subject.storeArtifactInstance(
+            debianFilteredByPullRequest.toArtifactInstance(
+              version = version,
+              createdAt = clock.tickMinutes(10)
+            ).copy(
+              gitMetadata = artifactMetadata.gitMetadata!!.copy(
+                // half the "versions" don't have pull request info
+                pullRequest = if (index < 10) null else artifactMetadata.gitMetadata!!.pullRequest
+              ),
+              buildMetadata = artifactMetadata.buildMetadata
+            )
+          )
+        }
+      }
+
+      test("returns \"versions\" with pull request sorted by timestamp") {
+        val versions = subject.versions(debianFilteredByPullRequest, 20)
+        // half the "versions" don't have pull request info
+        expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+      }
+    }
+
+
+    context("artifact filtered by pull request and branch") {
+      // registers versions backwards to check that sorting by timestamp takes precedence
+      val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
+
+      before {
+        subject.register(debianFilteredByPullRequestAndBranch)
+        allVersions.forEachIndexed { index, version ->
+          subject.storeArtifactInstance(
+            debianFilteredByPullRequestAndBranch.toArtifactInstance(
+              version = version,
+              createdAt = clock.tickMinutes(10)
+            ).copy(
+              gitMetadata = artifactMetadata.gitMetadata!!.copy(
+                // the last 5 versions don't have a matching branch
+                branch = if (index in 0..4) null else debianFilteredByBranch.fromBranch,
+                // the 5 versions before that don't have pull request info
+                pullRequest = if (index in 5..9) null else artifactMetadata.gitMetadata!!.pullRequest
+              ),
+              buildMetadata = artifactMetadata.buildMetadata
+            )
+          )
+        }
+      }
+
+      test("returns \"versions\" with pull request and matching branch sorted by timestamp") {
+        val versions = subject.versions(debianFilteredByPullRequestAndBranch, 20)
+        // all versions should match
+        expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
       }
     }
   }
