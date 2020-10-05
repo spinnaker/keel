@@ -105,10 +105,8 @@ data class ServerGroup(
  * It is intended to be called from the init block of classes that implement BaseEc2ServerGroup
  */
 fun ensureLaunchConfigInfoIsPresent(sg : BaseEc2ServerGroup) {
-  sg.run {
-    if(launchConfig == null && launchTemplate == null) {
-      throw SystemException("Server group info contains neither launchConfig nor launchTemplate fields: ${sg.name}")
-    }
+  if(sg.launchConfig == null && sg.launchTemplate == null) {
+    throw SystemException("Server group info contains neither launchConfig nor launchTemplate fields: ${sg.name}")
   }
 }
 
