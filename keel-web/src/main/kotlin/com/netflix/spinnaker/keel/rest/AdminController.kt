@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.rest
 
-import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
+import com.netflix.spinnaker.keel.events.NotificationEvent
 import com.netflix.spinnaker.keel.services.AdminService
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import org.slf4j.LoggerFactory.getLogger
@@ -79,7 +79,7 @@ class AdminController(
     path = ["/notifications/test"]
   )
   fun sendNotificationEvent(
-    @RequestBody event: ResourceNotificationEvent
+    @RequestBody event: NotificationEvent
   ) {
     adminService.sendNotificationEvent(event)
   }

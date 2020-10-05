@@ -7,12 +7,12 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.echo.model.EchoNotification.InteractiveActions
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
-import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
+import com.netflix.spinnaker.keel.events.NotificationEvent
 import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
-import com.netflix.spinnaker.keel.notifications.Notifier.UNHEALTHY
+import com.netflix.spinnaker.keel.notifications.NotificationType.UNHEALTHY_RESOURCE
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
-import com.netflix.spinnaker.keel.persistence.NotifierRepository
+import com.netflix.spinnaker.keel.persistence.NotificationRepository
 import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
@@ -42,10 +42,10 @@ import org.springframework.stereotype.Component
 @Configuration
 @EnableConfigurationProperties(KeelNotificationConfig::class)
 @Component
-class ResourceNotifier(
+class Notifier(
   private val echoService: EchoService,
   private val keelRepository: KeelRepository,
-  private val notifierRepository: NotifierRepository,
+  private val notificationRepository: NotificationRepository,
   private val keelNotificationConfig: KeelNotificationConfig,
   private val springEnv: Environment,
   private val spectator: Registry
@@ -56,20 +56,20 @@ class ResourceNotifier(
   private val notificationsEnabled: Boolean
     get() = springEnv.getProperty("keel.notifications.resource", Boolean::class.java, true)
 
-  @EventListener(ResourceNotificationEvent::class)
-  fun onResourceNotificationEvent(event: ResourceNotificationEvent) {
+  @EventListener(NotificationEvent::class)
+  fun onResourceNotificationEvent(event: NotificationEvent) {
     if (notificationsEnabled){
-      val shouldNotify = notifierRepository.addNotification(event.scope, event.identifier, event.notifier)
+      val shouldNotify = notificationRepository.addNotification(event.scope, event.identifier, event.notificationType)
       if (shouldNotify) {
         notify(event)
-        notifierRepository.markSent(event.scope, event.identifier, event.notifier)
+        notificationRepository.markSent(event.scope, event.identifier, event.notificationType)
         spectator.counter(
           NOTIFICATION_SENT_ID,
-          listOf(BasicTag("notifier", event.notifier.name))
+          listOf(BasicTag("notifier", event.notificationType.name))
         )
           .runCatching { increment() }
           .onFailure {
-            log.error("Exception incrementing {} counter: {}", NOTIFICATION_SENT_ID, it.message)
+            log.error("Exception incrementing {} counter: {}", NOTIFICATION_SENT_ID, it)
           }
       }
     }
@@ -79,7 +79,7 @@ class ResourceNotifier(
    * This method assumes we're notifying about a resource.
    * If / when we notify about something else, we will need to update this assumption
    */
-  private fun notify(event: ResourceNotificationEvent) {
+  private fun notify(event: NotificationEvent) {
     log.debug("Sending notifications for ${event.scope.name.toLowerCase()} ${event.identifier} with content ${event.message}")
     try {
       val application = keelRepository.getResource(event.identifier).application
@@ -107,7 +107,7 @@ class ResourceNotifier(
 
   }
 
-  private fun NotificationConfig.toEchoNotification(application: String, event: ResourceNotificationEvent): EchoNotification {
+  private fun NotificationConfig.toEchoNotification(application: String, event: NotificationEvent): EchoNotification {
     return EchoNotification(
       notificationType = EchoNotification.Type.valueOf(type.name.toUpperCase()),
       to = listOf(address),
@@ -120,7 +120,7 @@ class ResourceNotifier(
         "subject" to event.message.subject,
         "body" to event.message.body
       ),
-      interactiveActions = generateInteractiveConfig(event.identifier, event.notifier.name, event.message.color)
+      interactiveActions = generateInteractiveConfig(event.identifier, event.notificationType.name, event.message.color)
     )
   }
 
@@ -143,7 +143,7 @@ class ResourceNotifier(
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
     if (event.healthy) {
-      notifierRepository.clearNotification(RESOURCE, event.resource.id, UNHEALTHY)
+      notificationRepository.clearNotification(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE)
     }
   }
 }

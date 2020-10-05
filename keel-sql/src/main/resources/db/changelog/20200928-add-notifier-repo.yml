@@ -19,7 +19,7 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: notifier_name
+                  name: notification_type
                   type: varchar(255)
                   constraints:
                     primaryKey: true

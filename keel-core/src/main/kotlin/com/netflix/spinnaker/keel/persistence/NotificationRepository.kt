@@ -1,15 +1,17 @@
 package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.notifications.NotificationScope
-import com.netflix.spinnaker.keel.notifications.Notifier
+import com.netflix.spinnaker.keel.notifications.NotificationType
 import org.springframework.beans.factory.annotation.Value
 import java.time.Clock
 
 /**
  * A repository for storing a list of ongoing notifications, and calculating whether
- * they should be resent
+ * they should be resent.
+ *
+ * Note, this repository does not store the notification message.
  */
-abstract class NotifierRepository(
+abstract class NotificationRepository(
   open val clock: Clock,
   @Value("notify.waiting-duration") var waitingDuration: String = "P1D"
 ) {
@@ -19,21 +21,21 @@ abstract class NotifierRepository(
    * Assumption: each notifier sends only one type of message
    * @return true if we should notify right now
    */
-  abstract fun addNotification(scope: NotificationScope, identifier: String, notifier: Notifier): Boolean
+  abstract fun addNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType): Boolean
 
   /**
    * Clears a notification from the list of ongoing notifications.
    * Does nothing if notification does not exist.
    */
-  abstract fun clearNotification(scope: NotificationScope, identifier: String, notifier: Notifier)
+  abstract fun clearNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType)
 
   /**
    * @return true if the notification should be sent
    */
-  abstract fun dueForNotification(scope: NotificationScope, identifier: String, notifier: Notifier): Boolean
+  abstract fun dueForNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType): Boolean
 
   /**
    * Marks notification as sent at the current time
    */
-  abstract fun markSent(scope: NotificationScope, identifier: String, notifier: Notifier)
+  abstract fun markSent(scope: NotificationScope, identifier: String, notificationType: NotificationType)
 }

@@ -5,11 +5,11 @@ import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
-import com.netflix.spinnaker.keel.events.ResourceNotificationEvent
+import com.netflix.spinnaker.keel.events.NotificationEvent
 import com.netflix.spinnaker.keel.notifications.ClusterViewParams
-import com.netflix.spinnaker.keel.notifications.NotificationMessage
+import com.netflix.spinnaker.keel.notifications.Notification
 import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
-import com.netflix.spinnaker.keel.notifications.Notifier.UNHEALTHY
+import com.netflix.spinnaker.keel.notifications.NotificationType.UNHEALTHY_RESOURCE
 import com.netflix.spinnaker.keel.veto.unhealthy.UnsupportedResourceTypeException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
@@ -31,7 +31,7 @@ class UnhealthyNotificationListener(
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
     if (notificationsEnabled && !event.healthy){
-      publisher.publishEvent(ResourceNotificationEvent(RESOURCE, event.resource.id, UNHEALTHY, message(event.resource)))
+      publisher.publishEvent(NotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event.resource)))
     }
   }
 
@@ -41,7 +41,7 @@ class UnhealthyNotificationListener(
    *
    *  Future improvement: add in how long the resource has been unhealthy for
    */
-  private fun message(resource: Resource<*>): NotificationMessage {
+  private fun message(resource: Resource<*>): Notification {
     val spec = resource.spec
     if (spec !is Monikered) {
       throw UnsupportedResourceTypeException("Resource kind ${resource.kind} must be monikered to construct resource links")
@@ -62,7 +62,7 @@ class UnhealthyNotificationListener(
     )
     val resourceUrl = "$spinnakerBaseUrl/#/applications/${resource.application}/clusters?${params.toURL()}"
 
-    return NotificationMessage(
+    return Notification(
       subject = "${resource.spec.displayName} is unhealthy",
       body = "<$resourceUrl|${resource.id}> is unhealthy and " +
         "Spinnaker does not detect any changes to this resource. " +
