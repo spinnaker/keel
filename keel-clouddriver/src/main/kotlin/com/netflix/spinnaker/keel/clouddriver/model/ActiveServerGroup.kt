@@ -222,7 +222,8 @@ data class LaunchTemplateData(
   val instanceType: String,
   val keyName: String,
   val iamInstanceProfile: IamInstanceProfile,
-  val monitoring: InstanceMonitoring
+  val monitoring: InstanceMonitoring,
+  val ramDiskId: String?
 )
 
 data class IamInstanceProfile(
