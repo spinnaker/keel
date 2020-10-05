@@ -216,6 +216,7 @@ data class LaunchTemplate(
   val launchTemplateData: LaunchTemplateData
 )
 
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-launchtemplate-launchtemplatedata.html
 data class LaunchTemplateData(
   val ebsOptimized: Boolean,
   val imageId: String,
