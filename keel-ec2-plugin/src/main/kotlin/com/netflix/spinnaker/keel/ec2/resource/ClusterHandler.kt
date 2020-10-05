@@ -944,8 +944,9 @@ class ClusterHandler(
   /**
    * Transforms CloudDriver response to our server group model.
    */
-  private fun ActiveServerGroup.toServerGroup() =
-    ServerGroup(
+  private fun ActiveServerGroup.toServerGroup() : ServerGroup {
+    val launchTemplateData = launchTemplate?.launchTemplateData
+    return ServerGroup(
       name = name,
       location = Location(
         account = accountName,
@@ -954,19 +955,18 @@ class ClusterHandler(
         subnet = subnet(cloudDriverCache),
         availabilityZones = zones
       ),
-      launchConfiguration = launchConfig.run {
+      launchConfiguration =
         LaunchConfiguration(
-          imageId = imageId,
+          imageId = launchConfig?.imageId ?: launchTemplateData!!.imageId,
           appVersion = image.appVersion,
           baseImageVersion = image.baseImageVersion,
-          instanceType = instanceType,
-          ebsOptimized = ebsOptimized,
-          iamRole = iamInstanceProfile,
-          keyPair = keyName,
-          instanceMonitoring = instanceMonitoring.enabled,
-          ramdiskId = ramdiskId.orNull()
-        )
-      },
+          instanceType = launchConfig?.instanceType ?: launchTemplateData!!.instanceType,
+          ebsOptimized = launchConfig?.ebsOptimized ?: launchTemplateData!!.ebsOptimized,
+          iamRole = launchConfig?.iamInstanceProfile ?: launchTemplateData!!.iamInstanceProfile.name,
+          keyPair = launchConfig?.keyName ?: launchTemplateData!!.keyName,
+          instanceMonitoring = launchConfig?.instanceMonitoring?.enabled ?: launchTemplateData!!.monitoring.enabled,
+          ramdiskId = launchConfig?.ramdiskId.orNull() // not in launchTemplateData
+        ),
       buildInfo = buildInfo?.toEc2Api(),
       capacity = capacity.let {
         when (scalingPolicies.isEmpty()) {
@@ -995,6 +995,7 @@ class ClusterHandler(
       image = image.toEc2Api(),
       instanceCounts = instanceCounts.toEc2Api()
     )
+  }
 
   private fun List<MetricDimensionModel>?.toSpec(): Set<MetricDimension> =
     when (this) {
