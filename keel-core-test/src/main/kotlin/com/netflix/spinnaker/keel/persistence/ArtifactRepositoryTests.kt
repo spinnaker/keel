@@ -88,7 +88,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB
     )
 
-    val debianWithSortingByTimestamp =  DebianArtifact(
+    val debianWithBranchSortedByTimestamp =  DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
@@ -97,6 +97,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       branch = "my-feature-branch"
     )
 
+    val debianWithBranchPatternSortedByTimestamp =  debianWithBranchSortedByTimestamp.copy(branch = ".*feature.*")
+
     val featureBranchEnvironment = Environment("feature-branch")
     val testEnvironment = Environment("test")
     val stagingEnvironment = Environment("staging")
@@ -104,7 +106,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       name = "my-manifest",
       application = "fnord",
       serviceAccount = "keel@spinnaker",
-      artifacts = setOf(versionedSnapshotDebian, versionedReleaseDebian, versionedDockerArtifact, debianWithSortingByTimestamp),
+      artifacts = setOf(versionedSnapshotDebian, versionedReleaseDebian, versionedDockerArtifact, debianWithBranchSortedByTimestamp),
       environments = setOf(featureBranchEnvironment, testEnvironment, stagingEnvironment)
     )
     val version1 = "keeldemo-0.0.1~dev.8-h8.41595c4" // snapshot
@@ -177,7 +179,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       setOf(version6, versionBad).forEach {
         storeArtifactInstance(versionedDockerArtifact.toArtifactInstance(it))
       }
-      register(debianWithSortingByTimestamp)
+      register(debianWithBranchSortedByTimestamp)
     }
     persist(manifest)
   }
@@ -864,22 +866,22 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     }
 
     context("artifact sorted by branch and timestamp") {
-      context("with branch specified in the artifact spec") {
+      context("with branch name specified in the artifact spec") {
         // registers versions backwards to check that sorting by timestamp takes precedence
         val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
 
         before {
-          subject.register(debianWithSortingByTimestamp)
+          subject.register(debianWithBranchSortedByTimestamp)
           allVersions.forEachIndexed { index, version ->
             subject.storeArtifactInstance(
-              debianWithSortingByTimestamp.toArtifactInstance(
+              debianWithBranchSortedByTimestamp.toArtifactInstance(
                 version = version,
                 status = SNAPSHOT,
                 // half of the versions doesn't have a timestamp
                 createdAt = if (index < 10) null else clock.tickMinutes(10)
               ).copy(
                 gitMetadata = artifactMetadata.gitMetadata?.copy(
-                  branch = debianWithSortingByTimestamp.branch
+                  branch = debianWithBranchSortedByTimestamp.branch
                 ),
                 buildMetadata = artifactMetadata.buildMetadata
               )
@@ -888,25 +890,59 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         }
 
         test("returns \"versions\" in the right order") {
-          val versions = subject.versions(debianWithSortingByTimestamp, 5)
+          val versions = subject.versions(debianWithBranchSortedByTimestamp, 5)
           expectThat(versions).containsExactly(allVersions.reversed().subList(0, 5))
         }
 
         test("skips artifacts without a timestamp") {
-          val versions = subject.versions(debianWithSortingByTimestamp, 20)
+          val versions = subject.versions(debianWithBranchSortedByTimestamp, 20)
           expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
         }
       }
 
       context("with branch missing in the artifact spec") {
         before {
-          subject.register(debianWithSortingByTimestamp)
+          subject.register(debianWithBranchSortedByTimestamp)
         }
 
         test("throws a validation exception") {
           expectThrows<InvalidArtifactSpecException> {
-            subject.versions(debianWithSortingByTimestamp.copy(branch = null))
+            subject.versions(debianWithBranchSortedByTimestamp.copy(branch = null))
           }
+        }
+      }
+
+      context("with branch pattern specified in the artifact spec") {
+        // registers versions backwards to check that sorting by timestamp takes precedence
+        val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
+
+        before {
+          subject.register(debianWithBranchPatternSortedByTimestamp)
+          allVersions.forEachIndexed { index, version ->
+            subject.storeArtifactInstance(
+              debianWithBranchPatternSortedByTimestamp.toArtifactInstance(
+                version = version,
+                status = SNAPSHOT,
+                createdAt = clock.tickMinutes(10)
+              ).copy(
+                gitMetadata = artifactMetadata.gitMetadata?.copy(
+                  branch = when {
+                    index < 5 -> "my-feature-x"
+                    index < 10 -> "feature-branch-x"
+                    index < 15 -> "myfeature"
+                    else -> "a-non-matching-branch"
+                  }
+                ),
+                buildMetadata = artifactMetadata.buildMetadata
+              )
+            )
+          }
+        }
+
+        test("returns \"versions\" in the right order") {
+          val versions = subject.versions(debianWithBranchPatternSortedByTimestamp, 20)
+          // first 5 have "a-non-matching-branch"
+          expectThat(versions).containsExactly(allVersions.reversed().subList(5, 20))
         }
       }
     }

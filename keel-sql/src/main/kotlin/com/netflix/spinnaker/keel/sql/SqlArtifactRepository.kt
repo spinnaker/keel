@@ -255,7 +255,7 @@ class SqlArtifactRepository(
           // When sorting "natively" by branch and timestamp, delegate sorting and limiting to the database
           if (artifact.sortBy == BRANCH_AND_TIMESTAMP) {
             // TODO: should we also be comparing the repo with what's configured for the app in front50?
-            and(ARTIFACT_VERSIONS_BRANCH.eq(artifact.branch))
+            and(ARTIFACT_VERSIONS_BRANCH.likeRegex(artifact.branch))
               .and(ARTIFACT_VERSIONS.CREATED_AT.isNotNull)
               .orderBy(ARTIFACT_VERSIONS.CREATED_AT.desc())
               .limit(limit)
