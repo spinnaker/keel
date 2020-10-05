@@ -231,14 +231,14 @@ class SqlArtifactRepository(
   }
 
   override fun versions(artifact: DeliveryArtifact, limit: Int): List<String> {
-    // sanity checks
     if (!isRegistered(artifact.name, artifact.type)) {
       throw NoSuchArtifactException(artifact)
     }
 
     if (artifact.sortBy == BRANCH_AND_TIMESTAMP && artifact.branch == null) {
       throw InvalidArtifactSpecException(
-        "The ${artifact.type} artifact ${artifact.name} specifies sorting by branch and timestamp, but no branch is defined in the config.")
+        "Artifact ${artifact.reference} in delivery config ${artifact.deliveryConfigName} " +
+          "requires field 'branch' to sort by branch and timestamp.")
     }
 
     val versions = sqlRetry.withRetry(READ) {

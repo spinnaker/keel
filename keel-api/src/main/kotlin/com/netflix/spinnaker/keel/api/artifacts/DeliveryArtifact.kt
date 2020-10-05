@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.api.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.BRANCH_AND_TIMESTAMP
 import com.netflix.spinnaker.keel.api.artifacts.SortStrategy.VERSION
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 import java.time.Instant
