@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
+import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
@@ -255,7 +256,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
         }
 
-        test("querying the list for returns both artifacts") {
+        test("querying for the list of versions returns both versions") {
           // status is stored on the artifact
           subject.storeArtifactInstance(artifact1.toArtifactInstance(version2, SNAPSHOT))
           expectThat(subject.versions(artifact1)).containsExactly(version2, version1)
@@ -297,6 +298,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           test("querying with only release returns correct versions") {
             expectThat(subject.versions(artifact2)).containsExactly(version5, version4)
           }
+
+          test("querying for limit returns limit") {
+            val artifactWithAll = artifact1.copy(statuses = emptySet())
+            expectThat(subject.versions(artifactWithAll, 2)).containsExactly(version5, version4)
+          }
         }
 
         context("docker") {
@@ -317,6 +323,23 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             )
             expectThat(subject.versions(incorrectArtifact)).isEmpty()
           }
+        }
+      }
+
+      context("limiting versions works") {
+        before {
+          (1..100).map { "1.0.$it"}.forEach {
+            subject.storeArtifactInstance(artifact1.toArtifactInstance(it, SNAPSHOT))
+          }
+        }
+
+        test("default cap applies with no limit specified") {
+          expectThat(subject.versions(artifact1)).hasSize(DEFAULT_MAX_ARTIFACT_VERSIONS)
+        }
+
+        test("limit parameter takes effect when specified") {
+          expectThat(subject.versions(artifact1, 20)).hasSize(20)
+          expectThat(subject.versions(artifact1, 100)).hasSize(100)
         }
       }
     }
