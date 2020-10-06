@@ -43,6 +43,7 @@ fun<T : BaseEc2ServerGroup> ContextBuilder<FixtureMaker<T>>.checkServerGroupCons
       expectCatching {
         make(launchTemplate = LaunchTemplate(
           launchTemplateData = LaunchTemplateData(
+            ramDiskId = null,
             ebsOptimized = true,
             imageId = "image",
             instanceType = "t2.micro",
