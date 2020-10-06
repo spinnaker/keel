@@ -1044,11 +1044,15 @@ class SqlDeliveryConfigRepository(
         select(DELIVERY_CONFIG.UID, DELIVERY_CONFIG.NAME)
           .from(DELIVERY_CONFIG, DELIVERY_CONFIG_LAST_CHECKED)
           .where(DELIVERY_CONFIG.UID.eq(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID))
-          .and(
-            DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY.isNull
-              .or(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT.lessOrEqual(cutoff))
-          )
+          // has not been checked recently
           .and(DELIVERY_CONFIG_LAST_CHECKED.AT.lessOrEqual(cutoff))
+          // either no other Keel instance is working on this, or the lease has expired (e.g. due to
+          // instance termination mid-check)
+          .and(
+            DELIVERY_CONFIG_LAST_CHECKED.LEASED_BY.isNull
+              .or(DELIVERY_CONFIG_LAST_CHECKED.LEASED_AT.lessOrEqual(cutoff))
+          )
+          // the application is not paused
           .andNotExists(
             selectOne()
               .from(PAUSED)
@@ -1062,8 +1066,8 @@ class SqlDeliveryConfigRepository(
           .also {
             it.forEach { (uid, _) ->
               update(DELIVERY_CONFIG_LAST_CHECKED)
-                .set(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY, InetAddress.getLocalHost().hostName)
-                .set(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT, now.toTimestamp())
+                .set(DELIVERY_CONFIG_LAST_CHECKED.LEASED_BY, InetAddress.getLocalHost().hostName)
+                .set(DELIVERY_CONFIG_LAST_CHECKED.LEASED_AT, now.toTimestamp())
                 .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(uid))
                 .execute()
             }
@@ -1079,9 +1083,11 @@ class SqlDeliveryConfigRepository(
     sqlRetry.withRetry(WRITE) {
       jooq
         .update(DELIVERY_CONFIG_LAST_CHECKED)
-        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_BY)
-        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LOCKED_AT)
+        // set last check time to now
         .set(DELIVERY_CONFIG_LAST_CHECKED.AT, clock.instant().toTimestamp())
+        // clear the lease to allow other instances to check this item
+        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LEASED_BY)
+        .setNull(DELIVERY_CONFIG_LAST_CHECKED.LEASED_AT)
         .where(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID.eq(
           select(DELIVERY_CONFIG.UID)
             .from(DELIVERY_CONFIG)

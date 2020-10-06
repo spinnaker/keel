@@ -7,12 +7,12 @@ databaseChangeLog:
         tableName: delivery_config_last_checked
         columns:
         - column:
-            name: locked_by
+            name: leased_by
             type: varchar(64)
             constraints:
               nullable: true
         - column:
-            name: locked_at
+            name: leased_at
             type: timestamp(3)
             constraints:
               nullable: true
@@ -21,9 +21,11 @@ databaseChangeLog:
         indexName: delivery_config_last_checked_at_idx
     - createIndex:
         tableName: delivery_config_last_checked
-        indexName: delivery_config_last_checked_at_locked_by_idx
+        indexName: delivery_config_last_checked_at_leased_by_leased_at_idx
         columns:
         - column:
             name: at
         - column:
-            name: locked_by
+            name: leased_by
+        - column:
+            name: leased_at
