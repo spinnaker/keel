@@ -961,7 +961,7 @@ class ClusterHandler(
       ),
       launchConfiguration =
         LaunchConfiguration(
-          imageId = launchConfig?.imageId ?: launchTemplateData!!.imageId,
+          imageId = image.imageId,
           appVersion = image.appVersion,
           baseImageVersion = image.baseImageVersion,
           instanceType = launchConfig?.instanceType ?: launchTemplateData!!.instanceType,
