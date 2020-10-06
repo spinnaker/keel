@@ -180,7 +180,7 @@ databaseChangeLog:
       file: changelog/20200925-environment-related-indices.yml
       relativeToChangelogFile: true
   - include:
-      file: changelog/20200928-add-notifier-repo.yml
+      file: changelog/20200928-add-notification-repo.yml
       relativeToChangelogFile: true
   - include:
       file: changelog/20201001-diff-action-count.yml

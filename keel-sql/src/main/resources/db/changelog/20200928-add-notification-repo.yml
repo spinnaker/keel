@@ -1,10 +1,10 @@
 databaseChangeLog:
   - changeSet:
-      id: add-notifier-repo
+      id: add-notification-repo
       author: emjburns
       changes:
         - createTable:
-            tableName: notifier
+            tableName: notification
             columns:
               - column:
                   name: scope
@@ -13,13 +13,13 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: identifier
+                  name: ref
                   type: varchar(255)
                   constraints:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: notification_type
+                  name: type
                   type: varchar(255)
                   constraints:
                     primaryKey: true

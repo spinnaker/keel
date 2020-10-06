@@ -28,7 +28,9 @@ import org.springframework.stereotype.Component
  *
  * This class receives every notification, but notifies only once per
  *  notify.waiting-duration (default once per day) if the notification
- *  is a duplicate
+ *  is a duplicate. It is essentially a rate limiter for notifications.
+ *
+ * This simple implementation was chosen to allow experimentation with this feature.
  *
  * Note: this implementation is simple functionality. We could add more advanced
  *  functionality by allowing the message to contain whether we should notify
@@ -59,13 +61,13 @@ class Notifier(
   @EventListener(NotificationEvent::class)
   fun onResourceNotificationEvent(event: NotificationEvent) {
     if (notificationsEnabled){
-      val shouldNotify = notificationRepository.addNotification(event.scope, event.identifier, event.notificationType)
+      val shouldNotify = notificationRepository.addNotification(event.scope, event.ref, event.type)
       if (shouldNotify) {
         notify(event)
-        notificationRepository.markSent(event.scope, event.identifier, event.notificationType)
+        notificationRepository.markSent(event.scope, event.ref, event.type)
         spectator.counter(
           NOTIFICATION_SENT_ID,
-          listOf(BasicTag("notifier", event.notificationType.name))
+          listOf(BasicTag("type", event.type.name))
         )
           .runCatching { increment() }
           .onFailure {
@@ -80,13 +82,13 @@ class Notifier(
    * If / when we notify about something else, we will need to update this assumption
    */
   private fun notify(event: NotificationEvent) {
-    log.debug("Sending notifications for ${event.scope.name.toLowerCase()} ${event.identifier} with content ${event.message}")
+    log.debug("Sending notifications for ${event.scope.name.toLowerCase()} ${event.ref} with content ${event.message}")
     try {
-      val application = keelRepository.getResource(event.identifier).application
-      val env = keelRepository.environmentFor(event.identifier)
+      val application = keelRepository.getResource(event.ref).application
+      val env = keelRepository.environmentFor(event.ref)
       env.notifications.forEach { notificationConfig ->
         val notification = notificationConfig.toEchoNotification(application, event)
-        log.debug("Sending notification for resource ${event.identifier} with config $notification")
+        log.debug("Sending notification for resource ${event.ref} with config $notification")
         runBlocking {
           echoService.sendNotification(notification)
         }
@@ -94,11 +96,11 @@ class Notifier(
     } catch (e: Exception) {
       when (e) {
         is NoSuchResourceException -> {
-          log.error("Trying to notify resource ${event.identifier} but it doesn't exist. Not notifying.")
+          log.error("Trying to notify resource ${event.ref} but it doesn't exist. Not notifying.")
           return
         }
         is OrphanedResourceException -> {
-          log.error("Trying to notify resource ${event.identifier} but it doesn't have an environment. Not notifying.")
+          log.error("Trying to notify resource ${event.ref} but it doesn't have an environment. Not notifying.")
           return
         }
         else -> throw e
@@ -120,7 +122,7 @@ class Notifier(
         "subject" to event.message.subject,
         "body" to event.message.body
       ),
-      interactiveActions = generateInteractiveConfig(event.identifier, event.notificationType.name, event.message.color)
+      interactiveActions = generateInteractiveConfig(event.ref, event.type.name, event.message.color)
     )
   }
 

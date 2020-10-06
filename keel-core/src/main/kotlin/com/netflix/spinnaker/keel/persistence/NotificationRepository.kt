@@ -21,21 +21,21 @@ abstract class NotificationRepository(
    * Assumption: each notifier sends only one type of message
    * @return true if we should notify right now
    */
-  abstract fun addNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType): Boolean
+  abstract fun addNotification(scope: NotificationScope, ref: String, type: NotificationType): Boolean
 
   /**
    * Clears a notification from the list of ongoing notifications.
    * Does nothing if notification does not exist.
    */
-  abstract fun clearNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType)
+  abstract fun clearNotification(scope: NotificationScope, ref: String, type: NotificationType)
 
   /**
    * @return true if the notification should be sent
    */
-  abstract fun dueForNotification(scope: NotificationScope, identifier: String, notificationType: NotificationType): Boolean
+  abstract fun dueForNotification(scope: NotificationScope, ref: String, type: NotificationType): Boolean
 
   /**
    * Marks notification as sent at the current time
    */
-  abstract fun markSent(scope: NotificationScope, identifier: String, notificationType: NotificationType)
+  abstract fun markSent(scope: NotificationScope, ref: String, type: NotificationType)
 }

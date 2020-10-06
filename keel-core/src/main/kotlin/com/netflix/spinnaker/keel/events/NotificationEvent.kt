@@ -6,8 +6,8 @@ import com.netflix.spinnaker.keel.notifications.NotificationType
 
 data class NotificationEvent(
   val scope: NotificationScope,
-  val identifier: String,
-  val notificationType: NotificationType,
+  val ref: String,
+  val type: NotificationType,
   val message: Notification
 )
 
