@@ -965,7 +965,9 @@ class ClusterHandler(
           iamRole = launchConfig?.iamInstanceProfile ?: launchTemplateData!!.iamInstanceProfile.name,
           keyPair = launchConfig?.keyName ?: launchTemplateData!!.keyName,
           instanceMonitoring = launchConfig?.instanceMonitoring?.enabled ?: launchTemplateData!!.monitoring.enabled,
-          ramdiskId = launchConfig?.ramdiskId ?: launchTemplateData!!.ramDiskId.orNull()
+
+          // Because launchConfig.ramdiskId can be null, need to do launchTemplateData?. instead of launchTemplateData!!
+          ramdiskId = launchConfig?.ramdiskId ?: launchTemplateData?.ramDiskId.orNull()
         ),
       buildInfo = buildInfo?.toEc2Api(),
       capacity = capacity.let {
