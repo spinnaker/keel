@@ -74,6 +74,7 @@ class ResourceActuator(
       try {
         log.debug("checkResource $id")
         val plugin = handlers.supporting(resource.kind)
+
         if (actuationPauser.isPaused(resource)) {
           log.debug("Actuation for resource {} is paused, skipping checks", id)
           publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "ActuationPaused"))
