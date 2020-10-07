@@ -3,9 +3,11 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -91,20 +93,59 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
-      fromBranch = "my-feature-branch"
+      from = ArtifactOriginFilterSpec(
+        branch = BranchFilterSpec(
+          name = "my-feature-branch"
+        )
+      )
     )
 
-    val debianFilteredByBranchPattern =  debianFilteredByBranch.copy(fromBranch = ".*feature.*")
+    val debianFilteredByBranchStartingWith = DebianArtifact(
+      name = "keeldemo",
+      deliveryConfigName = "my-manifest",
+      reference = "feature-branch",
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
+      from = ArtifactOriginFilterSpec(
+        branch = BranchFilterSpec(
+          startsWith = "feature-"
+        )
+      )
+    )
 
-    val debianFilteredByPullRequest =  DebianArtifact(
+    val debianFilteredByBranchPattern = DebianArtifact(
+      name = "keeldemo",
+      deliveryConfigName = "my-manifest",
+      reference = "feature-branch",
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
+      from = ArtifactOriginFilterSpec(
+        branch = BranchFilterSpec(
+          regex = ".*feature.*"
+        )
+      )
+    )
+
+    val debianFilteredByPullRequest = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "pr",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
-      fromPullRequest = true
+      from = ArtifactOriginFilterSpec(
+        pullRequestOnly = true
+      )
     )
 
-    val debianFilteredByPullRequestAndBranch =  debianFilteredByPullRequest.copy(fromBranch = "my-feature-branch")
+    val debianFilteredByPullRequestAndBranch = DebianArtifact(
+      name = "keeldemo",
+      deliveryConfigName = "my-manifest",
+      reference = "pr",
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
+      from = ArtifactOriginFilterSpec(
+        branch = BranchFilterSpec(
+          name = "my-feature-branch"
+        ),
+        pullRequestOnly = true
+      )
+    )
 
     val featureBranchEnvironment = Environment("feature-branch")
     val testEnvironment = Environment("test")
@@ -887,7 +928,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
                 createdAt = if (index < 10) null else clock.tickMinutes(10)
               ).copy(
                 gitMetadata = artifactMetadata.gitMetadata?.copy(
-                  branch = debianFilteredByBranch.fromBranch
+                  branch = debianFilteredByBranch.from!!.branch!!.name
                 ),
                 buildMetadata = artifactMetadata.buildMetadata
               )
@@ -905,7 +946,36 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
         }
       }
-      
+
+      context("with branch prefix specified in the artifact spec") {
+        // registers versions backwards to check that sorting by timestamp takes precedence
+        val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
+
+        before {
+          val prefix = debianFilteredByBranchStartingWith.from!!.branch!!.startsWith!!
+          subject.register(debianFilteredByBranchStartingWith)
+          allVersions.forEachIndexed { index, version ->
+            subject.storeArtifactInstance(
+              debianFilteredByBranchStartingWith.toArtifactInstance(
+                version = version,
+                createdAt = clock.tickMinutes(10)
+              ).copy(
+                gitMetadata = artifactMetadata.gitMetadata?.copy(
+                  branch = if (index < 10) "not-a-matching-branch" else "$prefix-$index"
+                ),
+                buildMetadata = artifactMetadata.buildMetadata
+              )
+            )
+          }
+        }
+
+        test("returns \"versions\" with matching branches sorted by timestamp") {
+          val versions = subject.versions(debianFilteredByBranchStartingWith, 20)
+          // only the first 10 versions have matching branches
+          expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+        }
+      }
+
       context("with branch pattern specified in the artifact spec") {
         // registers versions backwards to check that sorting by timestamp takes precedence
         val allVersions = (20 downTo 1).map { "keeldemo-not-a-version-$it" }
@@ -984,7 +1054,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             ).copy(
               gitMetadata = artifactMetadata.gitMetadata!!.copy(
                 // the last 5 versions don't have a matching branch
-                branch = if (index in 0..4) null else debianFilteredByBranch.fromBranch,
+                branch = if (index in 0..4) null else debianFilteredByBranch.from!!.branch!!.name,
                 // the 5 versions before that don't have pull request info
                 pullRequest = if (index in 5..9) null else artifactMetadata.gitMetadata!!.pullRequest
               ),

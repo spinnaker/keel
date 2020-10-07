@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -18,8 +19,7 @@ data class DockerArtifact(
   val tagVersionStrategy: TagVersionStrategy = SEMVER_TAG,
   val captureGroupRegex: String? = null,
   override val versioningStrategy: VersioningStrategy = DockerVersioningStrategy(tagVersionStrategy, captureGroupRegex),
-  override val fromPullRequest: Boolean? = false,
-  override val fromBranch: String? = null
+  override val from: ArtifactOriginFilterSpec? = null
 ) : DeliveryArtifact() {
   init {
     require(name.count { it == '/' } <= 1) {

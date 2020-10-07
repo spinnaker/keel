@@ -18,6 +18,40 @@ enum class ArtifactStatus {
 }
 
 /**
+ * Filters for source code branches. The fields within this class are mutually-exclusive.
+ *
+ * @param name A specific branch to match against.
+ * @param startsWith Match branches starting with this string.
+ * @param regex A regular expression to match against (e.g. "feature-.*").
+ */
+data class BranchFilterSpec(
+  val name: String? = null,
+  val startsWith: String? = null,
+  val regex: String? = null
+) {
+  init {
+    require(
+      (name != null && startsWith == null && regex == null)
+        || (name == null && startsWith != null && regex == null)
+        || (name == null && startsWith == null && regex != null)
+    ) {
+      "Please specify only one of 'name', 'startsWith' or 'regex'."
+    }
+  }
+}
+
+/**
+ * Filters for the origin of an artifact in source control.
+ *
+ * @param branch A [BranchFilterSpec] with branch filters.
+ * @param pullRequestOnly Whether to include only artifacts built from pull requests.
+ */
+data class ArtifactOriginFilterSpec(
+  val branch: BranchFilterSpec? = null,
+  val pullRequestOnly: Boolean? = false
+)
+
+/**
  * An artifact as defined in a [DeliveryConfig].
  *
  * Unlike other places within Spinnaker, this class does not describe a specific instance of a software artifact
@@ -33,18 +67,16 @@ abstract class DeliveryArtifact {
   abstract val reference: String
   /** The delivery config this artifact is a part of. */
   abstract val deliveryConfigName: String?
-  /** A set of release statuses to filter by. Mutually exclusive with [fromBranch] and [fromPullRequest]. */
+  /** A set of release statuses to filter by. Mutually exclusive with [from] filters. */
   open val statuses: Set<ArtifactStatus> = emptySet()
-  /** A specific branch to filter by, or a regular expression like "feature-.*" */
-  open val fromBranch: String? = null
-  /** Whether to include only artifacts from pull requests. */
-  open val fromPullRequest: Boolean? = false
+  /** Filters for the artifact origin in source control. */
+  open val from: ArtifactOriginFilterSpec? = null
 
   val filteredByBranch: Boolean
-    get() = fromBranch != null
+    get() = from?.branch != null
 
   val filteredByPullRequest: Boolean
-    get() = fromPullRequest == true
+    get() = from?.pullRequestOnly == true
 
   val filteredByReleaseStatus: Boolean
     get() = statuses.isNotEmpty()

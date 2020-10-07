@@ -73,9 +73,9 @@ class SqlArtifactRepository(
 
   companion object {
     private val ARTIFACT_VERSIONS_BRANCH =
-      field<String?>("keel.artifact_versions.git_metadata->'$.branch'")
+      field<String?>("json_unquote(keel.artifact_versions.git_metadata->'$.branch')")
     private val ARTIFACT_VERSIONS_PR_NUMBER =
-      field<String?>("keel.artifact_versions.git_metadata->'$.pullRequest.number'")
+      field<String?>("json_unquote(keel.artifact_versions.git_metadata->'$.pullRequest.number')")
     private const val EMPTY_PR_NUMBER = "\"\""
   }
 
@@ -245,13 +245,22 @@ class SqlArtifactRepository(
           if (artifact.filteredByReleaseStatus) {
             and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.map { it.toString() }.toTypedArray()))
           } else {
+            // TODO: should we also be comparing the repo with what's configured for the app in front50?
+
             if (artifact.filteredByPullRequest) {
               and(ARTIFACT_VERSIONS_PR_NUMBER.isNotNull).and(ARTIFACT_VERSIONS_PR_NUMBER.ne(EMPTY_PR_NUMBER))
             }
 
             if (artifact.filteredByBranch) {
-              // TODO: should we also be comparing the repo with what's configured for the app in front50?
-              and(ARTIFACT_VERSIONS_BRANCH.likeRegex(artifact.fromBranch))
+              artifact.from?.branch?.name?.also {
+                and(ARTIFACT_VERSIONS_BRANCH.eq(it))
+              }
+              artifact.from?.branch?.startsWith?.also {
+                and(ARTIFACT_VERSIONS_BRANCH.startsWith(it))
+              }
+              artifact.from?.branch?.regex?.also {
+                and(ARTIFACT_VERSIONS_BRANCH.likeRegex(it))
+              }
             }
 
             // With branches or pull requests, delegate sorting and limiting to the database
