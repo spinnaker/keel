@@ -21,6 +21,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.MemoryCloudDriverCache
+import io.micrometer.core.instrument.MeterRegistry
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.springframework.beans.factory.BeanCreationException
@@ -57,8 +58,11 @@ class ClouddriverConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(CloudDriverCache::class)
-  fun cloudDriverCache(cloudDriverService: CloudDriverService) =
-    MemoryCloudDriverCache(cloudDriverService)
+  fun cloudDriverCache(
+    cloudDriverService: CloudDriverService,
+    meterRegistry: MeterRegistry
+  ) =
+    MemoryCloudDriverCache(cloudDriverService, meterRegistry)
 
   @Bean
   fun imageService(

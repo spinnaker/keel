@@ -64,6 +64,5 @@ class ImageExistsConstraintEvaluator(
   private val defaultImageAccount: String
     get() = dynamicConfigService.getConfig("images.default-account", "test")
 
-
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

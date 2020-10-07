@@ -17,6 +17,7 @@ dependencies {
   implementation("org.springframework:spring-context")
   implementation("org.springframework.boot:spring-boot-autoconfigure")
   implementation("com.netflix.frigga:frigga")
+  implementation("com.netflix.spectator:spectator-reg-micrometer")
 
   testImplementation(project(":keel-retrofit-test-support"))
   testImplementation("com.squareup.retrofit2:retrofit-mock")
