@@ -18,6 +18,7 @@ package com.netflix.spinnaker.keel.clouddriver
 import com.github.benmanes.caffeine.cache.AsyncCache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
+import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
@@ -29,10 +30,15 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.function.BiFunction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
 
 /**
  * An in-memory cache for calls against cloud driver
@@ -48,34 +54,44 @@ class MemoryCloudDriverCache(
 ) : CloudDriverCache {
 
   private val securityGroupSummariesByIdOrName = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(1000)
     .expireAfterWrite(1, MINUTES)
     .buildAsync<String, SecurityGroupSummary>()
 
   private val networks = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
     .buildAsync<String, Network>()
 
   private val availabilityZones = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
     .buildAsync<String, Set<String>>()
 
   private val credentials = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(100)
     .expireAfterWrite(1, HOURS)
     .buildAsync<String, Credential>()
 
   private val subnetsById = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
     .buildAsync<String, Subnet>()
 
   private val subnetsByPurpose = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
     .maximumSize(1000)
     .expireAfterWrite(1, HOURS)
     .buildAsync<String, Subnet>()
+
+  private val namedImagesByAccountAndImageName = Caffeine.newBuilder()
+    .executor(IO.asExecutor())
+    .buildAsync<String, List<NamedImage>>()
 
   override fun credentialBy(name: String): Credential =
     credentials.getOrNotFound(name, "Credentials with name $name not found") {
@@ -85,10 +101,13 @@ class MemoryCloudDriverCache(
   /**
    * Convert a suspending function to a [BiFunction] that [AsyncCache.get] expects as its second argument
    *
-   * Uses [Dispatchers.IO] because it assumes that [block] makes I/O calls
+   * Uses a coroutine dispatcher based on the cache's [Executor].
    */
-  private fun <T> asyncify(block: suspend CoroutineScope.() -> T?): BiFunction<String, Executor, CompletableFuture<T?>> =
-    BiFunction { _, _ -> CoroutineScope(Dispatchers.IO).future(block = block) }
+  private fun <K, V> asyncify(block: suspend CoroutineScope.(K) -> V?): BiFunction<K, Executor, CompletableFuture<V?>> =
+    BiFunction { key, executor ->
+      CoroutineScope(executor.asCoroutineDispatcher())
+        .future(block = { block(key) })
+    }
 
   override fun securityGroupById(account: String, region: String, id: String): SecurityGroupSummary =
     securityGroupSummariesByIdOrName.getOrNotFound(
@@ -155,11 +174,19 @@ class MemoryCloudDriverCache(
         .find { it.account == account && it.region == region && it.purpose == purpose }
     }
 
-  private fun <T> AsyncCache<String, T>.getOrNotFound(
-    key: String,
+  override fun namedImages(imageName: String, account: String): List<NamedImage> =
+    runBlocking {
+      namedImagesByAccountAndImageName.get(
+        "$account:$imageName",
+        asyncify { cloudDriver.namedImages(DEFAULT_SERVICE_ACCOUNT, imageName, account) }
+      ).await() ?: emptyList()
+    }
+
+  private fun <K, V> AsyncCache<K, V>.getOrNotFound(
+    key: K,
     notFoundMessage: String,
-    loader: suspend CoroutineScope.() -> T?
-  ): T = runCatching {
+    loader: suspend CoroutineScope.(K) -> V?
+  ): V = runCatching {
     runBlocking {
       get(key, asyncify(loader)).await()
     }

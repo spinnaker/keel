@@ -62,6 +62,7 @@ class ClouddriverConfiguration {
 
   @Bean
   fun imageService(
-    cloudDriverService: CloudDriverService
-  ) = ImageService(cloudDriverService)
+    cloudDriverService: CloudDriverService,
+    cloudDriverCache: CloudDriverCache
+  ) = ImageService(cloudDriverService, cloudDriverCache)
 }
