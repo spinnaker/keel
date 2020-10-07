@@ -31,13 +31,13 @@ abstract class UnhealthyRepositoryTests<T : UnhealthyRepository> : JUnit5Minutes
 
     context("nothing is unhealthy") {
       test("marking healthy works") {
-        expectThat(subject.markUnhealthy(resourceId)).isEqualTo(Duration.ofMinutes(0))
+        expectCatching {subject.markUnhealthy(resourceId) }.isSuccess()
       }
       test("marking unhealthy works") {
         expectCatching { subject.markHealthy(resourceId) }.isSuccess()
       }
       test("getting duration works") {
-        expectThat(subject.durationUnhealthy(resourceId)).isEqualTo(Duration.ofMinutes(0))
+        expectThat(subject.durationUnhealthy(resourceId)).isEqualTo(Duration.ZERO)
       }
     }
 
@@ -49,7 +49,6 @@ abstract class UnhealthyRepositoryTests<T : UnhealthyRepository> : JUnit5Minutes
 
       test("duration is correct") {
         expect {
-          that(subject.markUnhealthy(resourceId)).isEqualTo(Duration.ofMinutes(10))
           that(subject.durationUnhealthy(resourceId)).isEqualTo(Duration.ofMinutes(10))
         }
 

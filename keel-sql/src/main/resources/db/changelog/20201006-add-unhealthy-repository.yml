@@ -14,7 +14,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: time_detected
-                  type: bigint
+                  type: timestamp(3)
                   constraints:
                     nullable: false
         - modifySql:

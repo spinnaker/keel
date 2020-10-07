@@ -37,15 +37,6 @@ class UnhealthyNotificationListenerTests : JUnit5Minutests {
     )
 
     val r = locatableResource()
-    val env = com.netflix.spinnaker.keel.api.Environment(
-      name = "test",
-      resources = setOf(r),
-      notifications = setOf(
-        NotificationConfig(type = NotificationType.slack, address = "#ohmy", frequency = NotificationFrequency.quiet),
-        NotificationConfig(type = NotificationType.email, address = "oh@my.com", frequency = NotificationFrequency.quiet)
-      ),
-      constraints = setOf()
-    )
   }
 
   fun tests() = rootContext<Fixture> {
@@ -53,21 +44,21 @@ class UnhealthyNotificationListenerTests : JUnit5Minutests {
       Fixture()
     }
 
-    context("no existing unhealthy record") {
+    context("no existing record") {
       before {
         every {
-          unhealthyRepository.markUnhealthy(r.id)
-        } returns Duration.ofMinutes(0)
+          unhealthyRepository.durationUnhealthy(r.id)
+        } returns Duration.ZERO
       }
 
-      test("marks unhealthy") {
-        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, healthy = true))
+      test("healthy marks resource healthy and clears unhealthy notification") {
+        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, isHealthy = true))
         verify(exactly = 1) { unhealthyRepository.markHealthy(r.id) }
         verify(exactly = 1) { publisher.publishEvent(ClearNotificationEvent(RESOURCE, r.id, UNHEALTHY_RESOURCE)) }
       }
 
-      test("marks unhealthy") {
-        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, healthy = false))
+      test("unhealthy adds a record") {
+        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, isHealthy = false))
         verify(exactly = 1) { unhealthyRepository.markUnhealthy(r.id) }
         verify(exactly = 0) { publisher.publishEvent(any()) }
       }
@@ -75,18 +66,18 @@ class UnhealthyNotificationListenerTests : JUnit5Minutests {
 
     context("existing unhealthy record") {
       before {
-        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, healthy = false))
+        subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, isHealthy = false))
       }
 
       context("it's been 4 minutes (less than the min time)") {
         before {
           every {
-            unhealthyRepository.markUnhealthy(r.id)
+            unhealthyRepository.durationUnhealthy(r.id)
           } returns Duration.ofMinutes(4)
         }
 
         test("we still don't notify") {
-          subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, healthy = false))
+          subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, isHealthy = false))
           verify(exactly = 0) { publisher.publishEvent(any()) }
         }
       }
@@ -94,12 +85,12 @@ class UnhealthyNotificationListenerTests : JUnit5Minutests {
       context("it's been 6 minutes (more than the min time)") {
         before {
           every {
-            unhealthyRepository.markUnhealthy(r.id)
+            unhealthyRepository.durationUnhealthy(r.id)
           } returns Duration.ofMinutes(6)
         }
 
         test("we notify") {
-          subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, healthy = false))
+          subject.onResourceHealthEvent(ResourceHealthEvent(resource = r, isHealthy = false))
           verify(exactly = 1) {
             publisher.publishEvent(
               NotificationEvent(RESOURCE, r.id, UNHEALTHY_RESOURCE, subject.message(r, Duration.ofMinutes(6)))

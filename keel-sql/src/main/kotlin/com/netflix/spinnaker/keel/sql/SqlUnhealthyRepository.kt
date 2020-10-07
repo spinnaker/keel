@@ -13,18 +13,14 @@ class SqlUnhealthyRepository(
   val jooq: DSLContext,
   val sqlRetry: SqlRetry
 ) : UnhealthyRepository() {
-  override fun markUnhealthy(resourceId: String): Duration {
-    val durationUnhealthy = durationUnhealthy(resourceId)
-    if (durationUnhealthy == Duration.ofMinutes(0)) {
-      sqlRetry.withRetry(RetryCategory.WRITE) {
-        jooq.insertInto(UNHEALTHY)
-          .set(UNHEALTHY.RESOURCE_ID, resourceId)
-          .set(UNHEALTHY.TIME_DETECTED, clock.millis())
-          .onDuplicateKeyIgnore()
-          .execute()
-      }
+  override fun markUnhealthy(resourceId: String) {
+    sqlRetry.withRetry(WRITE) {
+      jooq.insertInto(UNHEALTHY)
+        .set(UNHEALTHY.RESOURCE_ID, resourceId)
+        .set(UNHEALTHY.TIME_DETECTED, clock.timestamp())
+        .onDuplicateKeyIgnore()
+        .execute()
     }
-    return durationUnhealthy
   }
 
   override fun markHealthy(resourceId: String) {
@@ -41,8 +37,8 @@ class SqlUnhealthyRepository(
         .from(UNHEALTHY)
         .where(UNHEALTHY.RESOURCE_ID.eq(resourceId))
         .fetchOne(UNHEALTHY.TIME_DETECTED)
-    } ?: return Duration.ofMinutes(0)
+    } ?: return Duration.ZERO
 
-    return Duration.ofMillis(clock.millis() - detectedTime)
+    return Duration.between(detectedTime, clock.timestamp())
   }
 }

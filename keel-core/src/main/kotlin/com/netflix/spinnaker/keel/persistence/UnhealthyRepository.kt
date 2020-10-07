@@ -15,10 +15,13 @@ abstract class UnhealthyRepository() {
   }
 
   /**
-   * Marks resource unhealthy, returns the duration it has been unhealthy for
+   * Marks resource unhealthy
    */
-  abstract fun markUnhealthy(resourceId: String): Duration
+  abstract fun markUnhealthy(resourceId: String)
 
+  /**
+   * Clears unhealthy marking
+   */
   abstract fun markHealthy(resourceId: String)
 
   /**
@@ -26,3 +29,4 @@ abstract class UnhealthyRepository() {
    */
   abstract fun durationUnhealthy(resourceId: String): Duration
 }
+

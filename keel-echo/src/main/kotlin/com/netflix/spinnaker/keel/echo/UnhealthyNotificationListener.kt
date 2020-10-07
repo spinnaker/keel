@@ -36,16 +36,17 @@ class UnhealthyNotificationListener(
 ) {
 
   private val notificationsEnabled: Boolean
-    get() = springEnv.getProperty("keel.notifications.unhealthy", Boolean::class.java, true)
+    get() = springEnv.getProperty("keel.notifications.unhealthy", Boolean::class.java, config.enabled)
 
   @EventListener(ResourceHealthEvent::class)
   fun onResourceHealthEvent(event: ResourceHealthEvent) {
     if (notificationsEnabled) {
-      if (event.healthy) {
+      if (event.isHealthy) {
         unhealthyRepository.markHealthy(event.resource.id)
         publisher.publishEvent(ClearNotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE))
       } else {
-        val unhealthyDuration = unhealthyRepository.markUnhealthy(event.resource.id)
+        unhealthyRepository.markUnhealthy(event.resource.id)
+        val unhealthyDuration = unhealthyRepository.durationUnhealthy(event.resource.id)
         if (unhealthyDuration > config.minUnhealthyDuration) {
           publisher.publishEvent(NotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event.resource, unhealthyDuration)))
         }
@@ -83,10 +84,9 @@ class UnhealthyNotificationListener(
     return Notification(
       subject = "${resource.spec.displayName} is unhealthy",
       body = "<$resourceUrl|${resource.id}> has been unhealthy for ${friendlyDuration(unhealthyDuration)} and " +
-        "Spinnaker cannot fix it. " +
+        "Spinnaker can't fix it. " +
         "Manual intervention might be required. Please check the History view for more details.",
       color = "#FF4949"
     )
   }
-
 }
