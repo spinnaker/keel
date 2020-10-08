@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
-import com.netflix.spinnaker.keel.test.DummyArtifact
+import com.netflix.spinnaker.keel.test.DummyArtifactSpec
 import com.netflix.spinnaker.keel.test.DummyVersioningStrategy
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -24,7 +24,7 @@ class AdminServiceTests : JUnit5Minutests {
     val repository: KeelRepository = mockk(relaxed = true)
     val diffFingerprintRepository: DiffFingerprintRepository = mockk()
     val actuationPauser: ActuationPauser = mockk()
-    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact, DummyVersioningStrategy>>(relaxUnitFun = true)
+    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifactSpec, DummyVersioningStrategy>>(relaxUnitFun = true)
     val publisher: ApplicationEventPublisher = mockk(relaxed = true)
 
     val application = "leapp"

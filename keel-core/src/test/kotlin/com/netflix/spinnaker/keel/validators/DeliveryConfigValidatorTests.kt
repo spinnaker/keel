@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.validators
 
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
@@ -21,7 +21,7 @@ import strikt.assertions.isFailure
 internal class DeliveryConfigValidatorTests : JUnit5Minutests {
 
   private val configName = "my-config"
-  val artifact = DockerArtifact(name = "org/image", deliveryConfigName = configName)
+  val artifact = DockerArtifactSpec(name = "org/image", deliveryConfigName = configName)
 
   val subject = DeliveryConfigValidator()
 
@@ -35,7 +35,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifacts = setOf(artifact),
+        artifactSpecs = setOf(artifact),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -71,15 +71,15 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
     context("a delivery config with non-unique artifact references errors fails validation") {
       // Two different artifacts with the same reference
       val artifacts = setOf(
-        DockerArtifact(name = "org/thing-1", deliveryConfigName = configName, reference = "thing"),
-        DockerArtifact(name = "org/thing-2", deliveryConfigName = configName, reference = "thing")
+        DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing"),
+        DockerArtifactSpec(name = "org/thing-2", deliveryConfigName = configName, reference = "thing")
       )
 
       val submittedConfig = SubmittedDeliveryConfig(
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifacts = artifacts,
+        artifactSpecs = artifacts,
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -107,7 +107,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifacts = setOf(DockerArtifact(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
+        artifactSpecs = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -136,7 +136,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifacts = setOf(DockerArtifact(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
+        artifactSpecs = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",

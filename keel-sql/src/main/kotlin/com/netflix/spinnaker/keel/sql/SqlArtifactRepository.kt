@@ -8,11 +8,11 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.artifacts.TagComparator
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -79,7 +79,7 @@ class SqlArtifactRepository(
     private const val EMPTY_PR_NUMBER = "\"\""
   }
 
-  override fun register(artifact: DeliveryArtifact) {
+  override fun register(artifact: ArtifactSpec) {
     val id: String = (
       sqlRetry.withRetry(READ) {
         jooq
@@ -118,7 +118,7 @@ class SqlArtifactRepository(
     }
   }
 
-  private fun DeliveryArtifact.detailsAsJson(): String {
+  private fun ArtifactSpec.detailsAsJson(): String {
     val details = objectMapper.convertValue<Map<String, Any?>>(this)
       .toMutableMap()
       // remove all the basic fields that have their own columns; everything else is serialized
@@ -133,7 +133,7 @@ class SqlArtifactRepository(
     return objectMapper.writeValueAsString(details)
   }
 
-  override fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> {
+  override fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<ArtifactSpec> {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE)
@@ -147,7 +147,7 @@ class SqlArtifactRepository(
     } ?: throw NoSuchArtifactException(name, type)
   }
 
-  override fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact {
+  override fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): ArtifactSpec {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE)
@@ -163,7 +163,7 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun get(deliveryConfigName: String, reference: String): DeliveryArtifact {
+  override fun get(deliveryConfigName: String, reference: String): ArtifactSpec {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE, DELIVERY_ARTIFACT.TYPE)
@@ -179,7 +179,7 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun delete(artifact: DeliveryArtifact) {
+  override fun delete(artifact: ArtifactSpec) {
     requireNotNull(artifact.deliveryConfigName) { "Error removing artifact - it has no delivery config!" }
     val deliveryConfigId = select(DELIVERY_CONFIG.UID)
       .from(DELIVERY_CONFIG)
@@ -191,8 +191,13 @@ class SqlArtifactRepository(
         .where(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(deliveryConfigId))
         .and(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID.eq(artifact.uid))
         .execute()
+<<<<<<< HEAD
       txn.deleteFrom(DELIVERY_ARTIFACT)
-        .where(DELIVERY_ARTIFACT.UID.eq(artifact.uid))
+        .where(DELIVERY_ARTIFACT.UID.eq(artifactSpec.uid))
+=======
+      txn.deleteFrom(ARTIFACT_SPEC)
+        .where(ARTIFACT_SPEC.UID.eq(artifact.uid))
+>>>>>>> fe6fb3a1... bla
         .execute()
     }
   }
@@ -208,7 +213,7 @@ class SqlArtifactRepository(
         .value1()
     } > 0
 
-  override fun getAll(type: ArtifactType?): List<DeliveryArtifact> =
+  override fun getAll(type: ArtifactType?): List<ArtifactSpec> =
     sqlRetry.withRetry(READ) {
       jooq
         .select(DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.TYPE, DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE, DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME)
@@ -230,7 +235,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun versions(artifact: DeliveryArtifact, limit: Int): List<String> {
+  override fun versions(artifact: ArtifactSpec, limit: Int): List<String> {
     if (!isRegistered(artifact.name, artifact.type)) {
       throw NoSuchArtifactException(artifact)
     }
@@ -279,7 +284,7 @@ class SqlArtifactRepository(
       versions
     } else {
       val sortedVersions = versions.sortedWith(artifact.versioningStrategy.comparator)
-      if (artifact is DockerArtifact) {
+      if (artifact is DockerArtifactSpec) {
         // FIXME: remove special handling for Docker
         filterDockerVersions(artifact, sortedVersions, limit)
       } else {
@@ -288,7 +293,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun storeArtifactInstance(artifact: PublishedArtifact): Boolean {
+  override fun storeArtifactInstance(artifact: ArtifactInstance): Boolean {
     with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)
@@ -309,7 +314,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? {
+  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): ArtifactInstance? {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(
@@ -328,7 +333,7 @@ class SqlArtifactRepository(
         .apply { if (status != null) and(ARTIFACT_VERSIONS.RELEASE_STATUS.eq(status.toString())) }
         .fetchOne()
         ?.let { (name, type, version, status, createdAt, gitMetadata, buildMetadata) ->
-          PublishedArtifact(
+          ArtifactInstance(
             name = name,
             type = type,
             version = version,
@@ -341,7 +346,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata) {
+  override fun updateArtifactMetadata(artifact: ArtifactInstance, artifactMetadata: ArtifactMetadata) {
     with(artifact) {
       if (!isRegistered(name, type)) {
         throw NoSuchArtifactException(name, type)
@@ -361,7 +366,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus? =
+  override fun getReleaseStatus(artifact: ArtifactSpec, version: String): ArtifactStatus? =
     if (isRegistered(artifact.name, artifact.type)) {
       sqlRetry.withRetry(READ) {
         jooq
@@ -384,7 +389,7 @@ class SqlArtifactRepository(
    *
    * This means that this will filter out tags like "latest" from the list.
    */
-  private fun filterDockerVersions(artifact: DockerArtifact, versions: List<String>, limit: Int): List<String> =
+  private fun filterDockerVersions(artifact: DockerArtifactSpec, versions: List<String>, limit: Int): List<String> =
     versions.filter { shouldInclude(it, artifact) }
       .also {
         filteredVersions->
@@ -395,7 +400,7 @@ class SqlArtifactRepository(
   /**
    * Returns true if a docker tag is not latest and the regex produces exactly one capture group on the tag, false otherwise.
    */
-  private fun shouldInclude(tag: String, artifact: DockerArtifact) =
+  private fun shouldInclude(tag: String, artifact: DockerArtifactSpec) =
     try {
       tag != "latest" && TagComparator.parseWithRegex(tag, artifact.tagVersionStrategy, artifact.captureGroupRegex) != null
     } catch (e: InvalidRegexException) {
@@ -405,7 +410,7 @@ class SqlArtifactRepository(
 
   override fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     targetEnvironment: String
   ): String? {
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
@@ -448,7 +453,7 @@ class SqlArtifactRepository(
 
   override fun approveVersionFor(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean {
@@ -468,7 +473,7 @@ class SqlArtifactRepository(
 
   override fun isApprovedFor(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean {
@@ -487,7 +492,7 @@ class SqlArtifactRepository(
 
   override fun wasSuccessfullyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean {
@@ -507,7 +512,7 @@ class SqlArtifactRepository(
 
   override fun isCurrentlyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean {
@@ -527,7 +532,7 @@ class SqlArtifactRepository(
 
   override fun markAsDeployingTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ) {
@@ -571,7 +576,7 @@ class SqlArtifactRepository(
 
   override fun markAsSuccessfullyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ) {
@@ -865,7 +870,7 @@ class SqlArtifactRepository(
   private fun environmentAndArtifactIds(
     deliveryConfig: DeliveryConfig,
     targetEnvironment: String,
-    artifact: DeliveryArtifact
+    artifact: ArtifactSpec
   ): Pair<String, String> {
     return sqlRetry.withRetry(READ) {
       Pair(
@@ -879,7 +884,7 @@ class SqlArtifactRepository(
 
   override fun deleteVeto(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ) {
@@ -952,7 +957,7 @@ class SqlArtifactRepository(
 
   override fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String,
     supersededByVersion: String
@@ -1043,7 +1048,7 @@ class SqlArtifactRepository(
             }
         }
           .filter { (version, _, _) ->
-            if (artifact is DockerArtifact) {
+            if (artifact is DockerArtifactSpec) {
               // filter out invalid docker tags
               shouldInclude(version, artifact)
             } else {
@@ -1263,7 +1268,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact> {
+  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<ArtifactSpec> {
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck).toTimestamp()
     return sqlRetry.withRetry(WRITE) {
@@ -1347,7 +1352,7 @@ class SqlArtifactRepository(
       .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(uid))
       .fetchOne(ENVIRONMENT.UID) ?: error("environment not found for $name / ${environment.name}")
 
-  private val DeliveryArtifact.uid: Select<Record1<String>>
+  private val ArtifactSpec.uid: Select<Record1<String>>
     get() = select(DELIVERY_ARTIFACT.UID)
       .from(DELIVERY_ARTIFACT)
       .where(
@@ -1357,7 +1362,7 @@ class SqlArtifactRepository(
           .and(DELIVERY_ARTIFACT.REFERENCE.eq(reference))
       )
 
-  private val DeliveryArtifact.uidString: String
+  private val ArtifactSpec.uidString: String
     get() = sqlRetry.withRetry(READ) {
       jooq.select(DELIVERY_ARTIFACT.UID)
         .from(DELIVERY_ARTIFACT)
@@ -1383,7 +1388,7 @@ class SqlArtifactRepository(
       .where(DELIVERY_CONFIG.NAME.eq(name))
 
   // Generates a unique hash for an artifact
-  private fun DeliveryArtifact.fingerprint(): String {
+  private fun ArtifactSpec.fingerprint(): String {
     return fingerprint(name, type, deliveryConfigName ?: "_pending", reference)
   }
 

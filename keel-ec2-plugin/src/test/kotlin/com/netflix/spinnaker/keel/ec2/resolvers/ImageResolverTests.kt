@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
@@ -44,7 +44,7 @@ internal class ImageResolverTests : JUnit5Minutests {
     val imageRegion: String = "ap-south-1",
     val resourceRegion: String = imageRegion
   ) {
-    val artifact = DebianArtifact(
+    val artifact = DebianArtifactSpec(
       name = "fnord",
       deliveryConfigName = "my-manifest",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf(imageRegion)),
@@ -161,7 +161,7 @@ internal class ImageResolverTests : JUnit5Minutests {
     }
 
     derivedContext<Fixture<ArtifactImageProvider>>("an image derived from an artifact") {
-      val artifact = DebianArtifact(name = "fnord", deliveryConfigName = "my-manifest", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")), statuses = setOf(RELEASE))
+      val artifact = DebianArtifactSpec(name = "fnord", deliveryConfigName = "my-manifest", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")), statuses = setOf(RELEASE))
       fixture {
         Fixture(
           ArtifactImageProvider(artifact, listOf(RELEASE))

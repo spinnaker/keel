@@ -27,7 +27,7 @@ class ArtifactDeployingListener(
 
       val approvedForEnv = repository.isApprovedFor(
         deliveryConfig = deliveryConfig,
-        artifact = artifact,
+        artifactSpec = artifact,
         version = event.artifactVersion,
         targetEnvironment = env.name
       )
@@ -36,7 +36,7 @@ class ArtifactDeployingListener(
         log.info("Marking {} as deploying in {} for config {}", event.artifactVersion, env.name, deliveryConfig.name)
         repository.markAsDeployingTo(
           deliveryConfig = deliveryConfig,
-          artifact = artifact,
+          artifactSpec = artifact,
           version = event.artifactVersion,
           targetEnvironment = env.name
         )

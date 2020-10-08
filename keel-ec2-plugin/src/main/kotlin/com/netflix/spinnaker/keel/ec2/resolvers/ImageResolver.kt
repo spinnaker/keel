@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
@@ -13,7 +13,7 @@ import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.plugins.Resolver
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
@@ -42,7 +42,7 @@ class ImageResolver(
 
   data class VersionedNamedImage(
     val namedImage: NamedImage,
-    val artifact: DeliveryArtifact?,
+    val artifact: ArtifactSpec?,
     val version: String?
   )
 
@@ -52,7 +52,7 @@ class ImageResolver(
       when (imageProvider) {
         is ReferenceArtifactImageProvider -> resolveFromReference(resource, imageProvider)
         // todo eb: artifact provider is here for backwards compatibility. Remove?
-        is ArtifactImageProvider -> resolveFromArtifact(resource, imageProvider.deliveryArtifact as DebianArtifact)
+        is ArtifactImageProvider -> resolveFromArtifact(resource, imageProvider.deliveryArtifact as DebianArtifactSpec)
         is JenkinsImageProvider -> resolveFromJenkinsJob(imageProvider)
       }
     }
@@ -70,12 +70,12 @@ class ImageResolver(
     val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == DEBIAN }
       ?: throw NoMatchingArtifactException(deliveryConfig.name, DEBIAN, imageProvider.reference)
 
-    return resolveFromArtifact(resource, artifact as DebianArtifact)
+    return resolveFromArtifact(resource, artifact as DebianArtifactSpec)
   }
 
   private suspend fun resolveFromArtifact(
     resource: Resource<ClusterSpec>,
-    artifact: DebianArtifact
+    artifact: DebianArtifactSpec
   ): VersionedNamedImage {
     val deliveryConfig = repository.deliveryConfigFor(resource.id)
     val environment = repository.environmentFor(resource.id)

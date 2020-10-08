@@ -3,8 +3,8 @@ package com.netflix.spinnaker.keel.actuation
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
@@ -58,14 +58,14 @@ internal object CheckSchedulerTests : JUnit5Minutests {
   )
 
   private val artifacts = listOf(
-    DebianArtifact(
+    DebianArtifactSpec(
       name = "fnord",
       vmOptions = VirtualMachineOptions(
         baseOs = "bionic-classic",
         regions = setOf("us-west-2", "us-east-1")
       )
     ),
-    DockerArtifact(
+    DockerArtifactSpec(
       name = "fnord-but-like-in-a-container"
     )
   )

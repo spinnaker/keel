@@ -7,9 +7,9 @@ import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
@@ -34,8 +34,8 @@ class ImageHandler(
   private val defaultCredentials: BakeCredentials
 ) : ArtifactHandler {
 
-  override suspend fun handle(artifact: DeliveryArtifact) {
-    if (artifact is DebianArtifact) {
+  override suspend fun handle(artifact: ArtifactSpec) {
+    if (artifact is DebianArtifactSpec) {
       if (taskLauncher.correlatedTasksRunning(artifact.correlationId)) {
         publisher.publishEvent(
           ArtifactCheckSkipped(artifact.type, artifact.name, "ActuationInProgress")
@@ -76,16 +76,16 @@ class ImageHandler(
     }
   }
 
-  private suspend fun DeliveryArtifact.findLatestAmi() =
+  private suspend fun ArtifactSpec.findLatestAmi() =
     imageService.getLatestImage(name, "test")
 
-  private fun DebianArtifact.findLatestBaseAmiVersion() =
+  private fun DebianArtifactSpec.findLatestBaseAmiVersion() =
     baseImageCache.getBaseAmiVersion(vmOptions.baseOs, vmOptions.baseLabel)
 
   /**
    * First checks our repo, and if a version isn't found checks igor.
    */
-  private suspend fun DebianArtifact.findLatestArtifactVersion(): String {
+  private suspend fun DebianArtifactSpec.findLatestArtifactVersion(): String {
     try {
       val knownVersion = repository
         .artifactVersions(this, 1)
@@ -117,7 +117,7 @@ class ImageHandler(
   }
 
   private suspend fun launchBake(
-    artifact: DebianArtifact,
+    artifact: DebianArtifactSpec,
     desiredVersion: String,
     diff: DefaultResourceDiff<Image>
   ): List<Task> {
@@ -176,7 +176,7 @@ class ImageHandler(
     }
   }
 
-  private val DebianArtifact.taskAuthenticationDetails: BakeCredentials
+  private val DebianArtifactSpec.taskAuthenticationDetails: BakeCredentials
     get() = deliveryConfigName?.let {
       repository.getDeliveryConfig(it).run {
         BakeCredentials(serviceAccount, application)
@@ -192,7 +192,7 @@ class ImageHandler(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
 
-internal val DebianArtifact.correlationId: String
+internal val DebianArtifactSpec.correlationId: String
   get() = "bake:$name"
 
 data class BakeCredentials(

@@ -27,7 +27,7 @@ import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.ec2.resolve
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
@@ -244,7 +244,7 @@ internal class ClusterExportTests : JUnit5Minutests {
 
         expectThat(artifact) {
           get { name }.isEqualTo("keel")
-          isA<DebianArtifact>()
+          isA<DebianArtifactSpec>()
             .and { get { vmOptions }.isEqualTo(VirtualMachineOptions(regions = setOf("us-east-1"), baseOs = "bionic-classic")) }
             .and { get { statuses }.isEqualTo(setOf(RELEASE)) }
         }

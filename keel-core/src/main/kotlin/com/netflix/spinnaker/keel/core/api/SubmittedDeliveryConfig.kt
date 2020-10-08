@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.serialization.SubmittedEnvironmentDeserializer
 
@@ -17,7 +17,7 @@ data class SubmittedDeliveryConfig(
   val name: String?,
   @Description("The service account Spinnaker will authenticate with when making changes.")
   val serviceAccount: String?,
-  val artifacts: Set<DeliveryArtifact> = emptySet(),
+  val artifactSpecs: Set<ArtifactSpec> = emptySet(),
   val environments: Set<SubmittedEnvironment> = emptySet(),
   val metadata: Map<String, Any?>? = emptyMap()
 ) {

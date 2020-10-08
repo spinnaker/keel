@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
@@ -31,20 +31,20 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
     val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
     val deliveryConfig = deliveryConfig()
-    val dockerArtifact = DockerArtifact(
+    val dockerArtifact = DockerArtifactSpec(
       name = "fnord",
       deliveryConfigName = deliveryConfig.name,
       tagVersionStrategy = SEMVER_TAG
     )
     val versions = listOf("v1.12.1-h1188.35b8b29", "v1.12.2-h1182.8a5b962")
-    val latestArtifact = PublishedArtifact(
+    val latestArtifact = ArtifactInstance(
       name = dockerArtifact.name,
       type = dockerArtifact.type,
       reference = dockerArtifact.reference,
       version = versions.last()
     )
 
-    val latestArtifactWithMetadata = PublishedArtifact(
+    val latestArtifactWithMetadata = ArtifactInstance(
       name = dockerArtifact.name,
       type = dockerArtifact.type,
       reference = dockerArtifact.reference,
@@ -79,7 +79,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
 
       test("supports Docker artifacts") {
         expectThat(dockerArtifactSupplier.supportedArtifact).isEqualTo(
-          SupportedArtifact(DOCKER, DockerArtifact::class.java)
+          SupportedArtifact(DOCKER, DockerArtifactSpec::class.java)
         )
       }
 

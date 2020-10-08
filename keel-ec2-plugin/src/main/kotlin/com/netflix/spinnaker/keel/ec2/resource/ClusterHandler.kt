@@ -13,7 +13,7 @@ import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.UNKNOWN
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.ec2.Capacity
@@ -47,7 +47,7 @@ import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
@@ -420,7 +420,7 @@ class ClusterHandler(
     return spec
   }
 
-  override suspend fun exportArtifact(exportable: Exportable): DeliveryArtifact {
+  override suspend fun exportArtifact(exportable: Exportable): ArtifactSpec {
     val serverGroups = cloudDriverService.getActiveServerGroups(
       account = exportable.account,
       moniker = exportable.moniker,
@@ -451,7 +451,7 @@ class ClusterHandler(
       throw ExportError("Unable to determine release status from appVersion ${base.launchConfiguration.appVersion}, you'll have to configure this artifact manually.")
     }
 
-    return DebianArtifact(
+    return DebianArtifactSpec(
       name = artifactName,
       vmOptions = VirtualMachineOptions(regions = serverGroups.keys, baseOs = guessBaseOsFrom(base.image)),
       statuses = setOf(status)

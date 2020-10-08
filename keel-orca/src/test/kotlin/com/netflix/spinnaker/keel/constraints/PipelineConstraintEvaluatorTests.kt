@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
@@ -57,7 +57,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
       constraints = setOf(constraint)
     )
 
-    val artifact = DebianArtifact(
+    val artifact = DebianArtifactSpec(
       name = "fnord",
       reference = "fnord",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
@@ -79,7 +79,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
     var result: Boolean? = null
 
     fun evaluate() {
-      result = subject.canPromote(DebianArtifact("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))), version, manifest, environment)
+      result = subject.canPromote(DebianArtifactSpec("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))), version, manifest, environment)
     }
   }
 

@@ -13,7 +13,7 @@ import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.api.artifacts.PullRequest
@@ -21,8 +21,8 @@ import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -64,7 +64,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     val subject: T
   ) {
     // the artifact built off a feature branch
-    val versionedSnapshotDebian = DebianArtifact(
+    val versionedSnapshotDebian = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "candidate",
@@ -73,7 +73,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     )
 
     // the artifact built off of master
-    val versionedReleaseDebian = DebianArtifact(
+    val versionedReleaseDebian = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "master",
@@ -81,14 +81,14 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       statuses = setOf(RELEASE)
     )
     
-    val versionedDockerArtifact = DockerArtifact(
+    val versionedDockerArtifact = DockerArtifactSpec(
       name = "docker",
       deliveryConfigName = "my-manifest",
       reference = "docker-artifact",
       tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB
     )
 
-    val debianFilteredByBranch =  DebianArtifact(
+    val debianFilteredByBranch =  DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
@@ -100,7 +100,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       )
     )
 
-    val debianFilteredByBranchStartingWith = DebianArtifact(
+    val debianFilteredByBranchStartingWith = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
@@ -112,7 +112,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       )
     )
 
-    val debianFilteredByBranchPattern = DebianArtifact(
+    val debianFilteredByBranchPattern = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "feature-branch",
@@ -124,7 +124,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       )
     )
 
-    val debianFilteredByPullRequest = DebianArtifact(
+    val debianFilteredByPullRequest = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "pr",
@@ -134,7 +134,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       )
     )
 
-    val debianFilteredByPullRequestAndBranch = DebianArtifact(
+    val debianFilteredByPullRequestAndBranch = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "pr",
@@ -236,7 +236,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
   private fun Fixture<T>.versionsIn(
     environment: Environment,
-    artifact: DeliveryArtifact = versionedSnapshotDebian
+    artifact: ArtifactSpec = versionedSnapshotDebian
   ): ArtifactVersionStatus {
     return subject
       .getEnvironmentSummaries(manifest)
@@ -282,7 +282,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         expectThat(subject.get(versionedSnapshotDebian.name, versionedSnapshotDebian.type, versionedSnapshotDebian.deliveryConfigName!!))
           .hasSize(1)
           .first()
-          .isA<DebianArtifact>()
+          .isA<DebianArtifactSpec>()
           .get { vmOptions }
           .isEqualTo(versionedSnapshotDebian.vmOptions)
       }
@@ -380,7 +380,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
 
           test("querying with a wrong strategy filters out everything") {
-            val incorrectArtifact = DockerArtifact(
+            val incorrectArtifact = DockerArtifactSpec(
               name = "docker",
               deliveryConfigName = "my-manifest",
               reference = "docker-artifact",

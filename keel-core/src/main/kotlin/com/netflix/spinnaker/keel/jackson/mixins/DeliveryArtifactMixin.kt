@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 
-internal interface DeliveryArtifactMixin {
+internal interface ArtifactSpecMixin {
   @get:JsonProperty(access = WRITE_ONLY)
   val deliveryConfigName: String
 

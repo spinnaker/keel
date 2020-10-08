@@ -27,7 +27,7 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
@@ -48,7 +48,7 @@ import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.MigrationPolicy
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Resources
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.api.withDefaultsOmitted
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
@@ -232,7 +232,7 @@ class TitusClusterHandler(
     return spec
   }
 
-  override suspend fun exportArtifact(exportable: Exportable): DeliveryArtifact {
+  override suspend fun exportArtifact(exportable: Exportable): ArtifactSpec {
     val serverGroups = cloudDriverService.getActiveServerGroups(
       exportable.account,
       exportable.moniker,
@@ -265,7 +265,7 @@ class TitusClusterHandler(
     val versionStrategy = guessVersioningStrategy(matchingImages)
       ?: throw DockerArtifactExportError(matchingImages.map { it.tag }, container.toString())
 
-    return DockerArtifact(
+    return DockerArtifactSpec(
       name = container.repository(),
       tagVersionStrategy = versionStrategy
     )

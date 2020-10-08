@@ -21,7 +21,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.exceptions.NoDockerImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import dev.minutest.junit.JUnit5Minutests
@@ -41,7 +41,7 @@ import strikt.assertions.isEqualTo
 class SampleDockerImageResolverTests : JUnit5Minutests {
   val repository: KeelRepository = mockk()
 
-  private val artifact = DockerArtifact(name = "spkr/keeldemo", reference = "spkr/keeldemo", tagVersionStrategy = SEMVER_TAG, deliveryConfigName = "mydeliveryconfig")
+  private val artifact = DockerArtifactSpec(name = "spkr/keeldemo", reference = "spkr/keeldemo", tagVersionStrategy = SEMVER_TAG, deliveryConfigName = "mydeliveryconfig")
 
   private val oldStyleSpec = SampleSpecWithContainer(
     container = VersionedTagProvider(
@@ -76,7 +76,7 @@ class SampleDockerImageResolverTests : JUnit5Minutests {
       )
     )
 
-  private fun generateDeliveryConfig(resource: Resource<SampleSpecWithContainer>, artifact: DockerArtifact): DeliveryConfig {
+  private fun generateDeliveryConfig(resource: Resource<SampleSpecWithContainer>, artifact: DockerArtifactSpec): DeliveryConfig {
     val env = Environment(
       name = "test",
       resources = setOf(resource)

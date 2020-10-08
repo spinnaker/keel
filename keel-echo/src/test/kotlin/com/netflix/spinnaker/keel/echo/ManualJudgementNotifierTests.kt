@@ -9,13 +9,13 @@ import com.netflix.spinnaker.keel.api.artifacts.BaseLabel.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.events.ConstraintStateChanged
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
@@ -98,7 +98,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
 
         every {
           repository.getArtifact("test", "deb")
-        } returns DebianArtifact("mypkg", "test", "deb",
+        } returns DebianArtifactSpec("mypkg", "test", "deb",
             vmOptions = VirtualMachineOptions(RELEASE, "bionic", emptySet()))
 
         every {
@@ -203,7 +203,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         before {
           every {
             repository.getArtifactInstance("mypkg", DEBIAN, "v1.0.0", any())
-          } returns PublishedArtifact(
+          } returns ArtifactInstance(
             name = "mypkg",
             type = DEBIAN,
             version = "v1.0.0",

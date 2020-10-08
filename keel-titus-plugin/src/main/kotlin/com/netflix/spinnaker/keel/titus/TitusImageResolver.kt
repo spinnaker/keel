@@ -19,7 +19,7 @@ package com.netflix.spinnaker.keel.titus
 
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.docker.ContainerProvider
@@ -55,7 +55,7 @@ class TitusImageResolver(
   override fun updateContainerInSpec(
     resource: Resource<TitusClusterSpec>,
     container: ContainerProvider,
-    artifact: DockerArtifact,
+    artifact: DockerArtifactSpec,
     tag: String
   ) =
     resource.copy(

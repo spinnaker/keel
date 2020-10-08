@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.api.titus.ResourcesSpec
 import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
@@ -228,7 +228,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
               exportArtifact(exportable)
             }
             expectThat(artifact)
-              .isA<DockerArtifact>()
+              .isA<DockerArtifactSpec>()
               .get { tagVersionStrategy }.isEqualTo(TagVersionStrategy.INCREASING_TAG)
           }
         }
@@ -242,7 +242,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
               exportArtifact(exportable)
             }
             expectThat(artifact)
-              .isA<DockerArtifact>()
+              .isA<DockerArtifactSpec>()
               .get { tagVersionStrategy }.isEqualTo(BRANCH_JOB_COMMIT_BY_JOB)
           }
         }

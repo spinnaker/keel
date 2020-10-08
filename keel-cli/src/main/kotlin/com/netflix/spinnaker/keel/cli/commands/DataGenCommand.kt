@@ -8,12 +8,12 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import kotlinx.cli.ArgType.Int
 import kotlinx.cli.Subcommand
@@ -32,7 +32,7 @@ class DataGenCommand(
     const val TEST_ACCT = "test"
     const val TEST_DEB_PACKAGE = "fakedeb"
     const val TEST_SVC_ACCT = "delivery-engineering@netflix.com"
-    val TEST_ARTIFACT = DebianArtifact(
+    val TEST_ARTIFACT = DebianArtifactSpec(
       deliveryConfigName = TEST_APP,
       name = TEST_DEB_PACKAGE,
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
@@ -70,7 +70,7 @@ class DataGenCommand(
     (1..artifactCount).forEach { index ->
       println("Writing artifact ${TEST_ARTIFACT.name} version 1.0.$index")
       repository.storeArtifactInstance(
-        PublishedArtifact(
+        ArtifactInstance(
           name = TEST_ARTIFACT.name,
           type = TEST_ARTIFACT.type,
           version = "1.0.$index",

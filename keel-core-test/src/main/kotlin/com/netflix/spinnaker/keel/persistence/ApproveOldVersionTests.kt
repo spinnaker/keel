@@ -16,7 +16,7 @@ import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.kind
 import com.netflix.spinnaker.keel.api.support.ConstraintRepositoryBridge
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.constraints.ArtifactUsedConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.ManualJudgementConstraintEvaluator
 import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
@@ -89,7 +89,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
       publisher
     )
 
-    val artifact = DebianArtifact(
+    val artifact = DebianArtifactSpec(
       name = "fnord",
       deliveryConfigName = "my-manifest",
       reference = "my-artifact",

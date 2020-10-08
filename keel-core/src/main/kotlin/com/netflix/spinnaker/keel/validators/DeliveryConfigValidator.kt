@@ -62,11 +62,11 @@ class DeliveryConfigValidator {
     /**
      * check: artifacts have unique references
      */
-    val refs = config.artifacts.map { it.reference }
+    val refs = config.artifactSpecs.map { it.reference }
     val duplicateRefs = duplicates(refs)
 
     if (duplicateRefs.isNotEmpty()) {
-      val duplicatesArtifactNameToRef: Map<String, String> = config.artifacts
+      val duplicatesArtifactNameToRef: Map<String, String> = config.artifactSpecs
         .filter { duplicateRefs.contains(it.reference) }
         .associate { art -> art.name to art.reference }
 

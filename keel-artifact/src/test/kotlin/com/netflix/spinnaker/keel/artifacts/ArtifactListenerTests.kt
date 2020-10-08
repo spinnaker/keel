@@ -6,9 +6,9 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.FINAL
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
@@ -28,7 +28,7 @@ import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
 internal class ArtifactListenerTests : JUnit5Minutests {
-  val publishedDeb = PublishedArtifact(
+  val publishedDeb = ArtifactInstance(
     type = "DEB",
     customKind = false,
     name = "fnord",
@@ -38,7 +38,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     provenance = "https://my.jenkins.master/jobs/fnord-release/58"
   ).normalized()
 
-  val newerPublishedDeb = PublishedArtifact(
+  val newerPublishedDeb = ArtifactInstance(
     type = "DEB",
     customKind = false,
     name = "fnord",
@@ -48,7 +48,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     provenance = "https://my.jenkins.master/jobs/fnord-release/60"
   ).normalized()
 
-  val publishedDocker = PublishedArtifact(
+  val publishedDocker = ArtifactInstance(
     type = DOCKER,
     customKind = false,
     name = "fnord/myimage",
@@ -58,8 +58,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
   val newerPublishedDocker = publishedDocker.copy(version = "master-h6.hehehe")
 
-  val debianArtifact = DebianArtifact(name = "fnord", deliveryConfigName = "fnord-config", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
-  val dockerArtifact = DockerArtifact(name = "fnord/myimage", tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB, deliveryConfigName = "fnord-config")
+  val debianArtifact = DebianArtifactSpec(name = "fnord", deliveryConfigName = "fnord-config", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
+  val dockerArtifact = DockerArtifactSpec(name = "fnord/myimage", tagVersionStrategy = BRANCH_JOB_COMMIT_BY_JOB, deliveryConfigName = "fnord-config")
   val deliveryConfig = DeliveryConfig(name = "fnord-config", application = "fnord", serviceAccount = "keel", artifacts = setOf(debianArtifact, dockerArtifact))
 
   val artifactMetadata = ArtifactMetadata(
@@ -67,7 +67,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
     buildMetadata = BuildMetadata(id = 1, status = "SUCCEEDED")
   )
 
-  val artifactVersion = slot<PublishedArtifact>()
+  val artifactVersion = slot<ArtifactInstance>()
 
   abstract class ArtifactListenerFixture {
     val repository: KeelRepository = mockk(relaxUnitFun = true)
@@ -80,7 +80,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
   data class ArtifactPublishedFixture(
     val event: ArtifactPublishedEvent,
-    val artifact: DeliveryArtifact
+    val artifact: ArtifactSpec
   ) : ArtifactListenerFixture()
 
   fun artifactEventTests() = rootContext<ArtifactPublishedFixture> {
@@ -96,8 +96,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     before {
       every { repository.getDeliveryConfig(any()) } returns deliveryConfig
-      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifact::class.java)
-      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifact::class.java)
+      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifactSpec::class.java)
+      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifactSpec::class.java)
     }
 
     context("the artifact is not something we're tracking") {
@@ -182,12 +182,12 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
   data class RegisteredFixture(
     val event: ArtifactRegisteredEvent,
-    val artifact: DeliveryArtifact
+    val artifact: ArtifactSpec
   ) : ArtifactListenerFixture()
 
   fun artifactRegisteredEventTests() = rootContext<RegisteredFixture> {
     fixture {
-      DebianArtifact(
+      DebianArtifactSpec(
         name = "fnord",
         vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
         deliveryConfigName = "fnord-config"
@@ -201,8 +201,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     before {
       every { repository.getDeliveryConfig(any()) } returns deliveryConfig
-      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifact::class.java)
-      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifact::class.java)
+      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifactSpec::class.java)
+      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifactSpec::class.java)
     }
 
     context("artifact already has saved versions") {
@@ -277,22 +277,22 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   }
 
   data class SyncArtifactsFixture(
-    val debArtifact: DeliveryArtifact,
-    val dockerArtifact: DockerArtifact
+    val debArtifactSpec: ArtifactSpec,
+    val dockerArtifact: DockerArtifactSpec
   ) : ArtifactListenerFixture()
 
   fun syncArtifactsFixture() = rootContext<SyncArtifactsFixture> {
     fixture {
       SyncArtifactsFixture(
-        debArtifact = debianArtifact,
+        debArtifactSpec = debianArtifact,
         dockerArtifact = dockerArtifact
       )
     }
 
     before {
       every { repository.getDeliveryConfig(any()) } returns deliveryConfig
-      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifact::class.java)
-      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifact::class.java)
+      every { debianArtifactSupplier.supportedArtifact } returns SupportedArtifact(DEBIAN, DebianArtifactSpec::class.java)
+      every { dockerArtifactSupplier.supportedArtifact } returns SupportedArtifact(DOCKER, DockerArtifactSpec::class.java)
       every { debianArtifactSupplier.getArtifactMetadata(any()) } returns artifactMetadata
       every { dockerArtifactSupplier.getArtifactMetadata(any()) } returns artifactMetadata
       every { repository.storeArtifactInstance(any()) } returns true
@@ -301,15 +301,15 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("we don't have any versions of the artifacts") {
       before {
-        every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
-        every { repository.artifactVersions(debArtifact, any()) } returns emptyList()
+        every { repository.getAllArtifacts() } returns listOf(debArtifactSpec, dockerArtifact)
+        every { repository.artifactVersions(debArtifactSpec, any()) } returns emptyList()
         every { repository.artifactVersions(dockerArtifact, any()) } returns emptyList()
       }
 
       context("versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
           } returns publishedDeb
 
           every {
@@ -320,7 +320,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         test("latest versions are stored") {
           listener.syncArtifactVersions()
 
-          val artifactVersions = mutableListOf<PublishedArtifact>()
+          val artifactVersions = mutableListOf<ArtifactInstance>()
 
           verify (exactly = 2) {
             repository.storeArtifactInstance(capture(artifactVersions))
@@ -335,8 +335,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           }
 
           with(artifactVersions[1]) {
-            expectThat(name).isEqualTo(debArtifact.name)
-            expectThat(type).isEqualTo(debArtifact.type)
+            expectThat(name).isEqualTo(debArtifactSpec.name)
+            expectThat(type).isEqualTo(debArtifactSpec.type)
             expectThat(version).isEqualTo(publishedDeb.version)
             expectThat(status).isEqualTo(FINAL)
             expectThat(gitMetadata).isEqualTo(artifactMetadata.gitMetadata)
@@ -348,15 +348,15 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("there are artifacts with versions stored") {
       before {
-        every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
-        every { repository.artifactVersions(debArtifact, any()) } returns listOf(publishedDeb.version)
+        every { repository.getAllArtifacts() } returns listOf(debArtifactSpec, dockerArtifact)
+        every { repository.artifactVersions(debArtifactSpec, any()) } returns listOf(publishedDeb.version)
         every { repository.artifactVersions(dockerArtifact, any()) } returns listOf(publishedDocker.version)
       }
 
       context("no newer versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
           } returns publishedDeb
 
           every {
@@ -373,7 +373,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       context("newer versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
           } returns newerPublishedDeb
 
           every {
@@ -384,7 +384,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
         test("new versions are stored") {
           listener.syncArtifactVersions()
 
-          val artifactVersions = mutableListOf<PublishedArtifact>()
+          val artifactVersions = mutableListOf<ArtifactInstance>()
 
           verify (exactly = 2) {
             repository.storeArtifactInstance(capture(artifactVersions))
@@ -399,8 +399,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           }
 
           with(artifactVersions[1]) {
-            expectThat(name).isEqualTo(debArtifact.name)
-            expectThat(type).isEqualTo(debArtifact.type)
+            expectThat(name).isEqualTo(debArtifactSpec.name)
+            expectThat(type).isEqualTo(debArtifactSpec.type)
             expectThat(version).isEqualTo(newerPublishedDeb.version)
             expectThat(status).isEqualTo(FINAL)
             expectThat(gitMetadata).isEqualTo(artifactMetadata.gitMetadata)

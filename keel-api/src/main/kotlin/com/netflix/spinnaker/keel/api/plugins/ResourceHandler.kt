@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.api.events.ArtifactVersionDeploying
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -28,7 +28,7 @@ import com.netflix.spinnaker.kork.plugins.api.internal.SpinnakerExtensionPoint
  * 3. Act to resolve the drift when requested by keel. This is done via the [create], [update] and [delete]
  *    methods, which receive a [ResourceDiff] as a parameter.
  *
- *    a. A [ResourceHandler] whose [Resource] type supports [DeliveryArtifact] deployments is additionally
+ *    a. A [ResourceHandler] whose [Resource] type supports [ArtifactSpec] deployments is additionally
  *       responsible for notifying core Keel when new versions of those artifacts transition to a deploying
  *       state and to a successfully deployed state via the [notifyArtifactDeploying] and [notifyArtifactDeployed]
  *       methods, respectively.
@@ -142,7 +142,7 @@ interface ResourceHandler<S : ResourceSpec, R : Any> : SpinnakerExtensionPoint {
    * Note: this only applies to resources that use artifacts, like clusters.
    */
   @JvmDefault
-  suspend fun exportArtifact(exportable: Exportable): DeliveryArtifact =
+  suspend fun exportArtifact(exportable: Exportable): ArtifactSpec =
     TODO("Not implemented or not supported with this handler")
 
   /**

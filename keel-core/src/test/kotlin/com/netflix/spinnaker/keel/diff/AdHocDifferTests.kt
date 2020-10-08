@@ -21,7 +21,7 @@ import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
@@ -54,7 +54,7 @@ class AdHocDifferTests : JUnit5Minutests {
       name = "keel-manifest",
       application = "keel",
       serviceAccount = "keel@spinnaker",
-      artifacts = setOf(DebianArtifact(name = "keel", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
+      artifactSpecs = setOf(DebianArtifactSpec(name = "keel", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
       environments = setOf(
         SubmittedEnvironment(
           name = "test",

@@ -22,9 +22,9 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.plugins.Resolver
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.artifacts.TagComparator
 import com.netflix.spinnaker.keel.exceptions.NoDockerImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -56,7 +56,7 @@ abstract class DockerImageResolver<T : ResourceSpec>(
   abstract fun updateContainerInSpec(
     resource: Resource<T>,
     container: ContainerProvider,
-    artifact: DockerArtifact,
+    artifact: DockerArtifactSpec,
     tag: String
   ): Resource<T>
 
@@ -85,21 +85,21 @@ abstract class DockerImageResolver<T : ResourceSpec>(
     return updateContainerInSpec(resource, newContainer, artifact, tag)
   }
 
-  fun getArtifact(container: ContainerProvider, deliveryConfig: DeliveryConfig): DockerArtifact =
+  fun getArtifact(container: ContainerProvider, deliveryConfig: DeliveryConfig): DockerArtifactSpec =
     when (container) {
       is ReferenceProvider -> {
-        deliveryConfig.artifacts.find { it.reference == container.reference && it.type == DOCKER } as DockerArtifact?
+        deliveryConfig.artifacts.find { it.reference == container.reference && it.type == DOCKER } as DockerArtifactSpec?
           ?: throw NoMatchingArtifactException(reference = container.reference, type = DOCKER, deliveryConfigName = deliveryConfig.name)
       }
       is VersionedTagProvider -> {
         // deprecated
         // container is old tag strategy, not artifact reference
-        DockerArtifact(name = container.repository(), deliveryConfigName = deliveryConfig.name, tagVersionStrategy = container.tagVersionStrategy, captureGroupRegex = container.captureGroupRegex)
+        DockerArtifactSpec(name = container.repository(), deliveryConfigName = deliveryConfig.name, tagVersionStrategy = container.tagVersionStrategy, captureGroupRegex = container.captureGroupRegex)
       }
       else -> throw ConfigurationException("Unsupported container provider ${container.javaClass}")
     }
 
-  fun findTagGivenDeliveryConfig(deliveryConfig: DeliveryConfig, environment: Environment, artifact: DeliveryArtifact) =
+  fun findTagGivenDeliveryConfig(deliveryConfig: DeliveryConfig, environment: Environment, artifact: ArtifactSpec) =
     repository.latestVersionApprovedIn(
       deliveryConfig,
       artifact,
@@ -116,7 +116,7 @@ abstract class DockerImageResolver<T : ResourceSpec>(
 
   fun getContainer(
     account: String,
-    artifact: DockerArtifact,
+    artifact: DockerArtifactSpec,
     tag: String
   ): DigestProvider {
     val digest = getDigest(account, artifact.organization, artifact.image, tag)

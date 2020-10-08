@@ -3,9 +3,9 @@ package com.netflix.spinnaker.keel.test
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 
 /**
  * Helper functions for working with delivery configs
@@ -15,7 +15,7 @@ fun deliveryConfig(
   resource: Resource<*> = resource(),
   env: Environment = Environment("test", setOf(resource)),
   configName: String = "myconfig",
-  artifact: DeliveryArtifact = DebianArtifact(name = "fnord", deliveryConfigName = configName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))),
+  artifact: ArtifactSpec = DebianArtifactSpec(name = "fnord", deliveryConfigName = configName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))),
   deliveryConfig: DeliveryConfig = DeliveryConfig(
     name = configName,
     application = "fnord",

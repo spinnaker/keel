@@ -86,7 +86,7 @@ class KeelConfigurationFinalizer(
     artifactSuppliers
       .map { it.supportedArtifact }
       .forEach { (name, artifactClass) ->
-        log.info("Registering DeliveryArtifact sub-type {}: {}", name, artifactClass.simpleName)
+        log.info("Registering ArtifactSpec sub-type {}: {}", name, artifactClass.simpleName)
         extensionRegistry.register(artifactClass, name)
       }
 

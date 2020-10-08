@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
@@ -32,7 +32,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
-import com.netflix.spinnaker.keel.test.DummyArtifact
+import com.netflix.spinnaker.keel.test.DummyArtifactSpec
 import com.netflix.spinnaker.keel.test.DummyVersioningStrategy
 import com.netflix.spinnaker.keel.test.artifactReferenceResource
 import com.netflix.spinnaker.keel.test.versionedArtifactResource
@@ -69,8 +69,8 @@ class ApplicationServiceTests : JUnit5Minutests {
     val application1 = "fnord1"
     val application2 = "fnord2"
 
-    val releaseArtifact = DummyArtifact(reference = "release")
-    val snapshotArtifact = DummyArtifact(reference = "snapshot")
+    val releaseArtifact = DummyArtifactSpec(reference = "release")
+    val snapshotArtifact = DummyArtifactSpec(reference = "snapshot")
 
     val singleArtifactEnvironments = listOf("test", "staging", "production").associateWith { name ->
       Environment(
@@ -137,9 +137,9 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { supportedType } returns SupportedConstraintType<DependsOnConstraint>("depends-on")
     }
 
-    private val artifactInstance = slot<PublishedArtifact>()
-    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact, DummyVersioningStrategy>>(relaxUnitFun = true) {
-      every { supportedArtifact } returns SupportedArtifact("dummy", DummyArtifact::class.java)
+    private val artifactInstance = slot<ArtifactInstance>()
+    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifactSpec, DummyVersioningStrategy>>(relaxUnitFun = true) {
+      every { supportedArtifact } returns SupportedArtifact("dummy", DummyArtifactSpec::class.java)
       every {
         getVersionDisplayName(capture(artifactInstance))
       } answers {
@@ -181,7 +181,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       every {
         repository.getArtifactInstance(any(), any(), any(), any())
       } answers {
-        PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2))
+        ArtifactInstance(arg<String>(0), arg<String>(1), arg<String>(2))
       }
 
       every {
@@ -208,7 +208,7 @@ class ApplicationServiceTests : JUnit5Minutests {
           every {
             repository.getArtifactInstance(any(), any(), any(), any())
           } answers {
-            PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
+            ArtifactInstance(arg<String>(0), arg<String>(1), arg<String>(2), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
           }
         }
 

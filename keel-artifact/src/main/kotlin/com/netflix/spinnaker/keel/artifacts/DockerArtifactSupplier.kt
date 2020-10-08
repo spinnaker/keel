@@ -3,9 +3,9 @@ package com.netflix.spinnaker.keel.artifacts
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
@@ -27,18 +27,18 @@ class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
   override val artifactMetadataService: ArtifactMetadataService
-) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
-  override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
+) : BaseArtifactSupplier<DockerArtifactSpec, DockerVersioningStrategy>(artifactMetadataService) {
+  override val supportedArtifact = SupportedArtifact("docker", DockerArtifactSpec::class.java)
 
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
 
-  override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? {
+  override fun getArtifactByVersion(artifact: ArtifactSpec, version: String): ArtifactInstance? {
     return runWithIoContext {
       cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = version)
         .firstOrNull()
         ?.let { dockerImage ->
-          PublishedArtifact(
+          ArtifactInstance(
             name = dockerImage.repository,
             type = DOCKER,
             reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
@@ -60,8 +60,8 @@ class DockerArtifactSupplier(
 
 
 
-  override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? {
-    if (artifact !is DockerArtifact) {
+  override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec): ArtifactInstance? {
+    if (artifact !is DockerArtifactSpec) {
       throw IllegalArgumentException("Only Docker artifacts are supported by this implementation.")
     }
 
@@ -80,7 +80,7 @@ class DockerArtifactSupplier(
         cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = latestTag)
           .firstOrNull()
           ?.let { dockerImage ->
-            PublishedArtifact(
+            ArtifactInstance(
               name = dockerImage.repository,
               type = DOCKER,
               reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
@@ -103,7 +103,7 @@ class DockerArtifactSupplier(
     }
   }
 
-  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun parseDefaultBuildMetadata(artifact: ArtifactInstance, versioningStrategy: VersioningStrategy): BuildMetadata? {
       if (versioningStrategy.hasBuild()) {
         val regex = Regex("""^.*-h(\d+).*$""")
         val result = regex.find(artifact.version)
@@ -114,7 +114,7 @@ class DockerArtifactSupplier(
     return null
   }
 
-  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun parseDefaultGitMetadata(artifact: ArtifactInstance, versioningStrategy: VersioningStrategy): GitMetadata? {
       if (versioningStrategy.hasCommit()) {
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }

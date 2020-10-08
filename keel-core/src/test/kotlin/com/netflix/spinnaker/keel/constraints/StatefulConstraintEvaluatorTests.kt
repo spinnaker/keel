@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.NotificationFrequency
 import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.api.StatefulConstraint
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintRepository
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
@@ -17,7 +17,7 @@ import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintAttributesT
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.test.resource
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -47,7 +47,7 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       val delegate: StatefulConstraintEvaluator<FakeConstraint, DefaultConstraintAttributes>
     ) : StatefulConstraintEvaluator<FakeConstraint, DefaultConstraintAttributes>(repository) {
       override fun canPromote(
-        artifact: DeliveryArtifact,
+        artifact: ArtifactSpec,
         version: String,
         deliveryConfig: DeliveryConfig,
         targetEnvironment: Environment,
@@ -60,7 +60,7 @@ internal class StatefulConstraintEvaluatorTests : JUnit5Minutests {
       override val attributeType = SupportedConstraintAttributesType<DefaultConstraintAttributes>("fake")
     }
 
-    val artifact = DebianArtifact("fnord", reference = "fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
+    val artifact = DebianArtifactSpec("fnord", reference = "fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
 
     val constraint = FakeConstraint()
 

@@ -5,7 +5,7 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.StatefulConstraint
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -219,7 +219,7 @@ class ApplicationService(
     return artifactSummaries
   }
 
-  private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
+  private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: ArtifactSpec, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
     return when (status) {
       PENDING -> ArtifactSummaryInEnvironment(
         environment = environmentName,
@@ -287,7 +287,7 @@ class ApplicationService(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String,
-    artifact: DeliveryArtifact
+    artifact: ArtifactSpec
   ): ArtifactSummaryInEnvironment {
     val statelessConstraints: List<StatelessConstraintSummary> = environment.constraints.filter { constraint ->
       constraint !is StatefulConstraint
@@ -316,14 +316,14 @@ class ApplicationService(
    * Takes an artifact version, plus information about the type of artifact, and constructs a summary view.
    */
   private fun buildArtifactVersionSummary(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     environments: Set<ArtifactSummaryInEnvironment>
   ): ArtifactVersionSummary {
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
     val releaseStatus = repository.getReleaseStatus(artifact, version)
     val artifactInstance = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
-      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
+      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifactSpec.")
 
     return ArtifactVersionSummary(
       version = version,

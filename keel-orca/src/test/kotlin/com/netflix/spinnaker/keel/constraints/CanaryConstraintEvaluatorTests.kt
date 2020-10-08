@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.actuation.Task
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintRepository
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
@@ -13,7 +13,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.core.api.CanarySource
 import com.netflix.spinnaker.keel.core.api.randomUID
@@ -75,8 +75,8 @@ internal class CanaryConstraintEvaluatorTests : JUnit5Minutests {
 
   data class Fixture(
     val constraint: CanaryConstraint,
-    val artifact: DeliveryArtifact =
-      DebianArtifact(name = "fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")), reference = "fnord"),
+    val artifact: ArtifactSpec =
+      DebianArtifactSpec(name = "fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")), reference = "fnord"),
     val version: String = "fnord-1.42.0",
     val targetEnvironment: Environment,
     val handlers: List<CanaryConstraintDeployHandler> = listOf(DummyCanaryConstraintDeployHandler())

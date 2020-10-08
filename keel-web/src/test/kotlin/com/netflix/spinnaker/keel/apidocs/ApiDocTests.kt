@@ -9,12 +9,12 @@ import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.extensionsOf
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.docker.ContainerProvider
 import com.netflix.spinnaker.keel.schema.Generator
@@ -85,7 +85,7 @@ class ApiDocTests : JUnit5Minutests {
     get() = ContainerProvider::class.sealedSubclasses.map(KClass<*>::java)
 
   val artifactTypes
-    get() = extensionRegistry.extensionsOf<DeliveryArtifact>().values.toList()
+    get() = extensionRegistry.extensionsOf<ArtifactSpec>().values.toList()
 
   fun tests() = rootContext<Assertion.Builder<JsonNode>> {
     fixture {
@@ -170,8 +170,8 @@ class ApiDocTests : JUnit5Minutests {
         }
       }
 
-    test("contains a schema for DeliveryArtifact with all sub-types") {
-      at("/\$defs/DeliveryArtifact")
+    test("contains a schema for ArtifactSpec with all sub-types") {
+      at("/\$defs/ArtifactSpec")
         .isObject()
         .path("oneOf")
         .isArray()
@@ -180,12 +180,12 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     sequenceOf(
-      DebianArtifact::class,
-      DockerArtifact::class
+      DebianArtifactSpec::class,
+      DockerArtifactSpec::class
     )
       .map(KClass<*>::simpleName)
       .forEach { type ->
-        test("DeliveryArtifact sub-type $type has its own schema") {
+        test("ArtifactSpec sub-type $type has its own schema") {
           at("/\$defs/$type")
             .isObject()
         }
@@ -245,7 +245,7 @@ class ApiDocTests : JUnit5Minutests {
         )
     }
 
-    test("schemas for DeliveryArtifact sub-types specify the fixed discriminator value") {
+    test("schemas for ArtifactSpec sub-types specify the fixed discriminator value") {
       at("/\$defs/DebianArtifact/properties/type/const")
         .textValue()
         .isEqualTo("deb")

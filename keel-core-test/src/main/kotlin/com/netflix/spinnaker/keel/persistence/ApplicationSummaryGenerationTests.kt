@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.time.MutableClock
@@ -32,7 +32,7 @@ abstract class ApplicationSummaryGenerationTests<T : ArtifactRepository> : JUnit
   data class Fixture<T : ArtifactRepository>(
     val subject: T
   ) {
-    val artifact = DebianArtifact(
+    val artifact = DebianArtifactSpec(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
       reference = "my-artifact",

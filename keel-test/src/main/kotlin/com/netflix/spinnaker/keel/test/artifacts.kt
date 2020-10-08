@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.test
 
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
@@ -13,11 +13,11 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import io.mockk.mockk
 
-class DummyArtifact(
+class DummyArtifactSpec(
   override val name: String = "fnord",
   override val deliveryConfigName: String? = "manifest",
   override val reference: String = "fnord"
-) : DeliveryArtifact() {
+) : ArtifactSpec() {
   override val type: ArtifactType = "dummy"
   override val versioningStrategy = DummyVersioningStrategy
 }

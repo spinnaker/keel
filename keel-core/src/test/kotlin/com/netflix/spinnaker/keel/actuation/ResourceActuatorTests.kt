@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.randomUID
@@ -107,7 +107,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           name = "fnord-manifest",
           application = "fnord",
           serviceAccount = "keel@spin",
-          artifacts = setOf(DebianArtifact("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
+          artifacts = setOf(DebianArtifactSpec("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
           environments = setOf(Environment(name = "staging", resources = setOf(resource)))
         )
       }

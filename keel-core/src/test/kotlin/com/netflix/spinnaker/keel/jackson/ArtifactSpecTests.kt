@@ -2,9 +2,9 @@ package com.netflix.spinnaker.keel.jackson
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff.Companion.mapper
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import dev.minutest.junit.JUnit5Minutests
@@ -15,7 +15,7 @@ import strikt.assertions.containsKey
 import strikt.assertions.isFailure
 import strikt.assertions.isSuccess
 
-internal class DeliveryArtifactTests : JUnit5Minutests {
+internal class ArtifactSpecTests : JUnit5Minutests {
   val debianArtifact =
     """
       {
@@ -60,14 +60,14 @@ internal class DeliveryArtifactTests : JUnit5Minutests {
 
     context("docker name validation") {
       test("rejects slashy") {
-        expectCatching { mapper.readValue<DeliveryArtifact>(slashyDockerArtifact) }
+        expectCatching { mapper.readValue<ArtifactSpec>(slashyDockerArtifact) }
           .isFailure()
       }
     }
 
     mapOf(
-      debianArtifact to DebianArtifact::class.java,
-      dockerArtifact to DockerArtifact::class.java
+      debianArtifact to DebianArtifactSpec::class.java,
+      dockerArtifact to DockerArtifactSpec::class.java
     ).forEach { (json, type) ->
       derivedContext<Fixture>(type.simpleName) {
         fixture {
@@ -76,26 +76,26 @@ internal class DeliveryArtifactTests : JUnit5Minutests {
 
         context("deserialization") {
           test("works") {
-            expectCatching { mapper.readValue<DeliveryArtifact>(json) }
+            expectCatching { mapper.readValue<ArtifactSpec>(json) }
               .isSuccess()
           }
 
           derivedContext<Map<String, Any?>>("serialization") {
             deriveFixture {
-              mapper.readValue<DeliveryArtifact>(json)
+              mapper.readValue<ArtifactSpec>(json)
                 .let { mapper.convertValue(it) }
             }
 
             test("ignores deliveryConfigName") {
               expectThat(this)
                 .not()
-                .containsKey(DeliveryArtifact::deliveryConfigName.name)
+                .containsKey(ArtifactSpec::deliveryConfigName.name)
             }
 
             test("ignores versioningStrategy") {
               expectThat(this)
                 .not()
-                .containsKey(DeliveryArtifact::versioningStrategy.name)
+                .containsKey(ArtifactSpec::versioningStrategy.name)
             }
           }
         }

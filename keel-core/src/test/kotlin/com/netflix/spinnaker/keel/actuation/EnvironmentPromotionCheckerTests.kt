@@ -4,8 +4,8 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -33,13 +33,13 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
       publisher
     )
 
-    val dockerArtifact = DockerArtifact(
+    val dockerArtifact = DockerArtifactSpec(
       name = "docker",
       deliveryConfigName = "my-manifest",
       tagVersionStrategy = SEMVER_TAG
     )
 
-    val debianArtifact = DebianArtifact(
+    val debianArtifact = DebianArtifactSpec(
       name = "debian",
       deliveryConfigName = "my-manifest",
       reference = "my-artifact",
@@ -206,7 +206,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
               PinnedEnvironment(
                 deliveryConfigName = deliveryConfig.name,
                 targetEnvironment = environment.name,
-                artifact = dockerArtifact,
+                artifactSpec = dockerArtifact,
                 version = "1.0",
                 pinnedBy = null,
                 pinnedAt = null,
@@ -331,7 +331,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
             PinnedEnvironment(
               deliveryConfigName = multiEnvConfig.name,
               targetEnvironment = env1.name,
-              artifact = dockerArtifact,
+              artifactSpec = dockerArtifact,
               version = "2.0",
               pinnedBy = null,
               pinnedAt = null,

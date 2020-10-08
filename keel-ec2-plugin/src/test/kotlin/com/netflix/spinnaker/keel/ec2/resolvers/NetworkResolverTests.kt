@@ -24,7 +24,7 @@ import com.netflix.spinnaker.keel.api.ec2.EC2_CLASSIC_LOAD_BALANCER_V1
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.plugins.supporting
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.MemoryCloudDriverCache
@@ -251,7 +251,7 @@ internal class ClusterNetworkResolverTests : NetworkResolverTests<ClusterSpec>()
           stack = "test"
         ),
         imageProvider = ArtifactImageProvider(
-          DebianArtifact(
+          DebianArtifactSpec(
             name = "fnord",
             vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = locations.regions.map(SubnetAwareRegionSpec::name).toSet())
           )

@@ -4,8 +4,8 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -16,28 +16,28 @@ import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Duration
 
-interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
+interface ArtifactRepository : PeriodicallyCheckedRepository<ArtifactSpec> {
 
   /**
    * Creates or updates a registered artifact
    */
-  fun register(artifact: DeliveryArtifact)
+  fun register(artifact: ArtifactSpec)
 
-  fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact>
+  fun get(name: String, type: ArtifactType, deliveryConfigName: String): List<ArtifactSpec>
 
-  fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact
+  fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): ArtifactSpec
 
-  fun get(deliveryConfigName: String, reference: String): DeliveryArtifact
+  fun get(deliveryConfigName: String, reference: String): ArtifactSpec
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
-  fun getAll(type: ArtifactType? = null): List<DeliveryArtifact>
+  fun getAll(type: ArtifactType? = null): List<ArtifactSpec>
 
   /**
    * Deletes an artifact from a delivery config.
    * Does not remove the registration of an artifact.
    */
-  fun delete(artifact: DeliveryArtifact)
+  fun delete(artifact: ArtifactSpec)
 
   /**
    * @returns the versions we have for an artifact, filtering by the artifact status information,
@@ -47,7 +47,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * the supplied versioning strategy).
    */
   fun versions(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS
   ): List<String>
 
@@ -65,23 +65,23 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
-  fun storeArtifactInstance(artifact: PublishedArtifact): Boolean
+  fun storeArtifactInstance(artifact: ArtifactInstance): Boolean
 
   /**
-   * @return The [PublishedArtifact] matching the specified name, type, version and (optionally) status, or `null`
+   * @return The [ArtifactInstance] matching the specified name, type, version and (optionally) status, or `null`
    * if not found.
    */
-  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): ArtifactInstance?
 
   /**
-   * Update metadata for the specified [PublishedArtifact].
+   * Update metadata for the specified [ArtifactInstance].
    */
-  fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata)
+  fun updateArtifactMetadata(artifact: ArtifactInstance, artifactMetadata: ArtifactMetadata)
 
   /**
    * Returns the release status for the specified [version] of the [artifact], if available.
    */
-  fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus?
+  fun getReleaseStatus(artifact: ArtifactSpec, version: String): ArtifactStatus?
 
   /**
    * @return the latest version of [artifact] approved for use in [targetEnvironment]
@@ -90,7 +90,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun latestVersionApprovedIn(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     targetEnvironment: String
   ): String?
 
@@ -104,7 +104,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun approveVersionFor(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean
@@ -114,7 +114,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun isApprovedFor(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean
@@ -124,7 +124,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun markAsDeployingTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   )
@@ -135,7 +135,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun wasSuccessfullyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean
@@ -145,7 +145,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun isCurrentlyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ): Boolean
@@ -156,7 +156,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun markAsSuccessfullyDeployedTo(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   )
@@ -190,7 +190,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun deleteVeto(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   )
@@ -200,7 +200,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    */
   fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String,
     supersededByVersion: String
@@ -212,7 +212,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary>
 
   /**
-   * Pin an environment to only deploy a specific DeliveryArtifact version
+   * Pin an environment to only deploy a specific ArtifactSpec version
    */
   fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin)
 
@@ -250,27 +250,27 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * This method is _not_ intended to be idempotent, subsequent calls are expected to return
    * different values.
    */
-  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact>
+  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<ArtifactSpec>
 
   /**
    * Returns true if the version is older (lower) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isOlder(artifact: DeliveryArtifact, new: String, existingVersion: String): Boolean =
+  fun isOlder(artifact: ArtifactSpec, new: String, existingVersion: String): Boolean =
     artifact.versioningStrategy.comparator.compare(new, existingVersion) > 0
 
   /**
    * Returns true if the version is newer (higher) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isNewer(artifact: DeliveryArtifact, version: String, existingVersion: String): Boolean =
+  fun isNewer(artifact: ArtifactSpec, version: String, existingVersion: String): Boolean =
     artifact.versioningStrategy.comparator.compare(version, existingVersion) < 0
 
   /**
    * Given a list of pending versions and a current version, removes all versions older than the current version
    * from the list. If there's no current, returns all pending versions.
    */
-  fun removeOlderIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeOlderIfCurrentExists(artifact: ArtifactSpec, currentVersion: String?, pending: List<String>?): List<String> {
     if (pending == null) {
       return emptyList()
     }
@@ -286,7 +286,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * Given a list of pending versions and a current version, returns all versions older than the current
    * version from the list. If there's no current version or no pending versions, returns an empty list.
    */
-  fun removeNewerIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeNewerIfCurrentExists(artifact: ArtifactSpec, currentVersion: String?, pending: List<String>?): List<String> {
     if (pending == null || currentVersion == null) {
       return emptyList()
     }
@@ -297,7 +297,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
 class NoSuchArtifactException(name: String, type: ArtifactType) :
   NoSuchEntityException("No $type artifact named $name is registered") {
-  constructor(artifact: DeliveryArtifact) : this(artifact.name, artifact.type)
+  constructor(artifact: ArtifactSpec) : this(artifact.name, artifact.type)
 }
 
 class ArtifactNotFoundException(reference: String, deliveryConfig: String?) :

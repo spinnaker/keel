@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML
@@ -49,7 +49,7 @@ internal class ArtifactControllerTests : JUnit5Minutests {
     }
 
     test("can get the versions of an artifact") {
-      val artifact = DebianArtifact(
+      val artifact = DebianArtifactSpec(
         name = "fnord",
         deliveryConfigName = "myconfig",
         vmOptions = VirtualMachineOptions(

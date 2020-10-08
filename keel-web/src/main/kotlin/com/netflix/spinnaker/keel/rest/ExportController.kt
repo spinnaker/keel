@@ -2,8 +2,7 @@ package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.ResourceKind
-import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
@@ -94,7 +93,7 @@ class ExportController(
     @PathVariable("account") account: String,
     @PathVariable("clusterName") name: String,
     @RequestHeader("X-SPINNAKER-USER") user: String
-  ): DeliveryArtifact? {
+  ): ArtifactSpec? {
     val kind = parseKind(cloudProvider, "cluster")
     val handler = handlers.supporting(kind)
     val exportable = generateExportable(cloudProvider, "cluster", account, user, name)

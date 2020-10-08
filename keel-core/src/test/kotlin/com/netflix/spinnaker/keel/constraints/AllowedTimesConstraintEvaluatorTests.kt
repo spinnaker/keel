@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.TimeWindow
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
@@ -35,7 +35,7 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
     val clock: Clock,
     val constraint: TimeWindowConstraint
   ) {
-    val artifact = DebianArtifact("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
+    val artifact = DebianArtifactSpec("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))
     val environment = Environment(
       name = "prod",
       constraints = setOf(constraint)

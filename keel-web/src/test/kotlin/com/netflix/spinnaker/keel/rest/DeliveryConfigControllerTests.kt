@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
@@ -76,8 +76,8 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
     name = "keel-manifest",
     application = "keel",
     serviceAccount = "keel@spinnaker",
-    artifacts = setOf(
-      DebianArtifact(
+    artifactSpecs = setOf(
+      DebianArtifactSpec(
         name = "keel",
         vmOptions = VirtualMachineOptions(
           baseOs = "bionic",
@@ -112,7 +112,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
     name = safeName,
     application = application,
     serviceAccount = serviceAccount!!,
-    artifacts = artifacts,
+    artifacts = artifactSpecs,
     environments = environments.map {
       Environment(
         name = it.name,

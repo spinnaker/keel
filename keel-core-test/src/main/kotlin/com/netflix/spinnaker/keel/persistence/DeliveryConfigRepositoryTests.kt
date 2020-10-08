@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.kind
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
@@ -168,7 +168,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         copy(
           deliveryConfig = deliveryConfig.copy(
             artifacts = setOf(
-              DebianArtifact(
+              DebianArtifactSpec(
                 name = "keel",
                 deliveryConfigName = deliveryConfig.name,
                 vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))

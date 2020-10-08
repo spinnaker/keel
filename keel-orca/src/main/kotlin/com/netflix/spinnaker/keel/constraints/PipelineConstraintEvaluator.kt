@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.constraints
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintRepository
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.FAIL
@@ -51,7 +51,7 @@ class PipelineConstraintEvaluator(
   private val log by lazy { getLogger(javaClass) }
 
   override fun canPromote(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment,

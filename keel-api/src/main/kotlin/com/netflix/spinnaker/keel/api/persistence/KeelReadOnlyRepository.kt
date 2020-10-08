@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 
 /**
@@ -42,28 +42,28 @@ interface KeelReadOnlyRepository {
 
   fun getResourcesByApplication(application: String): List<Resource<*>>
 
-  fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact>
+  fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<ArtifactSpec>
 
-  fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact
+  fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): ArtifactSpec
 
-  fun getArtifact(deliveryConfigName: String, reference: String): DeliveryArtifact
+  fun getArtifact(deliveryConfigName: String, reference: String): ArtifactSpec
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
-  fun artifactVersions(artifact: DeliveryArtifact, limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS): List<String>
+  fun artifactVersions(artifact: ArtifactSpec, limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS): List<String>
 
   fun artifactVersions(name: String, type: ArtifactType): List<String>
 
-  fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, targetEnvironment: String): String?
+  fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, targetEnvironment: String): String?
 
-  fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean
+  fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean
 
-  fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean
+  fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean
 
-  fun isCurrentlyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean
+  fun isCurrentlyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean
 
   /**
    * Returns the release status for the specified [version] of the [artifact], if available.
    */
-  fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus?
+  fun getReleaseStatus(artifact: ArtifactSpec, version: String): ArtifactStatus?
 }

@@ -52,23 +52,28 @@ data class ArtifactOriginFilterSpec(
 )
 
 /**
- * An artifact as defined in a [DeliveryConfig].
+ * An artifact specification, as defined in a [DeliveryConfig].
  *
  * Unlike other places within Spinnaker, this class does not describe a specific instance of a software artifact
  * (i.e. the output of a build that is published to an artifact repository), but rather the high-level properties
  * that allow keel and [ArtifactSupplier] plugins to find/process the actual artifacts.
+ *
+ * @property reference A friendly reference to use within a delivery config.
+ * @property deliveryConfigName The delivery config this artifact is a part of.
+ * @property statuses A set of release statuses to filter by. Mutually exclusive with [from] filters.
+ * @property from Filters for the artifact origin in source control.
+ *
+ * @see ArtifactStatus
+ * @see ArtifactOriginFilterSpec
+ * @see ArtifactInstance
  */
 abstract class ArtifactSpec {
   abstract val name: String
   @Discriminator abstract val type: ArtifactType
   abstract val versioningStrategy: VersioningStrategy
-  /** A friendly reference to use within a delivery config. */
   abstract val reference: String
-  /** The delivery config this artifact is a part of. */
   abstract val deliveryConfigName: String?
-  /** A set of release statuses to filter by. Mutually exclusive with [from] filters. */
   open val statuses: Set<ArtifactStatus> = emptySet()
-  /** Filters for the artifact origin in source control. */
   open val from: ArtifactOriginFilterSpec? = null
 
   val filteredByBranch: Boolean
@@ -80,17 +85,8 @@ abstract class ArtifactSpec {
   val filteredByReleaseStatus: Boolean
     get() = statuses.isNotEmpty()
 
-  fun toArtifactInstance(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
-    PublishedArtifact(
-      name = name,
-      type = type,
-      reference = reference,
-      version = version,
-      metadata = mapOf(
-        "releaseStatus" to status,
-        "createdAt" to createdAt
-      )
-    ).normalized()
-
   override fun toString() = "${type.toUpperCase()} artifact $name (ref: $reference)"
 }
+
+// TODO: for backwards compatibility with plugins. Remove when plugins are updated.
+abstract class DeliveryArtifact : ArtifactSpec()

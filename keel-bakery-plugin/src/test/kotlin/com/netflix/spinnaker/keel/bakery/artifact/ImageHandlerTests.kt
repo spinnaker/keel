@@ -6,12 +6,12 @@ import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BaseLabel.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.StoreType.EBS
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.Image
@@ -65,7 +65,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
       BakeCredentials("keel@spinnaker.io", "keel")
     )
 
-    val artifact = DebianArtifact(
+    val artifact = DebianArtifactSpec(
       name = "keel",
       deliveryConfigName = "delivery-config",
       vmOptions = VirtualMachineOptions(
@@ -96,8 +96,8 @@ internal class ImageHandlerTests : JUnit5Minutests {
     val bakeTaskArtifact = slot<List<Map<String, Any?>>>()
     val bakeTaskParameters = slot<Map<String, Any>>()
 
-    fun runHandler(artifact: DeliveryArtifact) {
-      if (artifact is DebianArtifact) {
+    fun runHandler(artifact: ArtifactSpec) {
+      if (artifact is DebianArtifactSpec) {
         every {
           taskLauncher.submitJob(
             capture(bakeTaskUser),
@@ -126,7 +126,7 @@ internal class ImageHandlerTests : JUnit5Minutests {
 
     context("the artifact is not a Debian") {
       before {
-        runHandler(DockerArtifact(artifact.name))
+        runHandler(DockerArtifactSpec(artifact.name))
       }
 
       test("nothing happens") {

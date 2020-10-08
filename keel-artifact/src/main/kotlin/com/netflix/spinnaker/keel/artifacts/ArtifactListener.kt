@@ -4,8 +4,8 @@ import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
@@ -145,13 +145,13 @@ class ArtifactListener(
     }
   }
 
-  private fun getLatestStoredVersion(artifact: DeliveryArtifact): String? =
+  private fun getLatestStoredVersion(artifact: ArtifactSpec): String? =
     repository.artifactVersions(artifact, 1).firstOrNull()
 
   /**
-   * Returns a copy of the [PublishedArtifact] with the git and build metadata populated, if available.
+   * Returns a copy of the [ArtifactInstance] with the git and build metadata populated, if available.
    */
-  private fun ArtifactSupplier<*,*>.addMetadata(artifact: PublishedArtifact): PublishedArtifact {
+  private fun ArtifactSupplier<*,*>.addMetadata(artifact: ArtifactInstance): ArtifactInstance {
     val artifactMetadata = runBlocking {
       try {
         getArtifactMetadata(artifact)
@@ -163,12 +163,12 @@ class ArtifactListener(
     return artifact.copy(gitMetadata = artifactMetadata?.gitMetadata, buildMetadata = artifactMetadata?.buildMetadata)
   }
 
-  private val DeliveryArtifact.deliveryConfig: DeliveryConfig
+  private val ArtifactSpec.deliveryConfig: DeliveryConfig
     get() = this.deliveryConfigName
       ?.let { repository.getDeliveryConfig(it) }
       ?: throw InvalidSystemStateException("Delivery config name missing in artifact object")
 
-  private val PublishedArtifact.artifactType: ArtifactType
+  private val ArtifactInstance.artifactType: ArtifactType
     get() = artifactTypeNames.find { it == type.toLowerCase() }
       ?.let { type.toLowerCase() }
       ?: throw InvalidSystemStateException("Unable to find registered artifact type for '$type'")

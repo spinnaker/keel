@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.events.ResourceCreated
@@ -54,7 +54,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
   val secondConfigName = "my-config-2"
   val application = "fnord"
   val secondApplication = "fnord-2"
-  val artifact = DockerArtifact(name = "org/image", deliveryConfigName = configName)
+  val artifact = DockerArtifactSpec(name = "org/image", deliveryConfigName = configName)
   val newArtifact = artifact.copy(reference = "myart")
   val firstResource = resource()
   val secondResource = resource()
@@ -148,7 +148,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
         test("artifacts are persisted") {
           expectThat(subject.isRegistered("org/image", DOCKER)).isTrue()
-          verify { publisher.publishEvent(ArtifactRegisteredEvent(DockerArtifact(name = "org/image", deliveryConfigName = configName))) }
+          verify { publisher.publishEvent(ArtifactRegisteredEvent(DockerArtifactSpec(name = "org/image", deliveryConfigName = configName))) }
         }
 
         test("individual resources are persisted") {
@@ -208,7 +208,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
             expectCatching {
               artifactRepository.get(name = artifact.name, type = artifact.type, reference = artifact.reference, deliveryConfigName = configName)
             }.isSuccess()
-              .isA<DockerArtifact>()
+              .isA<DockerArtifactSpec>()
               .get { tagVersionStrategy }.isEqualTo(BRANCH_JOB_COMMIT_BY_JOB)
           }
         }

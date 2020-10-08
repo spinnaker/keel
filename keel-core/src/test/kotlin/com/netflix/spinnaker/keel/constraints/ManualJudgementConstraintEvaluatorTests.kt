@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintRepository
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.resource
@@ -29,7 +29,7 @@ internal class ManualJudgementConstraintEvaluatorTests : JUnit5Minutests {
 
     val configName = "my-config"
     val version = "1.1.1"
-    val artifact = DockerArtifact("fnord", reference = "dockerfnord", deliveryConfigName = configName)
+    val artifact = DockerArtifactSpec("fnord", reference = "dockerfnord", deliveryConfigName = configName)
 
     val resource: Resource<DummyResourceSpec> = resource()
     val constraint = ManualJudgementConstraint(timeout = Duration.ofHours(1))

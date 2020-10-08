@@ -5,8 +5,8 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -19,9 +19,9 @@ import strikt.assertions.isTrue
 internal class ArtifactUsedConstraintEvaluatorTests : JUnit5Minutests {
   object Fixture {
     val manifestName = "my-manifest"
-    val debian = DebianArtifact("fnord", reference = "debFnord", deliveryConfigName = manifestName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-east-1", "us-west-2")))
-    val docker = DockerArtifact("fnord", reference = "dockerfnord", deliveryConfigName = manifestName)
-    val anotherDebian = DebianArtifact("fnord", reference = "fnord2.0", statuses = setOf(SNAPSHOT), deliveryConfigName = manifestName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-east-1", "us-west-2")))
+    val debian = DebianArtifactSpec("fnord", reference = "debFnord", deliveryConfigName = manifestName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-east-1", "us-west-2")))
+    val docker = DockerArtifactSpec("fnord", reference = "dockerfnord", deliveryConfigName = manifestName)
+    val anotherDebian = DebianArtifactSpec("fnord", reference = "fnord2.0", statuses = setOf(SNAPSHOT), deliveryConfigName = manifestName, vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-east-1", "us-west-2")))
 
     val emptyEnv = Environment(
       name = "test"

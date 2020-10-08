@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.api.ApiVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.plugins.kind
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 
 class SampleDockerImageResolver(
@@ -41,7 +41,7 @@ class SampleDockerImageResolver(
   override fun updateContainerInSpec(
     resource: Resource<SampleSpecWithContainer>,
     container: ContainerProvider,
-    artifact: DockerArtifact,
+    artifact: DockerArtifactSpec,
     tag: String
   ) =
     resource.copy(spec = resource.spec.copy(container = container))

@@ -28,14 +28,14 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.StaggeredRegion
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
 import com.netflix.spinnaker.keel.jackson.mixins.ClusterDeployStrategyMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ConstraintStateMixin
-import com.netflix.spinnaker.keel.jackson.mixins.DeliveryArtifactMixin
+import com.netflix.spinnaker.keel.jackson.mixins.ArtifactSpecMixin
 import com.netflix.spinnaker.keel.jackson.mixins.LocatableMixin
 import com.netflix.spinnaker.keel.jackson.mixins.MonikeredMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ResourceKindMixin
@@ -55,7 +55,7 @@ object KeelApiModule : SimpleModule("Keel API") {
       addDeserializers(KeelApiDeserializers)
       setMixInAnnotations<ClusterDeployStrategy, ClusterDeployStrategyMixin>()
       setMixInAnnotations<ConstraintState, ConstraintStateMixin>()
-      setMixInAnnotations<DeliveryArtifact, DeliveryArtifactMixin>()
+      setMixInAnnotations<ArtifactSpec, ArtifactSpecMixin>()
       setMixInAnnotations<Locatable<*>, LocatableMixin<*>>()
       setMixInAnnotations<Monikered, MonikeredMixin>()
       setMixInAnnotations<ResourceKind, ResourceKindMixin>()
@@ -88,7 +88,7 @@ internal object KeelApiAnnotationIntrospector : NopAnnotationIntrospector() {
   private val types = setOf(
     Constraint::class.java,
     ConstraintStateAttributes::class.java,
-    DeliveryArtifact::class.java,
+    ArtifactSpec::class.java,
     VersioningStrategy::class.java
   )
 

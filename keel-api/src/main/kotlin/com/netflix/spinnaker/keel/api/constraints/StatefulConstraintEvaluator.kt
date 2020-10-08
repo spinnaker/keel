@@ -18,7 +18,7 @@ package com.netflix.spinnaker.keel.api.constraints
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 
@@ -36,7 +36,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAt
   abstract val attributeType: SupportedConstraintAttributesType<A>
 
   override fun canPromote(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment
@@ -80,7 +80,7 @@ abstract class StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAt
    * TODO: Docs.
    */
   abstract fun canPromote(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment,

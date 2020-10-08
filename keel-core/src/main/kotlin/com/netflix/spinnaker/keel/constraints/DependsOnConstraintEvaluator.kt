@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.constraints
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator.Companion.getConstraintForEnvironment
@@ -20,7 +20,7 @@ class DependsOnConstraintEvaluator(
   override val supportedType = SupportedConstraintType<DependsOnConstraint>("depends-on")
 
   override fun canPromote(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment

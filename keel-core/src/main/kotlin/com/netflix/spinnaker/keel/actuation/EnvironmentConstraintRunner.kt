@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.actuation
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.anyStateful
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
@@ -155,7 +155,7 @@ class EnvironmentConstraintRunner(
   data class EnvironmentContext(
     val deliveryConfig: DeliveryConfig,
     val environment: Environment,
-    val artifact: DeliveryArtifact,
+    val artifact: ArtifactSpec,
     val versions: List<String>,
     val vetoedVersions: Set<String>
   ) {
@@ -169,7 +169,7 @@ class EnvironmentConstraintRunner(
    */
   private fun queueForApproval(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ) {
@@ -179,12 +179,12 @@ class EnvironmentConstraintRunner(
       log.debug("Queueing version $version of ${artifact.type} artifact ${artifact.name} in environment $targetEnvironment for approval")
       repository.queueAllConstraintsApproved(deliveryConfig.name, targetEnvironment, version, artifact.reference)
     } else {
-      log.debug("Not queueing version $version of $artifact in environment $targetEnvironment for approval as it's already approved")
+      log.debug("Not queueing version $version of $artifactSpec in environment $targetEnvironment for approval as it's already approved")
     }
   }
 
   fun checkStatelessConstraints(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment
@@ -193,7 +193,7 @@ class EnvironmentConstraintRunner(
       checkConstraintWhenSpecified(statelessEvaluators, artifact, deliveryConfig, version, environment)
 
   fun checkStatefulConstraints(
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment
@@ -208,7 +208,7 @@ class EnvironmentConstraintRunner(
    */
   private fun checkConstraintForEveryEnvironment(
     evaluators: List<ConstraintEvaluator<*>>,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment
@@ -224,7 +224,7 @@ class EnvironmentConstraintRunner(
    */
   private fun checkConstraintWhenSpecified(
     evaluators: List<ConstraintEvaluator<*>>,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     deliveryConfig: DeliveryConfig,
     version: String,
     environment: Environment

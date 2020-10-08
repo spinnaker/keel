@@ -6,8 +6,8 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.persistence.KeelReadOnlyRepository
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
@@ -137,27 +137,27 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun resourcesDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>>
 
-  fun artifactsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact>
+  fun artifactsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<ArtifactSpec>
   // END ResourceRepository methods
 
   // START ArtifactRepository methods
-  fun register(artifact: DeliveryArtifact)
+  fun register(artifact: ArtifactSpec)
 
-  fun getAllArtifacts(type: ArtifactType? = null): List<DeliveryArtifact>
+  fun getAllArtifacts(type: ArtifactType? = null): List<ArtifactSpec>
 
-  fun storeArtifactInstance(artifact: PublishedArtifact): Boolean
+  fun storeArtifactInstance(artifact: ArtifactInstance): Boolean
 
-  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): ArtifactInstance?
 
-  fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata)
+  fun updateArtifactMetadata(artifact: ArtifactInstance, artifactMetadata: ArtifactMetadata)
 
-  fun deleteArtifact(artifact: DeliveryArtifact)
+  fun deleteArtifact(artifact: ArtifactSpec)
 
-  fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean
+  fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean
 
-  fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
+  fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String)
 
-  fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
+  fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String)
 
   fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary>
 
@@ -175,11 +175,11 @@ interface KeelRepository : KeelReadOnlyRepository {
     force: Boolean = false
   ): Boolean
 
-  fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
+  fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String)
 
   fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String,
     supersededByVersion: String

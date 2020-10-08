@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType.ELB
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.configuredTestYamlMapper
@@ -137,7 +137,7 @@ data class Fixture(
       stack = "test"
     ),
     imageProvider = ArtifactImageProvider(
-      DebianArtifact(
+      DebianArtifactSpec(
         name = "fnord",
         vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2", "us-east-1"))
       )

@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.keel.core.api
 
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.core.validateComment
 import java.time.Instant
 
@@ -19,7 +19,7 @@ data class EnvironmentArtifactPin(
 data class PinnedEnvironment(
   val deliveryConfigName: String,
   val targetEnvironment: String,
-  val artifact: DeliveryArtifact,
+  val artifact: ArtifactSpec,
   val version: String,
   val pinnedBy: String?,
   val pinnedAt: Instant?,

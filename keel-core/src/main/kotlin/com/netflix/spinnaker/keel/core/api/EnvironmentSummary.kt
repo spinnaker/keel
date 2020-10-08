@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.APPROVED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
@@ -33,7 +33,7 @@ data class EnvironmentSummary(
     val log = LoggerFactory.getLogger(EnvironmentSummary::class.java)
   }
 
-  fun getArtifactPromotionStatus(artifact: DeliveryArtifact, version: String) =
+  fun getArtifactPromotionStatus(artifact: ArtifactSpec, version: String) =
     artifacts.find { it.reference == artifact.reference && it.type == artifact.type }
       ?.let {
         when (version) {

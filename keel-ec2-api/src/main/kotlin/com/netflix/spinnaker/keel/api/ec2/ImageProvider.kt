@@ -18,7 +18,7 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 
 /**
  * Base interface for providing an image
@@ -33,7 +33,7 @@ sealed class ImageProvider
   replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
 )
 data class ArtifactImageProvider(
-  val deliveryArtifact: DeliveryArtifact,
+  val deliveryArtifact: ArtifactSpec,
   val artifactStatuses: List<ArtifactStatus> = emptyList() // treated as "all statuses" by ImageResolver
 ) : ImageProvider()
 

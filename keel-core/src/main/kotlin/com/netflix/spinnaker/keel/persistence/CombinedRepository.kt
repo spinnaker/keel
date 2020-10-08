@@ -9,8 +9,8 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactInstance
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
@@ -64,7 +64,7 @@ class CombinedRepository(
       application = submittedDeliveryConfig.application,
       serviceAccount = submittedDeliveryConfig.serviceAccount
         ?: error("No service account specified, and no default applied"),
-      artifacts = submittedDeliveryConfig.artifacts.transform(submittedDeliveryConfig.safeName),
+      artifacts = submittedDeliveryConfig.artifactSpecs.transform(submittedDeliveryConfig.safeName),
       environments = submittedDeliveryConfig.environments.mapTo(mutableSetOf()) { env ->
         Environment(
           name = env.name,
@@ -174,7 +174,7 @@ class CombinedRepository(
       }
   }
 
-  private fun Set<DeliveryArtifact>.transform(deliveryConfigName: String) =
+  private fun Set<ArtifactSpec>.transform(deliveryConfigName: String) =
     map { artifact ->
       val artifacAsMap: MutableMap<String, Any?> = objectMapper.convertValue(artifact)
       artifacAsMap["deliveryConfigName"] = deliveryConfigName
@@ -290,72 +290,72 @@ class CombinedRepository(
   override fun resourcesDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>> =
     resourceRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
 
-  override fun artifactsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryArtifact> =
+  override fun artifactsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<ArtifactSpec> =
     artifactRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
 
   // END ResourceRepository methods
 
   // START ArtifactRepository methods
-  override fun register(artifact: DeliveryArtifact) {
+  override fun register(artifact: ArtifactSpec) {
     artifactRepository.register(artifact)
     publisher.publishEvent(ArtifactRegisteredEvent(artifact))
   }
 
-  override fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<DeliveryArtifact> =
+  override fun getArtifact(name: String, type: ArtifactType, deliveryConfigName: String): List<ArtifactSpec> =
     artifactRepository.get(name, type, deliveryConfigName)
 
-  override fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact =
+  override fun getArtifact(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): ArtifactSpec =
     artifactRepository.get(name, type, reference, deliveryConfigName)
 
-  override fun getArtifact(deliveryConfigName: String, reference: String): DeliveryArtifact =
+  override fun getArtifact(deliveryConfigName: String, reference: String): ArtifactSpec =
     artifactRepository.get(deliveryConfigName, reference)
 
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     artifactRepository.isRegistered(name, type)
 
-  override fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
+  override fun getAllArtifacts(type: ArtifactType?): List<ArtifactSpec> =
     artifactRepository.getAll(type)
 
-  override fun storeArtifactInstance(artifact: PublishedArtifact): Boolean =
+  override fun storeArtifactInstance(artifact: ArtifactInstance): Boolean =
     artifactRepository.storeArtifactInstance(artifact)
 
-  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact? =
+  override fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): ArtifactInstance? =
     artifactRepository.getArtifactInstance(name, type, version, status)
 
-  override fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata) =
+  override fun updateArtifactMetadata(artifact: ArtifactInstance, artifactMetadata: ArtifactMetadata) =
     artifactRepository.updateArtifactMetadata(artifact, artifactMetadata)
 
-  override fun deleteArtifact(artifact: DeliveryArtifact) =
+  override fun deleteArtifact(artifact: ArtifactSpec) =
     artifactRepository.delete(artifact)
 
-  override fun artifactVersions(artifact: DeliveryArtifact, limit: Int): List<String> =
+  override fun artifactVersions(artifact: ArtifactSpec, limit: Int): List<String> =
     artifactRepository.versions(artifact, limit)
 
   override fun artifactVersions(name: String, type: ArtifactType): List<String> =
     artifactRepository.versions(name, type)
 
-  override fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, targetEnvironment: String): String? =
+  override fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, targetEnvironment: String): String? =
     artifactRepository.latestVersionApprovedIn(deliveryConfig, artifact, targetEnvironment)
 
-  override fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun approveVersionFor(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean =
     artifactRepository.approveVersionFor(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun isApprovedFor(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean =
     artifactRepository.isApprovedFor(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun markAsDeployingTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String) =
     artifactRepository.markAsDeployingTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun wasSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean =
     artifactRepository.wasSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun isCurrentlyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String): Boolean =
+  override fun isCurrentlyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String): Boolean =
     artifactRepository.isCurrentlyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun getReleaseStatus(artifact: DeliveryArtifact, version: String): ArtifactStatus? =
+  override fun getReleaseStatus(artifact: ArtifactSpec, version: String): ArtifactStatus? =
     artifactRepository.getReleaseStatus(artifact, version)
 
-  override fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String) =
     artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
   override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> =
@@ -384,10 +384,10 @@ class CombinedRepository(
   ): Boolean =
     artifactRepository.markAsVetoedIn(deliveryConfig, veto, force)
 
-  override fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
+  override fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String) =
     artifactRepository.deleteVeto(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun markAsSkipped(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String, supersededByVersion: String) {
+  override fun markAsSkipped(deliveryConfig: DeliveryConfig, artifact: ArtifactSpec, version: String, targetEnvironment: String, supersededByVersion: String) {
     artifactRepository.markAsSkipped(deliveryConfig, artifact, version, targetEnvironment, supersededByVersion)
   }
 

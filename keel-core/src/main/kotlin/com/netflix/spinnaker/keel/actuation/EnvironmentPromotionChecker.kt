@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.actuation.EnvironmentConstraintRunner.EnvironmentContext
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -96,7 +96,7 @@ class EnvironmentPromotionChecker(
 
   private fun approveVersion(
     deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
+    artifact: ArtifactSpec,
     version: String,
     targetEnvironment: String
   ) {
@@ -129,7 +129,7 @@ class EnvironmentPromotionChecker(
 
   private fun Map<String, PinnedEnvironment>.hasPinFor(
     environmentName: String,
-    artifact: DeliveryArtifact
+    artifact: ArtifactSpec
   ): Boolean {
     if (isEmpty()) {
       return false
@@ -141,10 +141,10 @@ class EnvironmentPromotionChecker(
 
   private fun Map<String, PinnedEnvironment>.versionFor(
     environmentName: String,
-    artifact: DeliveryArtifact
+    artifact: ArtifactSpec
   ): String? =
     get(envPinKey(environmentName, artifact))?.version
 
-  fun envPinKey(environmentName: String, artifact: DeliveryArtifact): String =
+  fun envPinKey(environmentName: String, artifact: ArtifactSpec): String =
     "$environmentName:${artifact.reference}"
 }

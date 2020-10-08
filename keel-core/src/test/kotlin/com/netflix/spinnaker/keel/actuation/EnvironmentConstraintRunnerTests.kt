@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.constraints.ArtifactUsedConstraintEvaluator
 import com.netflix.spinnaker.keel.core.api.ArtifactUsedConstraint
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
@@ -50,7 +50,7 @@ internal class EnvironmentConstraintRunnerTests : JUnit5Minutests {
       listOf(statelessEvaluator, statefulEvaluator, implicitStatelessEvaluator)
     )
 
-    val artifact = DockerArtifact(
+    val artifact = DockerArtifactSpec(
       name = "fnord",
       deliveryConfigName = "my-manifest",
       tagVersionStrategy = SEMVER_TAG

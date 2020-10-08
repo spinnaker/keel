@@ -6,11 +6,11 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.keel.artifacts.DebianArtifactSpec
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSpec
 import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
@@ -32,7 +32,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
   data class Fixture(
     val account: String = "prod",
     val regions: List<String> = listOf("us-west-2", "us-east-1"),
-    val artifact: DeliveryArtifact = DebianArtifact(
+    val artifact: ArtifactSpec = DebianArtifactSpec(
       name = "fnord",
       deliveryConfigName = "image-exists-constraint-evaluator-tests",
       vmOptions = VirtualMachineOptions(
@@ -82,7 +82,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
     context("A non-Debian artifact") {
       deriveFixture {
         Fixture(
-          artifact = DockerArtifact("fnord", "bake-constraint-evaluator-tests")
+          artifact = DockerArtifactSpec("fnord", "bake-constraint-evaluator-tests")
         )
       }
 
@@ -123,7 +123,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
           imageService.getLatestNamedImageWithAllRegionsForAppVersion(
             AppVersion.parseName(appVersion),
             "test",
-            (artifact as DebianArtifact).vmOptions.regions
+            (artifact as DebianArtifactSpec).vmOptions.regions
           )
         } returns NamedImage(
           imageName = appVersion,

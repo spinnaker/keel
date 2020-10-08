@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.exceptions.ArtifactParsingException
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactSpec
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 
@@ -38,7 +38,7 @@ fun mapToArtifact(
   json: String,
   reference: String,
   deliveryConfigName: String
-): DeliveryArtifact {
+): ArtifactSpec {
   try {
     val artifactAsMap = objectMapper.readValue<Map<String, Any>>(json)
       .toMutableMap()
