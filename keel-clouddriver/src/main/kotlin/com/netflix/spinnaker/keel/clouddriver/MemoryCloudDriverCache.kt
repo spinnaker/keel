@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel.clouddriver
 
 import com.github.benmanes.caffeine.cache.AsyncCache
 import com.github.benmanes.caffeine.cache.Caffeine
+import com.netflix.spinnaker.config.CacheProperties
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.Network
@@ -33,10 +34,9 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
-import java.util.concurrent.TimeUnit.HOURS
-import java.util.concurrent.TimeUnit.MINUTES
 import java.util.function.BiFunction
 
 /**
@@ -50,59 +50,62 @@ import java.util.function.BiFunction
  */
 class MemoryCloudDriverCache(
   private val cloudDriver: CloudDriverService,
-  private val meterRegistry: MeterRegistry
+  private val meterRegistry: MeterRegistry,
+  cacheProperties: CacheProperties = CacheProperties()
 ) : CloudDriverCache {
 
   private val securityGroupSummariesByIdOrName = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(1000)
-    .expireAfterWrite(1, MINUTES)
+    .maximumSize(cacheProperties.caches["securityGroups"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["securityGroups"]?.expireAfterWrite ?: Duration.ofMinutes(10))
     .recordStats()
     .buildAsync<String, SecurityGroupSummary>()
     .withMetrics("securityGroups")
 
   private val networks = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(1000)
-    .expireAfterWrite(1, HOURS)
+    .maximumSize(cacheProperties.caches["networks"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["networks"]?.expireAfterWrite ?: Duration.ofHours(1))
     .recordStats()
     .buildAsync<String, Network>()
     .withMetrics("networks")
 
   private val availabilityZones = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(1000)
-    .expireAfterWrite(1, HOURS)
+    .maximumSize(cacheProperties.caches["availabilityZones"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["availabilityZones"]?.expireAfterWrite ?: Duration.ofHours(1))
     .recordStats()
     .buildAsync<String, Set<String>>()
     .withMetrics("availabilityZones")
 
   private val credentials = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(100)
-    .expireAfterWrite(1, HOURS)
+    .maximumSize(cacheProperties.caches["credentials"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["credentials"]?.expireAfterWrite ?: Duration.ofHours(1))
     .recordStats()
     .buildAsync<String, Credential>()
     .withMetrics("credentials")
 
   private val subnetsById = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(1000)
-    .expireAfterWrite(1, HOURS)
+    .maximumSize(cacheProperties.caches["subnetsById"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["subnetsById"]?.expireAfterWrite ?: Duration.ofHours(1))
     .recordStats()
     .buildAsync<String, Subnet>()
     .withMetrics("subnetsById")
 
   private val subnetsByPurpose = Caffeine.newBuilder()
     .executor(IO.asExecutor())
-    .maximumSize(1000)
-    .expireAfterWrite(1, HOURS)
+    .maximumSize(cacheProperties.caches["subnetsByPurpose"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["subnetsByPurpose"]?.expireAfterWrite ?: Duration.ofHours(1))
     .recordStats()
     .buildAsync<String, Subnet>()
     .withMetrics("subnetsByPurpose")
 
   private val namedImagesByAccountAndImageName = Caffeine.newBuilder()
     .executor(IO.asExecutor())
+    .maximumSize(cacheProperties.caches["namedImages"]?.maximumSize ?: 1000)
+    .expireAfterWrite(cacheProperties.caches["namedImages"]?.expireAfterWrite ?: Duration.ofMinutes(5))
     .recordStats()
     .buildAsync<String, List<NamedImage>>()
     .withMetrics("namedImages")
