@@ -51,64 +51,38 @@ import java.util.function.BiFunction
 class MemoryCloudDriverCache(
   private val cloudDriver: CloudDriverService,
   private val meterRegistry: MeterRegistry,
-  cacheProperties: CacheProperties = CacheProperties()
+  private val cacheProperties: CacheProperties = CacheProperties()
 ) : CloudDriverCache {
 
-  private val securityGroupSummariesByIdOrName = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["securityGroups"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["securityGroups"]?.expireAfterWrite ?: Duration.ofMinutes(10))
-    .recordStats()
-    .buildAsync<String, SecurityGroupSummary>()
-    .withMetrics("securityGroups")
+  private val securityGroupSummariesByIdOrName = buildAsyncCache<String, SecurityGroupSummary>(
+    cacheName = "securityGroups",
+    defaultExpireAfterWrite = Duration.ofMinutes(10)
+  )
 
-  private val networks = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["networks"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["networks"]?.expireAfterWrite ?: Duration.ofHours(1))
-    .recordStats()
-    .buildAsync<String, Network>()
-    .withMetrics("networks")
+  private val networks = buildAsyncCache<String, Network>(
+    cacheName = "networks"
+  )
 
-  private val availabilityZones = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["availabilityZones"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["availabilityZones"]?.expireAfterWrite ?: Duration.ofHours(1))
-    .recordStats()
-    .buildAsync<String, Set<String>>()
-    .withMetrics("availabilityZones")
+  private val availabilityZones = buildAsyncCache<String, Set<String>>(
+    cacheName = "availabilityZones"
+  )
 
-  private val credentials = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["credentials"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["credentials"]?.expireAfterWrite ?: Duration.ofHours(1))
-    .recordStats()
-    .buildAsync<String, Credential>()
-    .withMetrics("credentials")
+  private val credentials = buildAsyncCache<String, Credential>(
+    cacheName = "credentials"
+  )
 
-  private val subnetsById = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["subnetsById"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["subnetsById"]?.expireAfterWrite ?: Duration.ofHours(1))
-    .recordStats()
-    .buildAsync<String, Subnet>()
-    .withMetrics("subnetsById")
+  private val subnetsById = buildAsyncCache<String, Subnet>(
+    cacheName = "subnetsById"
+  )
 
-  private val subnetsByPurpose = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["subnetsByPurpose"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["subnetsByPurpose"]?.expireAfterWrite ?: Duration.ofHours(1))
-    .recordStats()
-    .buildAsync<String, Subnet>()
-    .withMetrics("subnetsByPurpose")
+  private val subnetsByPurpose = buildAsyncCache<String, Subnet>(
+    cacheName = "subnetsByPurpose"
+  )
 
-  private val namedImagesByAccountAndImageName = Caffeine.newBuilder()
-    .executor(IO.asExecutor())
-    .maximumSize(cacheProperties.caches["namedImages"]?.maximumSize ?: 1000)
-    .expireAfterWrite(cacheProperties.caches["namedImages"]?.expireAfterWrite ?: Duration.ofMinutes(5))
-    .recordStats()
-    .buildAsync<String, List<NamedImage>>()
-    .withMetrics("namedImages")
+  private val namedImagesByAccountAndImageName = buildAsyncCache<String, List<NamedImage>>(
+    cacheName = "namedImages",
+    defaultExpireAfterWrite = Duration.ofMinutes(5)
+  )
 
   override fun credentialBy(name: String): Credential =
     credentials.getOrNotFound(name, "Credentials with name $name not found") {
@@ -215,6 +189,19 @@ class MemoryCloudDriverCache(
     }
   } ?: throw ResourceNotFound(notFoundMessage)
 
-  private fun <C : AsyncCache<K, V>, K, V> C.withMetrics(cacheName: String): C =
-    CaffeineCacheMetrics.monitor(meterRegistry, this, cacheName)
+  private fun <K, V> buildAsyncCache(
+    cacheName: String,
+    defaultMaximumSize: Long = 1000,
+    defaultExpireAfterWrite: Duration = Duration.ofHours(1)
+  ): AsyncCache<K, V> =
+    Caffeine.newBuilder()
+      .executor(IO.asExecutor())
+      .maximumSize(cacheProperties.caches[cacheName]?.maximumSize ?: defaultMaximumSize)
+      .expireAfterWrite(cacheProperties.caches[cacheName]?.expireAfterWrite
+        ?: defaultExpireAfterWrite)
+      .recordStats()
+      .buildAsync<K, V>()
+      .apply {
+        CaffeineCacheMetrics.monitor(meterRegistry, this, cacheName)
+      }
 }
