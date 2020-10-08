@@ -10,11 +10,13 @@ import com.netflix.spinnaker.keel.sql.SqlAgentLockRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlDiffFingerprintRepository
+import com.netflix.spinnaker.keel.sql.SqlNotificationRepository
 import com.netflix.spinnaker.keel.sql.SqlPausedRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
 import com.netflix.spinnaker.keel.sql.SqlRetry
 import com.netflix.spinnaker.keel.sql.SqlTaskTrackingRepository
 import com.netflix.spinnaker.keel.sql.SqlUnhappyVetoRepository
+import com.netflix.spinnaker.keel.sql.SqlUnhealthyRepository
 import com.netflix.spinnaker.kork.sql.config.DefaultSqlConfiguration
 import com.netflix.spinnaker.kork.sql.config.SqlProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
@@ -102,4 +104,18 @@ class SqlConfiguration {
     properties: SqlProperties,
     agents: List<ScheduledAgent>
   ) = SqlAgentLockRepository(jooq, clock, agents, SqlRetry(sqlRetryProperties))
+
+  @Bean
+  fun notificationRepository(
+    jooq: DSLContext,
+    clock: Clock,
+    properties: SqlProperties
+  ) = SqlNotificationRepository(clock, jooq, SqlRetry(sqlRetryProperties))
+
+  @Bean
+  fun unhealthyRepository(
+    jooq: DSLContext,
+    clock: Clock,
+    properties: SqlProperties
+  ) = SqlUnhealthyRepository(clock, jooq, SqlRetry(sqlRetryProperties))
 }

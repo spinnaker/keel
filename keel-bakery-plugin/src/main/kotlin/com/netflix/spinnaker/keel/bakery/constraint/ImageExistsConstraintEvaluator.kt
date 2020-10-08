@@ -50,18 +50,16 @@ class ImageExistsConstraintEvaluator(
     return image != null
   }
 
-  private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? {
-    log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
-    val appVersion = AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version")
-    return runBlocking {
+  private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? =
+    runBlocking {
+      log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
       imageService.getLatestNamedImageWithAllRegionsForAppVersion(
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        appVersion,
+        AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version"),
         defaultImageAccount,
         vmOptions.regions
       )
     }
-  }
 
   private val defaultImageAccount: String
     get() = dynamicConfigService.getConfig("images.default-account", "test")

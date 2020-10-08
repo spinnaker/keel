@@ -37,12 +37,13 @@ import com.netflix.spinnaker.keel.veto.VetoResponse
 import com.netflix.spinnaker.kork.exceptions.SpinnakerException
 import com.netflix.spinnaker.kork.exceptions.SystemException
 import com.netflix.spinnaker.kork.exceptions.UserException
-import java.time.Clock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.Duration
 
 /**
  * The core component in keel responsible for resource state monitoring and actuation.
@@ -70,22 +71,33 @@ class ResourceActuator(
   suspend fun <T : ResourceSpec> checkResource(resource: Resource<T>) {
     withTracingContext(resource) {
       val id = resource.id
-      log.debug("checkResource $id")
-      val plugin = handlers.supporting(resource.kind)
-
-      if (actuationPauser.isPaused(resource)) {
-        log.debug("Actuation for resource {} is paused, skipping checks", id)
-        publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "ActuationPaused"))
-        return@withTracingContext
-      }
-
-      if (plugin.actuationInProgress(resource)) {
-        log.debug("Actuation for resource {} is already running, skipping checks", id)
-        publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "ActuationInProgress"))
-        return@withTracingContext
-      }
-
       try {
+        log.debug("checkResource $id")
+        val plugin = handlers.supporting(resource.kind)
+
+        if (actuationPauser.isPaused(resource)) {
+          log.debug("Actuation for resource {} is paused, skipping checks", id)
+          publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "ActuationPaused"))
+          return@withTracingContext
+        }
+
+        if (plugin.actuationInProgress(resource)) {
+          log.debug("Actuation for resource {} is already running, skipping checks", id)
+          publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "ActuationInProgress"))
+          return@withTracingContext
+        }
+
+        val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
+        val environment = checkNotNull(deliveryConfig.environmentFor(resource)) {
+          "Failed to find environment for ${resource.id} in deliveryConfig ${deliveryConfig.name}"
+        }
+
+        if (deliveryConfig.isPromotionCheckStale()) {
+          log.debug("Environments check for {} is stale, skipping checks", deliveryConfig.name)
+          publisher.publishEvent(ResourceCheckSkipped(resource.kind, id, "PromotionCheckStale"))
+          return@withTracingContext
+        }
+
         val (desired, current) = plugin.resolve(resource)
         val diff = DefaultResourceDiff(desired, current)
         if (diff.hasChanges()) {
@@ -120,12 +132,6 @@ class ResourceActuator(
 
               if (versionedArtifact != null) {
                 with(versionedArtifact) {
-                  val deliveryConfig = deliveryConfigRepository.deliveryConfigFor(resource.id)
-                  val environment = deliveryConfig.environmentFor(resource)?.name
-                    ?: error(
-                      "Failed to find environment for ${resource.id} in deliveryConfig ${deliveryConfig.name} " +
-                        "while attempting to veto artifact $artifactType:$artifactName version $artifactVersion"
-                    )
                   val artifact = deliveryConfig.matchingArtifactByName(versionedArtifact.artifactName, artifactType)
                     ?: error("Artifact $artifactType:$artifactName not found in delivery config ${deliveryConfig.name}")
 
@@ -134,7 +140,7 @@ class ResourceActuator(
                     veto = EnvironmentArtifactVeto(
                       reference = artifact.reference,
                       version = artifactVersion,
-                      targetEnvironment = environment,
+                      targetEnvironment = environment.name,
                       vetoedBy = "Spinnaker",
                       comment = "Automatically marked as bad because multiple deployments of this version failed."
                     )
@@ -165,6 +171,9 @@ class ResourceActuator(
 
         log.debug("Checking resource {}", id)
 
+        // todo eb: add support for plugins to look at a diff and say "I can't fix this"
+        // todo eb: emit event for ^ with custom message provided by the plugin
+
         when {
           current == null -> {
             log.warn("Resource {} is missing", id)
@@ -173,6 +182,7 @@ class ResourceActuator(
             plugin.create(resource, diff)
               .also { tasks ->
                 publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                diffFingerprintRepository.markActionTaken(id)
               }
           }
           diff.hasChanges() -> {
@@ -183,6 +193,7 @@ class ResourceActuator(
             plugin.update(resource, diff)
               .also { tasks ->
                 publisher.publishEvent(ResourceActuationLaunched(resource, plugin.name, tasks, clock))
+                diffFingerprintRepository.markActionTaken(id)
               }
           }
           else -> {
@@ -207,6 +218,14 @@ class ResourceActuator(
         publisher.publishEvent(ResourceCheckError(resource, e.toSpinnakerException(), clock))
       }
     }
+  }
+
+  private fun DeliveryConfig.isPromotionCheckStale(): Boolean {
+    val age = Duration.between(
+      deliveryConfigRepository.deliveryConfigLastChecked(this),
+      clock.instant()
+    )
+    return age > Duration.ofMinutes(5)
   }
 
   private fun Exception.toSpinnakerException(): SpinnakerException =
@@ -246,7 +265,11 @@ class ResourceActuator(
     }
 
   private fun DeliveryConfig.environmentFor(resource: Resource<*>): Environment? =
-    environments.firstOrNull { it.resources.contains(resource) }
+    environments.firstOrNull {
+      it.resources
+        .map { r -> r.id }
+        .contains(resource.id)
+    }
 
   // These extensions get round the fact tht we don't know the spec type of the resource from
   // the repository. I don't want the `ResourceHandler` interface to be untyped though.
