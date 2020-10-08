@@ -49,7 +49,7 @@ class DockerArtifactSupplier(
                   "commitId" to dockerImage.commitId,
                   "buildNumber" to dockerImage.buildNumber,
                   "branch" to dockerImage.branch,
-                  "date" to dockerImage.date
+                  "createdAt" to dockerImage.date
                 )
               } else {
                 emptyMap()
