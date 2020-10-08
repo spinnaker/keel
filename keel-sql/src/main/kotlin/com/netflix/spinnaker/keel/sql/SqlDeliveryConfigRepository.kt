@@ -22,7 +22,7 @@ import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.CURRENT_CONSTRAINT
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ARTIFACT_SPEC
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG_LAST_CHECKED
@@ -248,8 +248,8 @@ class SqlDeliveryConfigRepository(
           )
           .execute()
         // delete artifact
-        txn.deleteFrom(DELIVERY_ARTIFACT)
-          .where(DELIVERY_ARTIFACT.UID.`in`(artifactUids))
+        txn.deleteFrom(ARTIFACT_SPEC)
+          .where(ARTIFACT_SPEC.UID.`in`(artifactUids))
           .execute()
         // delete delivery config
         txn.deleteFrom(DELIVERY_CONFIG)
@@ -325,12 +325,12 @@ class SqlDeliveryConfigRepository(
           .set(
             DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID,
             jooq
-              .select(DELIVERY_ARTIFACT.UID)
-              .from(DELIVERY_ARTIFACT)
-              .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-              .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
-              .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
-              .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
+              .select(ARTIFACT_SPEC.UID)
+              .from(ARTIFACT_SPEC)
+              .where(ARTIFACT_SPEC.NAME.eq(artifact.name))
+              .and(ARTIFACT_SPEC.TYPE.eq(artifact.type))
+              .and(ARTIFACT_SPEC.DELIVERY_CONFIG_NAME.eq(artifact.deliveryConfigName))
+              .and(ARTIFACT_SPEC.REFERENCE.eq(artifact.reference))
           )
           .onDuplicateKeyIgnore()
           .execute()
@@ -403,9 +403,9 @@ class SqlDeliveryConfigRepository(
   private fun DeliveryConfig.attachDependents(uid: String): DeliveryConfig =
     sqlRetry.withRetry(READ) {
       jooq
-        .select(DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.TYPE, DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE, DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME)
-        .from(DELIVERY_ARTIFACT, DELIVERY_CONFIG_ARTIFACT)
-        .where(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
+        .select(ARTIFACT_SPEC.NAME, ARTIFACT_SPEC.TYPE, ARTIFACT_SPEC.DETAILS, ARTIFACT_SPEC.REFERENCE, ARTIFACT_SPEC.DELIVERY_CONFIG_NAME)
+        .from(ARTIFACT_SPEC, DELIVERY_CONFIG_ARTIFACT)
+        .where(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID.eq(ARTIFACT_SPEC.UID))
         .and(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(uid))
         .fetch { (name, type, details, reference, configName) ->
           mapToArtifact(artifactSuppliers.supporting(type), name, type.toLowerCase(), details, reference, configName)

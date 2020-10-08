@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: rename-delivery-artifact
+      author: lpollo
+      changes:
+        - renameTable:
+            oldTableName: delivery_artifact
+            newTableName: artifact_spec
