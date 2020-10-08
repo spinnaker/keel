@@ -51,7 +51,9 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       version = versions.last(),
       metadata = mapOf(
         "buildNumber" to "1",
-        "commitId" to "a15p0"
+        "commitId" to "a15p0",
+        "branch" to "master",
+        "createdAt" to "1598707355157"
       )
     )
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
