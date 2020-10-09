@@ -61,8 +61,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
     val latestArtifactEvent = ArtifactPublishedEvent(
       artifacts = listOf(latestArtifactWithMetadata.copy(
       metadata = latestArtifactWithMetadata.metadata.toMutableMap().also {
-        it["createdAt"] = latestArtifactWithMetadata.metadata["date"]
-        it.remove("date")
+        it["createdAt"] = it.remove("date")
       }
     )),
       details = emptyMap()
