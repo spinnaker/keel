@@ -36,21 +36,6 @@ class DockerArtifactSupplier(
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
 
-  override fun publishArtifact(artifact: PublishedArtifact) {
-    if (artifact.hasDate()) {
-      super.publishArtifact(artifact.copy(
-        //changing date to createdAt, to match other artifact types
-        metadata = artifact.metadata.toMutableMap().also {
-          it["createdAt"] = it.remove("date")
-        }
-        ))
-
-    } else {
-      log.warn("Docker artifact: ${artifact.name} does not contains a date.")
-      super.publishArtifact(artifact)
-    }
-  }
-
   override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? {
     return runWithIoContext {
       cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = version)
@@ -155,8 +140,5 @@ class DockerArtifactSupplier(
       ?: false
   }
 
-  // Check whether the artifact has date information from docker registry
-  private fun PublishedArtifact.hasDate() =
-    this.metadata.containsKey("date") && this.metadata["date"] != null
 
 }

@@ -58,14 +58,6 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       )
     )
 
-    val latestArtifactEvent = ArtifactPublishedEvent(
-      artifacts = listOf(latestArtifactWithMetadata.copy(
-      metadata = latestArtifactWithMetadata.metadata.toMutableMap().also {
-        it["createdAt"] = it.remove("date")
-      }
-    )),
-      details = emptyMap()
-    )
 
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
@@ -142,17 +134,6 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         }
         expectThat(results)
           .isEqualTo(artifactMetadata)
-      }
-
-    }
-
-    context("DockerArtifactSupplier publish event with processed artifact") {
-
-      test("returns artifact metadata based on ci provider") {
-        dockerArtifactSupplier.publishArtifact(latestArtifactWithMetadata)
-        verify(exactly = 1) {
-          expectThat(dockerArtifactSupplier.eventPublisher.publishEvent(latestArtifactEvent))
-        }
       }
 
     }
