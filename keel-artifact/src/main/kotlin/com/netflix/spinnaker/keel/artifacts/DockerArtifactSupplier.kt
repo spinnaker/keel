@@ -41,13 +41,12 @@ class DockerArtifactSupplier(
       super.publishArtifact(artifact.copy(
         //changing date to createdAt, to match other artifact types
         metadata = artifact.metadata.toMutableMap().also {
-         it["createdAt"] = artifact.metadata["date"]
-          it.remove("date")
+          it["createdAt"] = it.remove("date")
         }
         ))
 
     } else {
-      log.debug("Docker artifact: ${artifact.name} does not contains a date.")
+      log.warn("Docker artifact: ${artifact.name} does not contains a date.")
       super.publishArtifact(artifact)
     }
   }
