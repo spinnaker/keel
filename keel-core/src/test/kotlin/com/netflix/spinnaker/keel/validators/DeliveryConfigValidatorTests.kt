@@ -35,7 +35,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifactSpecs = setOf(artifact),
+        artifacts = setOf(artifact),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -79,7 +79,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifactSpecs = artifacts,
+        artifacts = artifacts,
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -107,7 +107,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifactSpecs = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
+        artifacts = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",
@@ -136,7 +136,7 @@ internal class DeliveryConfigValidatorTests : JUnit5Minutests {
         name = configName,
         application = "keel",
         serviceAccount = "keel@spinnaker",
-        artifactSpecs = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
+        artifacts = setOf(DockerArtifactSpec(name = "org/thing-1", deliveryConfigName = configName, reference = "thing")),
         environments = setOf(
           SubmittedEnvironment(
             name = "test",

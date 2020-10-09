@@ -77,7 +77,7 @@ internal class DeliveryConfigTransactionTests : JUnit5Minutests {
       name = "keel-manifest",
       application = "keel",
       serviceAccount = "keel@spinnaker",
-      artifactSpecs = setOf(
+      artifacts = setOf(
         DebianArtifactSpec(
           name = "keel",
           deliveryConfigName = "keel-manifest",

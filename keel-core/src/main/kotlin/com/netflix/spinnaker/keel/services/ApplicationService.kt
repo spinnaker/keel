@@ -323,7 +323,7 @@ class ApplicationService(
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
     val releaseStatus = repository.getReleaseStatus(artifact, version)
     val artifactInstance = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
-      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifactSpec.")
+      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
 
     return ArtifactVersionSummary(
       version = version,

@@ -179,7 +179,7 @@ class EnvironmentConstraintRunner(
       log.debug("Queueing version $version of ${artifact.type} artifact ${artifact.name} in environment $targetEnvironment for approval")
       repository.queueAllConstraintsApproved(deliveryConfig.name, targetEnvironment, version, artifact.reference)
     } else {
-      log.debug("Not queueing version $version of $artifactSpec in environment $targetEnvironment for approval as it's already approved")
+      log.debug("Not queueing version $version of $artifact in environment $targetEnvironment for approval as it's already approved")
     }
   }
 

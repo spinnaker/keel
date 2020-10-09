@@ -277,14 +277,14 @@ internal class ArtifactListenerTests : JUnit5Minutests {
   }
 
   data class SyncArtifactsFixture(
-    val debArtifactSpec: ArtifactSpec,
+    val debArtifact: ArtifactSpec,
     val dockerArtifact: DockerArtifactSpec
   ) : ArtifactListenerFixture()
 
   fun syncArtifactsFixture() = rootContext<SyncArtifactsFixture> {
     fixture {
       SyncArtifactsFixture(
-        debArtifactSpec = debianArtifact,
+        debArtifact = debianArtifact,
         dockerArtifact = dockerArtifact
       )
     }
@@ -301,15 +301,15 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("we don't have any versions of the artifacts") {
       before {
-        every { repository.getAllArtifacts() } returns listOf(debArtifactSpec, dockerArtifact)
-        every { repository.artifactVersions(debArtifactSpec, any()) } returns emptyList()
+        every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
+        every { repository.artifactVersions(debArtifact, any()) } returns emptyList()
         every { repository.artifactVersions(dockerArtifact, any()) } returns emptyList()
       }
 
       context("versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
           } returns publishedDeb
 
           every {
@@ -335,8 +335,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           }
 
           with(artifactVersions[1]) {
-            expectThat(name).isEqualTo(debArtifactSpec.name)
-            expectThat(type).isEqualTo(debArtifactSpec.type)
+            expectThat(name).isEqualTo(debArtifact.name)
+            expectThat(type).isEqualTo(debArtifact.type)
             expectThat(version).isEqualTo(publishedDeb.version)
             expectThat(status).isEqualTo(FINAL)
             expectThat(gitMetadata).isEqualTo(artifactMetadata.gitMetadata)
@@ -348,15 +348,15 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("there are artifacts with versions stored") {
       before {
-        every { repository.getAllArtifacts() } returns listOf(debArtifactSpec, dockerArtifact)
-        every { repository.artifactVersions(debArtifactSpec, any()) } returns listOf(publishedDeb.version)
+        every { repository.getAllArtifacts() } returns listOf(debArtifact, dockerArtifact)
+        every { repository.artifactVersions(debArtifact, any()) } returns listOf(publishedDeb.version)
         every { repository.artifactVersions(dockerArtifact, any()) } returns listOf(publishedDocker.version)
       }
 
       context("no newer versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
           } returns publishedDeb
 
           every {
@@ -373,7 +373,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
       context("newer versions are available") {
         before {
           every {
-            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifactSpec)
+            debianArtifactSupplier.getLatestArtifact(deliveryConfig, debArtifact)
           } returns newerPublishedDeb
 
           every {
@@ -399,8 +399,8 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           }
 
           with(artifactVersions[1]) {
-            expectThat(name).isEqualTo(debArtifactSpec.name)
-            expectThat(type).isEqualTo(debArtifactSpec.type)
+            expectThat(name).isEqualTo(debArtifact.name)
+            expectThat(type).isEqualTo(debArtifact.type)
             expectThat(version).isEqualTo(newerPublishedDeb.version)
             expectThat(status).isEqualTo(FINAL)
             expectThat(gitMetadata).isEqualTo(artifactMetadata.gitMetadata)

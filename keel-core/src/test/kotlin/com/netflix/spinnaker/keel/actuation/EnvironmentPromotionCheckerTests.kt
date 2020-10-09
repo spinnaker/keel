@@ -206,7 +206,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
               PinnedEnvironment(
                 deliveryConfigName = deliveryConfig.name,
                 targetEnvironment = environment.name,
-                artifactSpec = dockerArtifact,
+                artifact = dockerArtifact,
                 version = "1.0",
                 pinnedBy = null,
                 pinnedAt = null,
@@ -331,7 +331,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
             PinnedEnvironment(
               deliveryConfigName = multiEnvConfig.name,
               targetEnvironment = env1.name,
-              artifactSpec = dockerArtifact,
+              artifact = dockerArtifact,
               version = "2.0",
               pinnedBy = null,
               pinnedAt = null,

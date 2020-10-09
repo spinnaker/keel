@@ -76,7 +76,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
     name = "keel-manifest",
     application = "keel",
     serviceAccount = "keel@spinnaker",
-    artifactSpecs = setOf(
+    artifacts = setOf(
       DebianArtifactSpec(
         name = "keel",
         vmOptions = VirtualMachineOptions(
@@ -112,7 +112,7 @@ internal class DeliveryConfigControllerTests : JUnit5Minutests {
     name = safeName,
     application = application,
     serviceAccount = serviceAccount!!,
-    artifacts = artifactSpecs,
+    artifacts = artifacts,
     environments = environments.map {
       Environment(
         name = it.name,

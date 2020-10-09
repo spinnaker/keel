@@ -54,7 +54,7 @@ class AdHocDifferTests : JUnit5Minutests {
       name = "keel-manifest",
       application = "keel",
       serviceAccount = "keel@spinnaker",
-      artifactSpecs = setOf(DebianArtifactSpec(name = "keel", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
+      artifacts = setOf(DebianArtifactSpec(name = "keel", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
       environments = setOf(
         SubmittedEnvironment(
           name = "test",

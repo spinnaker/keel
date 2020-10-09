@@ -64,7 +64,7 @@ class CombinedRepository(
       application = submittedDeliveryConfig.application,
       serviceAccount = submittedDeliveryConfig.serviceAccount
         ?: error("No service account specified, and no default applied"),
-      artifacts = submittedDeliveryConfig.artifactSpecs.transform(submittedDeliveryConfig.safeName),
+      artifacts = submittedDeliveryConfig.artifacts.transform(submittedDeliveryConfig.safeName),
       environments = submittedDeliveryConfig.environments.mapTo(mutableSetOf()) { env ->
         Environment(
           name = env.name,

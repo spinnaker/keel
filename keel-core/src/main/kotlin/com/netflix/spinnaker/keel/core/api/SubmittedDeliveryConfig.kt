@@ -17,7 +17,7 @@ data class SubmittedDeliveryConfig(
   val name: String?,
   @Description("The service account Spinnaker will authenticate with when making changes.")
   val serviceAccount: String?,
-  val artifactSpecs: Set<ArtifactSpec> = emptySet(),
+  val artifacts: Set<ArtifactSpec> = emptySet(),
   val environments: Set<SubmittedEnvironment> = emptySet(),
   val metadata: Map<String, Any?>? = emptyMap()
 ) {
