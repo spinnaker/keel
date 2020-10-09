@@ -57,8 +57,6 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         "date" to "1598707355157"
       )
     )
-
-
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 

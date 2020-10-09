@@ -16,7 +16,6 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -30,8 +29,6 @@ class DockerArtifactSupplier(
   override val artifactMetadataService: ArtifactMetadataService
 ) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
-
 
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
@@ -139,6 +136,4 @@ class DockerArtifactSupplier(
       ?.let { it.strategy in listOf(BRANCH_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_SEMVER) }
       ?: false
   }
-
-
 }
