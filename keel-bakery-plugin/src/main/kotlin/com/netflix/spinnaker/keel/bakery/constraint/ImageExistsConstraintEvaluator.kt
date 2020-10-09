@@ -10,6 +10,8 @@ import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
+import com.netflix.spinnaker.keel.caffeine.CacheFactory
+import com.netflix.spinnaker.keel.caffeine.getOrLoad
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.getConfig
@@ -29,7 +31,8 @@ import org.springframework.stereotype.Component
 class ImageExistsConstraintEvaluator(
   private val imageService: ImageService,
   private val dynamicConfigService: DynamicConfigService,
-  override val eventPublisher: EventPublisher
+  override val eventPublisher: EventPublisher,
+  cacheFactory: CacheFactory
 ) : ConstraintEvaluator<ImageExistsConstraint> {
 
   override fun isImplicit(): Boolean = true
@@ -50,15 +53,21 @@ class ImageExistsConstraintEvaluator(
     return image != null
   }
 
+  private val cache = cacheFactory.buildAsyncCache<String, NamedImage>(
+    cacheName = "namedImages"
+  )
+
   private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? =
     runBlocking {
-      log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
-      imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version"),
-        defaultImageAccount,
-        vmOptions.regions
-      )
+      cache.getOrLoad("$defaultImageAccount:$version:${vmOptions.regions.sorted().joinToString()}") {
+        log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
+        imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+          // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
+          AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version"),
+          defaultImageAccount,
+          vmOptions.regions
+        )
+      }
     }
 
   private val defaultImageAccount: String

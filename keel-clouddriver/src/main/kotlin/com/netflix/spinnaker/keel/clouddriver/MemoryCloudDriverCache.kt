@@ -16,28 +16,17 @@
 package com.netflix.spinnaker.keel.clouddriver
 
 import com.github.benmanes.caffeine.cache.AsyncCache
-import com.github.benmanes.caffeine.cache.Caffeine
-import com.netflix.spinnaker.config.CacheProperties
+import com.netflix.spinnaker.keel.caffeine.CacheFactory
+import com.netflix.spinnaker.keel.caffeine.getOrLoad
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
-import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import retrofit2.HttpException
 import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executor
-import java.util.function.BiFunction
 
 /**
  * An in-memory cache for calls against cloud driver
@@ -50,54 +39,37 @@ import java.util.function.BiFunction
  */
 class MemoryCloudDriverCache(
   private val cloudDriver: CloudDriverService,
-  private val meterRegistry: MeterRegistry,
-  private val cacheProperties: CacheProperties = CacheProperties()
+  cacheFactory: CacheFactory
 ) : CloudDriverCache {
 
-  private val securityGroupSummariesByIdOrName = buildAsyncCache<String, SecurityGroupSummary>(
+  private val securityGroupSummariesByIdOrName = cacheFactory.buildAsyncCache<String, SecurityGroupSummary>(
     cacheName = "securityGroups",
     defaultExpireAfterWrite = Duration.ofMinutes(10)
   )
 
-  private val networks = buildAsyncCache<String, Network>(
+  private val networks = cacheFactory.buildAsyncCache<String, Network>(
     cacheName = "networks"
   )
 
-  private val availabilityZones = buildAsyncCache<String, Set<String>>(
+  private val availabilityZones = cacheFactory.buildAsyncCache<String, Set<String>>(
     cacheName = "availabilityZones"
   )
 
-  private val credentials = buildAsyncCache<String, Credential>(
+  private val credentials = cacheFactory.buildAsyncCache<String, Credential>(
     cacheName = "credentials"
   )
 
-  private val subnetsById = buildAsyncCache<String, Subnet>(
+  private val subnetsById = cacheFactory.buildAsyncCache<String, Subnet>(
     cacheName = "subnetsById"
   )
 
-  private val subnetsByPurpose = buildAsyncCache<String, Subnet>(
+  private val subnetsByPurpose = cacheFactory.buildAsyncCache<String, Subnet>(
     cacheName = "subnetsByPurpose"
-  )
-
-  private val namedImagesByAccountAndImageName = buildAsyncCache<String, List<NamedImage>>(
-    cacheName = "namedImages",
-    defaultExpireAfterWrite = Duration.ofMinutes(5)
   )
 
   override fun credentialBy(name: String): Credential =
     credentials.getOrNotFound(name, "Credentials with name $name not found") {
       cloudDriver.getCredential(name, DEFAULT_SERVICE_ACCOUNT)
-    }
-
-  /**
-   * Convert a suspending function to a [BiFunction] that [AsyncCache.get] expects as its second argument
-   *
-   * Uses a coroutine dispatcher based on the cache's [Executor].
-   */
-  private fun <K, V> asyncify(block: suspend CoroutineScope.(K) -> V?): BiFunction<K, Executor, CompletableFuture<V?>> =
-    BiFunction { key, executor ->
-      CoroutineScope(executor.asCoroutineDispatcher())
-        .future(block = { block(key) })
     }
 
   override fun securityGroupById(account: String, region: String, id: String): SecurityGroupSummary =
@@ -139,16 +111,13 @@ class MemoryCloudDriverCache(
 
   override fun availabilityZonesBy(account: String, vpcId: String, purpose: String, region: String): Set<String> =
     runBlocking {
-      availabilityZones.get(
-        "$account:$vpcId:$purpose:$region",
-        asyncify {
-          cloudDriver
-            .listSubnets("aws", DEFAULT_SERVICE_ACCOUNT)
-            .filter { it.account == account && it.vpcId == vpcId && it.purpose == purpose && it.region == region }
-            .map { it.availabilityZone }
-            .toSet()
-        }
-      ).await()
+      availabilityZones.getOrLoad("$account:$vpcId:$purpose:$region") {
+        cloudDriver
+          .listSubnets("aws", DEFAULT_SERVICE_ACCOUNT)
+          .filter { it.account == account && it.vpcId == vpcId && it.purpose == purpose && it.region == region }
+          .map { it.availabilityZone }
+          .toSet()
+      } ?: emptySet()
     }
 
   override fun subnetBy(subnetId: String): Subnet =
@@ -165,21 +134,13 @@ class MemoryCloudDriverCache(
         .find { it.account == account && it.region == region && it.purpose == purpose }
     }
 
-  override fun namedImages(imageName: String, account: String): List<NamedImage> =
-    runBlocking {
-      namedImagesByAccountAndImageName.get(
-        "$account:$imageName",
-        asyncify { cloudDriver.namedImages(DEFAULT_SERVICE_ACCOUNT, imageName, account) }
-      ).await() ?: emptyList()
-    }
-
   private fun <K, V> AsyncCache<K, V>.getOrNotFound(
     key: K,
     notFoundMessage: String,
     loader: suspend CoroutineScope.(K) -> V?
   ): V = runCatching {
     runBlocking {
-      get(key, asyncify(loader)).await()
+      getOrLoad(key, loader)
     }
   }.getOrElse { ex ->
     if (ex is HttpException && ex.code() == 404) {
@@ -188,20 +149,4 @@ class MemoryCloudDriverCache(
       throw CacheLoadingException("Error loading cache for $key", ex)
     }
   } ?: throw ResourceNotFound(notFoundMessage)
-
-  private fun <K, V> buildAsyncCache(
-    cacheName: String,
-    defaultMaximumSize: Long = 1000,
-    defaultExpireAfterWrite: Duration = Duration.ofHours(1)
-  ): AsyncCache<K, V> =
-    Caffeine.newBuilder()
-      .executor(IO.asExecutor())
-      .maximumSize(cacheProperties.caches[cacheName]?.maximumSize ?: defaultMaximumSize)
-      .expireAfterWrite(cacheProperties.caches[cacheName]?.expireAfterWrite
-        ?: defaultExpireAfterWrite)
-      .recordStats()
-      .buildAsync<K, V>()
-      .apply {
-        CaffeineCacheMetrics.monitor(meterRegistry, this, cacheName)
-      }
 }

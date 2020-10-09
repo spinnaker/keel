@@ -1,12 +1,12 @@
 package com.netflix.spinnaker.keel.clouddriver
 
+import com.netflix.spinnaker.keel.caffeine.TEST_CACHE_FACTORY
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_SERVICE_UNAVAILABLE
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -20,8 +20,7 @@ import io.mockk.coEvery as every
 object MemoryCloudDriverCacheTest {
 
   val cloudDriver = mockk<CloudDriverService>()
-  val meterRegistry = SimpleMeterRegistry()
-  val subject = MemoryCloudDriverCache(cloudDriver, meterRegistry)
+  val subject = MemoryCloudDriverCache(cloudDriver, TEST_CACHE_FACTORY)
 
   val sg1 = SecurityGroupSummary("foo", "sg-1", "vpc-1")
   val sg2 = SecurityGroupSummary("bar", "sg-2", "vpc-1")
