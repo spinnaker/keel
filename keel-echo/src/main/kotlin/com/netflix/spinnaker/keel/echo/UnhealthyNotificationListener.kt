@@ -48,7 +48,9 @@ class UnhealthyNotificationListener(
         unhealthyRepository.markUnhealthy(event.resource.id)
         val unhealthyDuration = unhealthyRepository.durationUnhealthy(event.resource.id)
         if (unhealthyDuration > config.minUnhealthyDuration) {
-          publisher.publishEvent(NotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event.resource, unhealthyDuration)))
+          publisher.publishEvent(
+            NotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event.resource, unhealthyDuration, event.unhealthyRegions))
+          )
         }
       }
     }
@@ -57,10 +59,8 @@ class UnhealthyNotificationListener(
   /**
    *  Assumption: health is only for clusters, and we have specific requirements
    *  about what the spec looks like in order to construct the notification link
-   *
-   *  Future improvement: add in how long the resource has been unhealthy for
    */
-  fun message(resource: Resource<*>, unhealthyDuration: Duration): Notification {
+  fun message(resource: Resource<*>, unhealthyDuration: Duration, regions: List<String>): Notification {
     val spec = resource.spec
     if (spec !is Monikered) {
       throw UnsupportedResourceTypeException("Resource kind ${resource.kind} must be monikered to construct resource links")
@@ -82,7 +82,7 @@ class UnhealthyNotificationListener(
     val resourceUrl = "$spinnakerBaseUrl/#/applications/${resource.application}/clusters?${params.toURL()}"
 
     return Notification(
-      subject = "${resource.spec.displayName} is unhealthy",
+      subject = "${resource.spec.displayName} is unhealthy in ${regions.joinToString(" and ")}",
       body = "<$resourceUrl|${resource.id}> has been unhealthy for ${friendlyDuration(unhealthyDuration)} and " +
         "Spinnaker can't fix it. " +
         "Manual intervention might be required. Please check the History view for more details.",

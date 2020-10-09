@@ -318,7 +318,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         }
 
         test("an unhealthy event fires") {
-          verify(exactly = 1) { publisher.publishEvent(ResourceHealthEvent(resource, false)) }
+          verify(exactly = 1) { publisher.publishEvent(ResourceHealthEvent(resource, false, listOf("us-east-1", "us-west-2"))) }
         }
 
         test("no deployed event fires") {
