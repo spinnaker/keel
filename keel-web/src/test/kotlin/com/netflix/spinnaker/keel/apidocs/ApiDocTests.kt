@@ -246,12 +246,15 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     test("schemas for ArtifactSpec sub-types specify the fixed discriminator value") {
-      at("/\$defs/DebianArtifact/properties/type/const")
+      at("/\$defs/DebianArtifactSpec/properties/type/const")
         .textValue()
         .isEqualTo("deb")
-      at("/\$defs/DockerArtifact/properties/type/const")
+      at("/\$defs/DockerArtifactSpec/properties/type/const")
         .textValue()
         .isEqualTo("docker")
+      at("/\$defs/NpmArtifactSpec/properties/type/const")
+        .textValue()
+        .isEqualTo("npm")
     }
 
     test("data class parameters without default values are required") {
