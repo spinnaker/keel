@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -29,9 +30,27 @@ class DockerArtifactSupplier(
   override val artifactMetadataService: ArtifactMetadataService
 ) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
 
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
+
+  override fun publishArtifact(artifact: PublishedArtifact) {
+    if (artifact.hasDate()) {
+      super.publishArtifact(artifact.copy(
+        //changing date to createdAt, to match other artifact types
+        metadata = artifact.metadata.toMutableMap().also {
+         it["createdAt"] = artifact.metadata["date"]
+          it.remove("date")
+        }
+        ))
+
+    } else {
+      log.debug("Docker artifact: ${artifact.name} does not contains a date.")
+      super.publishArtifact(artifact)
+    }
+  }
 
   override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? {
     return runWithIoContext {
@@ -136,4 +155,9 @@ class DockerArtifactSupplier(
       ?.let { it.strategy in listOf(BRANCH_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_SEMVER) }
       ?: false
   }
+
+  // Check whether the artifact has date information from docker registry
+  private fun PublishedArtifact.hasDate() =
+    this.metadata.containsKey("date") && this.metadata["date"] != null
+
 }
