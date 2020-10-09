@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
+import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
@@ -53,9 +54,20 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         "buildNumber" to "1",
         "commitId" to "a15p0",
         "branch" to "master",
-        "createdAt" to "1598707355157"
+        "date" to "1598707355157"
       )
     )
+
+    val latestArtifactEvent = ArtifactPublishedEvent(
+      artifacts = listOf(latestArtifactWithMetadata.copy(
+      metadata = latestArtifactWithMetadata.metadata.toMutableMap().also {
+        it["createdAt"] = latestArtifactWithMetadata.metadata["date"]
+        it.remove("date")
+      }
+    )),
+      details = emptyMap()
+    )
+
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 
@@ -131,6 +143,17 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         }
         expectThat(results)
           .isEqualTo(artifactMetadata)
+      }
+
+    }
+
+    context("DockerArtifactSupplier publish event with processed artifact") {
+
+      test("returns artifact metadata based on ci provider") {
+        dockerArtifactSupplier.publishArtifact(latestArtifactWithMetadata)
+        verify(exactly = 1) {
+          expectThat(dockerArtifactSupplier.eventPublisher.publishEvent(latestArtifactEvent))
+        }
       }
 
     }
