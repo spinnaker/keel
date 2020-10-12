@@ -54,8 +54,9 @@ data class PublishedArtifact(
 
   val createdAt = let {
     metadata["createdAt"]
-      //docker artifact createdAt time is under date field
+    //docker artifact createdAt time is under date field
       ?: metadata["date"]
+  }
     ?.let {
       when (it) {
         is Long -> Instant.ofEpochMilli(it) // to accommodate for artifact events from CI integration
