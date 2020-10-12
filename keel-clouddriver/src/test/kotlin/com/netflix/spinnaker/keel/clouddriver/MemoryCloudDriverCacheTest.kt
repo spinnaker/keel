@@ -16,8 +16,9 @@ import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import io.mockk.coEvery as every
+import io.mockk.coVerify as verify
 
-object MemoryCloudDriverCacheTest {
+internal class MemoryCloudDriverCacheTest {
 
   val cloudDriver = mockk<CloudDriverService>()
   val subject = MemoryCloudDriverCache(cloudDriver, TEST_CACHE_FACTORY)
@@ -81,6 +82,25 @@ object MemoryCloudDriverCacheTest {
         get { name }.isEqualTo("foo")
         get { id }.isEqualTo("sg-1")
       }
+    }
+  }
+
+  @Test
+  fun `subsequent requests for the same security groups are served from the cache`() {
+    every {
+      cloudDriver.getSecurityGroupSummaryByName("prod", "aws", "us-east-1", "foo")
+    } returns sg1
+    every {
+      cloudDriver.getCredential("prod")
+    } returns Credential("prod", "aws")
+
+    subject.securityGroupByName("prod", "us-east-1", "foo")
+
+    verify(exactly = 1) {
+      cloudDriver.getSecurityGroupSummaryByName(any(), any(), any(), any())
+    }
+    verify(exactly = 1) {
+      cloudDriver.getCredential(any())
     }
   }
 

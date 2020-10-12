@@ -11,12 +11,12 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.caffeine.CacheFactory
-import com.netflix.spinnaker.keel.caffeine.getOrLoad
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.getConfig
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import com.netflix.spinnaker.kork.exceptions.SystemException
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -53,21 +53,27 @@ class ImageExistsConstraintEvaluator(
     return image != null
   }
 
-  private val cache = cacheFactory.buildAsyncCache<String, NamedImage>(
-    cacheName = "namedImages"
+  private data class Key(
+    val account: String,
+    val version: String,
+    val regions: Set<String>
   )
+
+  private val cache = cacheFactory
+    .asyncLoadingCache<Key, NamedImage>(cacheName = "namedImages") { key ->
+      log.debug("Searching for baked image for {} in {}", key.version, key.regions.joinToString())
+      imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
+        appVersion = AppVersion.parseName(key.version)
+          ?: throw SystemException("Invalid AMI app version: ${key.version}"),
+        account = key.account,
+        regions = key.regions
+      )
+    }
 
   private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? =
     runBlocking {
-      cache.getOrLoad("$defaultImageAccount:$version:${vmOptions.regions.sorted().joinToString()}") {
-        log.debug("Searching for baked image for {} in {}", version, vmOptions.regions.joinToString())
-        imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-          // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-          AppVersion.parseName(version) ?: throw SystemException("Invalid AMI app version: $version"),
-          defaultImageAccount,
-          vmOptions.regions
-        )
-      }
+      cache.get(Key(defaultImageAccount, version, vmOptions.regions)).await()
     }
 
   private val defaultImageAccount: String
