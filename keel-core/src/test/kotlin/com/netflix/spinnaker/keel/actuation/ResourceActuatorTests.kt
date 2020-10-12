@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.plugins.ActionDecision
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
@@ -91,8 +92,10 @@ internal class ResourceActuatorTests : JUnit5Minutests {
 
     before {
       every { plugin1.name } returns "plugin1"
+      every { plugin1.willTakeAction(any(), any()) } returns ActionDecision()
       every { plugin1.supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyArtifactVersionedResourceSpec::class.java)
       every { plugin2.name } returns "plugin2"
+      every { plugin2.willTakeAction(any(), any()) } returns ActionDecision()
       every { plugin2.supportedKind } returns SupportedKind(parseKind("plugin2/bar@v1"), DummyArtifactVersionedResourceSpec::class.java)
     }
 

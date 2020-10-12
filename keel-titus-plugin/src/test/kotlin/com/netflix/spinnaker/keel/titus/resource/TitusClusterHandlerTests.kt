@@ -356,7 +356,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         )
         test("we will take action"){
           val response = runBlocking { willTakeAction(resource, diff) }
-          expectThat(response.willTakeAction).isTrue()
+          expectThat(response.willAct).isTrue()
         }
       }
 
@@ -378,7 +378,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
           test("we will take action"){
             val response = runBlocking { willTakeAction(resource, diff) }
-            expectThat(response.willTakeAction).isTrue()
+            expectThat(response.willAct).isTrue()
           }
         }
 
@@ -396,7 +396,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           }
           test("we won't take action"){
             val response = runBlocking { willTakeAction(resource, diff) }
-            expectThat(response.willTakeAction).isFalse()
+            expectThat(response.willAct).isFalse()
           }
         }
       }

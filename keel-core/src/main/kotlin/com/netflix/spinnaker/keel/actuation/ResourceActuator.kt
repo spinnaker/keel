@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.actuation.Task
-import com.netflix.spinnaker.keel.api.plugins.ActionResponse
+import com.netflix.spinnaker.keel.api.plugins.ActionDecision
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
@@ -173,8 +173,8 @@ class ResourceActuator(
 
         log.debug("Checking resource {}", id)
 
-        val actionResponse = plugin.willTakeAction(resource, diff)
-        if (actionResponse.willTakeAction) {
+        val decision = plugin.willTakeAction(resource, diff)
+        if (decision.willAct) {
           when {
             current == null -> {
               log.warn("Resource {} is missing", id)
@@ -212,8 +212,8 @@ class ResourceActuator(
             }
           }
         } else {
-          log.info("Resource {} skipped because it can't be fixed: ${actionResponse.message}", id)
-          publisher.publishEvent(ResourceDiffNotActionable(resource, actionResponse.message))
+          log.warn("Resource {} skipped because it can't be fixed: ${decision.message}", id)
+          publisher.publishEvent(ResourceDiffNotActionable(resource, decision.message))
         }
       } catch (e: ResourceCurrentlyUnresolvable) {
         log.warn("Resource check for {} failed (hopefully temporarily) due to {}", id, e.message)
@@ -294,7 +294,7 @@ class ResourceActuator(
   private suspend fun <S : ResourceSpec, R : Any> ResourceHandler<S, R>.willTakeAction(
     resource: Resource<*>,
     resourceDiff: ResourceDiff<*>
-  ): ActionResponse =
+  ): ActionDecision =
     willTakeAction(resource as Resource<S>, resourceDiff as ResourceDiff<R>)
 
   @Suppress("UNCHECKED_CAST")

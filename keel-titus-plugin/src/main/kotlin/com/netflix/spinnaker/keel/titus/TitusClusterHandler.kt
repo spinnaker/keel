@@ -36,7 +36,7 @@ import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.InstanceCounts
-import com.netflix.spinnaker.keel.api.plugins.ActionResponse
+import com.netflix.spinnaker.keel.api.plugins.ActionDecision
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
@@ -125,7 +125,7 @@ class TitusClusterHandler(
   override suspend fun willTakeAction(
     resource: Resource<TitusClusterSpec>,
     resourceDiff: ResourceDiff<Map<String, TitusServerGroup>>
-  ): ActionResponse {
+  ): ActionDecision {
     // we can't take any action if there is more than one active server group
     //  AND the current active server group is unhealthy
     val potentialInactionableRegions = mutableListOf<String>()
@@ -147,8 +147,8 @@ class TitusClusterHandler(
         }
       }
       if (inactionableRegions.isNotEmpty()) {
-        return ActionResponse(
-          willTakeAction = false,
+        return ActionDecision(
+          willAct = false,
           message = "There is more than one server group enabled " +
             "but the latest is not healthy in ${inactionableRegions.joinToString(" and ")}. " +
             "Spinnaker cannot resolve the problem at this time, " +
@@ -156,7 +156,7 @@ class TitusClusterHandler(
         )
       }
     }
-    return ActionResponse(willTakeAction = true)
+    return ActionDecision(willAct = true)
   }
 
   override suspend fun upsert(
