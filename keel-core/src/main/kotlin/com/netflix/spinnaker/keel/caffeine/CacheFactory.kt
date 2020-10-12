@@ -72,6 +72,6 @@ class CacheFactory(
 }
 
 /**
- * A [CacheFactory] usable in tests that uses no-op metering and null configuration.
+ * A [CacheFactory] usable in tests that uses no-op metering and default configuration.
  */
 val TEST_CACHE_FACTORY = CacheFactory(SimpleMeterRegistry(), CacheProperties())

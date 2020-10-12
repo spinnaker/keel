@@ -88,12 +88,13 @@ internal class MemoryCloudDriverCacheTest {
   @Test
   fun `subsequent requests for the same security groups are served from the cache`() {
     every {
-      cloudDriver.getSecurityGroupSummaryByName("prod", "aws", "us-east-1", "foo")
-    } returns sg1
-    every {
       cloudDriver.getCredential("prod")
     } returns Credential("prod", "aws")
+    every {
+      cloudDriver.getSecurityGroupSummaryByName("prod", "aws", "us-east-1", "foo")
+    } returns sg1
 
+    subject.securityGroupByName("prod", "us-east-1", "foo")
     subject.securityGroupByName("prod", "us-east-1", "foo")
 
     verify(exactly = 1) {
@@ -106,6 +107,9 @@ internal class MemoryCloudDriverCacheTest {
 
   @Test
   fun `a 404 from CloudDriver is translated into a ResourceNotFound exception`() {
+    every {
+      cloudDriver.getCredential("prod")
+    } returns Credential("prod", "aws")
     every {
       cloudDriver.getSecurityGroupSummaryById("prod", "aws", "us-east-1", "sg-4")
     } throws RETROFIT_NOT_FOUND
@@ -189,8 +193,8 @@ internal class MemoryCloudDriverCacheTest {
   @Test
   fun `an invalid account, VPC id and region returns an empty set`() {
     every {
-      cloudDriver.listNetworks()
-    } returns mapOf("aws" to vpcs)
+      cloudDriver.listSubnets("aws")
+    } returns subnets
 
     expectThat(
       subject.availabilityZonesBy("test", "vpc-2", "external (vpc2)", "ew-west-1")
