@@ -54,7 +54,7 @@ data class PublishedArtifact(
 
   val createdAt = let {
     metadata["createdAt"]
-    //docker artifact createdAt time is under date field
+    //docker artifact createdAt time is under date field in metadata
       ?: metadata["date"]
   }
     ?.let {
