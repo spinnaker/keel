@@ -501,7 +501,7 @@ class TitusClusterHandler(
       }
     }
     val healthy: Boolean = unhealthyRegions.isEmpty()
-    eventPublisher.publishEvent(ResourceHealthEvent(resource, healthy, unhealthyRegions))
+    eventPublisher.publishEvent(ResourceHealthEvent(resource, healthy, unhealthyRegions, resource.spec.locations.regions.size))
 
     if (sameContainer && healthy) {
       // only publish a successfully deployed event if the server group is healthy

@@ -8,5 +8,6 @@ import com.netflix.spinnaker.keel.api.Resource
 data class ResourceHealthEvent(
   val resource: Resource<*>,
   val isHealthy: Boolean = true,
-  val unhealthyRegions: List<String> = emptyList()
+  val unhealthyRegions: List<String> = emptyList(),
+  val totalRegions: Int = 1
 )
