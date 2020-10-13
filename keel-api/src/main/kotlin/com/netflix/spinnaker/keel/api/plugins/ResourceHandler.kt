@@ -84,7 +84,7 @@ interface ResourceHandler<S : ResourceSpec, R : Any> : SpinnakerExtensionPoint {
   suspend fun willTakeAction(
     resource: Resource<S>,
     resourceDiff: ResourceDiff<R>
-  ): ActionDecision = ActionDecision()
+  ): ActionDecision = ActionDecision(willAct = true)
 
   /**
    * Create a resource so that it matches the desired state represented by [resource].

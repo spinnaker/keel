@@ -212,7 +212,10 @@ class ResourceActuator(
             }
           }
         } else {
-          log.warn("Resource {} skipped because it can't be fixed: ${decision.message}", id)
+          log.warn("Resource {} skipped because it can't be fixed: {} (diff: {})", id, decision.message, diff.toDeltaJson())
+          if (diff.hasChanges()) {
+            publisher.publishEvent(ResourceDeltaDetected(resource, diff.toDeltaJson(), clock))
+          }
           publisher.publishEvent(ResourceDiffNotActionable(resource, decision.message))
         }
       } catch (e: ResourceCurrentlyUnresolvable) {

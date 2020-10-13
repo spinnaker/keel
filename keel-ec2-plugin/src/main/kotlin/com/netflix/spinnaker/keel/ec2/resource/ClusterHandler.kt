@@ -146,8 +146,8 @@ class ClusterHandler(
           willAct = false,
           message = "There is more than one server group enabled " +
             "but the latest is not healthy in ${inactionableRegions.joinToString(" and ")}. " +
-            "Spinnaker cannot resolve the problem at this time, " +
-            "manual intervention might be required."
+            "Spinnaker cannot resolve the problem at this time. " +
+            "Manual intervention might be required."
         )
       }
     }

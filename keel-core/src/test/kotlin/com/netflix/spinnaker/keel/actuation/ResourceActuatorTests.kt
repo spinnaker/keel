@@ -495,6 +495,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
         }
 
         test("no action is taken and event is emitted") {
+          verify { publisher.publishEvent(ofType<ResourceDeltaDetected>()) }
           verify { publisher.publishEvent(any<ResourceDiffNotActionable>()) }
           verify(exactly = 0) { plugin1.create(any(), any()) }
           verify(exactly = 0) { plugin1.update(any(), any()) }
