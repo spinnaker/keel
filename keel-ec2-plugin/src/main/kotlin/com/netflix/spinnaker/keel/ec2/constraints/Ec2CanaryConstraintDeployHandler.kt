@@ -18,6 +18,7 @@ import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.ec2.resolvers.ImageResolver
 import com.netflix.spinnaker.keel.retrofit.isNotFound
+import com.netflix.spinnaker.kork.exceptions.SystemException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -55,7 +56,12 @@ class Ec2CanaryConstraintDeployHandler(
 
     val image = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
       // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-      appVersion = AppVersion.parseName(version.replace("~", "_")),
+      appVersion = try {
+        AppVersion.parseName(version.replace("~", "_"))
+      } catch (ex: Exception) {
+        log.error("trying to parse name for version $version but got an exception", ex)
+        throw SystemException("Invalid for version $version")
+      },
       account = imageResolver.defaultImageAccount,
       regions = constraint.regions.toList()
     )

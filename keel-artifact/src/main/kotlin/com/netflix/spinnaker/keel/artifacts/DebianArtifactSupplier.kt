@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
+import org.apache.logging.log4j.util.Strings
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -62,32 +63,47 @@ class DebianArtifactSupplier(
 
   override fun getVersionDisplayName(artifact: PublishedArtifact): String {
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
-    return if (appversion?.version != null) {
-      appversion.version
-    } else {
-      artifact.version.removePrefix("${artifact.name}-")
+    return try {
+      val appversion = AppVersion.parseName(artifact.version)
+      if (appversion?.version != null) {
+        return appversion.version
+      } else {
+        return artifact.version.removePrefix("${artifact.name}-")
+      }
+    } catch (ex: Exception) {
+      log.warn("trying to parse artifact ${artifact.name} with version ${artifact.version} but got an exception", ex)
+      Strings.EMPTY
     }
   }
 
   override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
-    if (appversion?.buildNumber != null) {
-      return BuildMetadata(id = appversion.buildNumber.toInt())
+    return try {
+      val appversion = AppVersion.parseName(artifact.version)
+      if (appversion?.buildNumber != null) {
+        return BuildMetadata(id = appversion.buildNumber.toInt())
+      }
+      null
+    } catch (ex: Exception) {
+      log.warn("trying to parse build metadata for artifact ${artifact.name} with version ${artifact.version} but got an exception", ex)
+      null
     }
-    return null
   }
 
   override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
-    if (appversion?.commit != null) {
-      return GitMetadata(commit = appversion.commit)
+    return try {
+      val appversion = AppVersion.parseName(artifact.version)
+      if (appversion?.commit != null) {
+        return GitMetadata(commit = appversion.commit)
+      }
+      null
+    } catch (ex: Exception) {
+      log.warn("trying to parse git metadata for artifact ${artifact.name} with version ${artifact.version} but got an exception", ex)
+      null
     }
-    return null
   }
 
 

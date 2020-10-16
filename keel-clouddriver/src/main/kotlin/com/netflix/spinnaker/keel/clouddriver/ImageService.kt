@@ -25,6 +25,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.hasAppVersion
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
+import com.netflix.spinnaker.kork.exceptions.SystemException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -75,7 +76,12 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .firstOrNull {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        AppVersion.parseName(it.appVersion).packageName == packageName
+        try {
+          AppVersion.parseName(it.appVersion).packageName == packageName
+        } catch (ex: Exception) {
+          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
+          throw SystemException("Invalid for version ${it.appVersion}")
+        }
       }
 
   /**
@@ -95,8 +101,13 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .firstOrNull {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        AppVersion.parseName(it.appVersion).run {
-          packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
+        try {
+          AppVersion.parseName(it.appVersion).run {
+            packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
+          }
+        } catch (ex: Exception) {
+          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
+          throw SystemException("Invalid for version ${it.appVersion}")
         }
       }
 
@@ -114,7 +125,12 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .find { namedImage ->
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        val curAppVersion = AppVersion.parseName(namedImage.appVersion)
+        val curAppVersion = try {
+          AppVersion.parseName(namedImage.appVersion)
+        } catch (ex: Exception) {
+          log.error("trying to parse name for image ${namedImage.imageName} with version ${namedImage.appVersion} but got an exception", ex)
+          throw SystemException("Invalid app version for image ${namedImage.imageName} with version ${namedImage.appVersion}")
+        }
         curAppVersion.packageName == appVersion.packageName &&
           curAppVersion.version == appVersion.version &&
           curAppVersion.commit == appVersion.commit &&
@@ -143,7 +159,12 @@ class ImageService(
       .find {
         val errors = mutableListOf<String>()
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        val curAppVersion = AppVersion.parseName(it.appVersion)
+        val curAppVersion = try {
+          AppVersion.parseName(it.appVersion)
+        } catch (ex: Exception) {
+          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
+          throw SystemException("Invalid for version ${it.appVersion}")
+        }
         if (curAppVersion.packageName != packageName) {
           errors.add("[package name ${curAppVersion.packageName} does not match required package]")
         }
@@ -178,7 +199,12 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .filter {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        AppVersion.parseName(it.appVersion).packageName == packageName
+        try {
+          AppVersion.parseName(it.appVersion).packageName == packageName
+        } catch (ex: Exception) {
+          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
+          throw SystemException("Invalid for version ${it.appVersion}")
+        }
       }
       .firstOrNull { namedImage ->
         val allTags = getAllTags(namedImage)
