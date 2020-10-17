@@ -40,6 +40,7 @@ import io.mockk.coEvery as every
 
 @Suppress("MemberVisibilityCanBePrivate")
 internal class LaunchConfigTests {
+
   @ParameterizedTest
   @EnumSource(LaunchInfo::class)
   fun `empty ramdisk id string is converted to null`(launchInfo: LaunchInfo) {
@@ -50,6 +51,11 @@ internal class LaunchConfigTests {
 
     expectThat(serverGroup(currentState).launchConfiguration.ramdiskId).isNull()
   }
+
+  //
+  // Everything below is just fixture and mocking setup
+  //
+
 
   /**
    * Given the output of ClusterHandler.current, return the ServerGroup object
