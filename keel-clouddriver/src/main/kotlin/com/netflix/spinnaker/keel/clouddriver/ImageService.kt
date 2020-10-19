@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImageComparator
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
+import com.netflix.spinnaker.keel.clouddriver.model.creationDate
 import com.netflix.spinnaker.keel.clouddriver.model.hasAppVersion
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
@@ -113,28 +114,40 @@ class ImageService(
    * Returns the latest image that is present in all regions.
    * Each ami must have tags.
    */
-  suspend fun getLatestNamedImageWithAllRegionsForAppVersion(appVersion: AppVersion, account: String, regions: Collection<String>): NamedImage? =
-    cloudDriverService.namedImages(
+  suspend fun getLatestNamedImageWithAllRegionsForAppVersion(appVersion: AppVersion, account: String, regions: Collection<String>): Collection<NamedImage> {
+    val requiredRegions = regions.toMutableSet()
+    val images = cloudDriverService.namedImages(
       user = DEFAULT_SERVICE_ACCOUNT,
       imageName = appVersion.toImageName().replace("~", "_"),
       account = account
     )
-      .filter { it.hasAppVersion }
-      .sortedWith(NamedImageComparator)
-      .find { namedImage ->
+      .asSequence()
+      // only consider images with tags and app version set properly
+      .filter { tagsExistForAllAmis(it.tagsByImageId) && it.hasAppVersion }
+      // filter to images with matching app version
+      .filter {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        val curAppVersion = try {
-          AppVersion.parseName(namedImage.appVersion)
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for image ${namedImage.imageName} with version ${namedImage.appVersion} but got an exception", ex)
-        }
-        curAppVersion.packageName == appVersion.packageName &&
-          curAppVersion.version == appVersion.version &&
-          curAppVersion.commit == appVersion.commit &&
-          namedImage.accounts.contains(account) &&
-          namedImage.amis.keys.containsAll(regions) &&
-          tagsExistForAllAmis(namedImage.tagsByImageId)
+        runCatching { AppVersion.parseName(it.appVersion) }
+          .getOrElse { ex ->
+            throw SystemException("trying to parse name for image ${it.imageName} with version ${it.appVersion} but got an exception", ex)
+          }
+          .run {
+            packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
+          }
       }
+      // filter to images in the correct account with at least one region we want
+      .filter { image ->
+        image.accounts.contains(account) && regions.any { it in image.amis.keys }
+      }
+      // reduce to the newest images required to support all regions we want
+      .sortedByDescending { it.creationDate }
+      .takeWhile { image ->
+        requiredRegions.isNotEmpty().also { requiredRegions.removeAll(image.amis.keys) }
+      }
+      .toList()
+    // if we didn't find an image for every required region, return nothing
+    return if (requiredRegions.isEmpty()) images else emptyList()
+  }
 
   /**
    * Returns the latest image that is present in all regions.

@@ -44,14 +44,8 @@ class ImageExistsConstraintEvaluator(
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment
-  ): Boolean {
-    if (artifact !is DebianArtifact) {
-      return true
-    }
-
-    val image = findMatchingImage(version, artifact.vmOptions)
-    return image != null
-  }
+  ): Boolean =
+    artifact !is DebianArtifact || findMatchingImages(version, artifact.vmOptions).isNotEmpty()
 
   private data class Key(
     val account: String,
@@ -60,7 +54,7 @@ class ImageExistsConstraintEvaluator(
   )
 
   private val cache = cacheFactory
-    .asyncLoadingCache<Key, NamedImage>(cacheName = "namedImages") { key ->
+    .asyncLoadingCache<Key, Collection<NamedImage>>(cacheName = "namedImages") { key ->
       log.debug("Searching for baked image for {} in {}", key.version, key.regions.joinToString())
       imageService.getLatestNamedImageWithAllRegionsForAppVersion(
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
@@ -71,7 +65,7 @@ class ImageExistsConstraintEvaluator(
       )
     }
 
-  private fun findMatchingImage(version: String, vmOptions: VirtualMachineOptions): NamedImage? =
+  private fun findMatchingImages(version: String, vmOptions: VirtualMachineOptions): Collection<NamedImage> =
     runBlocking {
       cache.get(Key(defaultImageAccount, version, vmOptions.regions)).await()
     }

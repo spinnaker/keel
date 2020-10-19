@@ -42,7 +42,7 @@ class ImageResolver(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   data class VersionedNamedImage(
-    val namedImage: NamedImage,
+    val namedImages: Collection<NamedImage>,
     val artifact: DeliveryArtifact?,
     val version: String?
   )
@@ -88,7 +88,7 @@ class ImageResolver(
       artifact,
       environment.name
     ) ?: throw NoImageSatisfiesConstraints(artifact.name, environment.name)
-    val image = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+    val images = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
       // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
       appVersion = try {
         AppVersion.parseName(artifactVersion)
@@ -97,9 +97,12 @@ class ImageResolver(
       },
       account = account,
       regions = regions
-    ) ?: throw NoImageFoundForRegions(artifactVersion, regions)
+    )
+    if (images.isEmpty()) {
+      throw NoImageFoundForRegions(artifactVersion, regions)
+    }
 
-    return VersionedNamedImage(image, artifact, artifactVersion)
+    return VersionedNamedImage(images, artifact, artifactVersion)
   }
 
   private suspend fun resolveFromJenkinsJob(
@@ -114,30 +117,34 @@ class ImageResolver(
     ) ?: throw NoImageFound(imageProvider.packageName)
 
     log.info("Image found for {}: {}", imageProvider.packageName, image)
-    return VersionedNamedImage(image, null, null)
+    return VersionedNamedImage(listOf(image), null, null)
   }
 
   private fun Resource<ClusterSpec>.withVirtualMachineImages(image: VersionedNamedImage): Resource<ClusterSpec> {
     val imageIdByRegion = image
-      .namedImage
-      .amis
+      .namedImages
+      .map { it.amis }
+      .reduceRight { acc, map -> acc + map }
       .filterNotNullValues()
       .filterValues { it.isNotEmpty() }
       .mapValues { it.value.first() }
     val missingRegions = spec.locations.regions.map { it.name } - imageIdByRegion.keys
     if (missingRegions.isNotEmpty()) {
-      throw NoImageFoundForRegions(image.namedImage.imageName, missingRegions)
+      throw NoImageFoundForRegions(image.artifact?.name
+        ?: image.namedImages.first().imageName, missingRegions)
     }
 
     val overrides = mutableMapOf<String, ServerGroupSpec>()
     overrides.putAll(spec.overrides)
     spec.locations.regions.map { it.name }.forEach { region ->
+      val amiId = imageIdByRegion.getValue(region)
+      val namedImage = checkNotNull(image.namedImages.find { it.tagsByImageId.containsKey(amiId) })
       overrides[region] = overrides[region]
         .withVirtualMachineImage(
           VirtualMachineImage(
-            imageIdByRegion.getValue(region),
-            image.namedImage.appVersion,
-            image.namedImage.baseImageVersion
+            amiId,
+            namedImage.appVersion,
+            namedImage.baseImageVersion
           )
         )
     }
@@ -146,7 +153,7 @@ class ImageResolver(
       spec = spec.copy(
         overrides = overrides,
         _artifactName = image.artifact?.name
-          ?: error("Artifact not found in image ${image.namedImage.imageName}"),
+          ?: error("Artifact not found in images ${image.namedImages.map { it.imageName }}"),
         artifactVersion = image.version
       )
     )

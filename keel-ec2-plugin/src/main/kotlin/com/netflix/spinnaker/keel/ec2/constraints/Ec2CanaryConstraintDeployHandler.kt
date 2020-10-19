@@ -54,7 +54,7 @@ class Ec2CanaryConstraintDeployHandler(
     val scope = CoroutineScope(GlobalScope.coroutineContext)
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
 
-    val image = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
+    val images = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
       // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
       appVersion = try {
         AppVersion.parseName(version.replace("~", "_"))
@@ -64,7 +64,9 @@ class Ec2CanaryConstraintDeployHandler(
       account = imageResolver.defaultImageAccount,
       regions = constraint.regions.toList()
     )
-      ?.imageName ?: error("Image not found for $version in all requested regions ($regions)")
+      if (images.isEmpty()) {
+        error("Image not found for $version in all requested regions ($regions)")
+      }
 
     val source = getSourceServerGroups(deliveryConfig.application, constraint, deliveryConfig.serviceAccount)
     require(regions.all { source.containsKey(it) }) {
@@ -73,13 +75,14 @@ class Ec2CanaryConstraintDeployHandler(
 
     val regionalJobs = regions.associateWith { region ->
       val sourceServerGroup = source.getValue(region)
+      val image = images.first { it.amis.containsKey(region) }
       constraint.toStageBase(
         cloudDriverCache = cloudDriverCache,
         metricsAccount = constraint.metricsAccount ?: defaults.metricsAccount,
         storageAccount = constraint.storageAccount ?: defaults.storageAccount,
         app = deliveryConfig.application,
-        control = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "baseline", image),
-        experiment = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "canary", image)
+        control = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "baseline", image.imageName),
+        experiment = sourceServerGroup.toKayentaStageServerGroup(constraint.capacity, "canary", image.imageName)
       )
     }
 

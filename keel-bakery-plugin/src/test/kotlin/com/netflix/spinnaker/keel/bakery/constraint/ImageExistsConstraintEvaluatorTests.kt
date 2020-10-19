@@ -107,7 +107,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
       before {
         coEvery {
           imageService.getLatestNamedImageWithAllRegionsForAppVersion(any(), any(), any())
-        } returns null
+        } returns emptyList()
 
         canPromote()
       }
@@ -127,20 +127,18 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
             "test",
             (artifact as DebianArtifact).vmOptions.regions
           )
-        } returns NamedImage(
-          imageName = appVersion,
-          attributes = mapOf(
-            "creationDate" to "2020-03-17T12:09:00.000Z"
-          ),
-          tagsByImageId = mapOf(
-            "ami-1" to mapOf("appversion" to appVersion, "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8")
-          ),
-          accounts = setOf(
-            "test" +
-              ""
-          ),
-          amis = mapOf(
-            "us-west-2" to listOf("ami-1")
+        } returns listOf(
+          NamedImage(
+            imageName = appVersion,
+            attributes = mapOf("creationDate" to "2020-03-17T12:09:00.000Z"),
+            tagsByImageId = mapOf(
+              "ami-1" to mapOf(
+                "appversion" to appVersion,
+                "base_ami_version" to "nflx-base-5.464.0-h1473.31178a8"
+              )
+            ),
+            accounts = setOf("test"),
+            amis = mapOf("us-west-2" to listOf("ami-1"))
           )
         )
 
