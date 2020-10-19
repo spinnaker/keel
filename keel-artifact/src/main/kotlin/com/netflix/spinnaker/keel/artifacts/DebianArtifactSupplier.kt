@@ -79,9 +79,9 @@ class DebianArtifactSupplier(
     return try {
       val appversion = AppVersion.parseName(artifact.version)
       if (appversion?.buildNumber != null) {
-        BuildMetadata(id = appversion.buildNumber.toInt())
+        return BuildMetadata(id = appversion.buildNumber.toInt())
       }
-      null
+      return null
     } catch (ex: NumberFormatException) {
       log.warn("parsed appversion.buildNumber for artifact version ${artifact.version} is not a number! ")
       null
