@@ -93,8 +93,7 @@ class ImageResolver(
       appVersion = try {
         AppVersion.parseName(artifactVersion)
       } catch (ex: Exception) {
-        log.error("trying to parse name for version $artifactVersion but got an exception", ex)
-        throw SystemException("Invalid for version $artifactVersion")
+        throw SystemException("trying to parse name for version $artifactVersion but got an exception", ex)
       },
       account = account,
       regions = regions

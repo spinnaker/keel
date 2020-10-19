@@ -437,8 +437,7 @@ class ClusterHandler(
     val appversion = try {
       AppVersion.parseName(base.image?.appVersion).packageName
     } catch (ex: Exception) {
-      log.error("trying to parse name for image ${base.image?.name} with version ${base.image?.appVersion} but got an exception", ex)
-      throw SystemException("Invalid for image ${base.image?.name} with version ${base.image?.appVersion}")
+      throw SystemException("trying to parse name for image ${base.image?.name} with version ${base.image?.appVersion} but got an exception", ex)
     }
 
     val spec = ClusterSpec(
@@ -491,8 +490,7 @@ class ClusterHandler(
     val artifactName = try {
       AppVersion.parseName(base.launchConfiguration.appVersion).packageName
     } catch (ex: Exception) {
-      log.error("trying to parse name for configuration ${base.launchConfiguration} with version ${base.launchConfiguration.appVersion} but got an exception", ex)
-      throw SystemException("Invalid for configuration ${base.launchConfiguration} with version ${base.launchConfiguration.appVersion}")
+      throw SystemException("trying to parse name for configuration ${base.launchConfiguration} with version ${base.launchConfiguration.appVersion} but got an exception", ex)
     }
 
     val status = debianArtifactParser.parseStatus(base.launchConfiguration.appVersion?.substringAfter("$artifactName-"))

@@ -126,8 +126,7 @@ class ImageHandler(
     val appVersion = try {
       AppVersion.parseName(desiredVersion)
     } catch (ex: Exception) {
-      log.error("trying to parse desired version for artifact ${artifact.name} with version $desiredVersion but got an exception", ex)
-      throw SystemException("Invalid for artifact ${artifact.name} with version $desiredVersion")
+      throw SystemException("trying to parse desired version for artifact ${artifact.name} with version $desiredVersion but got an exception", ex)
     }
     val packageName = appVersion.packageName
     val version = desiredVersion.substringAfter("$packageName-")

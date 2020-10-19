@@ -59,8 +59,7 @@ class Ec2CanaryConstraintDeployHandler(
       appVersion = try {
         AppVersion.parseName(version.replace("~", "_"))
       } catch (ex: Exception) {
-        log.error("trying to parse name for version $version but got an exception", ex)
-        throw SystemException("Invalid for version $version")
+        throw SystemException("trying to parse name for version $version but got an exception", ex)
       },
       account = imageResolver.defaultImageAccount,
       regions = constraint.regions.toList()

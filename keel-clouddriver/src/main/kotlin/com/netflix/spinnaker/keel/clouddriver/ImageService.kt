@@ -79,8 +79,7 @@ class ImageService(
         try {
           AppVersion.parseName(it.appVersion).packageName == packageName
         } catch (ex: Exception) {
-          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
-          throw SystemException("Invalid for version ${it.appVersion}")
+          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
         }
       }
 
@@ -106,8 +105,7 @@ class ImageService(
             packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
           }
         } catch (ex: Exception) {
-          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
-          throw SystemException("Invalid for version ${it.appVersion}")
+          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
         }
       }
 
@@ -128,8 +126,7 @@ class ImageService(
         val curAppVersion = try {
           AppVersion.parseName(namedImage.appVersion)
         } catch (ex: Exception) {
-          log.error("trying to parse name for image ${namedImage.imageName} with version ${namedImage.appVersion} but got an exception", ex)
-          throw SystemException("Invalid app version for image ${namedImage.imageName} with version ${namedImage.appVersion}")
+          throw SystemException("trying to parse name for image ${namedImage.imageName} with version ${namedImage.appVersion} but got an exception", ex)
         }
         curAppVersion.packageName == appVersion.packageName &&
           curAppVersion.version == appVersion.version &&
@@ -162,8 +159,7 @@ class ImageService(
         val curAppVersion = try {
           AppVersion.parseName(it.appVersion)
         } catch (ex: Exception) {
-          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
-          throw SystemException("Invalid for version ${it.appVersion}")
+          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
         }
         if (curAppVersion.packageName != packageName) {
           errors.add("[package name ${curAppVersion.packageName} does not match required package]")
@@ -202,8 +198,7 @@ class ImageService(
         try {
           AppVersion.parseName(it.appVersion).packageName == packageName
         } catch (ex: Exception) {
-          log.error("trying to parse name for version ${it.appVersion} but got an exception", ex)
-          throw SystemException("Invalid for version ${it.appVersion}")
+          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
         }
       }
       .firstOrNull { namedImage ->
