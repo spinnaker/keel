@@ -76,22 +76,29 @@ class DebianArtifactSupplier(
   override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-      val appversion = parseName(artifact)
+    return try {
+      val appversion = AppVersion.parseName(artifact.version)
       if (appversion?.buildNumber != null) {
-        return BuildMetadata(id = appversion.buildNumber.toInt())
+        BuildMetadata(id = appversion.buildNumber.toInt())
       }
-      return null
-
+      null
+    } catch (ex: NumberFormatException) {
+      log.warn("parsed appversion.buildNumber for artifact version ${artifact.version} is not a number! ")
+      null
+    } catch (ex: Exception) {
+      log.warn("trying to parse artifact ${artifact.name} with version ${artifact.version} but got an exception", ex)
+      null
+    }
   }
 
   override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-      val appversion = parseName(artifact)
-      if (appversion?.commit != null) {
-        return GitMetadata(commit = appversion.commit)
-      }
-      return null
+    val appversion = parseName(artifact)
+    if (appversion?.commit != null) {
+      return GitMetadata(commit = appversion.commit)
+    }
+    return null
   }
 
   private fun parseName(artifact: PublishedArtifact): AppVersion? =
