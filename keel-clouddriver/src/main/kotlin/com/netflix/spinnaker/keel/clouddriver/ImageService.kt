@@ -38,14 +38,6 @@ class ImageService(
   suspend fun getLatestImage(artifactName: String, account: String): Image? =
     getLatestNamedImage(artifactName, account)?.toImage(artifactName)
 
-  /**
-   * If possible, return the latest image that's present in all regions and has tags.
-   * If that doesn't exist, just return the latest image.
-   */
-  suspend fun getLatestImageWithAllRegions(artifactName: String, account: String, regions: List<String>): Image? =
-    getLatestNamedImageWithAllRegions(artifactName, account, regions)?.toImage(artifactName)
-      ?: getLatestImage(artifactName, account)
-
   private fun NamedImage.toImage(artifactName: String): Image? =
     tagsByImageId
       .values
@@ -85,34 +77,8 @@ class ImageService(
       }
 
   /**
-   * Get a specific image for an app version.
-   *
-   * @param region if supplied the latest image in this region is returned, if `null` the latest
-   * image regardless of region.
-   */
-  suspend fun getLatestNamedImage(appVersion: AppVersion, account: String, region: String? = null): NamedImage? =
-    cloudDriverService.namedImages(
-      user = DEFAULT_SERVICE_ACCOUNT,
-      imageName = appVersion.toImageName().replace("~", "_"),
-      account = account,
-      region = region
-    )
-      .filter { it.hasAppVersion }
-      .sortedWith(NamedImageComparator)
-      .firstOrNull {
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        try {
-          AppVersion.parseName(it.appVersion).run {
-            packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
-          }
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
-        }
-      }
-
-  /**
    * Returns the latest image that is present in all regions.
-   * Each ami must have tags.
+   * Each AMI must have tags.
    */
   suspend fun getLatestNamedImageWithAllRegionsForAppVersion(appVersion: AppVersion, account: String, regions: Collection<String>): Collection<NamedImage> {
     val requiredRegions = regions.toMutableSet()
@@ -147,59 +113,6 @@ class ImageService(
       .toList()
     // if we didn't find an image for every required region, return nothing
     return if (requiredRegions.isEmpty()) images else emptyList()
-  }
-
-  /**
-   * Returns the latest image that is present in all regions.
-   * Each ami must have tags.
-   */
-  suspend fun getLatestNamedImageWithAllRegions(packageName: String, account: String, regions: List<String>): NamedImage? {
-    val images = cloudDriverService.namedImages(
-      user = DEFAULT_SERVICE_ACCOUNT,
-      imageName = packageName,
-      account = account
-    )
-
-    val filteredImages = images
-      .filter { it.hasAppVersion }
-      .sortedWith(NamedImageComparator)
-
-    val eliminatedImages = mutableMapOf<String, String>()
-    val image = filteredImages
-      .find {
-        val errors = mutableListOf<String>()
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        val curAppVersion = try {
-          AppVersion.parseName(it.appVersion)
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
-        }
-        if (curAppVersion.packageName != packageName) {
-          errors.add("[package name ${curAppVersion.packageName} does not match required package]")
-        }
-        if (!it.accounts.contains(account)) {
-          errors.add("[image is only in accounts ${it.accounts}]")
-        }
-        if (!it.amis.keys.containsAll(regions)) {
-          errors.add("[image is only in regions ${it.amis.keys}]")
-        }
-        if (!tagsExistForAllAmis(it.tagsByImageId)) {
-          errors.add("[image does not have tags for all regions: existing tags ${it.tagsByImageId}]")
-        }
-        if (errors.isEmpty()) {
-          true
-        } else {
-          eliminatedImages[it.imageName] = errors.joinToString(",")
-          false
-        }
-      }
-    log.debug(
-      "Finding latest qualifying named image for $packageName in account $account and regions $regions:\n " +
-        "selected image=${image?.imageName}\n " +
-        "rejected images=${eliminatedImages.map { it.key + ": " + it.value + "\n" }.joinToString("")}"
-    )
-
-    return image
   }
 
   suspend fun getNamedImageFromJenkinsInfo(packageName: String, account: String, buildHost: String, buildName: String, buildNumber: String): NamedImage? =

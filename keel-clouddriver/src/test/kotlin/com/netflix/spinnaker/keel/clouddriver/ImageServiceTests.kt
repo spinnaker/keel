@@ -39,7 +39,6 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import java.time.Instant
 import io.mockk.coEvery as every
-import io.mockk.coVerify as verify
 
 class ImageServiceTests : JUnit5Minutests {
   class Fixture {
@@ -236,6 +235,7 @@ class ImageServiceTests : JUnit5Minutests {
           )
         } returns listOf(image2, image4, image3, image1, image5, image6)
       }
+
       test("latest image returns actual image") {
         runBlocking {
           val image = subject.getLatestImage(
@@ -260,6 +260,7 @@ class ImageServiceTests : JUnit5Minutests {
           )
         } returns listOf(image2, image4, image3, image1, image5)
       }
+
       test("get latest named image returns actual latest image") {
         runBlocking {
           val image = subject.getLatestNamedImage(
@@ -318,6 +319,7 @@ class ImageServiceTests : JUnit5Minutests {
           )
         } returns emptyList()
       }
+
       test("no image provided") {
         runBlocking {
           val image = subject.getLatestNamedImage(
@@ -330,40 +332,13 @@ class ImageServiceTests : JUnit5Minutests {
       }
     }
 
-    context("searching for a very specific image version") {
-      before {
-        every {
-          cloudDriver.namedImages(any(), any(), any())
-        } returns listOf(image2)
-      }
-
-      test("returns correct version") {
-        runBlocking {
-          val image = subject.getLatestNamedImage(
-            appVersion = AppVersion.parseName("my-package-0.0.1~rc.98-h99.4cb755c"),
-            account = "test"
-          )
-          expectThat(image)
-            .isNotNull()
-            .isEqualTo(image2)
-        }
-
-        verify {
-          cloudDriver.namedImages(
-            user = DEFAULT_SERVICE_ACCOUNT,
-            imageName = "my-package-0.0.1_rc.98-h99.4cb755c",
-            account = "test"
-          )
-        }
-      }
-    }
-
     context("given jenkins info") {
       before {
         every {
           cloudDriver.namedImages(DEFAULT_SERVICE_ACCOUNT, "my-package", "test")
         } returns listOf(image2, image4, image3, image1)
       }
+
       test("finds named image") {
         runBlocking {
           val image = subject.getNamedImageFromJenkinsInfo(
@@ -381,28 +356,6 @@ class ImageServiceTests : JUnit5Minutests {
       }
     }
 
-    context("given images in varying stages of completeness") {
-      val packageName = "keel"
-      val regions = listOf("us-west-2", "us-east-1")
-      before {
-        every {
-          cloudDriver.namedImages(
-            user = DEFAULT_SERVICE_ACCOUNT,
-            imageName = packageName,
-            account = "test"
-          )
-        } returns realImages
-      }
-      test("searching by package name finds latest complete image") {
-        runBlocking {
-          val image = subject.getLatestNamedImageWithAllRegions(packageName, "test", regions)
-          expectThat(image)
-            .isNotNull()
-            .get { imageName }
-            .isEqualTo("keel-0.312.0-h240.44eaaa3-x86_64-20191025212812-xenial-hvm-sriov-ebs")
-        }
-      }
-    }
 
     context("given images in varying stages of completeness") {
       val appVersion = "my-package-0.0.1~rc.97-h98.1c684a9"
