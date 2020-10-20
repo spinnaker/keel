@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.actuation
 
-import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.CompleteVersionedArtifact
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
@@ -120,7 +119,7 @@ class ResourceActuator(
 
         val response = vetoEnforcer.canCheck(resource)
         if (!response.allowed) {
-          handleVetoingArtifact(response, resource, deliveryConfig, environment, desired)
+          handleArtifactVetoing(response, resource, deliveryConfig, environment, desired)
           log.debug("Skipping actuation for resource {} because it was vetoed: {}", resource.id, response.message)
           publisher.publishEvent(ResourceCheckSkipped(resource.kind, resource.id, response.vetoName))
           publisher.publishEvent(
@@ -208,7 +207,7 @@ class ResourceActuator(
    * we do not want to veto the artifact in the case of a bad config change or other downstream problem.
    * Rolling back most likely will not help in these cases and it will probably cause confusion.
    */
-  private fun handleVetoingArtifact(
+  private fun handleArtifactVetoing(
     response: VetoResponse,
     resource: Resource<*>,
     deliveryConfig: DeliveryConfig,
@@ -244,16 +243,16 @@ class ResourceActuator(
             log.info(
               "Vetoing artifact version {} of artifact {} for config {} and env {} because multiple deploys failed",
               versionedArtifact,
-              artifact.reference,
+              artifact.reference + ":" + artifact.type,
               deliveryConfig.name,
               environment.name
             )
-            publisher.publishEvent(ArtifactVersionVetoed(artifact.reference))
+            publisher.publishEvent(ArtifactVersionVetoed(resource.application))
           } else {
             log.info(
               "Not vetoing artifact version {} of artifact {} for config {} and env {} because it was previously successfully deployed",
               versionedArtifact,
-              artifact.reference,
+              artifact.reference + ":" + artifact.type,
               deliveryConfig.name,
               environment.name
             )

@@ -134,7 +134,7 @@ class TelemetryListener(
   fun onArtifactVersionVetoed(event: ArtifactVersionVetoed) {
     spectator.counter(
       ARTIFACT_VERSION_VETOED,
-      listOf(BasicTag("artifactReference", event.artifactReference))
+      listOf(BasicTag("application", event.application))
     )
       .safeIncrement()
   }

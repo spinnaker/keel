@@ -52,5 +52,5 @@ data class ArtifactCheckTimedOut(
 ) : TelemetryEvent()
 
 data class ArtifactVersionVetoed(
-  val artifactReference: String,
+  val application: String,
 ) : TelemetryEvent()
