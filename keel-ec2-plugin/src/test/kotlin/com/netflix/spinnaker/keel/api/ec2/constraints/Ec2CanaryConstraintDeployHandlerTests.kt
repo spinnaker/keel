@@ -102,14 +102,14 @@ internal class Ec2CanaryConstraintDeployHandlerTests : JUnit5Minutests {
     context("need to launch canaries in two regions") {
       before {
         coEvery {
-          imageService.getLatestNamedImageWithAllRegionsForAppVersion(any(), any(), any())
-        } returns listOf(NamedImage(
-          imageName = "fnord-42.0.0-h42",
-          attributes = emptyMap(),
-          tagsByImageId = emptyMap(),
-          accounts = emptySet(),
-          amis = mapOf("us-west-1" to listOf("ami-001"), "us-west-2" to listOf("ami-002"))
-        ))
+          imageService.getLatestNamedImageForAppVersionInRegion(any(), any(), any())
+        } returns NamedImage(
+            imageName = "fnord-42.0.0-h42",
+            attributes = emptyMap(),
+            tagsByImageId = emptyMap(),
+            accounts = emptySet(),
+            amis = mapOf("us-west-1" to listOf("ami-001"), "us-west-2" to listOf("ami-002"))
+          )
 
         coEvery {
           cloudDriverService.activeServerGroup(any(), any(), any(), any(), "us-west-1", any())
@@ -158,7 +158,8 @@ internal class Ec2CanaryConstraintDeployHandlerTests : JUnit5Minutests {
         }
 
         coVerify(exactly = 1) {
-          imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName(version), "test", any())
+          imageService.getLatestNamedImageForAppVersionInRegion(AppVersion.parseName(version), "test", "us-west-1")
+          imageService.getLatestNamedImageForAppVersionInRegion(AppVersion.parseName(version), "test", "us-west-2")
           cloudDriverService.activeServerGroup(any(), any(), any(), any(), "us-west-1", any())
           cloudDriverService.activeServerGroup(any(), any(), any(), any(), "us-west-2", any())
         }

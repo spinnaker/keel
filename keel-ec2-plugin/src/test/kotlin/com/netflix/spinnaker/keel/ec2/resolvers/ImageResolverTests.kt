@@ -178,11 +178,9 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
+              imageService.getLatestNamedImageForAppVersionInRegion(AppVersion.parseName("${artifact.name}-$version2"), any(), resourceRegion)
             } answers {
               images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
-                ?.let { listOf(it) }
-                ?: emptyList()
             }
           }
 
@@ -212,8 +210,8 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
-            } returns emptyList()
+              imageService.getLatestNamedImageForAppVersionInRegion(AppVersion.parseName("${artifact.name}-$version2"), any(), resourceRegion)
+            } returns null
           }
 
           test("throws an exception") {
@@ -237,11 +235,13 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
+              imageService.getLatestNamedImageForAppVersionInRegion(AppVersion.parseName("${artifact.name}-$version2"), any(), any())
             } answers {
-              images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
-                ?.let { listOf(it) }
-                ?: emptyList()
+              if (thirdArg<String>() == imageRegion) {
+                images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
+              } else {
+                null
+              }
             }
           }
 

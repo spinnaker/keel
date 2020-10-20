@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
+import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImageForAppVersionInRegions
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.constraints.CanaryConstraintConfigurationProperties
@@ -18,7 +19,6 @@ import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.ec2.resolvers.ImageResolver
 import com.netflix.spinnaker.keel.retrofit.isNotFound
-import com.netflix.spinnaker.kork.exceptions.SystemException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -54,19 +54,16 @@ class Ec2CanaryConstraintDeployHandler(
     val scope = CoroutineScope(GlobalScope.coroutineContext)
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
 
-    val images = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-      // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-      appVersion = try {
-        AppVersion.parseName(version.replace("~", "_"))
-      } catch (ex: Exception) {
-        throw SystemException("trying to parse name for version $version but got an exception", ex)
-      },
+    val images = imageService.getLatestNamedImageForAppVersionInRegions(
+      appVersion = AppVersion.parseName(version.replace("~", "_")),
       account = imageResolver.defaultImageAccount,
-      regions = constraint.regions.toList()
+      regions = regions
     )
-      if (images.isEmpty()) {
-        error("Image not found for $version in all requested regions ($regions)")
-      }
+
+    val missingRegions = regions - images.keys
+    if (missingRegions.isNotEmpty()) {
+      error("Image not found for $version in all requested regions ($regions)")
+    }
 
     val source = getSourceServerGroups(deliveryConfig.application, constraint, deliveryConfig.serviceAccount)
     require(regions.all { source.containsKey(it) }) {
@@ -75,7 +72,7 @@ class Ec2CanaryConstraintDeployHandler(
 
     val regionalJobs = regions.associateWith { region ->
       val sourceServerGroup = source.getValue(region)
-      val image = images.first { it.amis.containsKey(region) }
+      val image = images.getValue(region)
       constraint.toStageBase(
         cloudDriverCache = cloudDriverCache,
         metricsAccount = constraint.metricsAccount ?: defaults.metricsAccount,
@@ -161,8 +158,10 @@ class Ec2CanaryConstraintDeployHandler(
       "ebsOptimized" to (launchConfig?.ebsOptimized ?: launchTemplateData!!.ebsOptimized),
       "healthCheckGracePeriod" to asg.healthCheckGracePeriod,
       "healthCheckType" to asg.healthCheckType,
-      "iamRole" to (launchConfig?.iamInstanceProfile ?: launchTemplateData!!.iamInstanceProfile.name),
-      "instanceMonitoring" to (launchConfig?.instanceMonitoring?.enabled ?: launchTemplateData!!.monitoring.enabled),
+      "iamRole" to (launchConfig?.iamInstanceProfile
+        ?: launchTemplateData!!.iamInstanceProfile.name),
+      "instanceMonitoring" to (launchConfig?.instanceMonitoring?.enabled
+        ?: launchTemplateData!!.monitoring.enabled),
       "instanceType" to (launchConfig?.instanceType ?: launchTemplateData!!.instanceType),
       "keyPair" to (launchConfig?.keyName ?: launchTemplateData!!.keyName),
       "loadBalancers" to loadBalancers,

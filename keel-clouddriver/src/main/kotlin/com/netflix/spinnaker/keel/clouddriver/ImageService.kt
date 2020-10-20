@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.clouddriver
 
 import com.netflix.frigga.ami.AppVersion
+import com.netflix.spinnaker.keel.caffeine.CacheFactory
 import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImageComparator
@@ -25,13 +26,19 @@ import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.creationDate
 import com.netflix.spinnaker.keel.clouddriver.model.hasAppVersion
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.filterNotNullValues
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
 import com.netflix.spinnaker.kork.exceptions.SystemException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.future.await
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.CompletableFuture.completedFuture
 
 class ImageService(
-  private val cloudDriverService: CloudDriverService
+  private val cloudDriverService: CloudDriverService,
+  cacheFactory: CacheFactory
 ) {
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -76,44 +83,65 @@ class ImageService(
         }
       }
 
-  /**
-   * Returns the latest image that is present in all regions.
-   * Each AMI must have tags.
-   */
-  suspend fun getLatestNamedImageWithAllRegionsForAppVersion(appVersion: AppVersion, account: String, regions: Collection<String>): Collection<NamedImage> {
-    val requiredRegions = regions.toMutableSet()
-    val images = cloudDriverService.namedImages(
-      user = DEFAULT_SERVICE_ACCOUNT,
-      imageName = appVersion.toImageName().replace("~", "_"),
-      account = account
-    )
-      .asSequence()
-      // only consider images with tags and app version set properly
-      .filter { tagsExistForAllAmis(it.tagsByImageId) && it.hasAppVersion }
-      // filter to images with matching app version
-      .filter {
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        runCatching { AppVersion.parseName(it.appVersion) }
-          .getOrElse { ex ->
-            throw SystemException("trying to parse name for image ${it.imageName} with version ${it.appVersion} but got an exception", ex)
-          }
-          .run {
-            packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
-          }
-      }
-      // filter to images in the correct account with at least one region we want
-      .filter { image ->
-        image.accounts.contains(account) && regions.any { it in image.amis.keys }
-      }
-      // reduce to the newest images required to support all regions we want
-      .sortedByDescending { it.creationDate }
-      .takeWhile { image ->
-        requiredRegions.isNotEmpty().also { requiredRegions.removeAll(image.amis.keys) }
-      }
-      .toList()
-    // if we didn't find an image for every required region, return nothing
-    return if (requiredRegions.isEmpty()) images else emptyList()
+  private data class NamedImageCacheKey(
+    val appVersion: AppVersion,
+    val account: String,
+    val region: String
+  )
+
+  private val namedImageCache = cacheFactory
+    .asyncLoadingCache<NamedImageCacheKey, NamedImage>("namedImages") { (appVersion, account, region) ->
+      log.debug("Searching for baked image for {} in {}", appVersion.toImageName(), region)
+      cloudDriverService.namedImages(
+        user = DEFAULT_SERVICE_ACCOUNT,
+        imageName = appVersion.toImageName().replace("~", "_"),
+        account = account
+      )
+        // only consider images with tags and app version set properly
+        .asSequence()
+        .filter { image ->
+          tagsExistForAllAmis(image.tagsByImageId) && image.hasAppVersion
+        }
+        // filter to images with matching app version
+        .filter { image ->
+          // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
+          runCatching { AppVersion.parseName(image.appVersion) }
+            .getOrElse { ex ->
+              throw SystemException("trying to parse name for image ${image.imageName} with version ${image.appVersion} but got an exception", ex)
+            }
+            .run {
+              packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
+            }
+        }
+        // filter to images in the correct account and the desired region
+        .filter { image ->
+          image.accounts.contains(account) && image.amis.containsKey(region)
+        }
+        // reduce to the newest images required to support all regions we want
+        .sortedByDescending { it.creationDate }
+        .firstOrNull()
   }
+
+  /**
+   * Find the latest properly tagged image in [account] and [region].
+   *
+   * As a side effect this method will prime the cache for any additional regions where the image is
+   * available.
+   */
+  suspend fun getLatestNamedImageForAppVersionInRegion(
+    appVersion: AppVersion,
+    account: String,
+    region: String
+  ): NamedImage? =
+    namedImageCache
+      .get(NamedImageCacheKey(appVersion, account, region))
+      .await()
+      // prime the cache if the image is also in other regions
+      ?.also { image ->
+        (image.amis.keys - region).forEach { otherRegion ->
+          namedImageCache.put(NamedImageCacheKey(appVersion, account, otherRegion), completedFuture(image))
+        }
+      }
 
   suspend fun getNamedImageFromJenkinsInfo(packageName: String, account: String, buildHost: String, buildName: String, buildNumber: String): NamedImage? =
     cloudDriverService.namedImages(DEFAULT_SERVICE_ACCOUNT, packageName, account)
@@ -183,6 +211,35 @@ class ImageService(
     }
     return true
   }
+}
+
+
+/**
+ * Find the latest properly tagged images in [account] for each of [regions] using
+ * [ImageService.getLatestNamedImageForAppVersionInRegion] in parallel for each region.
+ *
+ * In many cases all the values in the resulting map will be the same [NamedImage] instance, but
+ * this may not be the case if images were baked separately in each region.
+ *
+ * The resulting map will contain no entry for regions where an image is not found. The calling
+ * code must check this if it requires all regions to be present.
+ */
+suspend fun ImageService.getLatestNamedImageForAppVersionInRegions(
+  appVersion: AppVersion,
+  account: String,
+  regions: Collection<String>
+): Map<String, NamedImage> = coroutineScope {
+  regions.associateWith { region ->
+    async {
+      getLatestNamedImageForAppVersionInRegion(
+        appVersion = appVersion,
+        account = account,
+        region = region
+      )
+    }
+  }
+    .mapValues { (_, it) -> it.await() }
+    .filterNotNullValues()
 }
 
 private fun AppVersion.toImageName() = "$packageName-$version-h$buildNumber.$commit"

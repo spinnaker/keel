@@ -15,17 +15,18 @@ import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.ImageService
+import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImageForAppVersionInRegions
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.baseImageVersion
 import com.netflix.spinnaker.keel.ec2.NoImageFound
 import com.netflix.spinnaker.keel.ec2.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.ec2.NoImageSatisfiesConstraints
+import com.netflix.spinnaker.keel.filterNotNullValues
 import com.netflix.spinnaker.keel.getConfig
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
-import com.netflix.spinnaker.kork.exceptions.SystemException
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -42,9 +43,9 @@ class ImageResolver(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   data class VersionedNamedImage(
-    val namedImages: Collection<NamedImage>,
-    val artifact: DeliveryArtifact?,
-    val version: String?
+    val namedImages: Map<String, NamedImage>,
+    val artifact: DeliveryArtifact?, // TODO: make this non-nullable
+    val version: String
   )
 
   override fun invoke(resource: Resource<ClusterSpec>): Resource<ClusterSpec> {
@@ -88,19 +89,12 @@ class ImageResolver(
       artifact,
       environment.name
     ) ?: throw NoImageSatisfiesConstraints(artifact.name, environment.name)
-    val images = imageService.getLatestNamedImageWithAllRegionsForAppVersion(
-      // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-      appVersion = try {
-        AppVersion.parseName(artifactVersion)
-      } catch (ex: Exception) {
-        throw SystemException("trying to parse name for version $artifactVersion but got an exception", ex)
-      },
+
+    val images = imageService.getLatestNamedImageForAppVersionInRegions(
+      appVersion = AppVersion.parseName(artifactVersion),
       account = account,
       regions = regions
     )
-    if (images.isEmpty()) {
-      throw NoImageFoundForRegions(artifactVersion, regions)
-    }
 
     return VersionedNamedImage(images, artifact, artifactVersion)
   }
@@ -117,28 +111,32 @@ class ImageResolver(
     ) ?: throw NoImageFound(imageProvider.packageName)
 
     log.info("Image found for {}: {}", imageProvider.packageName, image)
-    return VersionedNamedImage(listOf(image), null, null)
+    return VersionedNamedImage(
+      namedImages = image.amis.keys.associateWith { image },
+      artifact = null,
+      version = image.appVersion
+    )
   }
 
   private fun Resource<ClusterSpec>.withVirtualMachineImages(image: VersionedNamedImage): Resource<ClusterSpec> {
+    val requiredRegions = spec.locations.regions.map { it.name }
+
+    val missingRegions = requiredRegions - image.namedImages.keys
+    if (missingRegions.isNotEmpty()) {
+      throw NoImageFoundForRegions(image.version, missingRegions)
+    }
+
     val imageIdByRegion = image
       .namedImages
-      .map { it.amis }
-      .reduceRight { acc, map -> acc + map }
+      .mapValues { (region, image) -> image.amis[region]?.first() }
       .filterNotNullValues()
-      .filterValues { it.isNotEmpty() }
-      .mapValues { it.value.first() }
-    val missingRegions = spec.locations.regions.map { it.name } - imageIdByRegion.keys
-    if (missingRegions.isNotEmpty()) {
-      throw NoImageFoundForRegions(image.artifact?.name
-        ?: image.namedImages.first().imageName, missingRegions)
-    }
 
     val overrides = mutableMapOf<String, ServerGroupSpec>()
     overrides.putAll(spec.overrides)
-    spec.locations.regions.map { it.name }.forEach { region ->
+
+    requiredRegions.forEach { region ->
       val amiId = imageIdByRegion.getValue(region)
-      val namedImage = checkNotNull(image.namedImages.find { it.tagsByImageId.containsKey(amiId) })
+      val namedImage = image.namedImages.getValue(region)
       overrides[region] = overrides[region]
         .withVirtualMachineImage(
           VirtualMachineImage(
@@ -153,7 +151,7 @@ class ImageResolver(
       spec = spec.copy(
         overrides = overrides,
         _artifactName = image.artifact?.name
-          ?: error("Artifact not found in images ${image.namedImages.map { it.imageName }}"),
+          ?: error("Artifact not found in images ${image.namedImages.values.map { it.imageName }}"),
         artifactVersion = image.version
       )
     )
@@ -167,8 +165,4 @@ class ImageResolver(
         }
       )
     }
-
-  @Suppress("UNCHECKED_CAST")
-  private fun <K, V> Map<out K, V?>.filterNotNullValues(): Map<K, V> =
-    filterValues { it != null } as Map<K, V>
 }
