@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.bakery.constraint
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -13,8 +12,8 @@ import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImages
 import com.netflix.spinnaker.keel.getConfig
+import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
-import com.netflix.spinnaker.kork.exceptions.SystemException
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -53,9 +52,6 @@ class ImageExistsConstraintEvaluator(
       )
     }
       .keys.containsAll(vmOptions.regions)
-
-  private fun String.parseAppVersion() =
-    AppVersion.parseName(this) ?: throw SystemException("Invalid AMI app version: $this")
 
   private val defaultImageAccount: String
     get() = dynamicConfigService.getConfig("images.default-account", "test")

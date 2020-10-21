@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.ec2.constraints
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.actuation.Task
@@ -18,6 +17,7 @@ import com.netflix.spinnaker.keel.constraints.toStageBase
 import com.netflix.spinnaker.keel.core.api.CanaryConstraint
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.ec2.resolvers.ImageResolver
+import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
@@ -55,7 +55,7 @@ class Ec2CanaryConstraintDeployHandler(
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
 
     val images = imageService.getLatestNamedImages(
-      appVersion = AppVersion.parseName(version.replace("~", "_")),
+      appVersion = version.replace("~", "_").parseAppVersion(),
       account = imageResolver.defaultImageAccount,
       regions = regions
     )

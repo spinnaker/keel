@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.ec2.resolvers
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -24,6 +23,7 @@ import com.netflix.spinnaker.keel.ec2.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.ec2.NoImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.filterNotNullValues
 import com.netflix.spinnaker.keel.getConfig
+import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoMatchingArtifactException
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
@@ -91,7 +91,7 @@ class ImageResolver(
     ) ?: throw NoImageSatisfiesConstraints(artifact.name, environment.name)
 
     val images = imageService.getLatestNamedImages(
-      appVersion = AppVersion.parseName(artifactVersion),
+      appVersion = artifactVersion.parseAppVersion(),
       account = account,
       regions = regions
     )

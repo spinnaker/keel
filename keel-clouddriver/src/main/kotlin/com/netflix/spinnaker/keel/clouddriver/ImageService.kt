@@ -27,8 +27,8 @@ import com.netflix.spinnaker.keel.clouddriver.model.creationDate
 import com.netflix.spinnaker.keel.clouddriver.model.hasAppVersion
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.filterNotNullValues
+import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.kork.exceptions.IntegrationException
-import com.netflix.spinnaker.kork.exceptions.SystemException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.await
@@ -48,11 +48,7 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .firstOrNull {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        try {
-          AppVersion.parseName(it.appVersion).packageName == artifactName
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
-        }
+        it.appVersion.parseAppVersion().packageName == artifactName
       }?.toImage(artifactName)
 
   private fun NamedImage.toImage(artifactName: String): Image? =
@@ -96,13 +92,9 @@ class ImageService(
         // filter to images with matching app version
         .filter { image ->
           // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-          runCatching { AppVersion.parseName(image.appVersion) }
-            .getOrElse { ex ->
-              throw SystemException("Error parsing name for image ${image.imageName} with version ${image.appVersion}: ${ex.message}", ex)
-            }
-            .run {
-              packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
-            }
+          image.appVersion.parseAppVersion().run {
+            packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
+          }
         }
         // filter to images in the correct account and the desired region
         .filter { image ->
@@ -111,7 +103,7 @@ class ImageService(
         // reduce to the newest images required to support all regions we want
         .sortedByDescending { it.creationDate }
         .firstOrNull()
-  }
+    }
 
   /**
    * Find the latest properly tagged image in [account] and [region].
@@ -140,11 +132,7 @@ class ImageService(
       .sortedWith(NamedImageComparator)
       .filter {
         // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        try {
-          AppVersion.parseName(it.appVersion).packageName == packageName
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
-        }
+        it.appVersion.parseAppVersion().packageName == packageName
       }
       .firstOrNull { namedImage ->
         val allTags = getAllTags(namedImage)
