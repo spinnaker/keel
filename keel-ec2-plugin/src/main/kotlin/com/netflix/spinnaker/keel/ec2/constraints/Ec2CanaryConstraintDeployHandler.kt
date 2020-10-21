@@ -62,7 +62,7 @@ class Ec2CanaryConstraintDeployHandler(
 
     val missingRegions = regions - images.keys
     if (missingRegions.isNotEmpty()) {
-      error("Image not found for $version in all requested regions ($regions)")
+      error("Image not found for $version in all requested regions ($regions.joinToString())")
     }
 
     val source = getSourceServerGroups(deliveryConfig.application, constraint, deliveryConfig.serviceAccount)
