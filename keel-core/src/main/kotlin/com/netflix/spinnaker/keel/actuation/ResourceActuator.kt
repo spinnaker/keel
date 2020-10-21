@@ -203,9 +203,13 @@ class ResourceActuator(
    * the environment containing [resource]. This ensures that the environment will be fully restored to
    * a prior good-state.
    *
-   * If the version has previously been deployed successfully do not veto the artifact because
-   * we do not want to veto the artifact in the case of a bad config change or other downstream problem.
-   * Rolling back most likely will not help in these cases and it will probably cause confusion.
+   * This method can override a veto's request to veto an artifact. In this method we have more
+   * information about the diff and the artifact version, and so we can make a better decision about
+   * whether or not to veto an artifact version
+   *
+   * If the version has previously been deployed successfully do not veto the artifact version because
+   * we do not want to veto the artifact version in the case of a bad config change or other downstream
+   * problem. Rolling back most likely will not help in these cases and it will probably cause confusion.
    */
   private fun handleArtifactVetoing(
     response: VetoResponse,
