@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
+import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import kotlinx.cli.ArgType.Int
@@ -92,7 +92,7 @@ class DataGenCommand(
           ),
           spec = ClusterSpec(
             moniker = Moniker(configName, TEST_STACK),
-            imageProvider = ReferenceArtifactImageProvider(
+            imageProvider = ImageProvider(
               reference = TEST_APP
             ),
             locations = SubnetAwareLocations(

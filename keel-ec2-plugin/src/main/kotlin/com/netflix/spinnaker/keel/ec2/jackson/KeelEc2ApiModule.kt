@@ -18,7 +18,6 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
-import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.IngressPorts
 import com.netflix.spinnaker.keel.api.ec2.InstanceProvider
 import com.netflix.spinnaker.keel.api.ec2.Scaling
@@ -94,7 +93,6 @@ internal object KeelEc2ApiDeserializers : Deserializers.Base() {
   override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
     when (type.rawClass) {
       ActiveServerGroupImage::class.java -> ActiveServerGroupImageDeserializer()
-      ImageProvider::class.java -> ImageProviderDeserializer()
       IngressPorts::class.java -> IngressPortsDeserializer()
       SecurityGroupRule::class.java -> SecurityGroupRuleDeserializer()
       else -> null

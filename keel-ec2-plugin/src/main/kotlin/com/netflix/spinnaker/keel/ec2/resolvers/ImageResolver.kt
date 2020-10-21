@@ -6,8 +6,8 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
+import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
@@ -48,9 +48,7 @@ class ImageResolver(
   override fun invoke(resource: Resource<ClusterSpec>): Resource<ClusterSpec> {
     val imageProvider = resource.spec.imageProvider ?: return resource
     val image = runBlocking {
-      when (imageProvider) {
-        is ReferenceArtifactImageProvider -> resolveFromReference(resource, imageProvider)
-      }
+      resolveFromReference(resource, imageProvider)
     }
     return resource.withVirtualMachineImages(image)
   }
@@ -60,7 +58,7 @@ class ImageResolver(
 
   private suspend fun resolveFromReference(
     resource: Resource<ClusterSpec>,
-    imageProvider: ReferenceArtifactImageProvider
+    imageProvider: ImageProvider
   ): VersionedNamedImage {
     val deliveryConfig = repository.deliveryConfigFor(resource.id)
     val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == DEBIAN }

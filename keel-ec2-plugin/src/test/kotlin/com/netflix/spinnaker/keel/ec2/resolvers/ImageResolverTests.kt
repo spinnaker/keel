@@ -14,7 +14,6 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
@@ -161,10 +160,10 @@ internal class ImageResolverTests : JUnit5Minutests {
       }
     }
 
-    derivedContext<Fixture<ReferenceArtifactImageProvider>>("an image derived from an artifact") {
+    derivedContext<Fixture<ImageProvider>>("an image derived from an artifact") {
       fixture {
         Fixture(
-          ReferenceArtifactImageProvider("my-artifact")
+          ImageProvider("my-artifact")
         )
       }
 

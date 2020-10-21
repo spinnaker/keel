@@ -172,10 +172,7 @@ data class ClusterSpec(
   // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
   // image provider.
   override val artifactReference: String?
-    get() = when (imageProvider) {
-      is ReferenceArtifactImageProvider -> imageProvider.reference
-      else -> null
-    }
+    get() = imageProvider?.reference
 
   override val maxDiffCount: Int? = 2
 

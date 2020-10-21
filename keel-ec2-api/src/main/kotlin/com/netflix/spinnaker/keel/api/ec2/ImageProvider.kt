@@ -18,13 +18,8 @@
 package com.netflix.spinnaker.keel.api.ec2
 
 /**
- * Base interface for providing an image
- */
-sealed class ImageProvider
-
-/**
  * Provides image id by referencing an artifact defined in the delivery config
  */
-data class ReferenceArtifactImageProvider(
+data class ImageProvider(
   val reference: String
-) : ImageProvider()
+)
