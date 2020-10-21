@@ -17,25 +17,10 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-
 /**
  * Base interface for providing an image
  */
 sealed class ImageProvider
-
-/**
- * Provides image id by reference to a package
- */
-@Deprecated(
-  "Non-reference-based artifact providers are no longer supported.",
-  replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
-)
-data class ArtifactImageProvider(
-  val deliveryArtifact: DeliveryArtifact,
-  val artifactStatuses: List<ArtifactStatus> = emptyList() // treated as "all statuses" by ImageResolver
-) : ImageProvider()
 
 /**
  * Provides image id by referencing an artifact defined in the delivery config

@@ -200,10 +200,7 @@ class ApiDocTests : JUnit5Minutests {
         .path("oneOf")
         .isArray()
         .findValuesAsText("\$ref")
-        .containsExactlyInAnyOrder(
-          "#/\$defs/ArtifactImageProvider",
-          "#/\$defs/ReferenceArtifactImageProvider"
-        )
+        .containsExactly("#/\$defs/ReferenceArtifactImageProvider")
     }
 
     imageProviderTypes.map(Class<*>::getSimpleName)

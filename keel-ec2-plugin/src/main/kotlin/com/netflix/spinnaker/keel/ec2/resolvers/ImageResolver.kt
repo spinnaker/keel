@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.ec2.resolvers
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
@@ -51,8 +50,6 @@ class ImageResolver(
     val image = runBlocking {
       when (imageProvider) {
         is ReferenceArtifactImageProvider -> resolveFromReference(resource, imageProvider)
-        // todo eb: artifact provider is here for backwards compatibility. Remove?
-        is ArtifactImageProvider -> resolveFromArtifact(resource, imageProvider.deliveryArtifact as DebianArtifact)
       }
     }
     return resource.withVirtualMachineImages(image)

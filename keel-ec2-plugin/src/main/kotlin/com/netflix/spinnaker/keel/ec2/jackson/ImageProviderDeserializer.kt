@@ -17,7 +17,6 @@
  */
 package com.netflix.spinnaker.keel.ec2.jackson
 
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.jackson.PropertyNamePolymorphicDeserializer
@@ -28,7 +27,6 @@ internal class ImageProviderDeserializer :
   override fun identifySubType(fieldNames: Collection<String>): Class<out ImageProvider> =
     when {
       "reference" in fieldNames -> ReferenceArtifactImageProvider::class.java
-      "deliveryArtifact" in fieldNames -> ArtifactImageProvider::class.java
       else -> throw InvalidPayload("ImageProvider")
     }
 }
