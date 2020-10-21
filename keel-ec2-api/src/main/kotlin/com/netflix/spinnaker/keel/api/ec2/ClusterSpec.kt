@@ -123,7 +123,7 @@ data class ClusterSpec(
   override val locations: SubnetAwareLocations,
   private val _defaults: ServerGroupSpec,
   override val overrides: Map<String, ServerGroupSpec> = emptyMap(),
-  private val _artifactName: String? = null, // Custom backing field for artifactName, used by resolvers
+  override val artifactName: String? = null,
   override val artifactVersion: String? = null
 ) : ComputeResourceSpec, Monikered, Locatable<SubnetAwareLocations>, OverrideableClusterDependencyContainer<ServerGroupSpec>, UnhappyControl {
   @Factory
@@ -168,14 +168,6 @@ data class ClusterSpec(
     get() = _defaults
 
   override val artifactType: ArtifactType? = DEBIAN
-
-  // Returns the artifact name set by resolvers, or attempts to find the artifact name from the image provider.
-  override val artifactName: String?
-    get() = _artifactName
-      ?: when (imageProvider) {
-        is ArtifactImageProvider -> imageProvider.deliveryArtifact.name
-        else -> null
-      }
 
   // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
   // image provider.

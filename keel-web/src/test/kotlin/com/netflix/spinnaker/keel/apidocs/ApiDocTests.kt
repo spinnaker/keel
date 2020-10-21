@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT
 import com.fasterxml.jackson.databind.node.BooleanNode
+import com.fasterxml.jackson.databind.node.MissingNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.VersionedArtifactProvider
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
@@ -114,7 +116,7 @@ class ApiDocTests : JUnit5Minutests {
     }
 
     resourceSpecTypes
-      .mapValues{ it.value.simpleName }
+      .mapValues { it.value.simpleName }
       .forEach { (kind, specSubType) ->
         test("contains a sub-schema for SubmittedResource predicated on a kind of $kind") {
           at("/\$defs/SubmittedResource/allOf")
@@ -349,6 +351,22 @@ class ApiDocTests : JUnit5Minutests {
         .isA<BooleanNode>()
         .booleanValue()
         .isTrue()
+    }
+
+    listOf(
+      VersionedArtifactProvider::artifactName.name,
+      VersionedArtifactProvider::artifactType.name,
+      VersionedArtifactProvider::artifactVersion.name,
+    ).forEach { propertyName ->
+      test("ClusterSpec does not contain transient property $propertyName used for image resolution") {
+        at("/\$defs/ClusterSpec/properties/$propertyName")
+          .isA<MissingNode>()
+      }
+
+      test("TitusClusterSpec does not contain transient property $propertyName used for image resolution") {
+        at("/\$defs/TitusClusterSpec/properties/$propertyName")
+          .isA<MissingNode>()
+      }
     }
   }
 }

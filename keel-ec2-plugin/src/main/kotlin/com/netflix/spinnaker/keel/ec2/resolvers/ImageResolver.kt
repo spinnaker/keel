@@ -42,7 +42,7 @@ class ImageResolver(
 
   data class VersionedNamedImage(
     val namedImages: Map<String, NamedImage>,
-    val artifact: DeliveryArtifact?, // TODO: make this non-nullable
+    val artifact: DeliveryArtifact,
     val version: String
   )
 
@@ -128,8 +128,7 @@ class ImageResolver(
     return copy(
       spec = spec.copy(
         overrides = overrides,
-        _artifactName = image.artifact?.name
-          ?: error("Artifact not found in images ${image.namedImages.values.map { it.imageName }}"),
+        artifactName = image.artifact.name,
         artifactVersion = image.version
       )
     )
