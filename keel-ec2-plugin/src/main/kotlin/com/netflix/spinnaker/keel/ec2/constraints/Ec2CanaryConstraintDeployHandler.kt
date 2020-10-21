@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImageForAppVersionInRegions
+import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImages
 import com.netflix.spinnaker.keel.clouddriver.model.ActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.constraints.CanaryConstraintConfigurationProperties
@@ -54,7 +54,7 @@ class Ec2CanaryConstraintDeployHandler(
     val scope = CoroutineScope(GlobalScope.coroutineContext)
     val judge = "canary:${deliveryConfig.application}:${targetEnvironment.name}:${constraint.canaryConfigId}"
 
-    val images = imageService.getLatestNamedImageForAppVersionInRegions(
+    val images = imageService.getLatestNamedImages(
       appVersion = AppVersion.parseName(version.replace("~", "_")),
       account = imageResolver.defaultImageAccount,
       regions = regions

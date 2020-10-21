@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImageForAppVersionInRegions
+import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImages
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.baseImageVersion
@@ -90,7 +90,7 @@ class ImageResolver(
       environment.name
     ) ?: throw NoImageSatisfiesConstraints(artifact.name, environment.name)
 
-    val images = imageService.getLatestNamedImageForAppVersionInRegions(
+    val images = imageService.getLatestNamedImages(
       appVersion = AppVersion.parseName(artifactVersion),
       account = account,
       regions = regions

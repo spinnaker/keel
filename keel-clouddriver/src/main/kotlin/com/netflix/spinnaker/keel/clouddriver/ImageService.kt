@@ -128,7 +128,7 @@ class ImageService(
    * As a side effect this method will prime the cache for any additional regions where the image is
    * available.
    */
-  suspend fun getLatestNamedImageForAppVersionInRegion(
+  suspend fun getLatestNamedImage(
     appVersion: AppVersion,
     account: String,
     region: String
@@ -216,7 +216,7 @@ class ImageService(
 
 /**
  * Find the latest properly tagged images in [account] for each of [regions] using
- * [ImageService.getLatestNamedImageForAppVersionInRegion] in parallel for each region.
+ * [ImageService.getLatestNamedImage] in parallel for each region.
  *
  * In many cases all the values in the resulting map will be the same [NamedImage] instance, but
  * this may not be the case if images were baked separately in each region.
@@ -224,14 +224,14 @@ class ImageService(
  * The resulting map will contain no entry for regions where an image is not found. The calling
  * code must check this if it requires all regions to be present.
  */
-suspend fun ImageService.getLatestNamedImageForAppVersionInRegions(
+suspend fun ImageService.getLatestNamedImages(
   appVersion: AppVersion,
   account: String,
   regions: Collection<String>
 ): Map<String, NamedImage> = coroutineScope {
   regions.associateWith { region ->
     async {
-      getLatestNamedImageForAppVersionInRegion(
+      getLatestNamedImage(
         appVersion = appVersion,
         account = account,
         region = region

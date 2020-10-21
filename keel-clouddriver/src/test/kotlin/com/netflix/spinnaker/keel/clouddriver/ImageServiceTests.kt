@@ -358,7 +358,7 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("searching for a specific appversion finds latest complete image") {
         val images = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegions(
+          subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
             regions = regions
@@ -376,7 +376,7 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("the newest image is selected when searching in a single region") {
         val image = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegion(appVersion, "test", regions.first())
+          subject.getLatestNamedImage(appVersion, "test", regions.first())
         }
 
         expectThat(image)
@@ -387,10 +387,10 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("any other regions supported by the same image are subsequently served from cache") {
         val r1Image = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegion(appVersion, "test", regions.first())
+          subject.getLatestNamedImage(appVersion, "test", regions.first())
         }
         val r2Image = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegion(appVersion, "test", regions.last())
+          subject.getLatestNamedImage(appVersion, "test", regions.last())
         }
 
         expectThat(r1Image).isEqualTo(r2Image)
@@ -412,7 +412,7 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("searching for a specific appversion finds all images for required regions") {
         val images = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegions(
+          subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
             regions = regions
@@ -442,7 +442,7 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("images that were found are returned") {
         val images = runBlocking {
-          subject.getLatestNamedImageForAppVersionInRegions(
+          subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
             regions = regions

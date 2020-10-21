@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.bakery.api.ImageExistsConstraint
 import com.netflix.spinnaker.keel.clouddriver.ImageService
-import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImageForAppVersionInRegions
+import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImages
 import com.netflix.spinnaker.keel.getConfig
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -46,7 +46,7 @@ class ImageExistsConstraintEvaluator(
 
   private fun imagesExistInAllRegions(version: String, vmOptions: VirtualMachineOptions): Boolean =
     runBlocking {
-      imageService.getLatestNamedImageForAppVersionInRegions(
+      imageService.getLatestNamedImages(
         appVersion = version.parseAppVersion(),
         account = defaultImageAccount,
         regions = vmOptions.regions
