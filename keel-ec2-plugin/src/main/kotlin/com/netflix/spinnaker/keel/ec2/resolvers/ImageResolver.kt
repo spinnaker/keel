@@ -7,7 +7,6 @@ import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
@@ -18,7 +17,6 @@ import com.netflix.spinnaker.keel.clouddriver.getLatestNamedImages
 import com.netflix.spinnaker.keel.clouddriver.model.NamedImage
 import com.netflix.spinnaker.keel.clouddriver.model.appVersion
 import com.netflix.spinnaker.keel.clouddriver.model.baseImageVersion
-import com.netflix.spinnaker.keel.ec2.NoImageFound
 import com.netflix.spinnaker.keel.ec2.NoImageFoundForRegions
 import com.netflix.spinnaker.keel.ec2.NoImageSatisfiesConstraints
 import com.netflix.spinnaker.keel.filterNotNullValues
@@ -55,7 +53,6 @@ class ImageResolver(
         is ReferenceArtifactImageProvider -> resolveFromReference(resource, imageProvider)
         // todo eb: artifact provider is here for backwards compatibility. Remove?
         is ArtifactImageProvider -> resolveFromArtifact(resource, imageProvider.deliveryArtifact as DebianArtifact)
-        is JenkinsImageProvider -> resolveFromJenkinsJob(imageProvider)
       }
     }
     return resource.withVirtualMachineImages(image)
@@ -97,25 +94,6 @@ class ImageResolver(
     )
 
     return VersionedNamedImage(images, artifact, artifactVersion)
-  }
-
-  private suspend fun resolveFromJenkinsJob(
-    imageProvider: JenkinsImageProvider
-  ): VersionedNamedImage {
-    val image = imageService.getNamedImageFromJenkinsInfo(
-      imageProvider.packageName,
-      dynamicConfigService.getConfig("images.default-account", "test"),
-      imageProvider.buildHost,
-      imageProvider.buildName,
-      imageProvider.buildNumber
-    ) ?: throw NoImageFound(imageProvider.packageName)
-
-    log.info("Image found for {}: {}", imageProvider.packageName, image)
-    return VersionedNamedImage(
-      namedImages = image.amis.keys.associateWith { image },
-      artifact = null,
-      version = image.appVersion
-    )
   }
 
   private fun Resource<ClusterSpec>.withVirtualMachineImages(image: VersionedNamedImage): Resource<ClusterSpec> {

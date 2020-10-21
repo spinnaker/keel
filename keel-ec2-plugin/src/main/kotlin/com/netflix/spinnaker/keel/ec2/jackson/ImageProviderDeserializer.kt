@@ -19,7 +19,6 @@ package com.netflix.spinnaker.keel.ec2.jackson
 
 import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ImageProvider
-import com.netflix.spinnaker.keel.api.ec2.JenkinsImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.jackson.PropertyNamePolymorphicDeserializer
 import com.netflix.spinnaker.kork.exceptions.UserException
@@ -30,7 +29,6 @@ internal class ImageProviderDeserializer :
     when {
       "reference" in fieldNames -> ReferenceArtifactImageProvider::class.java
       "deliveryArtifact" in fieldNames -> ArtifactImageProvider::class.java
-      "buildHost" in fieldNames -> JenkinsImageProvider::class.java
       else -> throw InvalidPayload("ImageProvider")
     }
 }

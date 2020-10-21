@@ -43,17 +43,3 @@ data class ArtifactImageProvider(
 data class ReferenceArtifactImageProvider(
   val reference: String
 ) : ImageProvider()
-
-/**
- * Provides an image by reference to a jenkins master, job, and job number
- */
-@Deprecated(
-  "Non-reference-based artifact providers are no longer supported.",
-  replaceWith = ReplaceWith("ReferenceArtifactImageProvider")
-)
-data class JenkinsImageProvider(
-  val packageName: String,
-  val buildHost: String,
-  val buildName: String,
-  val buildNumber: String
-) : ImageProvider()

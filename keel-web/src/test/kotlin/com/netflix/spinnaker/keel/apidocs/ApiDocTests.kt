@@ -200,7 +200,6 @@ class ApiDocTests : JUnit5Minutests {
         .findValuesAsText("\$ref")
         .containsExactlyInAnyOrder(
           "#/\$defs/ArtifactImageProvider",
-          "#/\$defs/JenkinsImageProvider",
           "#/\$defs/ReferenceArtifactImageProvider"
         )
     }
