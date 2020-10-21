@@ -107,7 +107,7 @@ class ImageService(
           // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
           runCatching { AppVersion.parseName(image.appVersion) }
             .getOrElse { ex ->
-              throw SystemException("trying to parse name for image ${image.imageName} with version ${image.appVersion} but got an exception", ex)
+              throw SystemException("Error parsing name for image ${image.imageName} with version ${image.appVersion}: ${ex.message}", ex)
             }
             .run {
               packageName == appVersion.packageName && version == appVersion.version && commit == appVersion.commit
