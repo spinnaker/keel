@@ -43,7 +43,17 @@ class ImageService(
   val log: Logger by lazy { LoggerFactory.getLogger(javaClass) }
 
   suspend fun getLatestImage(artifactName: String, account: String): Image? =
-    getLatestNamedImage(artifactName, account)?.toImage(artifactName)
+    cloudDriverService.namedImages(DEFAULT_SERVICE_ACCOUNT, artifactName, account)
+      .filter { it.hasAppVersion }
+      .sortedWith(NamedImageComparator)
+      .firstOrNull {
+        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
+        try {
+          AppVersion.parseName(it.appVersion).packageName == artifactName
+        } catch (ex: Exception) {
+          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
+        }
+      }?.toImage(artifactName)
 
   private fun NamedImage.toImage(artifactName: String): Image? =
     tagsByImageId
@@ -61,25 +71,6 @@ class ImageService(
           )
           log.debug("Latest image for {} is {}", artifactName, image)
           image
-        }
-      }
-
-  /**
-   * Get the latest named image for a package.
-   *
-   * @param region if supplied the latest image in this region is returned, if `null` the latest
-   * image regardless of region.
-   */
-  suspend fun getLatestNamedImage(packageName: String, account: String, region: String? = null): NamedImage? =
-    cloudDriverService.namedImages(DEFAULT_SERVICE_ACCOUNT, packageName, account, region)
-      .filter { it.hasAppVersion }
-      .sortedWith(NamedImageComparator)
-      .firstOrNull {
-        // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-        try {
-          AppVersion.parseName(it.appVersion).packageName == packageName
-        } catch (ex: Exception) {
-          throw SystemException("trying to parse name for version ${it.appVersion} but got an exception", ex)
         }
       }
 

@@ -20,12 +20,12 @@ import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService.NoopDynamic
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Called
-import io.mockk.coEvery
 import io.mockk.mockk
-import io.mockk.verify
 import strikt.api.expectThat
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
+import io.mockk.coEvery as every
+import io.mockk.coVerify as verify
 
 internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
@@ -103,7 +103,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
     context("CloudDriver cannot find an image for an artifact version") {
       before {
-        coEvery {
+        every {
           imageService.getLatestNamedImage(any(), any(), any())
         } returns null
 
@@ -119,7 +119,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
     context("CloudDriver finds a matching image for an artifact version") {
       before {
-        coEvery {
+        every {
           imageService.getLatestNamedImage(
             AppVersion.parseName(appVersion),
             "test",

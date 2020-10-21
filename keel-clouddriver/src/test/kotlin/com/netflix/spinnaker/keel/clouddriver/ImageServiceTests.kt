@@ -28,7 +28,6 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.DynamicTest.dynamicTest
 import strikt.api.expectThat
 import strikt.assertions.all
 import strikt.assertions.containsExactly
@@ -254,47 +253,14 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("get latest named image returns actual latest image") {
         runBlocking {
-          val image = subject.getLatestNamedImage(
-            packageName = "my-package",
+          val image = subject.getLatestImage(
+            artifactName = "my-package",
             account = "test"
           )
           expectThat(image)
             .isNotNull()
-            .get { imageName }
-            .isEqualTo(newestImage.imageName)
-        }
-      }
-    }
-
-    context("get latest named image can be filtered by region") {
-      mapOf("us-west-1" to "ami-003", "ap-south-1" to "ami-005").map { (region, imageId) ->
-        dynamicTest("get latest image can be filtered by region ($region)") {
-          before {
-            every {
-              cloudDriver.namedImages(
-                user = DEFAULT_SERVICE_ACCOUNT,
-                imageName = "my-package",
-                account = "test",
-                region = region
-              )
-            } answers {
-              listOf(image2, image4, image3, image1, image5).filter { it.amis.keys.contains(region) }
-            }
-          }
-
-          test("it works") {
-            runBlocking {
-              val image = subject.getLatestNamedImage(
-                packageName = "my-package",
-                account = "test",
-                region = region
-              )
-              expectThat(image)
-                .isNotNull()
-                .get { imageId }
-                .isEqualTo(imageId)
-            }
-          }
+            .get { appVersion }
+            .isEqualTo(newestImage.appVersion)
         }
       }
     }
@@ -313,8 +279,8 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("no image provided") {
         runBlocking {
-          val image = subject.getLatestNamedImage(
-            packageName = "my-package",
+          val image = subject.getLatestImage(
+            artifactName = "my-package",
             account = "test"
           )
           expectThat(image)
