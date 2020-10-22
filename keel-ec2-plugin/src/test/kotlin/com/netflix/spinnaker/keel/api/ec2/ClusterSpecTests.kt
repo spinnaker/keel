@@ -134,9 +134,7 @@ data class Fixture(
       app = "fnord",
       stack = "test"
     ),
-    imageProvider = ImageProvider(
-      reference = "fnord-deb"
-    ),
+    artifactReference = "fnord-deb",
     locations = SubnetAwareLocations(
       account = "test",
       vpc = "vpc0",

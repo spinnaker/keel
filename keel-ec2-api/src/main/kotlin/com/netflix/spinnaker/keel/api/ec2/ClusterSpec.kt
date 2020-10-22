@@ -118,7 +118,7 @@ private fun ClusterSpec.resolveHealth(region: String): Health {
 
 data class ClusterSpec(
   override val moniker: Moniker,
-  val imageProvider: ImageProvider? = null,
+  override val artifactReference: String? = null,
   val deployWith: ClusterDeployStrategy = RedBlack(),
   override val locations: SubnetAwareLocations,
   private val _defaults: ServerGroupSpec,
@@ -129,7 +129,7 @@ data class ClusterSpec(
   @Factory
   constructor(
     moniker: Moniker,
-    imageProvider: ImageProvider? = null,
+    artifactReference: String? = null,
     deployWith: ClusterDeployStrategy = RedBlack(),
     @Optional locations: SubnetAwareLocations,
     launchConfiguration: LaunchConfigurationSpec? = null,
@@ -141,7 +141,7 @@ data class ClusterSpec(
     overrides: Map<String, ServerGroupSpec> = emptyMap()
   ) : this(
     moniker,
-    imageProvider,
+    artifactReference,
     deployWith,
     locations,
     ServerGroupSpec(
@@ -168,11 +168,6 @@ data class ClusterSpec(
     get() = _defaults
 
   override val artifactType: ArtifactType? = DEBIAN
-
-  // Provides a hint as to cluster -> artifact linkage even _without_ resolvers being applied, by delegating to the
-  // image provider.
-  override val artifactReference: String?
-    get() = imageProvider?.reference
 
   override val maxDiffCount: Int? = 2
 

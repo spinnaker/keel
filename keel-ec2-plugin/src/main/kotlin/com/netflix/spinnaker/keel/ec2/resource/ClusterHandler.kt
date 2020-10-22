@@ -21,9 +21,8 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
+import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
-import com.netflix.spinnaker.keel.api.ec2.ImageProvider
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.ec2.Metric
@@ -106,7 +105,7 @@ class ClusterHandler(
 
   private val mapper = configuredObjectMapper()
 
-  override val supportedKind = EC2_CLUSTER_V1
+  override val supportedKind = EC2_CLUSTER_V1_1
 
   override suspend fun toResolvedType(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =
     with(resource.spec) {
@@ -439,7 +438,7 @@ class ClusterHandler(
 
     val spec = ClusterSpec(
       moniker = exportable.moniker,
-      imageProvider = appversion?.let(::ImageProvider),
+      artifactReference = appversion,
       locations = locations,
       deployWith = deployStrategy.withDefaultsOmitted(),
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),

@@ -289,7 +289,7 @@ internal class ClusterExportTests : JUnit5Minutests {
           get { defaults.scaling!!.targetTrackingPolicies }.hasSize(1)
           get { defaults.health }.isNull()
           get { deployWith }.isA<RedBlack>()
-          get { imageProvider }.isNotNull()
+          get { artifactReference }.isNotNull()
         }
       }
     }

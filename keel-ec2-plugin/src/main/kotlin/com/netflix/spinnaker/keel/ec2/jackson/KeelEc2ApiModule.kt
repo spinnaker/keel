@@ -31,11 +31,13 @@ import com.netflix.spinnaker.keel.api.ec2.StepScalingPolicy
 import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1Spec
+import com.netflix.spinnaker.keel.api.ec2.old.ClusterV1Spec
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.BuildInfoMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClassicLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterDependenciesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterSpecMixin
+import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClusterV1SpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.CustomizedMetricSpecificationMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.HealthMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.HealthSpecMixin
@@ -64,6 +66,7 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       setMixInAnnotations<ClassicLoadBalancerSpec, ClassicLoadBalancerSpecMixin>()
       setMixInAnnotations<ClusterDependencies, ClusterDependenciesMixin>()
       setMixInAnnotations<ClusterSpec, ClusterSpecMixin>()
+      setMixInAnnotations<ClusterV1Spec, ClusterV1SpecMixin>()
       setMixInAnnotations<CustomizedMetricSpecification, CustomizedMetricSpecificationMixin>()
       setMixInAnnotations<Health, HealthMixin>()
       setMixInAnnotations<HealthSpec, HealthSpecMixin>()

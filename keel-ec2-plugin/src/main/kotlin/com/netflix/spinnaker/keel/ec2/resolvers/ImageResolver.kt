@@ -5,8 +5,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.ec2.ImageProvider
+import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.VirtualMachineImage
 import com.netflix.spinnaker.keel.api.plugins.Resolver
@@ -35,7 +34,7 @@ class ImageResolver(
   private val imageService: ImageService
 ) : Resolver<ClusterSpec> {
 
-  override val supportedKind = EC2_CLUSTER_V1
+  override val supportedKind = EC2_CLUSTER_V1_1
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -46,9 +45,11 @@ class ImageResolver(
   )
 
   override fun invoke(resource: Resource<ClusterSpec>): Resource<ClusterSpec> {
-    val imageProvider = resource.spec.imageProvider ?: return resource
+    val ref = resource.spec.artifactReference
+    if (ref == null) return resource
+
     val image = runBlocking {
-      resolveFromReference(resource, imageProvider)
+      resource.resolveFromReference(ref)
     }
     return resource.withVirtualMachineImages(image)
   }
@@ -56,25 +57,23 @@ class ImageResolver(
   val defaultImageAccount: String
     get() = dynamicConfigService.getConfig("images.default-account", "test")
 
-  private suspend fun resolveFromReference(
-    resource: Resource<ClusterSpec>,
-    imageProvider: ImageProvider
+  private suspend fun Resource<ClusterSpec>.resolveFromReference(
+    ref: String
   ): VersionedNamedImage {
-    val deliveryConfig = repository.deliveryConfigFor(resource.id)
-    val artifact = deliveryConfig.artifacts.find { it.reference == imageProvider.reference && it.type == DEBIAN }
-      ?: throw NoMatchingArtifactException(deliveryConfig.name, DEBIAN, imageProvider.reference)
+    val deliveryConfig = repository.deliveryConfigFor(id)
+    val artifact = deliveryConfig.artifacts.find { it.reference == ref && it.type == DEBIAN }
+      ?: throw NoMatchingArtifactException(deliveryConfig.name, DEBIAN, ref)
 
-    return resolveFromArtifact(resource, artifact as DebianArtifact)
+    return this.resolveFromArtifact(artifact as DebianArtifact)
   }
 
-  private suspend fun resolveFromArtifact(
-    resource: Resource<ClusterSpec>,
+  private suspend fun Resource<ClusterSpec>.resolveFromArtifact(
     artifact: DebianArtifact
   ): VersionedNamedImage {
-    val deliveryConfig = repository.deliveryConfigFor(resource.id)
-    val environment = repository.environmentFor(resource.id)
+    val deliveryConfig = repository.deliveryConfigFor(id)
+    val environment = repository.environmentFor(id)
     val account = defaultImageAccount
-    val regions = resource.spec.locations.regions.map { it.name }
+    val regions = spec.locations.regions.map { it.name }
 
     val artifactVersion = repository.latestVersionApprovedIn(
       deliveryConfig,
