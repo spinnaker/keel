@@ -31,6 +31,8 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
+  fun getDeliveryArtifact(name: String, type: ArtifactType): DeliveryArtifact?
+
   fun getAll(type: ArtifactType? = null): List<DeliveryArtifact>
 
   /**

@@ -15,7 +15,9 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.exceptions.InvalidRegexException
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -30,6 +32,7 @@ class DockerArtifactSupplier(
 ) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
 
@@ -123,6 +126,27 @@ class DockerArtifactSupplier(
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
     return null
+  }
+
+  /**
+   * Given a docker artifact and a docker tag, filters out all tags that don't produce exactly one capture
+   * group with the provided regex.
+   *
+   * This means that this will filter out tags like "latest" from the list.
+   */
+  override fun shouldProcessArtifact(artifactDefinition: DeliveryArtifact, artifact: PublishedArtifact): Boolean {
+    return try {
+      if (artifactDefinition is DockerArtifact) {
+        artifact.version != "latest" && TagComparator.parseWithRegex(artifact.version, artifactDefinition.tagVersionStrategy, artifactDefinition.captureGroupRegex) != null
+      }
+      //artifact is not a docker artifact
+      else {
+        false
+      }
+    } catch (e: InvalidRegexException) {
+      log.warn("Version ${artifact.version} produced more than one capture group based on artifact $artifact, excluding")
+      false
+    }
   }
 
   private fun VersioningStrategy.hasBuild(): Boolean {

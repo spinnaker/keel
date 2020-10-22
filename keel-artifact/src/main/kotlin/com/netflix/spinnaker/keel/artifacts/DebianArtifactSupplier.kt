@@ -36,14 +36,6 @@ class DebianArtifactSupplier(
   override val supportedVersioningStrategy =
     SupportedVersioningStrategy("deb", DebianVersioningStrategy::class.java)
 
-  override fun publishArtifact(artifact: PublishedArtifact) {
-    if (artifact.hasReleaseStatus()) {
-      super.publishArtifact(artifact)
-    } else {
-      log.debug("Ignoring artifact event without release status: $artifact")
-    }
-  }
-
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     runWithIoContext {
       artifactService.getVersions(artifact.name, artifact.statusesForQuery, DEBIAN)
@@ -101,9 +93,29 @@ class DebianArtifactSupplier(
     return null
   }
 
+  override fun shouldProcessArtifact(artifactDefinition: DeliveryArtifact, artifact: PublishedArtifact): Boolean =
+    artifact.hasReleaseStatus() && artifact.hasCorrectVersion()
+
+
   // Debian Artifacts should contain a releaseStatus in the metadata
-  private fun PublishedArtifact.hasReleaseStatus() =
-    this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
+  private fun PublishedArtifact.hasReleaseStatus() : Boolean {
+    return if (this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null) {
+      true
+    } else {
+      log.debug("Ignoring artifact event without release status: $this")
+      false
+    }
+  }
+
+  // Debian Artifacts should not have "local" as a part of their version string
+  private fun PublishedArtifact.hasCorrectVersion() : Boolean {
+    return if (!this.version.contains("local")) {
+      true
+    } else {
+      log.debug("Ignoring artifact which contains local is its version string: $this")
+      false
+    }
+  }
 
   private val DeliveryArtifact.statusesForQuery: List<String>
     get() = statuses.map { it.name }

@@ -72,6 +72,10 @@ class NpmArtifactSupplier(
       ?.let { GitMetadata(it) }
   }
 
+  override fun shouldProcessArtifact(artifactDefinition:DeliveryArtifact, artifact: PublishedArtifact): Boolean {
+    //currently, we don't have any limitations for NPM artifact versions
+    return true
+  }
 
   // The API requires colons in place of slashes to avoid path pattern conflicts
   private val DeliveryArtifact.nameForQuery: String

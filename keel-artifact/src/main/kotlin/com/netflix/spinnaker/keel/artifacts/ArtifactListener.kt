@@ -52,19 +52,25 @@ class ArtifactListener(
       .artifacts
       .filter { it.type.toLowerCase() in artifactTypeNames }
       .forEach { artifact ->
-        if (repository.isRegistered(artifact.name, artifact.artifactType)) {
+        val deliveryArtifact = repository.getDeliveryArtifact(artifact.name, artifact.artifactType)
+        //check if the artifact is registered
+        if (deliveryArtifact != null) {
           val artifactSupplier = artifactSuppliers.supporting(artifact.artifactType)
-          val enrichedArtifact = artifactSupplier.addMetadata(artifact.normalized())
+          if (artifactSupplier.shouldProcessArtifact(deliveryArtifact, artifact)) {
+            val enrichedArtifact = artifactSupplier.addMetadata(artifact.normalized())
 
-          log.info("Registering version {} (status={}) of {} artifact {}",
-            artifact.version, artifact.status, artifact.type, artifact.name)
+            log.info("Registering version {} (status={}) of {} artifact {}",
+              artifact.version, artifact.status, artifact.type, artifact.name)
 
-          repository.storeArtifactInstance(enrichedArtifact)
-            .also { wasAdded ->
-              if (wasAdded) {
-                publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
+            repository.storeArtifactInstance(enrichedArtifact)
+              .also { wasAdded ->
+                if (wasAdded) {
+                  publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
+                }
               }
-            }
+          } else {
+            log.warn("Artifact $artifact should not be processed due to artifactSupplier limitations.")
+          }
         } else {
           log.debug("Artifact $artifact is not registered. Ignoring new artifact version.")
         }

@@ -313,6 +313,9 @@ class CombinedRepository(
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     artifactRepository.isRegistered(name, type)
 
+  override fun getDeliveryArtifact (name: String, type: ArtifactType): DeliveryArtifact? =
+    artifactRepository.getDeliveryArtifact(name, type)
+
   override fun getAllArtifacts(type: ArtifactType?): List<DeliveryArtifact> =
     artifactRepository.getAll(type)
 

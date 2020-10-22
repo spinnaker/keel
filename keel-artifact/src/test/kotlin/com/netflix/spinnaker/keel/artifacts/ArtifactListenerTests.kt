@@ -102,7 +102,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("the artifact is not something we're tracking") {
       before {
-        every { repository.isRegistered(any(), any()) } returns false
+        every { repository.getDeliveryArtifact(any(), any()) } returns null
         listener.onArtifactPublished(event)
       }
 
@@ -117,13 +117,16 @@ internal class ArtifactListenerTests : JUnit5Minutests {
 
     context("the artifact is registered with versions") {
       before {
-        every { repository.isRegistered(artifact.name, artifact.type) } returns true
+        every { repository.getDeliveryArtifact(artifact.name, artifact.type) } returns debianArtifact
         every {
           debianArtifactSupplier.getLatestArtifact(deliveryConfig, artifact)
         } returns publishedDeb
         every {
           debianArtifactSupplier.getArtifactMetadata(publishedDeb)
         } returns artifactMetadata
+        every {
+          debianArtifactSupplier.shouldProcessArtifact(any(), any())
+        } returns true
       }
 
       context("the version was already known") {

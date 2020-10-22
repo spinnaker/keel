@@ -4,10 +4,10 @@ import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
-import com.netflix.spinnaker.keel.api.events.ArtifactPublishedEvent
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
@@ -22,7 +22,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
 import strikt.assertions.isNull
+import strikt.assertions.isTrue
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
@@ -37,6 +39,13 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       deliveryConfigName = deliveryConfig.name,
       tagVersionStrategy = SEMVER_TAG
     )
+
+    val dockerArtifactWithAnotherStrategy = DockerArtifact(
+      name = "fnord",
+      deliveryConfigName = deliveryConfig.name,
+      tagVersionStrategy = TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
+    )
+
     val versions = listOf("v1.12.1-h1188.35b8b29", "v1.12.2-h1182.8a5b962")
     val latestArtifact = PublishedArtifact(
       name = dockerArtifact.name,
@@ -57,6 +66,14 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         "date" to "1598707355157"
       )
     )
+
+    val latestArtifactWithBadVersion = PublishedArtifact(
+      name = dockerArtifact.name,
+      type = dockerArtifact.type,
+      reference = dockerArtifact.reference,
+      version = "latest"
+    )
+
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 
@@ -116,6 +133,21 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
           .isEqualTo(BuildMetadata(id = 1182))
         expectThat(dockerArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, DockerVersioningStrategy(INCREASING_TAG)))
           .isNull()
+      }
+
+      test("should not process artifact with latest version") {
+        expectThat(dockerArtifactSupplier.shouldProcessArtifact(dockerArtifact, latestArtifact))
+          .isTrue()
+      }
+
+      test("should not process artifact with latest version") {
+        expectThat(dockerArtifactSupplier.shouldProcessArtifact(dockerArtifact, latestArtifactWithBadVersion))
+          .isFalse()
+      }
+
+      test("should not process artifact with different strategy tag") {
+        expectThat(dockerArtifactSupplier.shouldProcessArtifact(dockerArtifactWithAnotherStrategy, latestArtifact))
+          .isFalse()
       }
     }
 
