@@ -109,7 +109,7 @@ class DebianArtifactSupplier(
     artifact.hasReleaseStatus() && artifact.hasCorrectVersion()
 
 
-  // Debian Artifacts should contain a releaseStatus in the metadata	  // Debian Artifacts should contain a releaseStatus in the metadata
+  // Debian Artifacts should contain a releaseStatus in the metadata
   private fun PublishedArtifact.hasReleaseStatus() : Boolean {
     return if (this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null) {
       true
@@ -121,11 +121,12 @@ class DebianArtifactSupplier(
 
   // Debian Artifacts should not have "local" as a part of their version string
   private fun PublishedArtifact.hasCorrectVersion() : Boolean {
-    return if (!this.version.contains("local")) {
-      true
-    } else {
+    val appversion = this.version.parseAppVersionOrNull()
+    return if (appversion?.buildNumber?.contains("local")!!) {
       log.debug("Ignoring artifact which contains local is its version string: $this")
       false
+    } else {
+      true
     }
   }
 }

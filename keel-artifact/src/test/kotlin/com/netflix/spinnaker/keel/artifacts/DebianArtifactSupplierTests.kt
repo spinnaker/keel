@@ -168,7 +168,8 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         expectThat(results)
           .isEqualTo(artifactMetadata)
       }
-      test (" should process artifact successfully") {
+
+      test ("should process artifact successfully") {
         expectThat(debianArtifactSupplier.shouldProcessArtifact(latestArtifact))
           .isTrue()
       }
