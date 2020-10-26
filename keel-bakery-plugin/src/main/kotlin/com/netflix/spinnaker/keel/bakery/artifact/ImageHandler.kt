@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.bakery.artifact
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.actuation.ArtifactHandler
 import com.netflix.spinnaker.keel.api.ResourceDiff
@@ -16,6 +15,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.model.Job
+import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
@@ -122,7 +122,7 @@ class ImageHandler(
     diff: DefaultResourceDiff<Image>
   ): List<Task> {
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appVersion = AppVersion.parseName(desiredVersion)
+    val appVersion = desiredVersion.parseAppVersion()
     val packageName = appVersion.packageName
     val version = desiredVersion.substringAfter("$packageName-")
     val artifactRef = "/${packageName}_${version}_all.deb"

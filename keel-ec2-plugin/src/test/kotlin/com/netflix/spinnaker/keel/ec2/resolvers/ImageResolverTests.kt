@@ -9,11 +9,9 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.api.ec2.ArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
-import com.netflix.spinnaker.keel.api.ec2.ImageProvider
+import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.clouddriver.ImageService
@@ -26,7 +24,6 @@ import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import io.mockk.coEvery as every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectCatching
@@ -36,11 +33,12 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isNotNull
 import strikt.assertions.propertiesAreEqualTo
+import io.mockk.coEvery as every
 
 internal class ImageResolverTests : JUnit5Minutests {
 
-  data class Fixture<T : ImageProvider>(
-    val imageProvider: T?,
+  data class Fixture(
+    val artifactReference: String?,
     val imageRegion: String = "ap-south-1",
     val resourceRegion: String = imageRegion
   ) {
@@ -48,7 +46,8 @@ internal class ImageResolverTests : JUnit5Minutests {
       name = "fnord",
       deliveryConfigName = "my-manifest",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf(imageRegion)),
-      statuses = setOf(RELEASE)
+      statuses = setOf(RELEASE),
+      reference = "my-artifact"
     )
     private val account = "test"
     val version1 = "1.0.0-123456"
@@ -109,10 +108,10 @@ internal class ImageResolverTests : JUnit5Minutests {
     )
 
     val resource = resource(
-      kind = EC2_CLUSTER_V1.kind,
+      kind = EC2_CLUSTER_V1_1.kind,
       spec = ClusterSpec(
         moniker = Moniker("fnord"),
-        imageProvider = imageProvider,
+        artifactReference = artifactReference,
         locations = SubnetAwareLocations(
           account = account,
           vpc = "vpc0",
@@ -150,7 +149,7 @@ internal class ImageResolverTests : JUnit5Minutests {
     }
   }
 
-  fun tests() = rootContext<Fixture<*>> {
+  fun tests() = rootContext<Fixture> {
     context("no image provider") {
       fixture { Fixture(null) }
 
@@ -160,12 +159,9 @@ internal class ImageResolverTests : JUnit5Minutests {
       }
     }
 
-    derivedContext<Fixture<ArtifactImageProvider>>("an image derived from an artifact") {
-      val artifact = DebianArtifact(name = "fnord", deliveryConfigName = "my-manifest", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")), statuses = setOf(RELEASE))
+    context("an image derived from an artifact") {
       fixture {
-        Fixture(
-          ArtifactImageProvider(artifact, listOf(RELEASE))
-        )
+        Fixture("my-artifact")
       }
 
       context("the resource is part of an environment in a delivery config manifest") {
@@ -178,7 +174,7 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
+              imageService.getLatestNamedImage(AppVersion.parseName("${artifact.name}-$version2"), any(), resourceRegion)
             } answers {
               images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
             }
@@ -210,7 +206,7 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
+              imageService.getLatestNamedImage(AppVersion.parseName("${artifact.name}-$version2"), any(), resourceRegion)
             } returns null
           }
 
@@ -235,9 +231,13 @@ internal class ImageResolverTests : JUnit5Minutests {
           before {
             every { repository.latestVersionApprovedIn(deliveryConfig, artifact, "test") } returns "${artifact.name}-$version2"
             every {
-              imageService.getLatestNamedImageWithAllRegionsForAppVersion(AppVersion.parseName("${artifact.name}-$version2"), any(), listOf(resourceRegion))
+              imageService.getLatestNamedImage(AppVersion.parseName("${artifact.name}-$version2"), any(), any())
             } answers {
-              images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
+              if (thirdArg<String>() == imageRegion) {
+                images.lastOrNull { AppVersion.parseName(it.appVersion).version == firstArg<AppVersion>().version }
+              } else {
+                null
+              }
             }
           }
 

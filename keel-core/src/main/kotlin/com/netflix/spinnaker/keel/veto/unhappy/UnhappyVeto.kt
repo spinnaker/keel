@@ -29,6 +29,8 @@ import java.time.format.DateTimeParseException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.time.Clock
+import java.time.Instant
 
 /**
  * A veto that stops keel from checking a resource for a configurable
@@ -40,7 +42,8 @@ class UnhappyVeto(
   private val unhappyVetoRepository: UnhappyVetoRepository,
   private val dynamicConfigService: DynamicConfigService,
   @Value("\${veto.unhappy.waiting-time:PT10M}")
-  private val configuredWaitingTime: String
+  private val configuredWaitingTime: String,
+  private val clock: Clock
 ) : Veto {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -55,18 +58,30 @@ class UnhappyVeto(
       return allowedResponse()
     }
 
-    val vetoStatus = unhappyVetoRepository.getOrCreateVetoStatus(resourceId, application, waitingTime(resource))
-    // allow for a check every [waitingTime] even if the resource is unhappy
-    if (vetoStatus.shouldRecheck) {
-      unhappyVetoRepository.markUnhappyForWaitingTime(resourceId, application, waitingTime(resource))
-      return allowedResponse()
+    val wait = waitingTime(resource)
+    val recheckTime = unhappyVetoRepository.getRecheckTime(resourceId)
+
+    /**
+     * We deny the resource check if it's the first time we detected the resource being unhappy with this diff
+     * (there's no record for it in the database), or if the recheck time has not expired yet. In the latter
+     * case, we *don't* update the recheck time so that it will eventually expire and the resource re-checked.
+     *
+     * If the recheck time has expired, the resource remains marked unhappy in the database, but we allow it
+     * to be rechecked and update the recheck time.
+     */
+    val response = if (recheckTime == null || recheckTime > clock.instant()) {
+      if (recheckTime == null) {
+        unhappyVetoRepository.markUnhappy(resourceId, application, calculateRecheckTime(wait))
+      }
+      log.debug("Resource $resourceId is unhappy. Denying resource check.")
+      deniedResponse(unhappyMessage(resource))
+    } else {
+      log.debug("Marking resource $resourceId unhappy for $wait, but allowing resource check.")
+      unhappyVetoRepository.markUnhappy(resourceId, application, calculateRecheckTime(wait))
+      allowedResponse()
     }
 
-    if (vetoStatus.shouldSkip) {
-      return deniedResponse(unhappyMessage(resource))
-    }
-
-    return allowedResponse()
+    return response
   }
 
   override fun currentRejections(): List<String> =
@@ -118,4 +133,7 @@ class UnhappyVeto(
     return "Resource is unhappy and our $maxDiffs actions have not fixed it. We will try again after " +
       "$waitingTime, or if the diff changes."
   }
+
+  fun calculateRecheckTime(wait: Duration?): Instant? =
+    wait?.let { clock.instant().plus(it) }
 }

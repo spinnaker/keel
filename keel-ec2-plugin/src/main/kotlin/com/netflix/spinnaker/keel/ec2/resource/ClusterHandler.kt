@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.rocket.api.artifact.internal.debian.DebianArtifactParser
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -22,14 +21,13 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
+import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.ec2.Metric
 import com.netflix.spinnaker.keel.api.ec2.MetricDimension
 import com.netflix.spinnaker.keel.api.ec2.PredefinedMetricSpecification
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.Scaling
 import com.netflix.spinnaker.keel.api.ec2.ScalingProcess
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
@@ -57,7 +55,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.CustomizedMetricSpecificatio
 import com.netflix.spinnaker.keel.clouddriver.model.MetricDimensionModel
 import com.netflix.spinnaker.keel.clouddriver.model.PredefinedMetricSpecificationModel
 import com.netflix.spinnaker.keel.clouddriver.model.ScalingPolicy
-import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup as ClouddriverServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
 import com.netflix.spinnaker.keel.clouddriver.model.Tag
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
@@ -76,6 +73,8 @@ import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
 import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
 import com.netflix.spinnaker.keel.orca.waitStage
+import com.netflix.spinnaker.keel.parseAppVersion
+import com.netflix.spinnaker.keel.parseAppVersionOrNull
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
@@ -89,6 +88,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup as ClouddriverServerGroup
 
 class ClusterHandler(
   private val cloudDriverService: CloudDriverService,
@@ -105,7 +105,7 @@ class ClusterHandler(
 
   private val mapper = configuredObjectMapper()
 
-  override val supportedKind = EC2_CLUSTER_V1
+  override val supportedKind = EC2_CLUSTER_V1_1
 
   override suspend fun toResolvedType(resource: Resource<ClusterSpec>): Map<String, ServerGroup> =
     with(resource.spec) {
@@ -204,7 +204,8 @@ class ClusterHandler(
           diff.isAutoScalingOnly() -> diff.modifyScalingPolicyJob() to "Modify auto-scaling of server group ${diff.desired.moniker} in " +
             "${diff.desired.location.account}/${diff.desired.location.region}"
           diff.isEnabledOnly() -> {
-            val appVersion = diff.desired.launchConfiguration.appVersion ?: throw MissingAppVersionException(resource.id)
+            val appVersion = diff.desired.launchConfiguration.appVersion
+              ?: throw MissingAppVersionException(resource.id)
             val job = diff.disableOtherServerGroupJob(resource, appVersion)
             listOf(job) to "Disable extra active server group ${job["asgName"]} in " +
               "${diff.desired.location.account}/${diff.desired.location.region}"
@@ -400,15 +401,15 @@ class ClusterHandler(
       SubnetAwareRegionSpec(
         name = region,
         availabilityZones =
-          if (!serverGroup.location.availabilityZones.containsAll(
+        if (!serverGroup.location.availabilityZones.containsAll(
             zonesByRegion[region]
               ?: error("Failed resolving availabilityZones for account: ${exportable.account}, region: $region")
           )
-          ) {
-            serverGroup.location.availabilityZones
-          } else {
-            emptySet()
-          }
+        ) {
+          serverGroup.location.availabilityZones
+        } else {
+          emptySet()
+        }
       )
     }
       .toSet()
@@ -433,15 +434,11 @@ class ClusterHandler(
     ) ?: RedBlack()
 
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(base.image?.appVersion).packageName
+    val appversion = base.image?.appVersion?.parseAppVersionOrNull()?.packageName
 
     val spec = ClusterSpec(
       moniker = exportable.moniker,
-      imageProvider = if (appversion != null) {
-        ReferenceArtifactImageProvider(reference = appversion)
-      } else {
-        null
-      },
+      artifactReference = appversion,
       locations = locations,
       deployWith = deployStrategy.withDefaultsOmitted(),
       _defaults = base.exportSpec(exportable.account, exportable.moniker.app),
@@ -482,7 +479,7 @@ class ClusterHandler(
     }
 
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val artifactName = AppVersion.parseName(base.launchConfiguration.appVersion).packageName
+    val artifactName = checkNotNull(base.launchConfiguration.appVersion).parseAppVersion().packageName
 
     val status = debianArtifactParser.parseStatus(base.launchConfiguration.appVersion?.substringAfter("$artifactName-"))
     if (status == UNKNOWN) {
@@ -758,139 +755,139 @@ class ClusterHandler(
 
   private fun ResourceDiff<ServerGroup>.toDeletePolicyJob(startingRefId: Int):
     Pair<Int, MutableList<Map<String, Any?>>> {
-      var refId = startingRefId
-      val stages: MutableList<Map<String, Any?>> = mutableListOf()
-      if (current == null) {
-        return Pair(refId, stages)
-      }
-      val current = current!!
-      val targetPoliciesToRemove = current.scaling.targetTrackingPolicies.filterNot {
-        desired.scaling.targetTrackingPolicies.contains(it)
-      }
-      val stepPoliciesToRemove = current.scaling.stepScalingPolicies.filterNot {
-        desired.scaling.stepScalingPolicies.contains(it)
-      }
-      val policyNamesToRemove = targetPoliciesToRemove.mapNotNull { it.name } +
-        stepPoliciesToRemove.mapNotNull { it.name }
-          .toSet()
-
-      stages.addAll(
-        policyNamesToRemove
-          .map {
-            refId++
-            mapOf(
-              "refId" to refId.toString(),
-              "requisiteStageRefIds" to when (refId) {
-                0, 1 -> listOf()
-                else -> listOf((refId - 1).toString())
-              },
-              "type" to "deleteScalingPolicy",
-              "policyName" to it,
-              "cloudProvider" to CLOUD_PROVIDER,
-              "credentials" to desired.location.account,
-              "moniker" to current.moniker.orcaClusterMoniker,
-              "region" to current.location.region
-            )
-          }
-          .toMutableList()
-      )
-
+    var refId = startingRefId
+    val stages: MutableList<Map<String, Any?>> = mutableListOf()
+    if (current == null) {
       return Pair(refId, stages)
     }
+    val current = current!!
+    val targetPoliciesToRemove = current.scaling.targetTrackingPolicies.filterNot {
+      desired.scaling.targetTrackingPolicies.contains(it)
+    }
+    val stepPoliciesToRemove = current.scaling.stepScalingPolicies.filterNot {
+      desired.scaling.stepScalingPolicies.contains(it)
+    }
+    val policyNamesToRemove = targetPoliciesToRemove.mapNotNull { it.name } +
+      stepPoliciesToRemove.mapNotNull { it.name }
+        .toSet()
+
+    stages.addAll(
+      policyNamesToRemove
+        .map {
+          refId++
+          mapOf(
+            "refId" to refId.toString(),
+            "requisiteStageRefIds" to when (refId) {
+              0, 1 -> listOf()
+              else -> listOf((refId - 1).toString())
+            },
+            "type" to "deleteScalingPolicy",
+            "policyName" to it,
+            "cloudProvider" to CLOUD_PROVIDER,
+            "credentials" to desired.location.account,
+            "moniker" to current.moniker.orcaClusterMoniker,
+            "region" to current.location.region
+          )
+        }
+        .toMutableList()
+    )
+
+    return Pair(refId, stages)
+  }
 
   private fun Set<TargetTrackingPolicy>.toCreateJob(startingRefId: Int, serverGroup: ServerGroup):
     Pair<Int, List<Map<String, Any?>>> {
-      var refId = startingRefId
-      val stages = map {
-        refId++
-        mapOf(
-          "refId" to refId.toString(),
-          "requisiteStageRefIds" to when (refId) {
-            0, 1 -> listOf()
-            else -> listOf((refId - 1).toString())
-          },
-          "type" to "upsertScalingPolicy",
-          "cloudProvider" to CLOUD_PROVIDER,
-          "credentials" to serverGroup.location.account,
-          "moniker" to serverGroup.moniker.orcaClusterMoniker,
-          "region" to serverGroup.location.region,
-          "estimatedInstanceWarmup" to it.warmup.seconds,
-          "targetTrackingConfiguration" to mapOf(
-            "targetValue" to it.targetValue,
-            "disableScaleIn" to it.disableScaleIn,
-            "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
-              null -> null
-              else -> with(metricsSpec) {
-                PredefinedMetricSpecificationModel(
-                  predefinedMetricType = type,
-                  resourceLabel = label
-                )
-              }
-            },
-            "customizedMetricSpecification" to when (val metricsSpec = it.customMetricSpec) {
-              null -> null
-              else -> with(metricsSpec) {
-                CustomizedMetricSpecificationModel(
-                  metricName = name,
-                  namespace = namespace,
-                  statistic = statistic,
-                  unit = unit,
-                  dimensions = dimensions?.map { d ->
-                    MetricDimensionModel(name = d.name, value = d.value)
-                  }
-                )
-              }
+    var refId = startingRefId
+    val stages = map {
+      refId++
+      mapOf(
+        "refId" to refId.toString(),
+        "requisiteStageRefIds" to when (refId) {
+          0, 1 -> listOf()
+          else -> listOf((refId - 1).toString())
+        },
+        "type" to "upsertScalingPolicy",
+        "cloudProvider" to CLOUD_PROVIDER,
+        "credentials" to serverGroup.location.account,
+        "moniker" to serverGroup.moniker.orcaClusterMoniker,
+        "region" to serverGroup.location.region,
+        "estimatedInstanceWarmup" to it.warmup.seconds,
+        "targetTrackingConfiguration" to mapOf(
+          "targetValue" to it.targetValue,
+          "disableScaleIn" to it.disableScaleIn,
+          "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
+            null -> null
+            else -> with(metricsSpec) {
+              PredefinedMetricSpecificationModel(
+                predefinedMetricType = type,
+                resourceLabel = label
+              )
             }
-          )
+          },
+          "customizedMetricSpecification" to when (val metricsSpec = it.customMetricSpec) {
+            null -> null
+            else -> with(metricsSpec) {
+              CustomizedMetricSpecificationModel(
+                metricName = name,
+                namespace = namespace,
+                statistic = statistic,
+                unit = unit,
+                dimensions = dimensions?.map { d ->
+                  MetricDimensionModel(name = d.name, value = d.value)
+                }
+              )
+            }
+          }
         )
-      }
-
-      return Pair(refId, stages)
+      )
     }
+
+    return Pair(refId, stages)
+  }
 
   private fun Set<StepScalingPolicy>.toCreateJob(startingRefId: Int, serverGroup: ServerGroup):
     List<Map<String, Any?>> {
-      var refId = startingRefId
-      return map {
-        refId++
-        mapOf(
-          "refId" to refId.toString(),
-          "requisiteStageRefIds" to when (refId) {
-            0, 1 -> listOf()
-            else -> listOf((refId - 1).toString())
-          },
-          "type" to "upsertScalingPolicy",
-          "cloudProvider" to CLOUD_PROVIDER,
-          "credentials" to serverGroup.location.account,
-          "moniker" to serverGroup.moniker.orcaClusterMoniker,
+    var refId = startingRefId
+    return map {
+      refId++
+      mapOf(
+        "refId" to refId.toString(),
+        "requisiteStageRefIds" to when (refId) {
+          0, 1 -> listOf()
+          else -> listOf((refId - 1).toString())
+        },
+        "type" to "upsertScalingPolicy",
+        "cloudProvider" to CLOUD_PROVIDER,
+        "credentials" to serverGroup.location.account,
+        "moniker" to serverGroup.moniker.orcaClusterMoniker,
+        "region" to serverGroup.location.region,
+        "adjustmentType" to it.adjustmentType,
+        "alarm" to mapOf(
           "region" to serverGroup.location.region,
-          "adjustmentType" to it.adjustmentType,
-          "alarm" to mapOf(
-            "region" to serverGroup.location.region,
-            "actionsEnabled" to it.actionsEnabled,
-            "comparisonOperator" to it.comparisonOperator,
-            "dimensions" to it.dimensions,
-            "evaluationPeriods" to it.evaluationPeriods,
-            "period" to it.period.seconds,
-            "threshold" to it.threshold,
-            "namespace" to it.namespace,
-            "metricName" to it.metricName,
-            "statistic" to it.statistic
-          ),
-          "step" to mapOf(
-            "estimatedInstanceWarmup" to it.warmup.seconds,
-            "metricAggregationType" to it.metricAggregationType,
-            "stepAdjustments" to it.stepAdjustments.map { adjustment ->
-              StepAdjustmentModel(
-                metricIntervalLowerBound = adjustment.lowerBound,
-                metricIntervalUpperBound = adjustment.upperBound,
-                scalingAdjustment = adjustment.scalingAdjustment
-              )
-            }
-          )
+          "actionsEnabled" to it.actionsEnabled,
+          "comparisonOperator" to it.comparisonOperator,
+          "dimensions" to it.dimensions,
+          "evaluationPeriods" to it.evaluationPeriods,
+          "period" to it.period.seconds,
+          "threshold" to it.threshold,
+          "namespace" to it.namespace,
+          "metricName" to it.metricName,
+          "statistic" to it.statistic
+        ),
+        "step" to mapOf(
+          "estimatedInstanceWarmup" to it.warmup.seconds,
+          "metricAggregationType" to it.metricAggregationType,
+          "stepAdjustments" to it.stepAdjustments.map { adjustment ->
+            StepAdjustmentModel(
+              metricIntervalLowerBound = adjustment.lowerBound,
+              metricIntervalUpperBound = adjustment.upperBound,
+              scalingAdjustment = adjustment.scalingAdjustment
+            )
+          }
         )
-      }
+      )
     }
+  }
 
   private suspend fun CloudDriverService.getActiveServerGroups(resource: Resource<ClusterSpec>): Iterable<ServerGroup> {
     val existingServerGroups: Map<String, List<ClouddriverServerGroup>> = getExistingServerGroupsByRegion(resource)
@@ -913,7 +910,7 @@ class ClusterHandler(
 
     val allSame: Boolean = activeServerGroups.distinctBy { it.launchConfiguration.appVersion }.size == 1
     val unhealthyRegions = mutableListOf<String>()
-    activeServerGroups.forEach {serverGroup ->
+    activeServerGroups.forEach { serverGroup ->
       if (serverGroup.instanceCounts?.isHealthy(resource.spec.deployWith.health, resource.spec.resolveCapacity(serverGroup.location.region)) == false) {
         unhealthyRegions.add(serverGroup.location.region)
       }
@@ -990,8 +987,9 @@ class ClusterHandler(
   /**
    * Transforms CloudDriver response to our server group model.
    */
-  private fun ActiveServerGroup.toServerGroup() =
-    ServerGroup(
+  private fun ActiveServerGroup.toServerGroup(): ServerGroup {
+    val launchTemplateData = launchTemplate?.launchTemplateData
+    return ServerGroup(
       name = name,
       location = Location(
         account = accountName,
@@ -1000,19 +998,21 @@ class ClusterHandler(
         subnet = subnet(cloudDriverCache),
         availabilityZones = zones
       ),
-      launchConfiguration = launchConfig.run {
-        LaunchConfiguration(
-          imageId = imageId,
-          appVersion = image.appVersion,
-          baseImageVersion = image.baseImageVersion,
-          instanceType = instanceType,
-          ebsOptimized = ebsOptimized,
-          iamRole = iamInstanceProfile,
-          keyPair = keyName,
-          instanceMonitoring = instanceMonitoring.enabled,
-          ramdiskId = ramdiskId.orNull()
-        )
-      },
+      launchConfiguration =
+      LaunchConfiguration(
+        imageId = image.imageId,
+        appVersion = image.appVersion,
+        baseImageVersion = image.baseImageVersion,
+        instanceType = launchConfig?.instanceType ?: launchTemplateData!!.instanceType,
+        ebsOptimized = launchConfig?.ebsOptimized ?: launchTemplateData!!.ebsOptimized,
+        iamRole = launchConfig?.iamInstanceProfile ?: launchTemplateData!!.iamInstanceProfile.name,
+        keyPair = launchConfig?.keyName ?: launchTemplateData!!.keyName,
+        instanceMonitoring = launchConfig?.instanceMonitoring?.enabled
+          ?: launchTemplateData!!.monitoring.enabled,
+
+        // Because launchConfig.ramdiskId can be null, need to do launchTemplateData?. instead of launchTemplateData!!
+        ramdiskId = (launchConfig?.ramdiskId ?: launchTemplateData?.ramDiskId).orNull()
+      ),
       buildInfo = buildInfo?.toEc2Api(),
       capacity = capacity.let {
         when (scalingPolicies.isEmpty()) {
@@ -1041,6 +1041,7 @@ class ClusterHandler(
       image = image.toEc2Api(),
       instanceCounts = instanceCounts.toEc2Api()
     )
+  }
 
   private fun List<MetricDimensionModel>?.toSpec(): Set<MetricDimension> =
     when (this) {

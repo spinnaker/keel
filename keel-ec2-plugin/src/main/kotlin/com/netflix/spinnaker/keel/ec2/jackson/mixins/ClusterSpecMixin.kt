@@ -32,7 +32,4 @@ interface ClusterSpecMixin {
 
   @get:JsonIgnore
   val artifactName: String?
-
-  @get:JsonIgnore
-  val artifactReference: String?
 }

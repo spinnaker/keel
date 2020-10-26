@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.artifacts
 
-import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
@@ -13,6 +12,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.parseAppVersionOrNull
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -62,28 +62,39 @@ class DebianArtifactSupplier(
 
   override fun getVersionDisplayName(artifact: PublishedArtifact): String {
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
-    return if (appversion?.version != null) {
-      appversion.version
-    } else {
-      artifact.version.removePrefix("${artifact.name}-")
+    val appversion = artifact.version.parseAppVersionOrNull()
+    if (appversion != null) {
+      if (appversion.version != null) {
+        return appversion.version
+      } else {
+        return artifact.version.removePrefix("${artifact.name}-")
+      }
     }
+    return artifact.version
   }
 
   override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
-    if (appversion?.buildNumber != null) {
-      return BuildMetadata(id = appversion.buildNumber.toInt())
+    return try {
+      val appversion = artifact.version.parseAppVersionOrNull()
+      if (appversion?.buildNumber != null) {
+        return BuildMetadata(id = appversion.buildNumber.toInt())
+      }
+      return null
+    } catch (ex: NumberFormatException) {
+      log.warn("parsed appversion.buildNumber for artifact version ${artifact.version} is not a number! ")
+      null
+    } catch (ex: Exception) {
+      log.warn("trying to parse artifact ${artifact.name} with version ${artifact.version} but got an exception", ex)
+      null
     }
-    return null
   }
 
   override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
-    val appversion = AppVersion.parseName(artifact.version)
+    val appversion = artifact.version.parseAppVersionOrNull()
     if (appversion?.commit != null) {
       return GitMetadata(commit = appversion.commit)
     }
@@ -91,10 +102,31 @@ class DebianArtifactSupplier(
   }
 
 
-  // Debian Artifacts should contain a releaseStatus in the metadata
-  private fun PublishedArtifact.hasReleaseStatus() =
-    this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null
-
   private val DeliveryArtifact.statusesForQuery: List<String>
     get() = statuses.map { it.name }
+
+  override fun shouldProcessArtifact(artifact: PublishedArtifact): Boolean =
+    artifact.hasReleaseStatus() && artifact.hasCorrectVersion()
+
+
+  // Debian Artifacts should contain a releaseStatus in the metadata
+  private fun PublishedArtifact.hasReleaseStatus() : Boolean {
+    return if (this.metadata.containsKey("releaseStatus") && this.metadata["releaseStatus"] != null) {
+      true
+    } else {
+      log.debug("Ignoring artifact event without release status: $this")
+      false
+    }
+  }
+
+  // Debian Artifacts should not have "local" as a part of their version string
+  private fun PublishedArtifact.hasCorrectVersion() : Boolean {
+    val appversion = this.version.parseAppVersionOrNull()
+    return if (appversion?.buildNumber?.contains("local")!!) {
+      log.debug("Ignoring artifact which contains local is its version string: $this")
+      false
+    } else {
+      true
+    }
+  }
 }

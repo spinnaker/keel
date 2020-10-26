@@ -15,9 +15,8 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
-import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1
+import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
-import com.netflix.spinnaker.keel.api.ec2.ReferenceArtifactImageProvider
 import com.netflix.spinnaker.keel.api.ec2.Scaling
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.LaunchConfiguration.Companion.defaultIamRoleFor
@@ -162,7 +161,7 @@ internal class ClusterExportTests : JUnit5Minutests {
   val serverGroupWest = serverGroups.first { it.location.region == "us-west-2" }.copy(image = image)
 
   val resource = resource(
-    kind = EC2_CLUSTER_V1.kind,
+    kind = EC2_CLUSTER_V1_1.kind,
     spec = spec
   )
 
@@ -175,7 +174,7 @@ internal class ClusterExportTests : JUnit5Minutests {
     user = "fzlem@netflix.com",
     moniker = spec.moniker,
     regions = spec.locations.regions.map { it.name }.toSet(),
-    kind = EC2_CLUSTER_V1.kind
+    kind = EC2_CLUSTER_V1_1.kind
   )
 
   fun tests() = rootContext<ClusterHandler> {
@@ -290,7 +289,7 @@ internal class ClusterExportTests : JUnit5Minutests {
           get { defaults.scaling!!.targetTrackingPolicies }.hasSize(1)
           get { defaults.health }.isNull()
           get { deployWith }.isA<RedBlack>()
-          get { imageProvider }.isA<ReferenceArtifactImageProvider>()
+          get { artifactReference }.isNotNull()
         }
       }
     }
@@ -372,7 +371,7 @@ private fun ActiveServerGroup.withNonDefaultHealthProps(): ActiveServerGroup =
 
 private fun ActiveServerGroup.withNonDefaultLaunchConfigProps(): ActiveServerGroup =
   copy(
-    launchConfig = launchConfig.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
+    launchConfig = launchConfig?.copy(iamInstanceProfile = "NotTheDefaultInstanceProfile", keyName = "not-the-default-key")
   )
 
 private fun ActiveServerGroup.withDifferentSize(): ActiveServerGroup =
