@@ -26,9 +26,9 @@ abstract class BaseClusterHandlerTests<
     resolvers: List<Resolver<*>>,
     clock: Clock,
     eventPublisher: EventPublisher): HANDLER
-  abstract fun getResourceOneRegion(): Resource<SPEC>
+  abstract fun getSingleRegionCluster(): Resource<SPEC>
   abstract fun getRegions(resource: Resource<SPEC>): List<String>
-  abstract fun getResourceTwoRegions(): Resource<SPEC>
+  abstract fun getMultiRegionCluster(): Resource<SPEC>
   abstract fun getDiffInMoreThanEnabled(): ResourceDiff<Map<String, RESOLVED>>
   abstract fun getDiffOnlyInEnabled(): ResourceDiff<Map<String, RESOLVED>>
 
@@ -54,22 +54,22 @@ abstract class BaseClusterHandlerTests<
     }
 
     context("testing whether handler will take action") {
-      context("diff in more then just enabled") {
+      context("diff in more then just too many server groups enabled") {
         test("handler will take action") {
-          val resource = getResourceOneRegion()
+          val resource = getSingleRegionCluster()
           val diff = getDiffInMoreThanEnabled()
           val response = runBlocking { handler.willTakeAction(resource, diff) }
           expectThat(response.willAct).isTrue()
         }
       }
 
-      context("diff only in enabled") {
+      context("diff only in number of server groups enabled") {
         context("all regions healthy") {
           before {
             every { handler.getUnhealthyRegionsForActiveServerGroup(any()) } returns listOf()
           }
           test("handler will take action") {
-            val resource = getResourceOneRegion()
+            val resource = getSingleRegionCluster()
             val diff = getDiffOnlyInEnabled()
             val response = runBlocking { handler.willTakeAction(resource, diff) }
             expectThat(response.willAct).isTrue()
@@ -78,10 +78,10 @@ abstract class BaseClusterHandlerTests<
 
         context("one region unhealthy") {
           before {
-            every { handler.getUnhealthyRegionsForActiveServerGroup(any()) } returns getRegions(getResourceOneRegion())
+            every { handler.getUnhealthyRegionsForActiveServerGroup(any()) } returns getRegions(getSingleRegionCluster())
           }
-          test("handler will not action") {
-            val resource = getResourceOneRegion()
+          test("handler will not take action") {
+            val resource = getSingleRegionCluster()
             val diff = getDiffOnlyInEnabled()
             val response = runBlocking { handler.willTakeAction(resource, diff) }
             expectThat(response.willAct).isFalse()

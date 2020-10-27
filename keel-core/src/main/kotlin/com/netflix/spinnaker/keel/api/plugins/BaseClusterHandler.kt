@@ -15,8 +15,19 @@ abstract class BaseClusterHandler<SPEC: ResourceSpec, RESOLVED: Any>(
   resolvers: List<Resolver<*>>
 ) : ResolvableResourceHandler<SPEC, Map<String, RESOLVED>>(resolvers) {
 
+  /**
+   * parses the desired region from a resource diff
+   */
   abstract fun getDesiredRegion(diff: ResourceDiff<RESOLVED>): String
-  abstract fun diffOnlyInEnabled(diff: ResourceDiff<RESOLVED>): Boolean
+
+  /**
+   * returns true if the diff is only in whether there are too many clusters enabled
+   */
+  abstract fun isDiffOnlyInEnabled(diff: ResourceDiff<RESOLVED>): Boolean
+
+  /**
+   * returns a list of regions where the active server group is unhealthy
+   */
   abstract fun getUnhealthyRegionsForActiveServerGroup(resource: Resource<SPEC>): List<String>
 
   override suspend fun willTakeAction(
@@ -28,7 +39,7 @@ abstract class BaseClusterHandler<SPEC: ResourceSpec, RESOLVED: Any>(
     val potentialInactionableRegions = mutableListOf<String>()
     val inactionableRegions = mutableListOf<String>()
     resourceDiff.toIndividualDiffs().forEach { diff ->
-      if (diff.hasChanges() && diffOnlyInEnabled(diff)) {
+      if (diff.hasChanges() && isDiffOnlyInEnabled(diff)) {
         potentialInactionableRegions.add(getDesiredRegion(diff))
       }
     }

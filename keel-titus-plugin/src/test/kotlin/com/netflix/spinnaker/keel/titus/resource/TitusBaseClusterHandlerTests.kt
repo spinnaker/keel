@@ -63,7 +63,7 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
       clusterExportHelper = clusterExportHelper
     ))
 
-  override fun getResourceOneRegion(): Resource<TitusClusterSpec> {
+  override fun getSingleRegionCluster(): Resource<TitusClusterSpec> {
     return Resource(
       kind = TITUS_CLUSTER_V1.kind,
       metadata = metadata,
@@ -71,7 +71,7 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
     )
   }
 
-  override fun getResourceTwoRegions(): Resource<TitusClusterSpec> {
+  override fun getMultiRegionCluster(): Resource<TitusClusterSpec> {
     val spec = baseSpec.copy(
       locations = SimpleLocations(
         account = "account",
@@ -86,17 +86,17 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
   }
 
   override fun getDiffInMoreThanEnabled(): ResourceDiff<Map<String, TitusServerGroup>> {
-    val currentServerGroups = getResourceOneRegion().spec.resolve()
+    val currentServerGroups = getSingleRegionCluster().spec.resolve()
       .byRegion()
-    val desiredServerGroups = getResourceOneRegion().spec.resolve()
+    val desiredServerGroups = getSingleRegionCluster().spec.resolve()
       .map { it.withDoubleCapacity().withManyEnabled() }.byRegion()
     return DefaultResourceDiff(desiredServerGroups, currentServerGroups)
   }
 
   override fun getDiffOnlyInEnabled(): ResourceDiff<Map<String, TitusServerGroup>> {
-    val currentServerGroups = getResourceOneRegion().spec.resolve()
+    val currentServerGroups = getSingleRegionCluster().spec.resolve()
       .byRegion()
-    val desiredServerGroups = getResourceOneRegion().spec.resolve()
+    val desiredServerGroups = getSingleRegionCluster().spec.resolve()
       .map { it.withManyEnabled() }.byRegion()
     return DefaultResourceDiff(desiredServerGroups, currentServerGroups)
   }

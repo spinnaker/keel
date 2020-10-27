@@ -70,7 +70,7 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
   override fun getRegions(resource: Resource<ClusterSpec>): List<String> =
     resource.spec.locations.regions.map { it.name }.toList()
 
-  override fun getResourceOneRegion(): Resource<ClusterSpec> {
+  override fun getSingleRegionCluster(): Resource<ClusterSpec> {
     return Resource(
       kind = EC2_CLUSTER_V1_1.kind,
       metadata = metadata,
@@ -78,7 +78,7 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
     )
   }
 
-  override fun getResourceTwoRegions(): Resource<ClusterSpec> {
+  override fun getMultiRegionCluster(): Resource<ClusterSpec> {
     val spec = baseSpec.copy(
       locations = SubnetAwareLocations(
         account = "account",
@@ -94,17 +94,17 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
   }
 
   override fun getDiffInMoreThanEnabled(): ResourceDiff<Map<String, ServerGroup>> {
-    val currentServerGroups = getResourceOneRegion().spec.resolve()
+    val currentServerGroups = getSingleRegionCluster().spec.resolve()
       .byRegion()
-    val desiredServerGroups = getResourceOneRegion().spec.resolve()
+    val desiredServerGroups = getSingleRegionCluster().spec.resolve()
       .map { it.withDoubleCapacity().withManyEnabled() }.byRegion()
     return DefaultResourceDiff(desiredServerGroups, currentServerGroups)
   }
 
   override fun getDiffOnlyInEnabled(): ResourceDiff<Map<String, ServerGroup>> {
-    val currentServerGroups = getResourceOneRegion().spec.resolve()
+    val currentServerGroups = getSingleRegionCluster().spec.resolve()
       .byRegion()
-    val desiredServerGroups = getResourceOneRegion().spec.resolve()
+    val desiredServerGroups = getSingleRegionCluster().spec.resolve()
       .map { it.withManyEnabled() }.byRegion()
     return DefaultResourceDiff(desiredServerGroups, currentServerGroups)
   }

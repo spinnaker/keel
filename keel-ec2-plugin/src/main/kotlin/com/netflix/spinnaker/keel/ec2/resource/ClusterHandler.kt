@@ -554,7 +554,7 @@ class ClusterHandler(
       affectedRootPropertyNames.all { it == "onlyEnabledServerGroup" } &&
       current!!.onlyEnabledServerGroup != desired.onlyEnabledServerGroup
 
-  override fun diffOnlyInEnabled(diff: ResourceDiff<ServerGroup>): Boolean =
+  override fun isDiffOnlyInEnabled(diff: ResourceDiff<ServerGroup>): Boolean =
     diff.isEnabledOnly()
 
   /**

@@ -494,7 +494,7 @@ class TitusClusterHandler(
       affectedRootPropertyNames.all { it == "onlyEnabledServerGroup" } &&
       current!!.onlyEnabledServerGroup != desired.onlyEnabledServerGroup
 
-  override fun diffOnlyInEnabled(diff: ResourceDiff<TitusServerGroup>): Boolean =
+  override fun isDiffOnlyInEnabled(diff: ResourceDiff<TitusServerGroup>): Boolean =
     diff.isEnabledOnly()
 
   private fun TitusClusterSpec.generateOverrides(serverGroups: Map<String, TitusServerGroup>) =
