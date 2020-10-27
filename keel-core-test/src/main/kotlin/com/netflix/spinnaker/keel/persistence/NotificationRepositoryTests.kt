@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
 import com.netflix.spinnaker.keel.notifications.NotificationType.UNHEALTHY_RESOURCE
-import com.netflix.spinnaker.time.MutableClock
+import com.netflix.spinnaker.keel.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectThat

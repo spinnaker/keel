@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
-import com.netflix.spinnaker.time.MutableClock
+import com.netflix.spinnaker.keel.time.MutableClock
 import dev.minutest.rootContext
 import java.time.Clock
 import java.time.Duration
