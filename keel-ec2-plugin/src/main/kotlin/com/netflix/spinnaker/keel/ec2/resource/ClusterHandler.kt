@@ -549,13 +549,10 @@ class ClusterHandler(
   /**
    * @return true if the only difference is in the onlyEnabledServerGroup property
    */
-  fun ResourceDiff<ServerGroup>.isEnabledOnly(): Boolean =
+  override fun ResourceDiff<ServerGroup>.isEnabledOnly(): Boolean =
     current != null &&
       affectedRootPropertyNames.all { it == "onlyEnabledServerGroup" } &&
       current!!.onlyEnabledServerGroup != desired.onlyEnabledServerGroup
-
-  override fun isDiffOnlyInEnabled(diff: ResourceDiff<ServerGroup>): Boolean =
-    diff.isEnabledOnly()
 
   /**
    * @return `true` if [current] doesn't exist and desired includes a scaling policy.

@@ -29,7 +29,7 @@ import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.locatableResource
 import com.netflix.spinnaker.keel.test.resource
-import com.netflix.spinnaker.keel.time.MutableClock
+import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.RootContextBuilder
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext

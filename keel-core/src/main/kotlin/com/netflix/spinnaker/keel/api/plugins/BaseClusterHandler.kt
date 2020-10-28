@@ -23,7 +23,7 @@ abstract class BaseClusterHandler<SPEC: ResourceSpec, RESOLVED: Any>(
   /**
    * returns true if the diff is only in whether there are too many clusters enabled
    */
-  abstract fun isDiffOnlyInEnabled(diff: ResourceDiff<RESOLVED>): Boolean
+  abstract fun ResourceDiff<RESOLVED>.isEnabledOnly(): Boolean
 
   /**
    * returns a list of regions where the active server group is unhealthy
@@ -39,7 +39,7 @@ abstract class BaseClusterHandler<SPEC: ResourceSpec, RESOLVED: Any>(
     val potentialInactionableRegions = mutableListOf<String>()
     val inactionableRegions = mutableListOf<String>()
     resourceDiff.toIndividualDiffs().forEach { diff ->
-      if (diff.hasChanges() && isDiffOnlyInEnabled(diff)) {
+      if (diff.hasChanges() && diff.isEnabledOnly()) {
         potentialInactionableRegions.add(getDesiredRegion(diff))
       }
     }

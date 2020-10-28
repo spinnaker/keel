@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.time
+package com.netflix.spinnaker.time
 
 import java.time.Clock
 import java.time.Duration
