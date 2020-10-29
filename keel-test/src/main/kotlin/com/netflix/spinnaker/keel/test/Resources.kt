@@ -140,10 +140,9 @@ fun artifactReferenceResource(
   kind: ResourceKind = TEST_API_V1.qualify("artifactReference"),
   id: String = randomString(),
   application: String = "fnord",
-  artifactReference: String = "fnord",
-  data: Map<String, Any> = mapOf("aString" to randomString())
+  artifactReference: String = "fnord"
 ): Resource<DummyArtifactReferenceResourceSpec> =
-  DummyArtifactReferenceResourceSpec(id = id, application = application, artifactReference = artifactReference, data = data)
+  DummyArtifactReferenceResourceSpec(id = id, application = application, artifactReference = artifactReference)
     .let { spec ->
       resource(
         kind = kind,
@@ -193,7 +192,7 @@ data class DummyArtifactVersionedResourceSpec(
 data class DummyArtifactReferenceResourceSpec(
   @get:ExcludedFromDiff
   override val id: String = randomString(),
-  val data: Map<String, Any> = mapOf("aString" to randomString()),
+  val data: String = randomString(),
   override val application: String = "fnord",
   override val artifactType: ArtifactType? = DEBIAN,
   override val artifactReference: String? = "fnord",
