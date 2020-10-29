@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.InjectableValues.Std
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyMetadata
+import com.fasterxml.jackson.databind.PropertyName
 import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Moniker
@@ -28,8 +30,22 @@ class SecurityGroupSpecDeserializer : StdNodeBasedDeserializer<SecurityGroupSpec
       )
     }
 
-  private inline fun <reified T> DeserializationContext.findInjectableValue(valueId: String) =
+  private inline fun <reified T> DeserializationContext.findInjectableValue(
+    valueId: String,
+    propertyName: String = valueId
+  ) =
     (parser.codec as ObjectMapper).let { mapper ->
-      mapper.injectableValues.findInjectableValue(valueId, this, BeanProperty.Bogus(), null) as T
+      mapper.injectableValues.findInjectableValue(
+        valueId,
+        this,
+        BeanProperty.Std(
+          PropertyName.construct(propertyName),
+          constructType(T::class.java),
+          PropertyName.construct(propertyName),
+          null,
+          PropertyMetadata.STD_REQUIRED_OR_OPTIONAL
+        ),
+        null
+      ) as T
     }
 }
