@@ -608,7 +608,42 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     }
 
     context("Java plugin compatibility") {
-      context("plugin blocks in calls to get current/desired state") {
+      before {
+        every { deliveryConfigRepository.deliveryConfigLastChecked(any()) } returns Instant.now().minus(Duration.ofSeconds(30))
+      }
+
+      context("checking a resource managed by a Java plugin") {
+        val resource = resource(
+          kind = SLEEPY_RESOURCE_KIND,
+          spec = MapBackedResourceSpec("test", "fnord", mapOf("nada" to "nada"))
+        )
+
+        before {
+          every { resourceRepository.lastEvent(resource.id) } returns ResourceCreated(resource)
+          every {
+            deliveryConfigRepository.deliveryConfigFor(resource.id)
+          } returns DeliveryConfig(
+            name = "fnord-manifest",
+            application = "fnord",
+            serviceAccount = "keel@spin",
+            artifacts = setOf(DebianArtifact("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
+            environments = setOf(Environment(name = "staging", resources = setOf(resource)))
+          )
+          every { veto.check(resource) } returns VetoResponse(true, "all")
+          runBlocking {
+            subject.checkResource(resource)
+          }
+        }
+
+        test("Java-compatibility methods are called on the plugin") {
+          verify(exactly=0) { javaPlugin.desired(resource) }
+          verify(exactly=1) { javaPlugin.desiredAsync(resource, any()) }
+          verify(exactly=0) { javaPlugin.current(resource) }
+          verify(exactly=1) { javaPlugin.currentAsync(resource, any()) }
+        }
+      }
+
+      context("Java plugin blocks in calls to get current/desired state") {
         val resource = resource(
           kind = SLEEPY_RESOURCE_KIND,
           spec = MapBackedResourceSpec("test", "fnord", mapOf("delay" to "2000"))
@@ -625,7 +660,6 @@ internal class ResourceActuatorTests : JUnit5Minutests {
             artifacts = setOf(DebianArtifact("fnord", vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")))),
             environments = setOf(Environment(name = "staging", resources = setOf(resource)))
           )
-          every { deliveryConfigRepository.deliveryConfigLastChecked(any()) } returns Instant.now().minus(Duration.ofSeconds(30))
           every { veto.check(resource) } returns VetoResponse(true, "all")
         }
 
