@@ -60,7 +60,11 @@ data class PublishedArtifact(
         when (it) {
           is Long -> Instant.ofEpochMilli(it) // to accommodate for artifact events from CI integration
           is Instant -> it
-          is String -> Instant.ofEpochMilli(it.toLong())
+          is String -> try {
+            Instant.ofEpochMilli(it.toLong())
+          } catch (ex: Exception) {
+            null
+          }
           else -> null
         }
       }
