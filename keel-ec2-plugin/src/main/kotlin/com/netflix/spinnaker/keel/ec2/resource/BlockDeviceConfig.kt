@@ -6,11 +6,11 @@ import org.springframework.stereotype.Component
 
 
 @ConfigurationProperties(prefix = "keel.plugins.ec2.volumes.defaults")
-class VolumeDefaultConfiguration (
-  var volumeType : String = "gp2",
-  var deviceName : String = "/dev/sdb",
+class VolumeDefaultConfiguration {
+  var volumeType : String = "gp2"
+  var deviceName : String = "/dev/sdb"
   var deleteOnTermination : Boolean = true
-)
+}
 
 data class BlockDevice(
   val volumeType : String,
