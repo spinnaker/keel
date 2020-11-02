@@ -38,7 +38,7 @@ class BlockDeviceConfig(
    * For instance types unsupported by this class, keel doesn't pass EBS config info, which results in falling back to
    * clouddriver's defaults
    */
-  fun get(instanceType: String): List<BlockDevice>? =
+  fun getBlockDevicesFor(instanceType: String): List<BlockDevice>? =
     volumeSizeGb(instanceType)?.let { size ->
       listOf(
         BlockDevice(volumeType=config.volumeType,

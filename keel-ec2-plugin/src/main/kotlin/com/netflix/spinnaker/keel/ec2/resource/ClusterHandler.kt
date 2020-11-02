@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.rocket.api.artifact.internal.debian.DebianArtifactParser
-import com.netflix.spinnaker.keel.api.DeployHealth
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
@@ -687,7 +686,7 @@ class ClusterHandler(
           }
 
         // pass block device info so that keel can specify the volume type
-        blockDeviceConfig.get(desired.launchConfiguration.instanceType)?.let { blockDevices ->
+        blockDeviceConfig.getBlockDevicesFor(desired.launchConfiguration.instanceType)?.let { blockDevices ->
           job["blockDevices"] = blockDevices.map {
             mapOf(
               "deviceName" to it.deviceName,
