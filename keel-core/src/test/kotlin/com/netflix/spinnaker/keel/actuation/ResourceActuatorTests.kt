@@ -14,6 +14,9 @@ import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
+import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
@@ -574,10 +577,9 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           every { deliveryConfigRepository.deliveryConfigLastChecked(any()) } returns Instant.now().minus(Duration.ofSeconds(30))
         }
 
-        context("the version has not been deployed successfully before") {
+        context("the version is currently deploying in the environment") {
           before {
-            every { artifactRepository.wasSuccessfullyDeployedTo(any(), any(), any(), any()) } returns
-              false
+            every { artifactRepository.getArtifactPromotionStatus(any(), any(), any(), any()) } returns DEPLOYING
             every { artifactRepository.markAsVetoedIn(any(), any(), false) } returns true
             runBlocking {
               subject.checkResource(resource)
@@ -590,17 +592,32 @@ internal class ResourceActuatorTests : JUnit5Minutests {
           }
         }
 
-        context("the version has previously been deployed successfully") {
-          before {
-            every { artifactRepository.wasSuccessfullyDeployedTo(any(), any(), any(), any()) } returns
-              true
-            runBlocking {
-              subject.checkResource(resource)
+        context("the version is not currently deploying in the environment") {
+          for (promotionStatus in PromotionStatus.values().filter { it != DEPLOYING }) {
+            before {
+              every {
+                artifactRepository.getArtifactPromotionStatus(any(), any(), "fnord-42", any())
+              } returns promotionStatus
+              runBlocking {
+                subject.checkResource(resource)
+              }
             }
-          }
-          test("no version was vetoed") {
-            verify(exactly = 0) { artifactRepository.markAsVetoedIn(any(), EnvironmentArtifactVeto("staging", "fnord", "fnord-42.0", "Spinnaker", "Automatically marked as bad because multiple deployments of this version failed."), false) }
-            verify { publisher.publishEvent(ofType<ResourceActuationVetoed>()) }
+
+            test("version is not vetoed with $promotionStatus status") {
+              verify(exactly = 0) {
+                artifactRepository.markAsVetoedIn(any(),
+                  EnvironmentArtifactVeto(
+                    "staging",
+                    "fnord",
+                    "fnord-42.0",
+                    "Spinnaker",
+                    "Automatically marked as bad because multiple deployments of this version failed."
+                  ),
+                  false
+                )
+              }
+              verify { publisher.publishEvent(ofType<ResourceActuationVetoed>()) }
+            }
           }
         }
 
