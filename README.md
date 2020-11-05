@@ -22,7 +22,7 @@ Resources model the specification for a concrete thing or set of homogeneous thi
 *   _EC2 Classic _or_ Application Load Balancer_: a specification for a set of homogeneous load balancers existing in one or more regions.
 *   _Bakery Image_: a specification for an AMI derived from successive versions of an artifact.
 
-The representation of resources is consciously designed around the equivalent concept in Kubernetes and we model resources using a formnat similar to Kubernetes’ [CRD](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/) format.
+The representation of resources is consciously designed around the equivalent concept in Kubernetes and we model resources using a format similar to Kubernetes’ [CRD](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/) format.
 
 
 ### Artifacts
