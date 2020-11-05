@@ -1268,14 +1268,12 @@ class SqlArtifactRepository(
     environmentName: String
   ): PromotionStatus? {
     return sqlRetry.withRetry(READ) {
-
       jooq
         .select(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS)
         .from(ENVIRONMENT_ARTIFACT_VERSIONS)
         .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environmentName)))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
-        .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
         .fetchOne(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS)
         ?.let { PromotionStatus.valueOf(it) }
     }
