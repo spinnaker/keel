@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PullRequest
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
-import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
+import com.netflix.spinnaker.keel.api.plugins.SupportedSortingStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
@@ -101,10 +101,10 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         )
       }
 
-      test("supports NPM versioning strategy") {
-        expectThat(npmArtifactSupplier.supportedVersioningStrategy)
+      test("supports NPM version sorting strategy") {
+        expectThat(npmArtifactSupplier.supportedSortingStrategy)
           .isEqualTo(
-            SupportedVersioningStrategy(NPM, NpmVersioningStrategy::class.java)
+            SupportedSortingStrategy(NPM, NpmVersionSortingStrategy::class.java)
           )
       }
 
@@ -126,13 +126,13 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on Netflix semver convention") {
         val gitMeta = GitMetadata(commit = NetflixVersions.getCommitHash(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.parseDefaultGitMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.parseDefaultGitMetadata(latestArtifact, npmArtifact.sortingStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on Netflix semver convention") {
         val buildMeta = BuildMetadata(id = NetflixVersions.getBuildNumber(latestArtifact)!!)
-        expectThat(npmArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, npmArtifact.versioningStrategy))
+        expectThat(npmArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, npmArtifact.sortingStrategy))
           .isEqualTo(buildMeta)
       }
 

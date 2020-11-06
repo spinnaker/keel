@@ -9,10 +9,10 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
-import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
-import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
+import com.netflix.spinnaker.keel.api.plugins.SupportedSortingStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
@@ -27,11 +27,11 @@ class DockerArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val cloudDriverService: CloudDriverService,
   override val artifactMetadataService: ArtifactMetadataService
-) : BaseArtifactSupplier<DockerArtifact, DockerVersioningStrategy>(artifactMetadataService) {
+) : BaseArtifactSupplier<DockerArtifact, DockerVersionSortingStrategy>(artifactMetadataService) {
   override val supportedArtifact = SupportedArtifact("docker", DockerArtifact::class.java)
 
-  override val supportedVersioningStrategy =
-    SupportedVersioningStrategy("docker", DockerVersioningStrategy::class.java)
+  override val supportedSortingStrategy =
+    SupportedSortingStrategy("docker", DockerVersionSortingStrategy::class.java)
 
   override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? {
     return runWithIoContext {
@@ -73,7 +73,7 @@ class DockerArtifactSupplier(
       cloudDriverService
         .findDockerTagsForImage("*", artifact.name, deliveryConfig.serviceAccount)
         .distinct()
-        .sortedWith(artifact.versioningStrategy.comparator)
+        .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull()
     }
 
@@ -107,8 +107,8 @@ class DockerArtifactSupplier(
     }
   }
 
-  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
-      if (versioningStrategy.hasBuild()) {
+  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, sortingStrategy: SortingStrategy): BuildMetadata? {
+      if (sortingStrategy.hasBuild()) {
         val regex = Regex("""^.*-h(\d+).*$""")
         val result = regex.find(artifact.version)
         if (result != null && result.groupValues.size == 2) {
@@ -118,21 +118,21 @@ class DockerArtifactSupplier(
     return null
   }
 
-  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
-      if (versioningStrategy.hasCommit()) {
+  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, sortingStrategy: SortingStrategy): GitMetadata? {
+      if (sortingStrategy.hasCommit()) {
         return GitMetadata(commit = artifact.version.substringAfterLast("."))
       }
     return null
   }
 
-  private fun VersioningStrategy.hasBuild(): Boolean {
-    return (this as? DockerVersioningStrategy)
+  private fun SortingStrategy.hasBuild(): Boolean {
+    return (this as? DockerVersionSortingStrategy)
       ?.let { it.strategy in listOf(BRANCH_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_SEMVER) }
       ?: false
   }
 
-  private fun VersioningStrategy.hasCommit(): Boolean {
-    return (this as? DockerVersioningStrategy)
+  private fun SortingStrategy.hasCommit(): Boolean {
+    return (this as? DockerVersionSortingStrategy)
       ?.let { it.strategy in listOf(BRANCH_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_JOB, SEMVER_JOB_COMMIT_BY_SEMVER) }
       ?: false
   }

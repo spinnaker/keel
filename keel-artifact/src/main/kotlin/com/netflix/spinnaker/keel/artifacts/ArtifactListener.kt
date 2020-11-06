@@ -130,7 +130,7 @@ class ArtifactListener(
               val hasNew = when {
                 lastRecordedVersion == null -> true
                 latestArtifact.version != lastRecordedVersion -> {
-                  artifact.versioningStrategy.comparator.compare(lastRecordedVersion, latestArtifact.version) > 0
+                  artifact.sortingStrategy.comparator.compare(lastRecordedVersion, latestArtifact.version) > 0
                 }
                 else -> false
               }

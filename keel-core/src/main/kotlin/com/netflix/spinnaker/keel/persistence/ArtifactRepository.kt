@@ -42,10 +42,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   /**
    * @returns the versions we have for an artifact, filtering by the artifact status information,
-   * and sorting with the artifact's sorting strategy
-   *
-   * This endpoint filters out invalid docker tags (tags that produce 0 or 2+ capture groups according to
-   * the supplied versioning strategy).
+   * and sorting with the artifact's sorting strategy.
    */
   fun versions(
     artifact: DeliveryArtifact,
@@ -269,14 +266,14 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * Note: the artifact comparitors are decending by default
    */
   fun isOlder(artifact: DeliveryArtifact, new: String, existingVersion: String): Boolean =
-    artifact.versioningStrategy.comparator.compare(new, existingVersion) > 0
+    artifact.sortingStrategy.comparator.compare(new, existingVersion) > 0
 
   /**
    * Returns true if the version is newer (higher) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
   fun isNewer(artifact: DeliveryArtifact, version: String, existingVersion: String): Boolean =
-    artifact.versioningStrategy.comparator.compare(version, existingVersion) < 0
+    artifact.sortingStrategy.comparator.compare(version, existingVersion) < 0
 
   /**
    * Given a list of pending versions and a current version, removes all versions older than the current version

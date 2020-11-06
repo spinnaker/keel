@@ -1,13 +1,16 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
-import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 
-data class DockerVersioningStrategy(
+/**
+ * A [SortingStrategy] for Docker images that compares version tags.
+ */
+data class DockerVersionSortingStrategy(
   val strategy: TagVersionStrategy,
   val captureGroupRegex: String? = null
-) : VersioningStrategy {
-  override val type: String = "docker"
+) : SortingStrategy {
+  override val type: String = "docker-versions"
 
   override val comparator: Comparator<String> =
     TagComparator(strategy, captureGroupRegex)

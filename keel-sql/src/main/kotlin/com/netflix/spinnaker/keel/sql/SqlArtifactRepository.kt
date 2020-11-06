@@ -278,7 +278,7 @@ class SqlArtifactRepository(
     return if (artifact.filteredByPullRequest || artifact.filteredByBranch) {
       versions
     } else {
-      val sortedVersions = versions.sortedWith(artifact.versioningStrategy.comparator)
+      val sortedVersions = versions.sortedWith(artifact.sortingStrategy.comparator)
       if (artifact is DockerArtifact) {
         filterDockerVersions(artifact, sortedVersions, limit)
       } else {
@@ -436,7 +436,7 @@ class SqlArtifactRepository(
             when (it.isNotEmpty()) {
               true ->
                 it
-                  .sortedWith(artifact.versioningStrategy.comparator)
+                  .sortedWith(artifact.sortingStrategy.comparator)
                   .first()
               else -> null
             }
@@ -1058,7 +1058,7 @@ class SqlArtifactRepository(
           }
           .toSet()
         val versions = unionedVersions
-          .sortedWith(compareBy(artifact.versioningStrategy.comparator) { (version, _, _) -> version })
+          .sortedWith(compareBy(artifact.sortingStrategy.comparator) { (version, _, _) -> version })
           .groupBy(
             { (_, _, promotionStatus) ->
               promotionStatus

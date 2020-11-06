@@ -137,7 +137,7 @@ class EnvironmentConstraintRunner(
   ) {
     log.debug("pendingVersionsToCheck: [$pendingVersionsToCheck] of artifact ${envContext.artifact.name} for environment ${envContext.environment.name} ")
     pendingVersionsToCheck
-      .sortedWith(envContext.artifact.versioningStrategy.comparator.reversed()) // oldest first
+      .sortedWith(envContext.artifact.sortingStrategy.comparator.reversed()) // oldest first
       .forEach { version ->
         val passesConstraints =
           checkStatelessConstraints(envContext.artifact, envContext.deliveryConfig, version, envContext.environment) &&

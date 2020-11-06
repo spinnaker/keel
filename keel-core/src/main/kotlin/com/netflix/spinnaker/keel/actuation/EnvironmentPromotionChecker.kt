@@ -78,7 +78,7 @@ class EnvironmentPromotionChecker(
                    * maintained.
                    */
                   queuedForApproval
-                    .sortedWith(artifact.versioningStrategy.comparator.reversed())
+                    .sortedWith(artifact.sortingStrategy.comparator.reversed())
                     .forEach { v ->
                       /**
                        * We don't need to re-invoke stateful constraint evaluators for these, but we still
@@ -95,7 +95,7 @@ class EnvironmentPromotionChecker(
                     }
 
                   val versionSelected = queuedForApproval
-                    .sortedWith(artifact.versioningStrategy.comparator.reversed())
+                    .sortedWith(artifact.sortingStrategy.comparator.reversed())
                     .lastOrNull()
                   if (versionSelected == null) {
                     log.warn("No version of {} passes constraints for environment {}", artifact.name, environment.name)

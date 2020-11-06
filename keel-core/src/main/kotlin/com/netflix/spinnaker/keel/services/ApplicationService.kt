@@ -333,9 +333,9 @@ class ApplicationService(
 
       // first attempt to use the artifact metadata fetched from the DB, then fallback to the default if not found
       build = artifactInstance.buildMetadata
-        ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.versioningStrategy),
+        ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.sortingStrategy),
       git = artifactInstance.gitMetadata
-        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.versioningStrategy)
+        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.sortingStrategy)
     )
   }
 

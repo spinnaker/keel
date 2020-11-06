@@ -7,10 +7,10 @@ import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
-import com.netflix.spinnaker.keel.api.artifacts.VersioningStrategy
+import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
-import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
+import com.netflix.spinnaker.keel.api.plugins.SupportedSortingStrategy
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.parseAppVersionOrNull
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
@@ -28,19 +28,19 @@ class DebianArtifactSupplier(
   override val eventPublisher: EventPublisher,
   private val artifactService: ArtifactService,
   override val artifactMetadataService: ArtifactMetadataService
-) : BaseArtifactSupplier<DebianArtifact, DebianVersioningStrategy>(artifactMetadataService) {
+) : BaseArtifactSupplier<DebianArtifact, DebianVersionSortingStrategy>(artifactMetadataService) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override val supportedArtifact = SupportedArtifact("deb", DebianArtifact::class.java)
 
-  override val supportedVersioningStrategy =
-    SupportedVersioningStrategy("deb", DebianVersioningStrategy::class.java)
+  override val supportedSortingStrategy =
+    SupportedSortingStrategy("deb", DebianVersionSortingStrategy::class.java)
 
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     runWithIoContext {
       artifactService.getVersions(artifact.name, artifact.statusesForQuery, DEBIAN)
         .map { version -> "${artifact.name}-$version" }
-        .sortedWith(artifact.versioningStrategy.comparator)
+        .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull() // versioning strategies return descending by default... ¯\_(ツ)_/¯
         ?.let { version ->
           artifactService.getArtifact(artifact.name, version.removePrefix("${artifact.name}-"), DEBIAN)
@@ -65,7 +65,7 @@ class DebianArtifactSupplier(
     return artifact.version
   }
 
-  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): BuildMetadata? {
+  override fun parseDefaultBuildMetadata(artifact: PublishedArtifact, sortingStrategy: SortingStrategy): BuildMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
     return try {
@@ -83,7 +83,7 @@ class DebianArtifactSupplier(
     }
   }
 
-  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, versioningStrategy: VersioningStrategy): GitMetadata? {
+  override fun parseDefaultGitMetadata(artifact: PublishedArtifact, sortingStrategy: SortingStrategy): GitMetadata? {
     // attempt to parse helpful info from the appversion.
     // TODO: Frigga and Rocket version parsing are not aligned. We should consolidate.
     val appversion = artifact.version.parseAppVersionOrNull()

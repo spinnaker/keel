@@ -15,7 +15,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PullRequest
 import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
-import com.netflix.spinnaker.keel.api.plugins.SupportedVersioningStrategy
+import com.netflix.spinnaker.keel.api.plugins.SupportedSortingStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import com.netflix.spinnaker.keel.test.deliveryConfig
@@ -134,10 +134,10 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         )
       }
 
-      test("supports Debian versioning strategy") {
-        expectThat(debianArtifactSupplier.supportedVersioningStrategy)
+      test("supports Debian version sorting strategy") {
+        expectThat(debianArtifactSupplier.supportedSortingStrategy)
           .isEqualTo(
-            SupportedVersioningStrategy(DEBIAN, DebianVersioningStrategy::class.java)
+            SupportedSortingStrategy(DEBIAN, DebianVersionSortingStrategy::class.java)
           )
       }
 
@@ -154,18 +154,18 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
 
       test("returns git metadata based on frigga parser") {
         val gitMeta = GitMetadata(commit = AppVersion.parseName(latestArtifact.version)!!.commit)
-        expectThat(debianArtifactSupplier.parseDefaultGitMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.parseDefaultGitMetadata(latestArtifact, debianArtifact.sortingStrategy))
           .isEqualTo(gitMeta)
       }
 
       test("returns build metadata based on frigga parser") {
         val buildMeta = BuildMetadata(id = AppVersion.parseName(latestArtifact.version)!!.buildNumber.toInt())
-        expectThat(debianArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.parseDefaultBuildMetadata(latestArtifact, debianArtifact.sortingStrategy))
           .isEqualTo(buildMeta)
       }
 
       test("frigga parser can't parse this version") {
-        expectThat(debianArtifactSupplier.parseDefaultBuildMetadata(artifactWithInvalidVersion, debianArtifact.versioningStrategy))
+        expectThat(debianArtifactSupplier.parseDefaultBuildMetadata(artifactWithInvalidVersion, debianArtifact.sortingStrategy))
           .isNull()
       }
 

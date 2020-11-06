@@ -33,7 +33,7 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.test.DummyArtifact
-import com.netflix.spinnaker.keel.test.DummyVersioningStrategy
+import com.netflix.spinnaker.keel.test.DummySortingStrategy
 import com.netflix.spinnaker.keel.test.artifactReferenceResource
 import com.netflix.spinnaker.keel.test.versionedArtifactResource
 import com.netflix.spinnaker.time.MutableClock
@@ -138,7 +138,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     private val artifactInstance = slot<PublishedArtifact>()
-    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact, DummyVersioningStrategy>>(relaxUnitFun = true) {
+    private val artifactSupplier = mockk<ArtifactSupplier<DummyArtifact, DummySortingStrategy>>(relaxUnitFun = true) {
       every { supportedArtifact } returns SupportedArtifact("dummy", DummyArtifact::class.java)
       every {
         getVersionDisplayName(capture(artifactInstance))
