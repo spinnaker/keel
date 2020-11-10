@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.api
 
 import com.netflix.spinnaker.keel.api.schema.Discriminator
 
-interface Validation {
+interface Verification {
   @Discriminator
   val type: String
 }

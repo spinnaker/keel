@@ -1,9 +1,9 @@
 package com.netflix.spinnaker.keel.core.api
 
-import com.netflix.spinnaker.keel.api.Validation
+import com.netflix.spinnaker.keel.api.Verification
 
-data class TestContainerValidation(
+data class TestContainerVerification(
   val container: String
-) : Validation {
+) : Verification {
   override val type = "test-container"
 }

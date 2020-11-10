@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
-import com.netflix.spinnaker.keel.api.Validation
+import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.toSimpleLocations
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
@@ -27,7 +27,7 @@ class SubmittedEnvironmentDeserializer : StdNodeBasedDeserializer<SubmittedEnvir
     with(context.mapper) {
       val name = root.path("name").textValue()
       val constraints: Set<Constraint> = convert(root, "constraints") ?: emptySet()
-      val verifyWith: Set<Validation> = convert(root, "verifyWith") ?: emptySet()
+      val verifyWith: Set<Verification> = convert(root, "verifyWith") ?: emptySet()
       val notifications: Set<NotificationConfig> = convert(root, "notifications") ?: emptySet()
       val locations: SubnetAwareLocations? = convert(root, "locations")
       val resources: Set<SubmittedResource<*>> = copy().run {
