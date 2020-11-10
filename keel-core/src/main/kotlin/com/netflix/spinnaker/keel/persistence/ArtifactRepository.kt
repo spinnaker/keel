@@ -47,15 +47,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun versions(
     artifact: DeliveryArtifact,
     limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS
-  ): List<String>
-
-  /**
-   * Lists all versions, unsorted and regardless of status
-   */
-  fun versions(
-    name: String,
-    type: ArtifactType
-  ): List<String>
+  ): List<PublishedArtifact>
 
   /**
    * Persists the specified instance of the artifact.
@@ -63,13 +55,13 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * @return `true` if a new version is persisted, `false` if the specified version was already
    * known (in which case this method is a no-op).
    */
-  fun storeArtifactInstance(artifact: PublishedArtifact): Boolean
+  fun storeArtifactVersion(artifactVersion: PublishedArtifact): Boolean
 
   /**
    * @return The [PublishedArtifact] matching the specified name, type, version and (optionally) status, or `null`
    * if not found.
    */
-  fun getArtifactInstance(name: String, type: ArtifactType, version: String, status: ArtifactStatus?): PublishedArtifact?
+  fun getArtifactVersion(artifact: DeliveryArtifact, version: String, status: ArtifactStatus? = null): PublishedArtifact?
 
   /**
    * Update metadata for the specified [PublishedArtifact].
@@ -265,21 +257,21 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * Returns true if the version is older (lower) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isOlder(artifact: DeliveryArtifact, new: String, existingVersion: String): Boolean =
+  fun isOlder(artifact: DeliveryArtifact, new: PublishedArtifact, existingVersion: PublishedArtifact): Boolean =
     artifact.sortingStrategy.comparator.compare(new, existingVersion) > 0
 
   /**
    * Returns true if the version is newer (higher) than the existing version.
    * Note: the artifact comparitors are decending by default
    */
-  fun isNewer(artifact: DeliveryArtifact, version: String, existingVersion: String): Boolean =
+  fun isNewer(artifact: DeliveryArtifact, version: PublishedArtifact, existingVersion: PublishedArtifact): Boolean =
     artifact.sortingStrategy.comparator.compare(version, existingVersion) < 0
 
   /**
    * Given a list of pending versions and a current version, removes all versions older than the current version
    * from the list. If there's no current, returns all pending versions.
    */
-  fun removeOlderIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeOlderIfCurrentExists(artifact: DeliveryArtifact, currentVersion: PublishedArtifact?, pending: List<PublishedArtifact>?): List<PublishedArtifact> {
     if (pending == null) {
       return emptyList()
     }
@@ -295,7 +287,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
    * Given a list of pending versions and a current version, returns all versions older than the current
    * version from the list. If there's no current version or no pending versions, returns an empty list.
    */
-  fun removeNewerIfCurrentExists(artifact: DeliveryArtifact, currentVersion: String?, pending: List<String>?): List<String> {
+  fun removeNewerIfCurrentExists(artifact: DeliveryArtifact, currentVersion: PublishedArtifact?, pending: List<PublishedArtifact>?): List<PublishedArtifact> {
     if (pending == null || currentVersion == null) {
       return emptyList()
     }
@@ -314,3 +306,8 @@ class ArtifactNotFoundException(reference: String, deliveryConfig: String?) :
 
 class ArtifactAlreadyRegistered(name: String, type: ArtifactType) :
   UserException("The $type artifact $name is already registered")
+
+class NoSuchArtifactVersionException(name: String, type: ArtifactType, version: String) :
+  NoSuchEntityException("Version $version of $type artifact named $name not found") {
+  constructor(artifact: DeliveryArtifact, version: String) : this(artifact.name, artifact.type, version)
+}

@@ -209,21 +209,21 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     with(subject) {
       register(versionedSnapshotDebian)
       setOf(version1, version2, version3).forEach {
-        storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(it, SNAPSHOT))
+        storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(it, SNAPSHOT))
       }
       setOf(version4, version5).forEach {
-        storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(it, RELEASE))
+        storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(it, RELEASE))
       }
       register(versionedReleaseDebian)
       setOf(version1, version2, version3).forEach {
-        storeArtifactInstance(versionedReleaseDebian.toArtifactInstance(it, SNAPSHOT))
+        storeArtifactVersion(versionedReleaseDebian.toArtifactVersion(it, SNAPSHOT))
       }
       setOf(version4, version5).forEach {
-        storeArtifactInstance(versionedReleaseDebian.toArtifactInstance(it, RELEASE))
+        storeArtifactVersion(versionedReleaseDebian.toArtifactVersion(it, RELEASE))
       }
       register(versionedDockerArtifact)
       setOf(version6).forEach {
-        storeArtifactInstance(versionedDockerArtifact.toArtifactInstance(it))
+        storeArtifactVersion(versionedDockerArtifact.toArtifactVersion(it))
       }
       register(debianFilteredByBranch)
     }
@@ -260,7 +260,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       test("storing a new version throws an exception") {
         expectThrows<NoSuchArtifactException> {
-          subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version1, SNAPSHOT))
+          subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version1, SNAPSHOT))
         }
       }
 
@@ -299,7 +299,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       context("an artifact version already exists") {
         before {
-          subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version1, SNAPSHOT))
+          subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version1, SNAPSHOT))
         }
 
         test("release status for the version is returned correctly") {
@@ -307,22 +307,24 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         }
 
         test("registering the same version is a no-op") {
-          val result = subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version1, SNAPSHOT))
+          val result = subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version1, SNAPSHOT))
           expectThat(result).isFalse()
           expectThat(subject.versions(versionedSnapshotDebian)).hasSize(1)
         }
 
         test("adding a new version adds it to the list") {
-          val result = subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version2, SNAPSHOT))
+          val result = subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version2, SNAPSHOT))
 
           expectThat(result).isTrue()
-          expectThat(subject.versions(versionedSnapshotDebian)).containsExactly(version2, version1)
+          expectThat(subject.versions(versionedSnapshotDebian).map { it.version })
+            .containsExactly(version2, version1)
         }
 
         test("querying for the list of versions returns both versions") {
           // status is stored on the artifact
-          subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version2, SNAPSHOT))
-          expectThat(subject.versions(versionedSnapshotDebian)).containsExactly(version2, version1)
+          subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version2, SNAPSHOT))
+          expectThat(subject.versions(versionedSnapshotDebian).map { it.version })
+            .containsExactly(version2, version1)
         }
       }
 
@@ -332,17 +334,19 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             .shuffled()
             .forEach {
               if (it == version4 || it == version5) {
-                subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(it, RELEASE))
+                subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(it, RELEASE))
               } else {
-                subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(it, SNAPSHOT))
+                subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(it, SNAPSHOT))
               }
             }
         }
 
         test("versions are returned newest first and status is respected") {
           expect {
-            that(subject.versions(versionedSnapshotDebian)).isEqualTo(listOf(version3, version2, version1))
-            that(subject.versions(versionedReleaseDebian)).isEqualTo(listOf(version5, version4))
+            that(subject.versions(versionedSnapshotDebian).map { it.version })
+              .isEqualTo(listOf(version3, version2, version1))
+            that(subject.versions(versionedReleaseDebian).map { it.version })
+              .isEqualTo(listOf(version5, version4))
           }
         }
       }
@@ -355,26 +359,31 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         context("debian") {
           test("querying for all returns all") {
             val artifactWithAll = versionedSnapshotDebian.copy(statuses = emptySet())
-            expectThat(subject.versions(artifactWithAll)).containsExactly(version5, version4, version3, version2, version1)
+            expectThat(subject.versions(artifactWithAll).map { it.version })
+              .containsExactly(version5, version4, version3, version2, version1)
           }
 
           test("querying with only release returns correct versions") {
-            expectThat(subject.versions(versionedReleaseDebian)).containsExactly(version5, version4)
+            expectThat(subject.versions(versionedReleaseDebian).map { it.version })
+              .containsExactly(version5, version4)
           }
 
           test("querying for limit returns limit") {
             val artifactWithAll = versionedSnapshotDebian.copy(statuses = emptySet())
-            expectThat(subject.versions(artifactWithAll, 2)).containsExactly(version5, version4)
+            expectThat(subject.versions(artifactWithAll, 2).map { it.version })
+              .containsExactly(version5, version4)
           }
         }
 
         context("docker") {
           test("querying for all returns all") {
-            expectThat(subject.versions(versionedDockerArtifact.name, versionedDockerArtifact.type)).containsExactlyInAnyOrder(version6)
+            expectThat(subject.versions(versionedDockerArtifact).map { it.version })
+              .containsExactlyInAnyOrder(version6)
           }
 
           test("querying the artifact filters out the bad tag") {
-            expectThat(subject.versions(versionedDockerArtifact)).containsExactly(version6)
+            expectThat(subject.versions(versionedDockerArtifact).map { it.version })
+              .containsExactly(version6)
           }
 
           test("querying with a wrong strategy filters out everything") {
@@ -392,7 +401,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       context("limiting versions works") {
         before {
           (1..100).map { "1.0.$it"}.forEach {
-            subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(it, SNAPSHOT))
+            subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(it, SNAPSHOT))
           }
         }
 
@@ -778,8 +787,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("getting all filters by type") {
       before {
         persist()
-        subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version4, FINAL))
-        subject.storeArtifactInstance(versionedDockerArtifact.toArtifactInstance(version6, FINAL))
+        subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version4, FINAL))
+        subject.storeArtifactVersion(versionedDockerArtifact.toArtifactVersion(version6, FINAL))
       }
 
       test("querying works") {
@@ -865,14 +874,14 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     context("artifact metadata exists") {
       before {
         subject.register(versionedSnapshotDebian)
-        subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version1, SNAPSHOT).copy(
+        subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version1, SNAPSHOT).copy(
           gitMetadata = artifactMetadata.gitMetadata,
           buildMetadata = artifactMetadata.buildMetadata
         ))
       }
 
       test("retrieves successfully") {
-        val artifactVersion = subject.getArtifactInstance(versionedSnapshotDebian.name, versionedSnapshotDebian.type, version1, SNAPSHOT)!!
+        val artifactVersion = subject.getArtifactVersion(versionedSnapshotDebian, version1, SNAPSHOT)!!
 
         expectThat(artifactVersion.buildMetadata)
           .isEqualTo(artifactMetadata.buildMetadata)
@@ -882,12 +891,12 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       }
 
       test("update with non-prefixed version works") {
-        subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(versionOnly, SNAPSHOT).copy(
+        subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(versionOnly, SNAPSHOT).copy(
           gitMetadata = artifactMetadata.gitMetadata,
           buildMetadata = artifactMetadata.buildMetadata
         ))
 
-        val artifactVersion = subject.getArtifactInstance(versionedSnapshotDebian.name, versionedSnapshotDebian.type, version1, SNAPSHOT)!!
+        val artifactVersion = subject.getArtifactVersion(versionedSnapshotDebian, version1, SNAPSHOT)!!
 
         expectThat(artifactVersion.buildMetadata)
           .isEqualTo(artifactMetadata.buildMetadata)
@@ -902,11 +911,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       before {
         subject.register(versionedSnapshotDebian)
-        subject.storeArtifactInstance(versionedSnapshotDebian.toArtifactInstance(version1, SNAPSHOT, createdAt = createdAt))
+        subject.storeArtifactVersion(versionedSnapshotDebian.toArtifactVersion(version1, SNAPSHOT, createdAt = createdAt))
       }
 
       test("retrieves timestamp successfully") {
-        val artifactVersion = subject.getArtifactInstance(versionedSnapshotDebian.name, versionedSnapshotDebian.type, version1, SNAPSHOT)!!
+        val artifactVersion = subject.getArtifactVersion(versionedSnapshotDebian, version1, SNAPSHOT)!!
         expectThat(artifactVersion.createdAt).isEqualTo(createdAt)
       }
     }
@@ -919,8 +928,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         before {
           subject.register(debianFilteredByBranch)
           allVersions.forEachIndexed { index, version ->
-            subject.storeArtifactInstance(
-              debianFilteredByBranch.toArtifactInstance(
+            subject.storeArtifactVersion(
+              debianFilteredByBranch.toArtifactVersion(
                 version = version,
                 // half of the versions doesn't have a timestamp
                 createdAt = if (index < 10) null else clock.tickMinutes(10)
@@ -936,12 +945,14 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
         test("returns \"versions\" with matching branch sorted by timestamp") {
           val versions = subject.versions(debianFilteredByBranch, 5)
-          expectThat(versions).containsExactly(allVersions.reversed().subList(0, 5))
+          expectThat(versions.map { it.version })
+            .containsExactly(allVersions.reversed().subList(0, 5))
         }
 
         test("skips artifacts without a timestamp") {
           val versions = subject.versions(debianFilteredByBranch, 20)
-          expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+          expectThat(versions.map { it.version })
+            .containsExactly(allVersions.reversed().subList(0, 10))
         }
       }
 
@@ -953,8 +964,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           val prefix = debianFilteredByBranchStartingWith.from!!.branch!!.startsWith!!
           subject.register(debianFilteredByBranchStartingWith)
           allVersions.forEachIndexed { index, version ->
-            subject.storeArtifactInstance(
-              debianFilteredByBranchStartingWith.toArtifactInstance(
+            subject.storeArtifactVersion(
+              debianFilteredByBranchStartingWith.toArtifactVersion(
                 version = version,
                 createdAt = clock.tickMinutes(10)
               ).copy(
@@ -970,7 +981,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         test("returns \"versions\" with matching branches sorted by timestamp") {
           val versions = subject.versions(debianFilteredByBranchStartingWith, 20)
           // only the first 10 versions have matching branches
-          expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+          expectThat(versions.map { it.version })
+            .containsExactly(allVersions.reversed().subList(0, 10))
         }
       }
 
@@ -981,8 +993,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         before {
           subject.register(debianFilteredByBranchPattern)
           allVersions.forEachIndexed { index, version ->
-            subject.storeArtifactInstance(
-              debianFilteredByBranchPattern.toArtifactInstance(
+            subject.storeArtifactVersion(
+              debianFilteredByBranchPattern.toArtifactVersion(
                 version = version,
                 createdAt = clock.tickMinutes(10)
               ).copy(
@@ -1003,7 +1015,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         test("returns \"versions\" with matching branches sorted by timestamp") {
           val versions = subject.versions(debianFilteredByBranchPattern, 20)
           // first 5 have "a-non-matching-branch"
-          expectThat(versions).containsExactly(allVersions.reversed().subList(5, 20))
+          expectThat(versions.map { it.version })
+            .containsExactly(allVersions.reversed().subList(5, 20))
         }
       }
     }
@@ -1015,8 +1028,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       before {
         subject.register(debianFilteredByPullRequest)
         allVersions.forEachIndexed { index, version ->
-          subject.storeArtifactInstance(
-            debianFilteredByPullRequest.toArtifactInstance(
+          subject.storeArtifactVersion(
+            debianFilteredByPullRequest.toArtifactVersion(
               version = version,
               createdAt = clock.tickMinutes(10)
             ).copy(
@@ -1033,7 +1046,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       test("returns \"versions\" with pull request sorted by timestamp") {
         val versions = subject.versions(debianFilteredByPullRequest, 20)
         // half the "versions" don't have pull request info
-        expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+        expectThat(versions.map { it.version })
+          .containsExactly(allVersions.reversed().subList(0, 10))
       }
     }
 
@@ -1045,8 +1059,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       before {
         subject.register(debianFilteredByPullRequestAndBranch)
         allVersions.forEachIndexed { index, version ->
-          subject.storeArtifactInstance(
-            debianFilteredByPullRequestAndBranch.toArtifactInstance(
+          subject.storeArtifactVersion(
+            debianFilteredByPullRequestAndBranch.toArtifactVersion(
               version = version,
               createdAt = clock.tickMinutes(10)
             ).copy(
@@ -1065,7 +1079,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       test("returns \"versions\" with pull request and matching branch sorted by timestamp") {
         val versions = subject.versions(debianFilteredByPullRequestAndBranch, 20)
         // all versions should match
-        expectThat(versions).containsExactly(allVersions.reversed().subList(0, 10))
+        expectThat(versions.map { it.version })
+          .containsExactly(allVersions.reversed().subList(0, 10))
       }
     }
   }

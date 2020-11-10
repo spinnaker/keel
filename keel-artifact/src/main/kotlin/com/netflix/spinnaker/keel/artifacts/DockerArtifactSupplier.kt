@@ -69,41 +69,15 @@ class DockerArtifactSupplier(
 
     // Note: we currently don't have a way to derive account information from artifacts,
     // so, in the calls to clouddriver below, we look in all accounts.
-    val latestTag = runWithIoContext {
+    return runWithIoContext {
       cloudDriverService
         .findDockerTagsForImage("*", artifact.name, deliveryConfig.serviceAccount)
         .distinct()
+        // FIXME: this is making N calls to fill in data for each version so we can sort.
+        //  Ideally, we'd make a single call to return the list with details for each version.
+        .mapNotNull { getArtifactByVersion(artifact, it) }
         .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull()
-    }
-
-    return if (latestTag != null) {
-      runWithIoContext {
-        cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = latestTag)
-          .firstOrNull()
-          ?.let { dockerImage ->
-            PublishedArtifact(
-              name = dockerImage.repository,
-              type = DOCKER,
-              reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
-              version = dockerImage.tag,
-              metadata = let {
-                if (dockerImage.commitId != null && dockerImage.buildNumber != null) {
-                  mapOf(
-                    "commitId" to dockerImage.commitId,
-                    "buildNumber" to dockerImage.buildNumber,
-                    "branch" to dockerImage.branch,
-                    "createdAt" to dockerImage.date
-                  )
-                } else {
-                  emptyMap()
-                }
-              }
-            )
-          }
-      }
-    } else {
-      null
     }
   }
 

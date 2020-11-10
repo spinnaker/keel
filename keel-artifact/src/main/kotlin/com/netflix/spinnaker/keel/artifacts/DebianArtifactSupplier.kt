@@ -39,12 +39,13 @@ class DebianArtifactSupplier(
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? =
     runWithIoContext {
       artifactService.getVersions(artifact.name, artifact.statusesForQuery, DEBIAN)
-        .map { version -> "${artifact.name}-$version" }
+        // FIXME: this is making N calls to fill in data for each version so we can sort.
+        //  Ideally, we'd make a single call to return the list with details for each version.
+        .map { version ->
+          artifactService.getArtifact(artifact.name, version, DEBIAN)
+        }
         .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull() // versioning strategies return descending by default... ¯\_(ツ)_/¯
-        ?.let { version ->
-          artifactService.getArtifact(artifact.name, version.removePrefix("${artifact.name}-"), DEBIAN)
-        }
     }
 
   override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? =

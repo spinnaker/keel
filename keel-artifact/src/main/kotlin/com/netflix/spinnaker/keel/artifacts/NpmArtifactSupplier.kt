@@ -37,11 +37,13 @@ class NpmArtifactSupplier(
     runWithIoContext {
       artifactService
         .getVersions(artifact.nameForQuery, artifact.statusesForQuery, NPM)
+        // FIXME: this is making N calls to fill in data for each version so we can sort.
+        //  Ideally, we'd make a single call to return the list with details for each version.
+        .map { version ->
+          artifactService.getArtifact(artifact.name, version, NPM)
+        }
         .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull() // versioning strategies return descending by default... ¯\_(ツ)_/¯
-        ?.let { version ->
-          artifactService.getArtifact(artifact.nameForQuery, version, NPM)
-        }
     }
 
   override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? =

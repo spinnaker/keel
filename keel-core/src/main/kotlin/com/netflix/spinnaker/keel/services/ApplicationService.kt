@@ -49,8 +49,8 @@ import org.springframework.stereotype.Component
 class ApplicationService(
   private val repository: KeelRepository,
   private val resourceStatusService: ResourceStatusService,
-  private val constraintEvaluators: List<ConstraintEvaluator<*>>,
-  private val artifactSuppliers: List<ArtifactSupplier<*, *>>
+  private val artifactSuppliers: List<ArtifactSupplier<*, *>>,
+  constraintEvaluators: List<ConstraintEvaluator<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -189,24 +189,24 @@ class ApplicationService(
     val environmentSummaries = getEnvironmentSummariesFor(application)
 
     val artifactSummaries = deliveryConfig.artifacts.map { artifact ->
-      val artifactVersionSummaries = repository.artifactVersions(artifact, limit).map { version ->
+      val artifactVersionSummaries = repository.artifactVersions(artifact, limit).map { artifactVersion ->
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         environmentSummaries.forEach { environmentSummary ->
           val environment = deliveryConfig.environments.find { it.name == environmentSummary.name }!!
-          environmentSummary.getArtifactPromotionStatus(artifact, version)
+          environmentSummary.getArtifactPromotionStatus(artifact, artifactVersion.version)
             ?.let { status ->
-              buildArtifactSummaryInEnvironment(deliveryConfig, environment.name, artifact, version, status)
+              buildArtifactSummaryInEnvironment(deliveryConfig, environment.name, artifact, artifactVersion.version, status)
                 ?.also {
                   artifactSummariesInEnvironments.add(
-                    it.addStatefulConstraintSummaries(deliveryConfig, environment, version)
-                      .addStatelessConstraintSummaries(deliveryConfig, environment, version, artifact)
+                    it.addStatefulConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
+                      .addStatelessConstraintSummaries(deliveryConfig, environment, artifactVersion.version, artifact)
                   )
                 }
             }
         }
 
-        buildArtifactVersionSummary(artifact, version, artifactSummariesInEnvironments)
+        buildArtifactVersionSummary(artifact, artifactVersion.version, artifactSummariesInEnvironments)
       }
       ArtifactSummary(
         name = artifact.name,
@@ -322,7 +322,7 @@ class ApplicationService(
   ): ArtifactVersionSummary {
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
     val releaseStatus = repository.getReleaseStatus(artifact, version)
-    val artifactInstance = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
+    val artifactInstance = repository.getArtifactVersion(artifact, version, releaseStatus)
       ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
 
     return ArtifactVersionSummary(

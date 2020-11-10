@@ -18,6 +18,7 @@ import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -73,20 +74,23 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
     fixture { Fixture }
 
     context("DockerArtifactSupplier") {
+      val versionSlot = slot<String>()
       before {
         every {
           clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, deliveryConfig.serviceAccount)
         } returns versions
         every {
-          clouddriverService.findDockerImages(account = "*", repository = latestArtifact.name, tag = latestArtifact.version)
-        } returns listOf(
-          DockerImage(
-            account = "test",
-            repository = latestArtifact.name,
-            tag = latestArtifact.version,
-            digest = "sha123"
+          clouddriverService.findDockerImages(account = "*", repository = latestArtifact.name, tag = capture(versionSlot))
+        } answers {
+          listOf(
+            DockerImage(
+              account = "test",
+              repository = latestArtifact.name,
+              tag = versionSlot.captured,
+              digest = "sha123"
+            )
           )
-        )
+        }
       }
 
       test("supports Docker artifacts") {

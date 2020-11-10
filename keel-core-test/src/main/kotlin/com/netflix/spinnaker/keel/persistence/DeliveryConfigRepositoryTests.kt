@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
@@ -58,6 +59,12 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     private val resourceRepository: R = resourceRepositoryProvider(resourceSpecIdentifier)
     private val artifactRepository: A = artifactRepositoryProvider()
 
+    val artifact =  DebianArtifact(
+      name = "keel",
+      deliveryConfigName = deliveryConfig.name,
+      vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
+    )
+
     fun getByName() = expectCatching {
       repository.get(deliveryConfig.name)
     }
@@ -79,6 +86,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     fun storeArtifacts() {
       deliveryConfig.artifacts.forEach {
         artifactRepository.register(it)
+        artifactRepository.storeArtifactVersion(PublishedArtifact(it.name, it.type, "${it.name}-1.0.0"))
       }
     }
 
@@ -100,7 +108,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     }
 
     fun queueConstraintApproval() {
-      repository.queueAllConstraintsApproved(deliveryConfig.name, "staging", "keel-1.0.0", "keel")
+      repository.queueArtifactVersionForApproval(deliveryConfig.name, "staging", artifact, "keel-1.0.0")
     }
 
     fun getEnvironment(resource: Resource<*>) = expectCatching {
@@ -166,11 +174,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         copy(
           deliveryConfig = deliveryConfig.copy(
             artifacts = setOf(
-              DebianArtifact(
-                name = "keel",
-                deliveryConfigName = deliveryConfig.name,
-                vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
-              )
+              artifact
             ),
             environments = setOf(
               Environment(
@@ -316,8 +320,10 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
         test("can queue constraint approvals") {
           queueConstraintApproval()
-          expectThat(repository.getQueuedConstraintApprovals(deliveryConfig.name, "staging", "keel"))
-            .isEqualTo(setOf("keel-1.0.0"))
+          expectThat(repository
+            .getArtifactVersionsQueuedForApproval(deliveryConfig.name, "staging", artifact)
+            .map { it.version }
+          ).isEqualTo(listOf("keel-1.0.0"))
         }
 
         test("can retrieve the environment for the resources") {

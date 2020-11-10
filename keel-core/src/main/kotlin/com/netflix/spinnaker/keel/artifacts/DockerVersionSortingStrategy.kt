@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 
@@ -11,9 +12,11 @@ data class DockerVersionSortingStrategy(
   val captureGroupRegex: String? = null
 ) : SortingStrategy {
   override val type: String = "docker-versions"
+  private val tagComparator = TagComparator(strategy, captureGroupRegex)
 
-  override val comparator: Comparator<String> =
-    TagComparator(strategy, captureGroupRegex)
+  override val comparator = Comparator<PublishedArtifact> { v1, v2 ->
+    tagComparator.compare(v1.version, v2.version)
+  }
 
   override fun toString(): String =
     "${javaClass.simpleName}[strategy=$strategy, captureGroupRegex=$captureGroupRegex]}"

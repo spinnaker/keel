@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.test
 import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
@@ -23,7 +24,7 @@ class DummyArtifact(
 }
 
 object DummySortingStrategy : SortingStrategy {
-  override val comparator: Comparator<String> = Comparator.naturalOrder()
+  override val comparator: Comparator<PublishedArtifact> = compareBy { it.version }
   override val type = "dummy"
 }
 

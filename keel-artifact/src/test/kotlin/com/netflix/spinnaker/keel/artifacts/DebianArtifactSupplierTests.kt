@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -114,14 +115,23 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
     fixture { Fixture }
 
     context("DebianArtifactSupplier") {
+      val versionSlot = slot<String>()
       before {
         every {
           artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
         } returns versions
 
         every {
-          artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
-        } returns latestArtifact
+          artifactService.getArtifact(debianArtifact.name, capture(versionSlot), DEBIAN)
+        } answers {
+          PublishedArtifact(
+            name = debianArtifact.name,
+            type = debianArtifact.type,
+            reference = debianArtifact.reference,
+            version = "${debianArtifact.name}-${versionSlot.captured}",
+            metadata = emptyMap()
+          )
+        }
 
         every {
           artifactMetadataService.getArtifactMetadata("1", "a15p0")
@@ -145,10 +155,12 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         val result = runBlocking {
           debianArtifactSupplier.getLatestArtifact(deliveryConfig, debianArtifact)
         }
-        expectThat(result).isEqualTo(latestArtifact)
+        expectThat(result!!.version).isEqualTo(latestArtifact.version)
         verify(exactly = 1) {
           artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
-          artifactService.getArtifact(debianArtifact.name, versions.last(), DEBIAN)
+        }
+        verify(exactly = versions.size) {
+          artifactService.getArtifact(debianArtifact.name, any(), DEBIAN)
         }
       }
 

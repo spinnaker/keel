@@ -8,5 +8,5 @@ import com.netflix.spinnaker.keel.api.schema.Discriminator
 interface SortingStrategy {
   @Discriminator
   val type: String
-  val comparator: Comparator<String>
+  val comparator: Comparator<PublishedArtifact>
 }

@@ -81,7 +81,7 @@ abstract class DeliveryArtifact {
   val filteredByReleaseStatus: Boolean
     get() = statuses.isNotEmpty()
 
-  fun toArtifactInstance(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
+  fun toArtifactVersion(version: String, status: ArtifactStatus? = null, createdAt: Instant? = null) =
     PublishedArtifact(
       name = name,
       type = type,

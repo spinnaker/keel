@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.test.deliveryConfig
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -83,13 +84,22 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
     fixture { Fixture }
 
     context("NpmArtifactSupplier") {
+      val versionSlot = slot<String>()
       before {
         every {
           artifactService.getVersions(npmArtifact.name, listOf(CANDIDATE.name), artifactType = NPM)
         } returns versions
         every {
-          artifactService.getArtifact(npmArtifact.name, versions.sortedWith(NPM_VERSION_COMPARATOR).first(), NPM)
-        } returns latestArtifact
+          artifactService.getArtifact(npmArtifact.name, capture(versionSlot), NPM)
+        } answers {
+          PublishedArtifact(
+            name = npmArtifact.name,
+            type = npmArtifact.type,
+            reference = npmArtifact.reference,
+            version = versionSlot.captured,
+            metadata = emptyMap()
+          )
+        }
         every {
           artifactMetadataService.getArtifactMetadata("7", "gc0c603")
         } returns artifactMetadata
@@ -112,10 +122,12 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         val result = runBlocking {
           npmArtifactSupplier.getLatestArtifact(deliveryConfig, npmArtifact)
         }
-        expectThat(result).isEqualTo(latestArtifact)
+        expectThat(result!!.version).isEqualTo(latestArtifact.version)
         verify(exactly = 1) {
           artifactService.getVersions(npmArtifact.name, listOf(CANDIDATE.name), artifactType = NPM)
-          artifactService.getArtifact(npmArtifact.name, versions.sortedWith(NPM_VERSION_COMPARATOR).first(), NPM)
+        }
+        verify(exactly = versions.size) {
+          artifactService.getArtifact(npmArtifact.name, any(), NPM)
         }
       }
 

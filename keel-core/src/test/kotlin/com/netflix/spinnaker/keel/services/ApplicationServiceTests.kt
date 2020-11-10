@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
@@ -45,8 +46,6 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import java.time.Instant
-import java.time.ZoneId
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.all
@@ -56,6 +55,8 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 import strikt.assertions.withFirst
+import java.time.Instant
+import java.time.ZoneId
 
 class ApplicationServiceTests : JUnit5Minutests {
   class Fixture {
@@ -153,8 +154,8 @@ class ApplicationServiceTests : JUnit5Minutests {
     val applicationService = ApplicationService(
       repository,
       resourceStatusService,
-      listOf(dependsOnEvaluator),
-      listOf(artifactSupplier)
+      listOf(artifactSupplier),
+      listOf(dependsOnEvaluator)
     )
 
     val buildMetadata = BuildMetadata(
@@ -166,6 +167,9 @@ class ApplicationServiceTests : JUnit5Minutests {
       author = "keel user",
       commit = "1sdla"
     )
+
+    fun Collection<String>.toArtifactVersions(artifact: DeliveryArtifact) =
+      map { PublishedArtifact(artifact.name, artifact.type, it) }
   }
 
   fun applicationServiceTests() = rootContext<Fixture> {
@@ -179,9 +183,9 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { repository.getDeliveryConfigForApplication(application2) } returns dualArtifactDeliveryConfig
 
       every {
-        repository.getArtifactInstance(any(), any(), any(), any())
+        repository.getArtifactVersion(any(), any(), any())
       } answers {
-        PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2))
+        PublishedArtifact(arg<DeliveryArtifact>(0).name, arg<DeliveryArtifact>(0).type, arg<String>(1))
       }
 
       every {
@@ -195,8 +199,8 @@ class ApplicationServiceTests : JUnit5Minutests {
 
     context("artifact summaries by application") {
       before {
-        every { repository.artifactVersions(releaseArtifact) } returns versions
-        every { repository.artifactVersions(snapshotArtifact) } returns snapshotVersions
+        every { repository.artifactVersions(releaseArtifact) } returns versions.toArtifactVersions(releaseArtifact)
+        every { repository.artifactVersions(snapshotArtifact) } returns snapshotVersions.toArtifactVersions(snapshotArtifact)
       }
 
       context("a delivery config with a single artifact for all environments") {
@@ -206,9 +210,9 @@ class ApplicationServiceTests : JUnit5Minutests {
           } returns emptyList()
 
           every {
-            repository.getArtifactInstance(any(), any(), any(), any())
+            repository.getArtifactVersion(any(), any(), any())
           } answers {
-            PublishedArtifact(arg<String>(0), arg<String>(1), arg<String>(2), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
+            PublishedArtifact(arg<DeliveryArtifact>(0).name, arg<DeliveryArtifact>(0).type, arg<String>(1), gitMetadata = gitMetadata, buildMetadata = buildMetadata)
           }
         }
 
@@ -578,6 +582,7 @@ class ApplicationServiceTests : JUnit5Minutests {
               repository.artifactVersions(releaseArtifact, capture(maxArtifactVersions))
             } answers {
               lotsaVersions.subList(0, maxArtifactVersions.captured)
+                .map { PublishedArtifact(releaseArtifact.name, releaseArtifact.type, it) }
             }
 
             every {
