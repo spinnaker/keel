@@ -226,23 +226,30 @@ class ApplicationService(
 
   private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
     val artifactGitMetadata = getArtifactInstance(artifact, version)?.gitMetadata
-    val potentialSummary = getPotentialSummary(deliveryConfig, environmentName, artifact.reference, version)
+
+    // some environments contain relevant info for skipped artifacts, so
+    // try and find that summary before defaulting to less information
+    val potentialSummary =
+      repository.getArtifactSummaryInEnvironment(
+        deliveryConfig = deliveryConfig,
+        environmentName = environmentName,
+        artifactReference = artifact.reference,
+        version = version
+      )
 
     return when (status) {
       PENDING -> {
-        val newerGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName,  artifact.reference, CURRENT.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName,  artifact.reference, CURRENT.name)
 
         ArtifactSummaryInEnvironment(
           environment = environmentName,
           version = version,
           state = status.name.toLowerCase(),
-          // comparing CURRENT (new code) vs. PENDING (version is question, old code)
-          diffLink = generateDiffLink(newerGitMetadata, artifactGitMetadata)
+          // comparing PENDING (version in question, new code) vs. CURRENT (old code)
+          diffLink = generateDiffLink(artifactGitMetadata, olderGitMetadata)
         )
       }
       SKIPPED -> {
-        // some environments contain relevant info for skipped artifacts, so
-        // try and find that summary before defaulting to less information
         if (potentialSummary == null || potentialSummary.state == "pending") {
           ArtifactSummaryInEnvironment(
             environment = environmentName,
@@ -256,21 +263,21 @@ class ApplicationService(
       DEPLOYING -> {
         val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
         potentialSummary?.copy(
-          // comparing DEPLOYING (version is question, new code) vs. CURRENT (old code)
+          // comparing DEPLOYING (version in question, new code) vs. CURRENT (old code)
           diffLink = generateDiffLink(artifactGitMetadata, olderGitMetadata)
         )
       }
       PREVIOUS -> {
         val newerGitMetadata = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it)?.gitMetadata }
         potentialSummary?.copy(
-          //comparing PREVIOUS (version is question, old code) vs. the version which replaced it (new code)
+          //comparing PREVIOUS (version in question, old code) vs. the version which replaced it (new code)
           diffLink = generateDiffLink(newerGitMetadata, artifactGitMetadata)
         )
       }
       CURRENT -> {
         val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, PREVIOUS.name)
         potentialSummary?.copy(
-          // comparing CURRENT (version is question, new code) vs. PREVIOUS (old code)
+          // comparing CURRENT (version in question, new code) vs. PREVIOUS (old code)
           diffLink = generateDiffLink(artifactGitMetadata, olderGitMetadata)
         )
       }
@@ -376,7 +383,7 @@ class ApplicationService(
     return repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
   }
 
-  // Generating a stash diff link between source and target versions (the order does matter!)
+  // Generating a SCM diff link between source and target versions (the order does matter!)
   private fun generateDiffLink (newerGitMetadata: GitMetadata?, olderGitMetadata: GitMetadata?) : String? {
     return if (newerGitMetadata !=null && olderGitMetadata != null) {
       "https://stash.corp.netflix.com/projects/${newerGitMetadata.project}/repos/${newerGitMetadata.repo?.name}/compare/diff?" +
@@ -385,13 +392,4 @@ class ApplicationService(
       null
     }
   }
-
-  private fun getPotentialSummary (deliveryConfig: DeliveryConfig, environmentName: String, artifactReference: String, version: String) =
-  repository.getArtifactSummaryInEnvironment(
-    deliveryConfig = deliveryConfig,
-    environmentName = environmentName,
-    artifactReference = artifactReference,
-    version = version
-  )
-
 }
