@@ -15,7 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
-import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import java.io.Serializable
@@ -102,7 +102,7 @@ internal class VerificationRunnerTests {
   @TestFactory
   fun `no-ops if all verifications are already complete`() =
     listOf(PASSED, FAILED).map { status->
-      DynamicTest.dynamicTest("no-ops if all verifications are already complete and the final one is $status"){
+      dynamicTest("no-ops if all verifications are already complete and the final one is $status"){
         val environment = Environment(
           name = "test",
           verifyWith = setOf(DummyVerification(1), DummyVerification(2))
