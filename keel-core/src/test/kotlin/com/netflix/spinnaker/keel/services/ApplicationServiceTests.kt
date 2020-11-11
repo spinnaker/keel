@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.SCMInfo
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
@@ -40,6 +41,7 @@ import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Runs
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -149,12 +151,21 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { parseDefaultGitMetadata(any(), any()) } returns null
     }
 
+    private val scmInfo = mockk<SCMInfo>() {
+      coEvery {
+        getSCMInfo()
+      } answers {
+        mapOf("stash" to "https://stash.corp.netflix.com/")
+      }
+    }
+
     // subject
     val applicationService = ApplicationService(
       repository,
       resourceStatusService,
       listOf(dependsOnEvaluator),
-      listOf(artifactSupplier)
+      listOf(artifactSupplier),
+      scmInfo
     )
 
     val buildMetadata = BuildMetadata(
