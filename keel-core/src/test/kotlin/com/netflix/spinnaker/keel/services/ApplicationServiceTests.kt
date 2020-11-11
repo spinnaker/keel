@@ -191,6 +191,10 @@ class ApplicationServiceTests : JUnit5Minutests {
       every {
         repository.getReleaseStatus(snapshotArtifact, any())
       } returns SNAPSHOT
+
+      every {
+        repository.getGitMetadataByPromotionStatus(any(), any(), any(), any())
+      } returns null
     }
 
     context("artifact summaries by application") {
@@ -227,6 +231,11 @@ class ApplicationServiceTests : JUnit5Minutests {
             every {
               dependsOnEvaluator.canPromote(releaseArtifact, any(), singleArtifactDeliveryConfig, singleArtifactEnvironments.getValue("production"))
             } returns false
+
+            every {
+              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any())
+            } returns null
+
           }
 
           test("artifact summary shows all versions pending in all environments") {
@@ -593,6 +602,10 @@ class ApplicationServiceTests : JUnit5Minutests {
             every {
               dependsOnEvaluator.canPromote(releaseArtifact, any(), singleArtifactDeliveryConfig, singleArtifactEnvironments.getValue("production"))
             } returns false
+
+            every {
+              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any())
+            } returns null
           }
 
           test("getting artifact summaries has a default cap on versions") {

@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
@@ -1198,6 +1199,41 @@ class SqlArtifactRepository(
         }
     }
   }
+
+  override fun getGitMetadataByPromotionStatus(
+    deliveryConfig: DeliveryConfig,
+    environmentName: String,
+    artifactReference: String,
+    promotionStatus: String
+  ): GitMetadata? {
+    return sqlRetry.withRetry(READ) {
+
+      val artifact = deliveryConfig.artifacts.firstOrNull { it.reference == artifactReference }
+        ?: error("Artifact not found: name=$artifactReference, deliveryConfig=${deliveryConfig.name}")
+
+      val version = jooq
+        .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environmentName)))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(promotionStatus))
+        .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
+        .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .firstOrNull()
+
+      jooq.select(
+        ARTIFACT_VERSIONS.GIT_METADATA
+      )
+        .from(ARTIFACT_VERSIONS)
+        .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
+        .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
+        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+        .fetchOne { (gitMetadata) ->
+          gitMetadata?.let { objectMapper.readValue(it) }
+        }
+    }
+  }
+
 
   override fun getArtifactSummaryInEnvironment(
     deliveryConfig: DeliveryConfig,

@@ -15,6 +15,8 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -25,7 +27,10 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.ResourceArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ResourceSummary
@@ -220,21 +225,24 @@ class ApplicationService(
   }
 
   private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
+    val artifactGitMetadata = getArtifactInstance(artifact, version)?.gitMetadata
+    val potentialSummary = getPotentialSummary(deliveryConfig, environmentName, artifact.reference, version)
+
     return when (status) {
-      PENDING -> ArtifactSummaryInEnvironment(
-        environment = environmentName,
-        version = version,
-        state = status.name.toLowerCase()
-      )
+      PENDING -> {
+        val targetGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName,  artifact.reference, CURRENT.name)
+
+        ArtifactSummaryInEnvironment(
+          environment = environmentName,
+          version = version,
+          state = status.name.toLowerCase(),
+          //comparing PENDING (version is question, old code) vs. CURRENT (target, new code)
+          diffLink = generateDiffLink(artifactGitMetadata, targetGitMetadata)
+        )
+      }
       SKIPPED -> {
         // some environments contain relevant info for skipped artifacts, so
         // try and find that summary before defaulting to less information
-        val potentialSummary = repository.getArtifactSummaryInEnvironment(
-          deliveryConfig = deliveryConfig,
-          environmentName = environmentName,
-          artifactReference = artifact.reference,
-          version = version
-        )
         if (potentialSummary == null || potentialSummary.state == "pending") {
           ArtifactSummaryInEnvironment(
             environment = environmentName,
@@ -245,12 +253,28 @@ class ApplicationService(
           potentialSummary
         }
       }
-      else -> repository.getArtifactSummaryInEnvironment(
-        deliveryConfig = deliveryConfig,
-        environmentName = environmentName,
-        artifactReference = artifact.reference,
-        version = version
-      )
+      DEPLOYING -> {
+        val sourceGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
+        potentialSummary?.copy(
+          //comparing CURRENT (old code) vs. DEPLOYING (version is question, new code)
+          diffLink = generateDiffLink(sourceGitMetadata, artifactGitMetadata)
+        )
+      }
+      PREVIOUS -> {
+        val sourceGitMetadata = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it)?.gitMetadata }
+        potentialSummary?.copy(
+          //comparing PREVIOUS (version is question, old code) vs. the version which replaced it (new code)
+          diffLink = generateDiffLink(sourceGitMetadata, artifactGitMetadata)
+        )
+      }
+      CURRENT -> {
+        val targetGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, PREVIOUS.name)
+        potentialSummary?.copy(
+          //comparing PREVIOUS (old code) vs. CURRENT (version is question, new code)
+          diffLink = generateDiffLink(artifactGitMetadata, targetGitMetadata)
+        )
+      }
+      else -> potentialSummary
     }
   }
 
@@ -320,28 +344,54 @@ class ApplicationService(
     version: String,
     environments: Set<ArtifactSummaryInEnvironment>
   ): ArtifactVersionSummary {
+
     val artifactSupplier = artifactSuppliers.supporting(artifact.type)
-    val releaseStatus = repository.getReleaseStatus(artifact, version)
-    val artifactInstance = repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
-      ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
-
+    val artifactInstance = getArtifactInstance(artifact, version)
+            ?: throw InvalidSystemStateException("Loading artifact version $version failed for known artifact $artifact.")
     return ArtifactVersionSummary(
-      version = version,
-      environments = environments,
-      displayName = artifactSupplier.getVersionDisplayName(artifactInstance),
-      createdAt = artifactInstance.createdAt,
+        version = version,
+        environments = environments,
+        displayName = artifactSupplier.getVersionDisplayName(artifactInstance),
+        createdAt = artifactInstance.createdAt,
 
-      // first attempt to use the artifact metadata fetched from the DB, then fallback to the default if not found
-      build = artifactInstance.buildMetadata
-        ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.versioningStrategy),
-      git = artifactInstance.gitMetadata
-        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.versioningStrategy)
-    )
-  }
+        // first attempt to use the artifact metadata fetched from the DB, then fallback to the default if not found
+        build = artifactInstance.buildMetadata
+          ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.versioningStrategy),
+        git = artifactInstance.gitMetadata
+          ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.versioningStrategy)
+      )
+    }
 
   fun getApplicationEventHistory(application: String, limit: Int) =
     repository.applicationEventHistory(application, limit)
 
   private fun ConstraintState.toConstraintSummary() =
     StatefulConstraintSummary(type, status, createdAt, judgedBy, judgedAt, comment, attributes)
+
+  private fun getArtifactInstance(
+    artifact: DeliveryArtifact,
+    version: String
+  ): PublishedArtifact? {
+    val releaseStatus = repository.getReleaseStatus(artifact, version)
+    return repository.getArtifactInstance(artifact.name, artifact.type, version, releaseStatus)
+  }
+
+  // Generating a stash diff link between source and target versions (the order does matter!)
+  private fun generateDiffLink (sourceGitMetadata: GitMetadata?, targetGitMetadata: GitMetadata?) : String? {
+    return if (sourceGitMetadata !=null && targetGitMetadata != null) {
+      "https://stash.corp.netflix.com/projects/${sourceGitMetadata.project}/repos/${sourceGitMetadata.repo?.name}/compare/diff?" +
+        "targetBranch=${targetGitMetadata.commitInfo?.sha}&sourceBranch=${sourceGitMetadata.commitInfo?.sha}"
+    } else {
+      null
+    }
+  }
+
+  private fun getPotentialSummary (deliveryConfig: DeliveryConfig, environmentName: String, artifactReference: String, version: String) =
+  repository.getArtifactSummaryInEnvironment(
+    deliveryConfig = deliveryConfig,
+    environmentName = environmentName,
+    artifactReference = artifactReference,
+    version = version
+  )
+
 }
