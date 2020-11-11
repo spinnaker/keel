@@ -1221,7 +1221,8 @@ class SqlArtifactRepository(
         .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .firstOrNull()
 
-      jooq.select(
+      jooq
+        .select(
         ARTIFACT_VERSIONS.GIT_METADATA
       )
         .from(ARTIFACT_VERSIONS)

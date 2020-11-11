@@ -235,7 +235,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String)
 
   /**
-   * Given artifact details and promotion status, return its git metadata, order by its last deployed version.
+   * Given artifact details and promotion status, return its last deployed version git metadata, sorted by deployed_at
    */
   fun getGitMetadataByPromotionStatus(
     deliveryConfig: DeliveryConfig,

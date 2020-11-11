@@ -198,7 +198,7 @@ interface KeelRepository : KeelReadOnlyRepository {
   ): ArtifactSummaryInEnvironment?
 
   /**
-   * Given artifact details and promotion status, return its last deployed version
+   * Given artifact details and promotion status, return its last deployed version git metadata, sorted by deployed_at
    */
   fun getGitMetadataByPromotionStatus(
     deliveryConfig: DeliveryConfig,

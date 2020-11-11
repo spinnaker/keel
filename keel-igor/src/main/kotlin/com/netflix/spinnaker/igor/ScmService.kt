@@ -28,4 +28,10 @@ interface ScmService {
     @Query("manifest") manifestPath: String,
     @Query("ref") ref: String? = null
   ): SubmittedDeliveryConfig
+
+  /**
+   * Retrieves all SCM base links, as defined in Igor
+   */
+  @GET("/scm/masters")
+  suspend fun getScmInfo(): Map<String, String?>
 }

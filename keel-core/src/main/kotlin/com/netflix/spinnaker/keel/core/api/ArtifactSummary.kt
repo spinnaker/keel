@@ -48,7 +48,7 @@ data class ArtifactSummaryInEnvironment(
   val vetoed: ActionMetadata? = null,
   val statefulConstraints: List<StatefulConstraintSummary> = emptyList(),
   val statelessConstraints: List<StatelessConstraintSummary> = emptyList(),
-  val diffLink: String? = null
+  val compareLink: String? = null
 )
 
 data class ActionMetadata(
