@@ -230,14 +230,14 @@ class ApplicationService(
 
     return when (status) {
       PENDING -> {
-        val targetGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName,  artifact.reference, CURRENT.name)
+        val newerGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName,  artifact.reference, CURRENT.name)
 
         ArtifactSummaryInEnvironment(
           environment = environmentName,
           version = version,
           state = status.name.toLowerCase(),
-          //comparing PENDING (version is question, old code) vs. CURRENT (target, new code)
-          diffLink = generateDiffLink(artifactGitMetadata, targetGitMetadata)
+          // comparing CURRENT (new code) vs. PENDING (version is question, old code)
+          diffLink = generateDiffLink(newerGitMetadata, artifactGitMetadata)
         )
       }
       SKIPPED -> {
@@ -254,24 +254,24 @@ class ApplicationService(
         }
       }
       DEPLOYING -> {
-        val sourceGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
         potentialSummary?.copy(
-          //comparing CURRENT (old code) vs. DEPLOYING (version is question, new code)
-          diffLink = generateDiffLink(sourceGitMetadata, artifactGitMetadata)
+          // comparing DEPLOYING (version is question, new code) vs. CURRENT (old code)
+          diffLink = generateDiffLink(artifactGitMetadata, olderGitMetadata)
         )
       }
       PREVIOUS -> {
-        val sourceGitMetadata = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it)?.gitMetadata }
+        val newerGitMetadata = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it)?.gitMetadata }
         potentialSummary?.copy(
           //comparing PREVIOUS (version is question, old code) vs. the version which replaced it (new code)
-          diffLink = generateDiffLink(sourceGitMetadata, artifactGitMetadata)
+          diffLink = generateDiffLink(newerGitMetadata, artifactGitMetadata)
         )
       }
       CURRENT -> {
-        val targetGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, PREVIOUS.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, PREVIOUS.name)
         potentialSummary?.copy(
-          //comparing PREVIOUS (old code) vs. CURRENT (version is question, new code)
-          diffLink = generateDiffLink(artifactGitMetadata, targetGitMetadata)
+          // comparing CURRENT (version is question, new code) vs. PREVIOUS (old code)
+          diffLink = generateDiffLink(artifactGitMetadata, olderGitMetadata)
         )
       }
       else -> potentialSummary
@@ -377,10 +377,10 @@ class ApplicationService(
   }
 
   // Generating a stash diff link between source and target versions (the order does matter!)
-  private fun generateDiffLink (sourceGitMetadata: GitMetadata?, targetGitMetadata: GitMetadata?) : String? {
-    return if (sourceGitMetadata !=null && targetGitMetadata != null) {
-      "https://stash.corp.netflix.com/projects/${sourceGitMetadata.project}/repos/${sourceGitMetadata.repo?.name}/compare/diff?" +
-        "targetBranch=${targetGitMetadata.commitInfo?.sha}&sourceBranch=${sourceGitMetadata.commitInfo?.sha}"
+  private fun generateDiffLink (newerGitMetadata: GitMetadata?, olderGitMetadata: GitMetadata?) : String? {
+    return if (newerGitMetadata !=null && olderGitMetadata != null) {
+      "https://stash.corp.netflix.com/projects/${newerGitMetadata.project}/repos/${newerGitMetadata.repo?.name}/compare/diff?" +
+        "targetBranch=${olderGitMetadata.commitInfo?.sha}&sourceBranch=${newerGitMetadata.commitInfo?.sha}"
     } else {
       null
     }
