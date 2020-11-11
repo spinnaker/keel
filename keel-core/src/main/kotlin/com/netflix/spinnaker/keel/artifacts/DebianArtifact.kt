@@ -16,9 +16,16 @@ data class DebianArtifact(
   override val reference: String = name,
   val vmOptions: VirtualMachineOptions,
   override val statuses: Set<ArtifactStatus> = emptySet(),
-  override val sortingStrategy: SortingStrategy = DebianVersionSortingStrategy,
   override val from: ArtifactOriginFilterSpec? = null
 ) : DeliveryArtifact() {
   override val type = DEBIAN
+
+  override val sortingStrategy: SortingStrategy
+    get() = if (filteredByBranch || filteredByPullRequest) {
+      BranchAndTimestampSortingStrategy
+    } else {
+      DebianVersionSortingStrategy
+    }
+
   override fun toString(): String = super.toString()
 }

@@ -18,7 +18,6 @@ data class DockerArtifact(
   override val reference: String = name,
   val tagVersionStrategy: TagVersionStrategy = SEMVER_TAG,
   val captureGroupRegex: String? = null,
-  override val sortingStrategy: SortingStrategy = DockerVersionSortingStrategy(tagVersionStrategy, captureGroupRegex),
   override val from: ArtifactOriginFilterSpec? = null
 ) : DeliveryArtifact() {
   init {
@@ -37,5 +36,13 @@ data class DockerArtifact(
 
   @JsonIgnore
   override val statuses: Set<ArtifactStatus> = emptySet()
+
+  override val sortingStrategy: SortingStrategy
+    get() = if (filteredByBranch || filteredByPullRequest) {
+      BranchAndTimestampSortingStrategy
+    } else {
+      DockerVersionSortingStrategy(tagVersionStrategy, captureGroupRegex)
+    }
+
   override fun toString(): String = super.toString()
 }

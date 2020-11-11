@@ -14,9 +14,16 @@ data class NpmArtifact(
   override val deliveryConfigName: String? = null,
   override val reference: String = name,
   override val statuses: Set<ArtifactStatus> = emptySet(),
-  override val sortingStrategy: SortingStrategy = NpmVersionSortingStrategy,
   override val from: ArtifactOriginFilterSpec? = null
 ) : DeliveryArtifact() {
   override val type = NPM
+
+  override val sortingStrategy: SortingStrategy
+    get() = if (filteredByBranch || filteredByPullRequest) {
+      BranchAndTimestampSortingStrategy
+    } else {
+      NpmVersionSortingStrategy
+    }
+
   override fun toString(): String = super.toString()
 }
