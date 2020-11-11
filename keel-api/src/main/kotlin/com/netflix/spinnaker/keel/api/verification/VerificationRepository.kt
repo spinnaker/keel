@@ -6,12 +6,20 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import java.time.Instant
 
 interface VerificationRepository {
-  fun getVerificationState(
+  fun getState(
     verification: Verification,
     environment: Environment,
     deliveryArtifact: DeliveryArtifact,
     version: String
   ) : VerificationState?
+
+  fun updateState(
+    verification: Verification,
+    environment: Environment,
+    deliveryArtifact: DeliveryArtifact,
+    version: String,
+    status: VerificationStatus
+  )
 }
 
 data class VerificationState(

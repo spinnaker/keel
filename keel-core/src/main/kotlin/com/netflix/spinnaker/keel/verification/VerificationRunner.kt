@@ -16,7 +16,11 @@ class VerificationRunner(
   fun runVerificationsFor(environment: Environment, artifact: DeliveryArtifact, version: String) {
     val statuses = environment
       .verifyWith
-      .map { it to verificationRepository.getVerificationState(it, environment, artifact, version)?.status }
+      .map {
+        it to verificationRepository
+          .getState(it, environment, artifact, version)
+          ?.status
+      }
 
     if (statuses.any { (_, status) -> status == RUNNING }) {
       log.debug("Verification already running for {}", environment.name)
@@ -29,6 +33,8 @@ class VerificationRunner(
         it.supportedVerification.first == verificationToRun.type
       }
       evaluator.evaluate()
+
+      verificationRepository.updateState(verificationToRun, environment, artifact, version, RUNNING)
     } else {
       log.debug("Verification complete for {}", environment.name)
     }

@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 
 class SqlVerificationRepository : VerificationRepository {
-  override fun getVerificationState(
+  override fun getState(
     verification: Verification,
     environment: Environment,
     deliveryArtifact: DeliveryArtifact,

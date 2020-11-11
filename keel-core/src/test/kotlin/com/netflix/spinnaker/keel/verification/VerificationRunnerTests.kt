@@ -27,7 +27,7 @@ internal class VerificationRunnerTests {
     override val type = "dummy"
   }
 
-  val repository = mockk<VerificationRepository>()
+  val repository = mockk<VerificationRepository>(relaxUnitFun = true)
   val evaluator1 = mockk<VerificationEvaluator<*>>(relaxUnitFun = true) {
     every { supportedVerification } returns ("dummy" to DummyVerification::class.java)
   }
@@ -64,12 +64,14 @@ internal class VerificationRunnerTests {
     val version = "fnord-0.190.0-h378.eacb135"
 
     every {
-      repository.getVerificationState(any(), any(), any(), any())
+      repository.getState(any(), any(), any(), any())
     } returns null
 
     subject.runVerificationsFor(environment, artifact, version)
 
     verify { evaluator1.evaluate() }
+    verify { repository.updateState(DummyVerification(1), any(), any(), any(), RUNNING)}
+
     verify(exactly = 0) { evaluator2.evaluate() }
   }
 
@@ -83,10 +85,10 @@ internal class VerificationRunnerTests {
     val version = "fnord-0.190.0-h378.eacb135"
 
     every {
-      repository.getVerificationState(DummyVerification(1), any(), any(), any())
+      repository.getState(DummyVerification(1), any(), any(), any())
     } returns RUNNING.toState()
     every {
-      repository.getVerificationState(DummyVerification(2), any(), any(), any())
+      repository.getState(DummyVerification(2), any(), any(), any())
     } returns null
 
     subject.runVerificationsFor(environment, artifact, version)
@@ -109,10 +111,10 @@ internal class VerificationRunnerTests {
         val version = "fnord-0.190.0-h378.eacb135"
 
         every {
-          repository.getVerificationState(DummyVerification(1), any(), any(), any())
+          repository.getState(DummyVerification(1), any(), any(), any())
         } returns PASSED.toState()
         every {
-          repository.getVerificationState(DummyVerification(2), any(), any(), any())
+          repository.getState(DummyVerification(2), any(), any(), any())
         } returns status.toState()
 
         subject.runVerificationsFor(environment, artifact, version)
