@@ -39,7 +39,7 @@ data class DockerArtifact(
 
   override val sortingStrategy: SortingStrategy
     get() = if (filteredByBranch || filteredByPullRequest) {
-      BranchAndTimestampSortingStrategy
+      CreatedAtSortingStrategy
     } else {
       DockerVersionSortingStrategy(tagVersionStrategy, captureGroupRegex)
     }

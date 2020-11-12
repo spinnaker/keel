@@ -20,7 +20,7 @@ data class NpmArtifact(
 
   override val sortingStrategy: SortingStrategy
     get() = if (filteredByBranch || filteredByPullRequest) {
-      BranchAndTimestampSortingStrategy
+      CreatedAtSortingStrategy
     } else {
       NpmVersionSortingStrategy
     }

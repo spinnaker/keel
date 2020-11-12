@@ -22,7 +22,7 @@ data class DebianArtifact(
 
   override val sortingStrategy: SortingStrategy
     get() = if (filteredByBranch || filteredByPullRequest) {
-      BranchAndTimestampSortingStrategy
+      CreatedAtSortingStrategy
     } else {
       DebianVersionSortingStrategy
     }

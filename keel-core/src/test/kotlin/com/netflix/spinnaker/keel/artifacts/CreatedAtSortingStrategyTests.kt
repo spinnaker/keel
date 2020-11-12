@@ -1,7 +1,5 @@
 package com.netflix.spinnaker.keel.artifacts
 
-import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -14,7 +12,7 @@ import dev.minutest.rootContext
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-class BranchAndTimestampSortingStrategyTests : JUnit5Minutests {
+class CreatedAtSortingStrategyTests : JUnit5Minutests {
   object Fixture {
     val clock = MutableClock()
 
@@ -47,7 +45,7 @@ class BranchAndTimestampSortingStrategyTests : JUnit5Minutests {
       )
     }
 
-    val subject = BranchAndTimestampSortingStrategy
+    val subject = CreatedAtSortingStrategy
   }
 
   fun tests() = rootContext<Fixture> {
@@ -56,18 +54,15 @@ class BranchAndTimestampSortingStrategyTests : JUnit5Minutests {
     context("an artifact filtered by branch or pull request") {
       test("branch and timestamp sorting strategy is auto-selected") {
         expectThat(debianFilteredByBranch.sortingStrategy)
-          .isEqualTo(BranchAndTimestampSortingStrategy)
+          .isEqualTo(CreatedAtSortingStrategy)
 
         expectThat(debianFilteredByPullRequest.sortingStrategy)
-          .isEqualTo(BranchAndTimestampSortingStrategy)
+          .isEqualTo(CreatedAtSortingStrategy)
       }
 
-      test("artifact versions are sorted by ascending order of branch and descending order of timestamp") {
+      test("artifact versions are sorted by descending order of creation timestamp") {
         expectThat(versions.shuffled().sortedWith(subject.comparator))
-          .isEqualTo(
-            versions.filter { it.gitMetadata?.branch == "master" }.sortedByDescending { it.createdAt } +
-              versions.filter { it.gitMetadata?.branch == "my-feature-branch" }.sortedByDescending { it.createdAt }
-          )
+          .isEqualTo(versions.sortedByDescending { it.createdAt })
       }
     }
   }
