@@ -43,6 +43,8 @@ import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
 import com.netflix.spinnaker.keel.exceptions.UnsupportedScmType
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventService
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
@@ -60,7 +62,8 @@ class ApplicationService(
   private val resourceStatusService: ResourceStatusService,
   private val constraintEvaluators: List<ConstraintEvaluator<*>>,
   private val artifactSuppliers: List<ArtifactSupplier<*, *>>,
-  private val scmInfo: ScmInfo
+  private val scmInfo: ScmInfo,
+  private val lifecycleEventService: LifecycleEventService
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -385,7 +388,8 @@ class ApplicationService(
       build = artifactInstance.buildMetadata
         ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.sortingStrategy),
       git = artifactInstance.gitMetadata
-        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.sortingStrategy)
+        ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.sortingStrategy),
+      lifecycleEvents = lifecycleEventService.getEventsForArtifactAndVersion(artifact, artifactInstance.version)
     )
   }
 

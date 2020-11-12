@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-lifecycle-events
+      author: emjburns
+      changes:
+        - createTable:
+            tableName: lifecycle
+            columns:
+              - column:
+                  name: uid
+                  type: char(26)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: scope
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ref
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: artifact_version
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: id
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: timestamp
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: json
+                  type: json
+                  constraints:
+                    nullable: true
+        - modifySql:
+            dbms: mysql
+            append:
+              value: " engine innodb"
+  - changeSet:
+      id: add-index-to-lifecycle
+      author: emjburns
+      changes:
+        - createIndex:
+            indexName: lifecycle_ref_version_idx
+            tableName: lifecycle
+            columns:
+              - column:
+                  name: ref
+              - column:
+                  name: artifact_version
+        - createIndex:
+            indexName: lifecycle_scope_ref_versions_id_idx
+            tableName: lifecycle
+            columns:
+              - column:
+                  name: scope
+              - column:
+                  name: ref
+              - column:
+                  name: artifact_version
+              - column:
+                  name: id
