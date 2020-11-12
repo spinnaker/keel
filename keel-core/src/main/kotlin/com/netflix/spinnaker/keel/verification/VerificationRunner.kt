@@ -19,37 +19,64 @@ class VerificationRunner(
     with(VerificationContext(environment, artifact, version)) {
       val statuses = environment
         .verifyWith
-        .map { it to getStatus(it) }
+        .map { verification ->
+          verification to latestStatus(verification)
+        }
 
-      if (statuses.anyAreStillRunning) {
+      if (statuses.anyStillRunning) {
         log.debug("Verification already running for {}", environment.name)
         return
       }
 
       statuses.firstOutstanding?.let { verification ->
-        evaluators.evaluatorFor(verification).evaluate()
+        evaluators.start(verification)
         markAsRunning(verification)
       } ?: log.debug("Verification complete for {}", environment.name)
     }
   }
 
-  private val Collection<Pair<*, VerificationStatus?>>.anyAreStillRunning: Boolean
+  private fun VerificationContext.latestStatus(verification: Verification): VerificationStatus? {
+    val status = previousStatus(verification)
+    return if (status == RUNNING) {
+      evaluators.evaluate(verification)
+        .also { newStatus ->
+          if (newStatus.complete) {
+            log.debug("Verification {} completed with status {} for {}", verification, newStatus, environment.name)
+            markAs(verification, newStatus)
+          }
+        }
+    } else {
+      status
+    }
+  }
+
+  private val Collection<Pair<*, VerificationStatus?>>.anyStillRunning: Boolean
     get() = any { (_, status) -> status == RUNNING }
 
   private val Collection<Pair<Verification, VerificationStatus?>>.firstOutstanding: Verification?
     get() = firstOrNull { (_, status) -> status == null }?.first
 
-  private fun VerificationContext.getStatus(verification: Verification) =
+  private fun VerificationContext.previousStatus(verification: Verification) =
     verificationRepository
       .getState(verification, environment, artifact, version)
       ?.status
 
   private fun VerificationContext.markAsRunning(verification: Verification) {
-    verificationRepository.updateState(verification, environment, artifact, version, RUNNING)
+    markAs(verification, RUNNING)
+  }
+
+  private fun VerificationContext.markAs(verification: Verification, status: VerificationStatus) {
+    verificationRepository.updateState(verification, environment, artifact, version, status)
   }
 
   private fun List<VerificationEvaluator<*>>.evaluatorFor(verification: Verification) =
     first { it.supportedVerification.first == verification.type }
+
+  private fun List<VerificationEvaluator<*>>.evaluate(verification: Verification) =
+    evaluatorFor(verification).evaluate()
+
+  private fun List<VerificationEvaluator<*>>.start(verification: Verification) =
+    evaluatorFor(verification).start(verification)
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

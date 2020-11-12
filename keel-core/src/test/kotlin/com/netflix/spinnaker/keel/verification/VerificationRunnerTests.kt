@@ -6,7 +6,6 @@ import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
-import com.netflix.spinnaker.keel.api.verification.VerificationStatus.FAILED
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.PASSED
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.RUNNING
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -15,9 +14,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
-import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.io.Serializable
 import java.time.Instant.now
 
@@ -28,16 +27,13 @@ internal class VerificationRunnerTests {
   }
 
   val repository = mockk<VerificationRepository>(relaxUnitFun = true)
-  val evaluator1 = mockk<VerificationEvaluator<*>>(relaxUnitFun = true) {
-    every { supportedVerification } returns ("dummy" to DummyVerification::class.java)
-  }
-  val evaluator2 = mockk<VerificationEvaluator<*>>(relaxUnitFun = true) {
+  val evaluator = mockk<VerificationEvaluator<DummyVerification>>(relaxUnitFun = true) {
     every { supportedVerification } returns ("dummy" to DummyVerification::class.java)
   }
 
   val subject = VerificationRunner(
     repository,
-    listOf(evaluator1, evaluator2)
+    listOf(evaluator)
   )
 
   @Test
@@ -48,9 +44,8 @@ internal class VerificationRunnerTests {
 
     subject.runVerificationsFor(environment, artifact, version)
 
-    verifyNone {
-      evaluator1.evaluate()
-      evaluator2.evaluate()
+    verify(exactly = 0) {
+      evaluator.start(any())
     }
   }
 
@@ -69,14 +64,12 @@ internal class VerificationRunnerTests {
 
     subject.runVerificationsFor(environment, artifact, version)
 
-    verify { evaluator1.evaluate() }
-    verify { repository.updateState(DummyVerification(1), any(), any(), any(), RUNNING)}
-
-    verify(exactly = 0) { evaluator2.evaluate() }
+    verify { evaluator.start(DummyVerification(1)) }
+    verify { repository.updateState(DummyVerification(1), any(), any(), any(), RUNNING) }
   }
 
   @Test
-  fun `no-ops if any verification is already running`() {
+  fun `no-ops if any verification was already running and has yet to complete`() {
     val environment = Environment(
       name = "test",
       verifyWith = setOf(DummyVerification(1), DummyVerification(2))
@@ -91,40 +84,87 @@ internal class VerificationRunnerTests {
       repository.getState(DummyVerification(2), any(), any(), any())
     } returns null
 
+    every {
+      evaluator.evaluate()
+    } returns RUNNING
+
     subject.runVerificationsFor(environment, artifact, version)
 
-    verifyNone {
-      evaluator1.evaluate()
-      evaluator2.evaluate()
+    verify {
+      evaluator.evaluate()
+    }
+    verify(exactly = 0) {
+      evaluator.start(any())
     }
   }
 
-  @TestFactory
-  fun `no-ops if all verifications are already complete`() =
-    listOf(PASSED, FAILED).map { status->
-      dynamicTest("no-ops if all verifications are already complete and the final one is $status"){
-        val environment = Environment(
-          name = "test",
-          verifyWith = setOf(DummyVerification(1), DummyVerification(2))
-        )
-        val artifact = DockerArtifact(name = "fnord")
-        val version = "fnord-0.190.0-h378.eacb135"
+  @ParameterizedTest(
+    name = "continues to the next if any verification was already running and has now completed with {0}"
+  )
+  @EnumSource(
+    value = VerificationStatus::class,
+    names = ["PASSED", "FAILED"]
+  )
+  fun `continues to the next if any verification was already running and has now completed`(status: VerificationStatus) {
+    val environment = Environment(
+      name = "test",
+      verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+    )
+    val artifact = DockerArtifact(name = "fnord")
+    val version = "fnord-0.190.0-h378.eacb135"
 
-        every {
-          repository.getState(DummyVerification(1), any(), any(), any())
-        } returns PASSED.toState()
-        every {
-          repository.getState(DummyVerification(2), any(), any(), any())
-        } returns status.toState()
+    every {
+      repository.getState(DummyVerification(1), any(), any(), any())
+    } returns RUNNING.toState()
+    every {
+      repository.getState(DummyVerification(2), any(), any(), any())
+    } returns null
 
-        subject.runVerificationsFor(environment, artifact, version)
+    every {
+      evaluator.evaluate()
+    } returns status
 
-        verifyNone {
-          evaluator1.evaluate()
-          evaluator2.evaluate()
-        }
-      }
+    subject.runVerificationsFor(environment, artifact, version)
+
+    verify {
+      repository.updateState(DummyVerification(1), any(), any(), any(), status)
     }
+    verify {
+      evaluator.start(DummyVerification(2))
+    }
+    verify {
+      repository.updateState(DummyVerification(2), any(), any(), any(), RUNNING)
+    }
+  }
+
+  @ParameterizedTest(
+    name = "no-ops if all verifications are already complete and the final one is {0}"
+  )
+  @EnumSource(
+    value = VerificationStatus::class,
+    names = ["PASSED", "FAILED"]
+  )
+  fun `no-ops if all verifications are already complete`(status: VerificationStatus) {
+    val environment = Environment(
+      name = "test",
+      verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+    )
+    val artifact = DockerArtifact(name = "fnord")
+    val version = "fnord-0.190.0-h378.eacb135"
+
+    every {
+      repository.getState(DummyVerification(1), any(), any(), any())
+    } returns PASSED.toState()
+    every {
+      repository.getState(DummyVerification(2), any(), any(), any())
+    } returns status.toState()
+
+    subject.runVerificationsFor(environment, artifact, version)
+
+    verify(exactly = 0) {
+      evaluator.start(any())
+    }
+  }
 }
 
 private fun VerificationStatus.toState() =
