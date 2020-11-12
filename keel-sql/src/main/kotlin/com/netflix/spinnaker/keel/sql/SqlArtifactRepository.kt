@@ -1203,14 +1203,13 @@ class SqlArtifactRepository(
   override fun getGitMetadataByPromotionStatus(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
-    artifactReference: String,
+    artifact: DeliveryArtifact,
     promotionStatus: String
   ): GitMetadata? {
+    //only CURRENT and PREVIOUS are supported, as they can be sorted by deploy_at
+    require(promotionStatus in listOf(CURRENT.name, PREVIOUS.name)) { "Invalid promotion status used to query" }
+
     return sqlRetry.withRetry(READ) {
-
-      val artifact = deliveryConfig.artifacts.firstOrNull { it.reference == artifactReference }
-        ?: error("Artifact not found: name=$artifactReference, deliveryConfig=${deliveryConfig.name}")
-
       val version = jooq
         .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .from(ENVIRONMENT_ARTIFACT_VERSIONS)
@@ -1221,17 +1220,21 @@ class SqlArtifactRepository(
         .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .firstOrNull()
 
-      jooq
-        .select(
-        ARTIFACT_VERSIONS.GIT_METADATA
-      )
-        .from(ARTIFACT_VERSIONS)
-        .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-        .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-        .and(ARTIFACT_VERSIONS.VERSION.eq(version))
-        .fetchOne { (gitMetadata) ->
-          gitMetadata?.let { objectMapper.readValue(it) }
-        }
+      if (version != null) {
+        jooq
+          .select(
+            ARTIFACT_VERSIONS.GIT_METADATA
+          )
+          .from(ARTIFACT_VERSIONS)
+          .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
+          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
+          .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+          .fetchOne { (gitMetadata) ->
+            gitMetadata?.let { objectMapper.readValue(it) }
+          }
+      } else {
+        null
+      }
     }
   }
 

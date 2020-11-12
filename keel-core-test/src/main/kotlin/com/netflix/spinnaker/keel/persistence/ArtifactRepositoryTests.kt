@@ -50,6 +50,7 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
+import java.lang.IllegalArgumentException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -1082,23 +1083,29 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
             commit = "12345"
           ),
         ))
-        subject.markAsDeployingTo(manifest, versionedReleaseDebian, version1, testEnvironment.name)
+        subject.markAsSuccessfullyDeployedTo(manifest, versionedReleaseDebian, version1, testEnvironment.name)
       }
 
       test ("no metadata for version which is not persisted") {
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian.reference, PromotionStatus.CURRENT.name))
+        expectThat(subject.getGitMetadataByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.PREVIOUS.name))
           .isNull()
       }
 
       test ("get git metadata for deploying status") {
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian.reference, PromotionStatus.DEPLOYING.name))
+        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name))
           .isEqualTo(artifactMetadata.gitMetadata)
         }
 
       test ("get a single results (and newest) data per status") {
-        subject.markAsDeployingTo(manifest, versionedReleaseDebian, version2, testEnvironment.name)
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian.reference, PromotionStatus.DEPLOYING.name))
+        subject.markAsSuccessfullyDeployedTo(manifest, versionedReleaseDebian, version2, testEnvironment.name)
+        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name))
           .get { this?.commit }.isEqualTo("12345")
+      }
+
+      test ("unsupported promotion status throws exception") {
+        expectThrows<IllegalArgumentException> {
+          subject.getGitMetadataByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.DEPLOYING.name)
+        }
       }
     }
   }

@@ -244,7 +244,7 @@ class ApplicationService(
 
     return when (status) {
       PENDING -> {
-        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
 
         ArtifactSummaryInEnvironment(
           environment = environmentName,
@@ -266,7 +266,7 @@ class ApplicationService(
         }
       }
       DEPLOYING -> {
-        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, CURRENT.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
         potentialSummary?.copy(
           // comparing DEPLOYING (version in question, new code) vs. CURRENT (old code)
           compareLink = generateDiffLink(baseScmUrl, artifactGitMetadata, olderGitMetadata)
@@ -280,7 +280,7 @@ class ApplicationService(
         )
       }
       CURRENT -> {
-        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact.reference, PREVIOUS.name)
+        val olderGitMetadata = repository.getGitMetadataByPromotionStatus(deliveryConfig, environmentName, artifact, PREVIOUS.name)
         potentialSummary?.copy(
           // comparing CURRENT (version in question, new code) vs. PREVIOUS (old code)
           compareLink = generateDiffLink(baseScmUrl, artifactGitMetadata, olderGitMetadata)
@@ -401,15 +401,14 @@ class ApplicationService(
   // Calling igor to fetch all base urls by SCM type, and returning the right one based on current commit link
   private fun getScmBaseLink(commitLink: String): String? {
     val scmInfo = runBlocking {
-      scmInfo.getSCMInfo()
+      scmInfo.getScmInfo()
     }
     //TODO[gyardeni]: replace this parsing when rocket will add scm type to gitMetadata
-    val currentScm = commitLink.substring(commitLink.indexOf("/") +2, commitLink.indexOf("."))
-    when(currentScm) {
-      "stash" ->
+    when {
+      "stash" in commitLink ->
         return scmInfo["stash"]
       else ->
-        throw UnsupportedScmType(message = "$currentScm is currently not supported")
+        throw UnsupportedScmType(message = "Stash is currently the only supported SCM type")
     }
   }
 }

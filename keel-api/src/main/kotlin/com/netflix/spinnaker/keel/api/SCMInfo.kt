@@ -1,7 +1,7 @@
 package com.netflix.spinnaker.keel.api
 
-interface SCMInfo {
+interface SCMInfo{
 
-  suspend fun getSCMInfo():
+  suspend fun getScmInfo():
     Map<String, String?>
 }

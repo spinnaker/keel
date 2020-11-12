@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.igor
 
+import com.netflix.spinnaker.keel.api.SCMInfo
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -7,7 +8,8 @@ import retrofit2.http.Query
 /**
  * Igor methods related to Source Control Management (SCM) operations.
  */
-interface ScmService {
+interface ScmService: SCMInfo
+{
   /**
    * Retrieves a delivery config manifest from a source control repository.
    *
@@ -33,5 +35,5 @@ interface ScmService {
    * Retrieves all SCM base links, as defined in Igor
    */
   @GET("/scm/masters")
-  suspend fun getScmInfo(): Map<String, String?>
+  override suspend fun getScmInfo(): Map<String, String?>
 }

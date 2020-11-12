@@ -6,7 +6,6 @@ import com.netflix.spinnaker.igor.ArtifactService
 import com.netflix.spinnaker.igor.BuildService
 import com.netflix.spinnaker.igor.ScmService
 import com.netflix.spinnaker.keel.services.DeliveryConfigImporter
-import com.netflix.spinnaker.keel.services.SCMInfoService
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.springframework.beans.factory.BeanCreationException

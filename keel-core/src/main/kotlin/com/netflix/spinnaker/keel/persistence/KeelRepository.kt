@@ -203,7 +203,7 @@ interface KeelRepository : KeelReadOnlyRepository {
   fun getGitMetadataByPromotionStatus(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
-    artifactReference: String,
+    artifact: DeliveryArtifact,
     promotionStatus: String
   ): GitMetadata?
 
