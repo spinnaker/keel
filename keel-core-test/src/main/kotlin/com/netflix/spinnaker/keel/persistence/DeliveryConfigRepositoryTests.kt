@@ -4,6 +4,10 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
@@ -15,6 +19,7 @@ import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expectCatching
@@ -57,12 +62,19 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
     internal val repository: T = deliveryConfigRepositoryProvider(resourceSpecIdentifier)
     private val resourceRepository: R = resourceRepositoryProvider(resourceSpecIdentifier)
-    private val artifactRepository: A = artifactRepositoryProvider()
+    internal val artifactRepository: A = artifactRepositoryProvider()
+    internal val clock = MutableClock()
 
     val artifact =  DebianArtifact(
       name = "keel",
       deliveryConfigName = deliveryConfig.name,
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2"))
+    )
+
+    val artifactFromBranch = artifact.copy(
+      name = "frombranch",
+      reference = "frombranch",
+      from = ArtifactOriginFilterSpec(branch = BranchFilterSpec(name = "main"))
     )
 
     fun getByName() = expectCatching {
@@ -86,19 +98,30 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     fun storeArtifacts() {
       deliveryConfig.artifacts.forEach {
         artifactRepository.register(it)
-        artifactRepository.storeArtifactVersion(PublishedArtifact(it.name, it.type, "${it.name}-1.0.0"))
       }
     }
 
-    fun storeJudgements() {
-      deliveryConfig.artifacts.forEach { art ->
+    fun storeJudgements() =
+      storeArtifactVersionsAndJudgements(artifact, 1, 1)
+
+    fun storeArtifactVersionsAndJudgements(artifact: DeliveryArtifact, start: Int, end: Int) {
+      val range = if (start < end) { start..end } else { start downTo end }
+      range.forEach { v ->
+        clock.tickMinutes(1)
+
+        artifactRepository.storeArtifactVersion(
+          PublishedArtifact(artifact.name, artifact.type, "${artifact.name}-1.0.$v", createdAt = clock.instant(),
+            gitMetadata = GitMetadata(commit = "ignored", branch = "main")
+          )
+        )
+
         deliveryConfig.environments.forEach { env ->
           repository.storeConstraintState(
             ConstraintState(
               deliveryConfigName = deliveryConfig.name,
               environmentName = env.name,
-              artifactVersion = "${art.name}-1.0.0",
-              artifactReference = art.reference,
+              artifactVersion = "${artifact.name}-1.0.$v",
+              artifactReference = artifact.reference,
               type = "manual-judgement",
               status = ConstraintStatus.PENDING
             )
@@ -108,7 +131,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     }
 
     fun queueConstraintApproval() {
-      repository.queueArtifactVersionForApproval(deliveryConfig.name, "staging", artifact, "keel-1.0.0")
+      repository.queueArtifactVersionForApproval(deliveryConfig.name, "staging", artifact, "keel-1.0.1")
     }
 
     fun getEnvironment(resource: Resource<*>) = expectCatching {
@@ -174,7 +197,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         copy(
           deliveryConfig = deliveryConfig.copy(
             artifacts = setOf(
-              artifact
+              artifact, artifactFromBranch
             ),
             environments = setOf(
               Environment(
@@ -266,64 +289,94 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
             .isEqualTo(deliveryConfig.environments)
         }
 
-        test("constraint states can be retrieved and updated") {
-          val environment = deliveryConfig.environments.first { it.name == "staging" }
-          val recentConstraintState = repository.constraintStateFor(deliveryConfig.name, environment.name)
+        context("artifact constraint flows") {
+          test("constraint states can be retrieved and updated") {
+            val environment = deliveryConfig.environments.first { it.name == "staging" }
+            val recentConstraintState = repository.constraintStateFor(deliveryConfig.name, environment.name)
 
-          expectThat(recentConstraintState)
-            .hasSize(1)
+            expectThat(recentConstraintState)
+              .hasSize(1)
 
-          expectThat(recentConstraintState.first().status)
-            .isEqualTo(ConstraintStatus.PENDING)
+            expectThat(recentConstraintState.first().status)
+              .isEqualTo(ConstraintStatus.PENDING)
 
-          val constraint = recentConstraintState
-            .first()
-            .copy(status = ConstraintStatus.PASS)
-          repository.storeConstraintState(constraint)
-          val appConstraintState = repository.constraintStateFor(deliveryConfig.application)
-          val updatedConstraintState = repository.constraintStateFor(deliveryConfig.name, environment.name)
+            val constraint = recentConstraintState
+              .first()
+              .copy(status = ConstraintStatus.PASS)
+            repository.storeConstraintState(constraint)
+            val appConstraintState = repository.constraintStateFor(deliveryConfig.application)
+            val updatedConstraintState = repository.constraintStateFor(deliveryConfig.name, environment.name)
 
-          expectThat(appConstraintState)
-            .contains(updatedConstraintState)
-          expectThat(updatedConstraintState)
-            .hasSize(1)
-          expectThat(updatedConstraintState.first().status)
-            .isEqualTo(ConstraintStatus.PASS)
-        }
+            expectThat(appConstraintState)
+              .contains(updatedConstraintState)
+            expectThat(updatedConstraintState)
+              .hasSize(1)
+            expectThat(updatedConstraintState.first().status)
+              .isEqualTo(ConstraintStatus.PASS)
+          }
 
-        // TODO: this should be removed when the artifactReference is made non-nullable in the repository methods
-        test("backwards-compatibility: constraint state can be retrieved with missing artifact reference in the database") {
-          val environment = deliveryConfig.environments.first { it.name == "staging" }
-          val originalState = repository.getConstraintState(
-            deliveryConfig.name, environment.name, "keel-1.0.0", "manual-judgement", "keel"
-          )
-          val stateWithNullReference = originalState!!.copy(artifactReference = null)
-          repository.storeConstraintState(stateWithNullReference)
-          val updatedState = repository.getConstraintState(
-            deliveryConfig.name, environment.name, "keel-1.0.0", "manual-judgement", "keel"
-          )
-          expectThat(updatedState).isNotNull()
-          expectThat(updatedState!!.artifactReference).isNull()
-        }
+          // TODO: this should be removed when the artifactReference is made non-nullable in the repository methods
+          test("backwards-compatibility: constraint state can be retrieved with missing artifact reference in the database") {
+            val environment = deliveryConfig.environments.first { it.name == "staging" }
+            val originalState = repository.getConstraintState(
+              deliveryConfig.name, environment.name, "keel-1.0.1", "manual-judgement", "keel"
+            )
+            val stateWithNullReference = originalState!!.copy(artifactReference = null)
+            repository.storeConstraintState(stateWithNullReference)
+            val updatedState = repository.getConstraintState(
+              deliveryConfig.name, environment.name, "keel-1.0.1", "manual-judgement", "keel"
+            )
+            expectThat(updatedState).isNotNull()
+            expectThat(updatedState!!.artifactReference).isNull()
+          }
 
-        // TODO: this should be removed when the artifactReference is made non-nullable in the repository methods
-        test("backwards-compatibility: constraint state can be retrieved without passing artifact reference") {
-          val environment = deliveryConfig.environments.first { it.name == "staging" }
-          // This only works currently because the artifactVersion contains the artifact name for debians and makes them
-          // unique, but won't work for Docker.
-          val constraintState = repository.getConstraintState(
-            deliveryConfig.name, environment.name, "keel-1.0.0", "manual-judgement", null
-          )
-          expectThat(constraintState).isNotNull()
-          expectThat(constraintState!!.artifactReference).isNotNull()
-        }
+          // TODO: this should be removed when the artifactReference is made non-nullable in the repository methods
+          test("backwards-compatibility: constraint state can be retrieved without passing artifact reference") {
+            val environment = deliveryConfig.environments.first { it.name == "staging" }
+            // This only works currently because the artifactVersion contains the artifact name for debians and makes them
+            // unique, but won't work for Docker.
+            val constraintState = repository.getConstraintState(
+              deliveryConfig.name, environment.name, "keel-1.0.1", "manual-judgement", null
+            )
+            expectThat(constraintState).isNotNull()
+            expectThat(constraintState!!.artifactReference).isNotNull()
+          }
 
-        test("can queue constraint approvals") {
-          queueConstraintApproval()
-          expectThat(repository
-            .getArtifactVersionsQueuedForApproval(deliveryConfig.name, "staging", artifact)
-            .map { it.version }
-          ).isEqualTo(listOf("keel-1.0.0"))
+          test("can queue constraint approvals") {
+            queueConstraintApproval()
+            expectThat(repository
+              .getArtifactVersionsQueuedForApproval(deliveryConfig.name, "staging", artifact)
+              .map { it.version }
+            ).isEqualTo(listOf("keel-1.0.1"))
+          }
+
+          context("with artifact filtered by status") {
+            before {
+              storeArtifactVersionsAndJudgements(artifact, 1, 5)
+            }
+
+            test("can retrieve sorted pending artifact versions") {
+              expectThat(
+                repository.getPendingArtifactVersions(deliveryConfig.name, "staging", artifact)
+                  .map { it.version }
+              )
+                .isEqualTo((1..5).map { "${artifact.name}-1.0.$it" }.reversed())
+            }
+          }
+
+          context("with artifact filtered by branch") {
+            before {
+              storeArtifactVersionsAndJudgements(artifactFromBranch, 5, 1) // versions in reverse order of time
+            }
+
+            test("can retrieve pending artifact versions sorted by timestamp") {
+              expectThat(
+                repository.getPendingArtifactVersions(deliveryConfig.name, "staging", artifactFromBranch)
+                  .map { it.version }
+              )
+                .isEqualTo((1..5).map { "${artifactFromBranch.name}-1.0.$it" })
+            }
+          }
         }
 
         test("can retrieve the environment for the resources") {
