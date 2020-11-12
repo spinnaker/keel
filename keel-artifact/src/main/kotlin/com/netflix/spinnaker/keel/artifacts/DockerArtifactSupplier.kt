@@ -60,8 +60,6 @@ class DockerArtifactSupplier(
     }
   }
 
-
-
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? {
     if (artifact !is DockerArtifact) {
       throw IllegalArgumentException("Only Docker artifacts are supported by this implementation.")
@@ -75,6 +73,9 @@ class DockerArtifactSupplier(
         .distinct()
         // FIXME: this is making N calls to fill in data for each version so we can sort.
         //  Ideally, we'd make a single call to return the list with details for each version.
+        .also {
+          log.warn("About to make ${it.size} calls to clouddriver to retrieve version details...")
+        }
         .mapNotNull { getArtifactByVersion(artifact, it) }
         .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull()

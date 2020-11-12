@@ -33,5 +33,5 @@ abstract class BaseArtifactSupplier<A : DeliveryArtifact, V : SortingStrategy>(
     }
   }
 
-  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+  protected val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

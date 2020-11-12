@@ -39,6 +39,9 @@ class NpmArtifactSupplier(
         .getVersions(artifact.nameForQuery, artifact.statusesForQuery, NPM)
         // FIXME: this is making N calls to fill in data for each version so we can sort.
         //  Ideally, we'd make a single call to return the list with details for each version.
+        .also {
+          log.warn("About to make ${it.size} calls to artifact service to retrieve version details...")
+        }
         .map { version ->
           artifactService.getArtifact(artifact.name, version, NPM)
         }
