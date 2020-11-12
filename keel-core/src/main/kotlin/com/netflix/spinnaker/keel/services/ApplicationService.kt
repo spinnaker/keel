@@ -4,7 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Resource
-import com.netflix.spinnaker.keel.api.SCMInfo
+import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.StatefulConstraint
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -59,7 +59,7 @@ class ApplicationService(
   private val resourceStatusService: ResourceStatusService,
   private val constraintEvaluators: List<ConstraintEvaluator<*>>,
   private val artifactSuppliers: List<ArtifactSupplier<*, *>>,
-  private val scmInfo: SCMInfo
+  private val scmInfo: ScmInfo
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

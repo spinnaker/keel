@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
-import com.netflix.spinnaker.keel.api.SCMInfo
+import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.SNAPSHOT
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
@@ -156,7 +156,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       every { parseDefaultGitMetadata(any(), any()) } returns null
     }
 
-    private val scmInfo = mockk<SCMInfo>() {
+    private val scmInfo = mockk<ScmInfo>() {
       coEvery {
         getScmInfo()
       } answers {
@@ -299,7 +299,6 @@ class ApplicationServiceTests : JUnit5Minutests {
                   "test" -> ArtifactVersionStatus(
                     previous = listOf(version0, version1, version2),
                     current = version3,
-                    //pending = listOf(version4),
                     deploying = version4
                   )
                   "staging" -> ArtifactVersionStatus(

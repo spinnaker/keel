@@ -1,6 +1,6 @@
 package com.netflix.spinnaker.igor
 
-import com.netflix.spinnaker.keel.api.SCMInfo
+import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -8,7 +8,7 @@ import retrofit2.http.Query
 /**
  * Igor methods related to Source Control Management (SCM) operations.
  */
-interface ScmService: SCMInfo
+interface ScmService: ScmInfo
 {
   /**
    * Retrieves a delivery config manifest from a source control repository.
