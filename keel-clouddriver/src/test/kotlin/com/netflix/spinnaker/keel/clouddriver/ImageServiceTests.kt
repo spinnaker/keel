@@ -199,6 +199,13 @@ class ImageServiceTests : JUnit5Minutests {
         expectThat(newestImage.imageName).isEqualTo("my-package-0.0.1_rc.99-h100")
       }
 
+      test("finds correct image") {
+        val sortedImages = listOf(image2, image3, image1, image5, image6).sortedWith(NamedImageComparator)
+        expectThat(sortedImages.first()) {
+          get { imageName }.isEqualTo("my-package-0.0.1_rc.99-h100")
+        }
+      }
+
       test("images are sorted by appversion, then creation date") {
         val sortedImages = listOf(image2, image3, image1, image5, image6).sortedWith(NamedImageComparator)
         val first = sortedImages[0]
