@@ -362,6 +362,18 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
               )
                 .isEqualTo((1..5).map { "${artifact.name}-1.0.$it" }.reversed())
             }
+
+            test("can retrieve sorted artifact versions queued for approval") {
+              (1..5).forEach { v ->
+                repository.queueArtifactVersionForApproval(
+                  deliveryConfig.name, "staging", artifact, "${artifact.name}-1.0.$v")
+              }
+              expectThat(
+                repository.getArtifactVersionsQueuedForApproval(deliveryConfig.name, "staging", artifact)
+                  .map { it.version }
+              )
+                .isEqualTo((1..5).map { "${artifact.name}-1.0.$it" }.reversed())
+            }
           }
 
           context("with artifact filtered by branch") {
@@ -372,6 +384,18 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
             test("can retrieve pending artifact versions sorted by timestamp") {
               expectThat(
                 repository.getPendingArtifactVersions(deliveryConfig.name, "staging", artifactFromBranch)
+                  .map { it.version }
+              )
+                .isEqualTo((1..5).map { "${artifactFromBranch.name}-1.0.$it" })
+            }
+
+            test("can retrieve sorted artifact versions queued for approval") {
+              (1..5).forEach { v ->
+                repository.queueArtifactVersionForApproval(
+                  deliveryConfig.name, "staging", artifactFromBranch, "${artifactFromBranch.name}-1.0.$v")
+              }
+              expectThat(
+                repository.getArtifactVersionsQueuedForApproval(deliveryConfig.name, "staging", artifactFromBranch)
                   .map { it.version }
               )
                 .isEqualTo((1..5).map { "${artifactFromBranch.name}-1.0.$it" })
