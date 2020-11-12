@@ -23,6 +23,7 @@ import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
@@ -122,7 +123,7 @@ internal class NpmArtifactSupplierTests : JUnit5Minutests {
         val result = runBlocking {
           npmArtifactSupplier.getLatestArtifact(deliveryConfig, npmArtifact)
         }
-        expectThat(result!!.version).isEqualTo(latestArtifact.version)
+        expectThat(result?.version).isNotNull().isEqualTo(latestArtifact.version)
         verify(exactly = 1) {
           artifactService.getVersions(npmArtifact.name, listOf(CANDIDATE.name), artifactType = NPM)
         }
