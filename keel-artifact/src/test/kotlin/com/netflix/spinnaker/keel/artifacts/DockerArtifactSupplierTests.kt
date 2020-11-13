@@ -67,6 +67,14 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       version = "latest"
     )
 
+    val latestDockerImage = DockerImage(
+      account = "test",
+      repository = latestArtifact.name,
+      tag = latestArtifact.version,
+      digest = "sha123"
+    )
+
+
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }
 
@@ -77,20 +85,8 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       val versionSlot = slot<String>()
       before {
         every {
-          clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, deliveryConfig.serviceAccount)
-        } returns versions
-        every {
-          clouddriverService.findDockerImages(account = "*", repository = latestArtifact.name, tag = capture(versionSlot))
-        } answers {
-          listOf(
-            DockerImage(
-              account = "test",
-              repository = latestArtifact.name,
-              tag = versionSlot.captured,
-              digest = "sha123"
-            )
-          )
-        }
+          clouddriverService.findDockerImages(account = "*", repository = dockerArtifact.name, tag = null)
+        } returns listOf(latestDockerImage)
       }
 
       test("supports Docker artifacts") {
@@ -112,8 +108,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         }
         expectThat(result).isEqualTo(latestArtifact)
         verify(exactly = 1) {
-          clouddriverService.findDockerTagsForImage("*", dockerArtifact.name, deliveryConfig.serviceAccount)
-          clouddriverService.findDockerImages(account = "*", repository = latestArtifact.name, tag = latestArtifact.version)
+          clouddriverService.findDockerImages(account = "*", repository = latestArtifact.name, tag = null)
         }
       }
 

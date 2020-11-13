@@ -33,11 +33,12 @@ class DockerArtifactSupplier(
   override val supportedSortingStrategy =
     SupportedSortingStrategy("docker", DockerVersionSortingStrategy::class.java)
 
-  override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? {
+  private fun findArtifactVersions(artifact: DeliveryArtifact, version: String? = null): List<PublishedArtifact> {
     return runWithIoContext {
+      // TODO: we currently don't have a way to derive account information from artifacts,
+      //  so we look in all accounts.
       cloudDriverService.findDockerImages(account = "*", repository = artifact.name, tag = version)
-        .firstOrNull()
-        ?.let { dockerImage ->
+        .map { dockerImage ->
           PublishedArtifact(
             name = dockerImage.repository,
             type = DOCKER,
@@ -60,23 +61,16 @@ class DockerArtifactSupplier(
     }
   }
 
+  override fun getArtifactByVersion(artifact: DeliveryArtifact, version: String): PublishedArtifact? =
+    findArtifactVersions(artifact, version).firstOrNull()
+
   override fun getLatestArtifact(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact): PublishedArtifact? {
     if (artifact !is DockerArtifact) {
       throw IllegalArgumentException("Only Docker artifacts are supported by this implementation.")
     }
 
-    // Note: we currently don't have a way to derive account information from artifacts,
-    // so, in the calls to clouddriver below, we look in all accounts.
     return runWithIoContext {
-      cloudDriverService
-        .findDockerTagsForImage("*", artifact.name, deliveryConfig.serviceAccount)
-        .distinct()
-        // FIXME: this is making N calls to fill in data for each version so we can sort.
-        //  Ideally, we'd make a single call to return the list with details for each version.
-        .also {
-          log.warn("About to make ${it.size} calls to clouddriver to retrieve version details...")
-        }
-        .mapNotNull { getArtifactByVersion(artifact, it) }
+      findArtifactVersions(artifact)
         .sortedWith(artifact.sortingStrategy.comparator)
         .firstOrNull()
     }
