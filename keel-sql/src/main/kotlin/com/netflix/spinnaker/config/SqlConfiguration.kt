@@ -130,5 +130,8 @@ class SqlConfiguration {
   ) = SqlUnhealthyRepository(clock, jooq, SqlRetry(sqlRetryProperties))
 
   @Bean
-  fun verificationRepository() = SqlVerificationRepository()
+  fun verificationRepository(
+    jooq: DSLContext,
+    clock: Clock
+  ) = SqlVerificationRepository(jooq, clock)
 }

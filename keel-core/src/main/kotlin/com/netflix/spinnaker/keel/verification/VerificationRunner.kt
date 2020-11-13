@@ -1,9 +1,8 @@
 package com.netflix.spinnaker.keel.verification
 
-import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
+import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.RUNNING
@@ -15,8 +14,8 @@ class VerificationRunner(
   private val verificationRepository: VerificationRepository,
   private val evaluators: List<VerificationEvaluator<*>>
 ) {
-  fun runVerificationsFor(environment: Environment, artifact: DeliveryArtifact, version: String) {
-    with(VerificationContext(environment, artifact, version)) {
+  fun runVerificationsFor(context: VerificationContext) {
+    with(context) {
       val statuses = environment
         .verifyWith
         .map { verification ->
@@ -58,7 +57,7 @@ class VerificationRunner(
 
   private fun VerificationContext.previousStatus(verification: Verification) =
     verificationRepository
-      .getState(verification, environment, artifact, version)
+      .getState(this, verification)
       ?.status
 
   private fun VerificationContext.markAsRunning(verification: Verification) {
@@ -66,7 +65,7 @@ class VerificationRunner(
   }
 
   private fun VerificationContext.markAs(verification: Verification, status: VerificationStatus) {
-    verificationRepository.updateState(verification, environment, artifact, version, status)
+    verificationRepository.updateState(this, verification, status)
   }
 
   private fun List<VerificationEvaluator<*>>.evaluatorFor(verification: Verification) =
@@ -80,9 +79,3 @@ class VerificationRunner(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
-
-private data class VerificationContext(
-  val environment: Environment,
-  val artifact: DeliveryArtifact,
-  val version: String
-)
