@@ -1,16 +1,20 @@
 package com.netflix.spinnaker.keel.artifacts
 
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.artifacts.PullRequest
+import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.INCREASING_TAG
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_JOB_COMMIT_BY_SEMVER
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.plugins.SupportedArtifact
 import com.netflix.spinnaker.keel.api.plugins.SupportedSortingStrategy
 import com.netflix.spinnaker.keel.api.support.SpringEventPublisherBridge
-import com.netflix.spinnaker.keel.artifacts.DebianArtifactSupplierTests.Fixture.artifactMetadata
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
@@ -74,6 +78,38 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
       digest = "sha123"
     )
 
+    val artifactMetadata = ArtifactMetadata(
+      BuildMetadata(
+        id = 1,
+        uid = "1234",
+        startedAt = "yesterday",
+        completedAt = "today",
+        job = Job(
+          name = "job bla bla",
+          link = "enkins.com"
+        ),
+        number = "1"
+      ),
+      GitMetadata(
+        commit = "a15p0",
+        author = "keel-user",
+        repo = Repo(
+          name = "keel",
+          link = ""
+        ),
+        pullRequest = PullRequest(
+          number = "111",
+          url = "www.github.com/pr/111"
+        ),
+        commitInfo = Commit(
+          sha = "a15p0",
+          message = "this is a commit message",
+          link = ""
+        ),
+        project = "spkr",
+        branch = "master"
+      )
+    )
 
     val dockerArtifactSupplier = DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService)
   }

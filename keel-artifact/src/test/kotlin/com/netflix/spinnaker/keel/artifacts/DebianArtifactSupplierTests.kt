@@ -24,27 +24,32 @@ import dev.minutest.rootContext
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
+import org.springframework.core.env.Environment
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
+import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
 internal class DebianArtifactSupplierTests : JUnit5Minutests {
-  object Fixture {
+  class Fixture {
     val artifactService: ArtifactService = mockk(relaxUnitFun = true)
     val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
     val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
     val deliveryConfig = deliveryConfig()
+
     val debianArtifact = DebianArtifact(
       name = "fnord",
       deliveryConfigName = deliveryConfig.name,
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       statuses = setOf(SNAPSHOT)
     )
+
     val versions = listOf("2.0.0-h120.608bd90", "2.1.0-h130.18ed1dc")
+
     val latestArtifact = PublishedArtifact(
       name = debianArtifact.name,
       type = debianArtifact.type,
@@ -108,11 +113,14 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
         branch = "master"
       )
     )
-    val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
+
+    val springEnv: Environment = mockk(relaxed = true)
+
+    val debianArtifactSupplier = DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService, springEnv)
   }
 
   fun tests() = rootContext<Fixture> {
-    fixture { Fixture }
+    fixture { Fixture() }
 
     context("DebianArtifactSupplier") {
       val versionSlot = slot<String>()
@@ -151,16 +159,45 @@ internal class DebianArtifactSupplierTests : JUnit5Minutests {
           )
       }
 
-      test("looks up latest artifact from igor") {
-        val result = runBlocking {
-          debianArtifactSupplier.getLatestArtifact(deliveryConfig, debianArtifact)
+      context("retrieving latest artifact version") {
+        context("with forced sorting by version") {
+          before {
+            every {
+              springEnv.getProperty("keel.artifacts.debian.forceSortByVersion", Boolean::class.java, false)
+            } returns true
+          }
+
+          test("calls igor a single time for the details of the specified version") {
+            val result = runBlocking {
+              debianArtifactSupplier.getLatestArtifact(deliveryConfig, debianArtifact)
+            }
+            expectThat(result?.version).isNotNull().isEqualTo(latestArtifact.version)
+            verify(exactly = 1) {
+              artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
+              artifactService.getArtifact(debianArtifact.name, any(), DEBIAN)
+            }
+          }
         }
-        expectThat(result!!.version).isEqualTo(latestArtifact.version)
-        verify(exactly = 1) {
-          artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
-        }
-        verify(exactly = versions.size) {
-          artifactService.getArtifact(debianArtifact.name, any(), DEBIAN)
+
+        context("with configured sorting strategy") {
+          before {
+            every {
+              springEnv.getProperty("keel.artifacts.debian.forceSortByVersion", Boolean::class.java, false)
+            } returns false
+          }
+
+          test("calls igor multiple times for the details of all known versions") {
+            val result = runBlocking {
+              debianArtifactSupplier.getLatestArtifact(deliveryConfig, debianArtifact)
+            }
+            expectThat(result?.version).isNotNull().isEqualTo(latestArtifact.version)
+            verify(exactly = 1) {
+              artifactService.getVersions(debianArtifact.name, listOf(SNAPSHOT.name), DEBIAN)
+            }
+            verify(exactly = versions.size) {
+              artifactService.getArtifact(debianArtifact.name, any(), DEBIAN)
+            }
+          }
         }
       }
 

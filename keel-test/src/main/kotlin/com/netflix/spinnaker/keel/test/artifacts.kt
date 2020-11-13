@@ -13,6 +13,7 @@ import com.netflix.spinnaker.keel.artifacts.NpmArtifactSupplier
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.services.ArtifactMetadataService
 import io.mockk.mockk
+import org.springframework.core.env.Environment
 
 class DummyArtifact(
   override val name: String = "fnord",
@@ -33,8 +34,9 @@ fun defaultArtifactSuppliers(): List<ArtifactSupplier<*, *>> {
   val clouddriverService: CloudDriverService = mockk(relaxUnitFun = true)
   val eventBridge: SpringEventPublisherBridge = mockk(relaxUnitFun = true)
   val artifactMetadataService: ArtifactMetadataService = mockk(relaxUnitFun = true)
+  val springEnv: Environment = mockk(relaxed = true)
   return listOf(
-    DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService),
+    DebianArtifactSupplier(eventBridge, artifactService, artifactMetadataService, springEnv),
     DockerArtifactSupplier(eventBridge, clouddriverService, artifactMetadataService),
     NpmArtifactSupplier(eventBridge, artifactService, artifactMetadataService)
   )
