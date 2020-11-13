@@ -22,6 +22,11 @@ databaseChangeLog:
               constraints:
                 nullable: false
           - column:
+              name: verification_id
+              type: varchar(255)
+              constraints:
+                nullable: false
+          - column:
               name: status
               type: varchar(255)
               constraints:
@@ -47,4 +52,4 @@ databaseChangeLog:
     - addPrimaryKey:
         constraintName: verification_state_pk
         tableName: verification_state
-        columnNames: environment_uid, artifact_uid, artifact_version
+        columnNames: environment_uid, artifact_uid, artifact_version, verification_id

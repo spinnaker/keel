@@ -5,4 +5,9 @@ import com.netflix.spinnaker.keel.api.schema.Discriminator
 interface Verification {
   @Discriminator
   val type: String
+
+  /**
+   * Identifier used to distinguish between different instances.
+   */
+  val id: String
 }

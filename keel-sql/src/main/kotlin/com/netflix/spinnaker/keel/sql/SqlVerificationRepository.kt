@@ -36,6 +36,7 @@ class SqlVerificationRepository(
         .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
         .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
         .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
+        .and(VERIFICATION_STATE.VERIFICATION_ID.eq(verification.id))
         .fetchOneInto<VerificationState>()
     }
 
@@ -52,6 +53,7 @@ class SqlVerificationRepository(
         .set(VERIFICATION_STATE.ENVIRONMENT_UID, environmentUid)
         .set(VERIFICATION_STATE.ARTIFACT_UID, artifact.uid)
         .set(VERIFICATION_STATE.ARTIFACT_VERSION, version)
+        .set(VERIFICATION_STATE.VERIFICATION_ID, verification.id)
         .onDuplicateKeyUpdate()
         .set(VERIFICATION_STATE.STATUS, status.name)
         .set(status.timestampColumn, currentTimestamp())

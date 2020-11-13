@@ -17,12 +17,11 @@ import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import java.io.Serializable
 import java.time.Instant.now
 
 internal class VerificationRunnerTests {
 
-  private data class DummyVerification(val id: Serializable) : Verification {
+  private data class DummyVerification(override val id: String) : Verification {
     override val type = "dummy"
   }
 
@@ -74,7 +73,7 @@ internal class VerificationRunnerTests {
         environments = setOf(
           Environment(
             name = "test",
-            verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+            verifyWith = setOf(DummyVerification("1"), DummyVerification("2"))
           )
         )
       ),
@@ -88,8 +87,8 @@ internal class VerificationRunnerTests {
 
     subject.runVerificationsFor(context)
 
-    verify { evaluator.start(DummyVerification(1)) }
-    verify { repository.updateState(any(), DummyVerification(1), RUNNING) }
+    verify { evaluator.start(DummyVerification("1")) }
+    verify { repository.updateState(any(), DummyVerification("1"), RUNNING) }
   }
 
   @Test
@@ -105,7 +104,7 @@ internal class VerificationRunnerTests {
         environments = setOf(
           Environment(
             name = "test",
-            verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+            verifyWith = setOf(DummyVerification("1"), DummyVerification("2"))
           )
         )
       ),
@@ -114,10 +113,10 @@ internal class VerificationRunnerTests {
     )
 
     every {
-      repository.getState(any(), DummyVerification(1))
+      repository.getState(any(), DummyVerification("1"))
     } returns RUNNING.toState()
     every {
-      repository.getState(any(), DummyVerification(2))
+      repository.getState(any(), DummyVerification("2"))
     } returns null
 
     every {
@@ -153,7 +152,7 @@ internal class VerificationRunnerTests {
         environments = setOf(
           Environment(
             name = "test",
-            verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+            verifyWith = setOf(DummyVerification("1"), DummyVerification("2"))
           )
         )
       ),
@@ -162,10 +161,10 @@ internal class VerificationRunnerTests {
     )
 
     every {
-      repository.getState(any(), DummyVerification(1))
+      repository.getState(any(), DummyVerification("1"))
     } returns RUNNING.toState()
     every {
-      repository.getState(any(), DummyVerification(2))
+      repository.getState(any(), DummyVerification("2"))
     } returns null
 
     every {
@@ -175,13 +174,13 @@ internal class VerificationRunnerTests {
     subject.runVerificationsFor(context)
 
     verify {
-      repository.updateState(any(), DummyVerification(1), status)
+      repository.updateState(any(), DummyVerification("1"), status)
     }
     verify {
-      evaluator.start(DummyVerification(2))
+      evaluator.start(DummyVerification("2"))
     }
     verify {
-      repository.updateState(any(), DummyVerification(2), RUNNING)
+      repository.updateState(any(), DummyVerification("2"), RUNNING)
     }
   }
 
@@ -204,7 +203,7 @@ internal class VerificationRunnerTests {
         environments = setOf(
           Environment(
             name = "test",
-            verifyWith = setOf(DummyVerification(1), DummyVerification(2))
+            verifyWith = setOf(DummyVerification("1"), DummyVerification("2"))
           )
         )
       ),
@@ -213,10 +212,10 @@ internal class VerificationRunnerTests {
     )
 
     every {
-      repository.getState(any(), DummyVerification(1))
+      repository.getState(any(), DummyVerification("1"))
     } returns PASSED.toState()
     every {
-      repository.getState(any(), DummyVerification(2))
+      repository.getState(any(), DummyVerification("2"))
     } returns status.toState()
 
     subject.runVerificationsFor(context)
