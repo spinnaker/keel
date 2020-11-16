@@ -14,6 +14,10 @@ class VerificationRunner(
   private val verificationRepository: VerificationRepository,
   private val evaluators: List<VerificationEvaluator<*>>
 ) {
+  /**
+   * Evaluates the state of any currently running verifications and launches the next, against a
+   * particular environment and artifact version.
+   */
   fun runVerificationsFor(context: VerificationContext) {
     with(context) {
       val statuses = environment
