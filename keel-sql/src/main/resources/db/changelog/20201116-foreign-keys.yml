@@ -212,7 +212,7 @@ databaseChangeLog:
         referencesUniqueColumn: true
         onDelete: CASCADE
 - changeSet:
-    id: foreign-keys-on-unhappy_veto
+    id: resource_uid-on-unhappy_veto
     author: fletch
     changes:
     - addColumn:
@@ -221,7 +221,14 @@ databaseChangeLog:
         - column:
             name: resource_uid
             type: char(26)
-            beforeColumn: recheck_time
+    - modifySql:
+        dbms: mysql
+        append:
+          value: " first"
+- changeSet:
+    id: foreign-keys-on-unhappy_veto
+    author: fletch
+    changes:
     - sql:
         sql: delete from unhappy_veto where not exists (select 1 from resource where resource.id = unhappy_veto.resource_id)
     - sql:
@@ -245,7 +252,7 @@ databaseChangeLog:
         tableName: unhappy_veto
         columnName: application
 - changeSet:
-    id: foreign-keys-on-unhealthy
+    id: resource_uid-on-unhealthy
     author: fletch
     changes:
     - addColumn:
@@ -254,7 +261,14 @@ databaseChangeLog:
         - column:
             name: resource_uid
             type: char(26)
-            beforeColumn: time_detected
+    - modifySql:
+        dbms: mysql
+        append:
+          value: " first"
+- changeSet:
+    id: foreign-keys-on-unhealthy
+    author: fletch
+    changes:
     - sql:
         sql: delete from unhealthy where not exists (select 1 from resource where resource.id = unhealthy.resource_id)
     - sql:
