@@ -244,3 +244,33 @@ databaseChangeLog:
     - dropColumn:
         tableName: unhappy_veto
         columnName: application
+- changeSet:
+    id: foreign-keys-on-unhealthy
+    author: fletch
+    changes:
+    - addColumn:
+        tableName: unhealthy
+        columns:
+        - column:
+            name: resource_uid
+            type: char(26)
+            beforeColumn: time_detected
+    - sql:
+        sql: delete from unhealthy where not exists (select 1 from resource where resource.id = unhealthy.resource_id)
+    - sql:
+        sql: update unhealthy set resource_uid = (select uid from resource where id = unhealthy.resource_id)
+    - addNotNullConstraint:
+        tableName: unhealthy
+        columnName: resource_uid
+        columnDataType: char(26)
+    - addForeignKeyConstraint:
+        baseTableName: unhealthy
+        baseColumnNames: resource_uid
+        constraintName: fk_unhealthy_resource
+        referencedTableName: resource
+        referencedColumnNames: uid
+        referencesUniqueColumn: true
+        onDelete: CASCADE
+    - dropColumn:
+        tableName: unhealthy
+        columnName: resource_id
