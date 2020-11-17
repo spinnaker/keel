@@ -141,6 +141,7 @@ class SqlConfiguration {
   fun lifecycleEventRepository(
     jooq: DSLContext,
     clock: Clock,
-    properties: SqlProperties
-  ) = SqlLifecycleEventRepository(clock, jooq, SqlRetry(sqlRetryProperties))
+    properties: SqlProperties,
+    objectMapper: ObjectMapper
+  ) = SqlLifecycleEventRepository(clock, jooq, SqlRetry(sqlRetryProperties), objectMapper)
 }

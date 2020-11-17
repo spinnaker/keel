@@ -8,12 +8,12 @@ interface LifecycleEventRepository {
   /**
    * Returns all raw events for the artifact version
    */
-  fun getEvents(artifactId: String, artifactVersion: String): List<LifecycleEvent>
+  fun getEvents(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleEvent>
 
   /**
    * Returns the event summaries by type ("steps") for an artifact version
    */
-  fun getSteps(artifactId: String, artifactVersion: String): List<LifecycleStep>
+  fun getSteps(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleStep>
 
   fun getEvent(
     scope: LifecycleEventScope,

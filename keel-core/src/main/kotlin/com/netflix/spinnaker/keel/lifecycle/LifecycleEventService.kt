@@ -8,6 +8,5 @@ class LifecycleEventService (
   val lifecycleEventRepository: LifecycleEventRepository
 ) {
   fun getEventsForArtifactAndVersion(deliveryArtifact: DeliveryArtifact, version: String): List<LifecycleEvent> =
-    lifecycleEventRepository.getEvents(deliveryArtifact.toLifecycleEventId(), version)
-
+    lifecycleEventRepository.getEvents(deliveryArtifact, version)
 }
