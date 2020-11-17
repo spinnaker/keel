@@ -211,3 +211,36 @@ databaseChangeLog:
         referencedColumnNames: uid
         referencesUniqueColumn: true
         onDelete: CASCADE
+- changeSet:
+    id: foreign-keys-on-unhappy_veto
+    author: fletch
+    changes:
+    - addColumn:
+        tableName: unhappy_veto
+        columns:
+        - column:
+            name: resource_uid
+            type: char(26)
+            beforeColumn: recheck_time
+    - sql:
+        sql: delete from unhappy_veto where not exists (select 1 from resource where resource.id = unhappy_veto.resource_id)
+    - sql:
+        sql: update unhappy_veto set resource_uid = (select uid from resource where id = unhappy_veto.resource_id)
+    - addNotNullConstraint:
+        tableName: unhappy_veto
+        columnName: resource_uid
+        columnDataType: char(26)
+    - addForeignKeyConstraint:
+        baseTableName: unhappy_veto
+        baseColumnNames: resource_uid
+        constraintName: fk_unhappy_veto_resource
+        referencedTableName: resource
+        referencedColumnNames: uid
+        referencesUniqueColumn: true
+        onDelete: CASCADE
+    - dropColumn:
+        tableName: unhappy_veto
+        columnName: resource_id
+    - dropColumn:
+        tableName: unhappy_veto
+        columnName: application
