@@ -235,7 +235,8 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifact: DeliveryArtifact,
-    promotionStatus: String
+    promotionStatus: String,
+    version: String? = null
   ): PublishedArtifact?
 
   /**

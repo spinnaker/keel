@@ -405,9 +405,10 @@ class CombinedRepository(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifact: DeliveryArtifact,
-    promotionStatus: String
+    promotionStatus: String,
+    version: String?
   ) = artifactRepository.getArtifactVersionByPromotionStatus(
-    deliveryConfig, environmentName, artifact, promotionStatus
+    deliveryConfig, environmentName, artifact, promotionStatus, version
   )
 
   override fun getPinnedVersion(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String)

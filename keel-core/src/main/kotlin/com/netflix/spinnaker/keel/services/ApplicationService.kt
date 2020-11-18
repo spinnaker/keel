@@ -295,13 +295,13 @@ class ApplicationService(
 
   // Pinning is a special case when is coming to creating a compare link between versions.
   // If there is a pinned version, which is not the same as the current version, we need
-  // to make sure we are creating the comparable link with referance to the pinned version.
+  // to make sure we are creating the comparable link with reference to the pinned version.
   private fun getPinnedArtifact(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String): PublishedArtifact? {
     val pinnedVersion = repository.getPinnedVersion(deliveryConfig, environmentName, artifact.reference)
      return if (pinnedVersion != version)
       pinnedVersion?.let { getArtifactInstance(artifact, it) }
-    else {
-       null
+    else { //if pinnedVersion == current version, fetch the version which that the pinned version replaced
+       repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, PREVIOUS.name, pinnedVersion)
      }
   }
 
