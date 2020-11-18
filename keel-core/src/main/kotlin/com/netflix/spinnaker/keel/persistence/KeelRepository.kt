@@ -204,7 +204,8 @@ interface KeelRepository : KeelReadOnlyRepository {
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifact: DeliveryArtifact,
-    promotionStatus: String
+    promotionStatus: String,
+    version: String? = null
   ): PublishedArtifact?
 
   /**

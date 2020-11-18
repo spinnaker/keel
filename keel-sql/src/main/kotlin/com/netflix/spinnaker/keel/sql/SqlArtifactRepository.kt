@@ -1181,23 +1181,28 @@ class SqlArtifactRepository(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifact: DeliveryArtifact,
-    promotionStatus: String
+    promotionStatus: String,
+    version: String?
   ): PublishedArtifact? {
     //only CURRENT and PREVIOUS are supported, as they can be sorted by deploy_at
     require(promotionStatus in listOf(CURRENT.name, PREVIOUS.name)) { "Invalid promotion status used to query" }
 
     return sqlRetry.withRetry(READ) {
-      val version = jooq
+      val fetchedVersion = jooq
         .select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .from(ENVIRONMENT_ARTIFACT_VERSIONS)
         .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.getUidFor(environmentName)))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
         .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(promotionStatus))
+
+        //special case for pinning
+        .apply { if (version != null) and(ENVIRONMENT_ARTIFACT_VERSIONS.REPLACED_BY.eq(version)) }
+
         .orderBy(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
         .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .firstOrNull()
 
-          if (version != null) {
+      if (fetchedVersion != null) {
         jooq
           .select(
             ARTIFACT_VERSIONS.NAME,
@@ -1211,7 +1216,7 @@ class SqlArtifactRepository(
           .from(ARTIFACT_VERSIONS)
           .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
           .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-          .and(ARTIFACT_VERSIONS.VERSION.eq(version))
+          .and(ARTIFACT_VERSIONS.VERSION.eq(fetchedVersion))
           .fetchOne { (name, type, version, status, createdAt, gitMetadata, buildMetadata) ->
             PublishedArtifact(
               name = name,
