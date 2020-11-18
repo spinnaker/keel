@@ -161,7 +161,7 @@ class ApplicationServiceTests : JUnit5Minutests {
       coEvery {
         getScmInfo()
       } answers {
-        mapOf("stash" to "https://stash.corp.netflix.com")
+        mapOf("stash" to "https://stash")
       }
     }
 
@@ -221,7 +221,11 @@ class ApplicationServiceTests : JUnit5Minutests {
       } returns SNAPSHOT
 
       every {
-        repository.getGitMetadataByPromotionStatus(any(), any(), any(), any())
+        repository.getArtifactVersionByPromotionStatus(any(), any(), any(), any())
+      } returns null
+
+      every {
+        repository.getPinnedVersion(any(), any(), any())
       } returns null
     }
 
@@ -496,16 +500,26 @@ class ApplicationServiceTests : JUnit5Minutests {
           context("compare links") {
             before {
               every {
-                repository.getGitMetadataByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, PREVIOUS.name)
+                repository.getArtifactVersionByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, PREVIOUS.name)
               } answers {
-                GitMetadata(commit = "previousCommitIn${arg<String>(1)}",
-                  commitInfo = Commit(sha = "previousCommitIn:${arg<String>(1)}"))
+                PublishedArtifact(
+                  name = arg<DeliveryArtifact>(2).name,
+                  type = arg<DeliveryArtifact>(2).type,
+                  version = version0,
+                  gitMetadata = GitMetadata(commit = "previousCommitIn${arg<String>(1)}",
+                    commitInfo = Commit(sha = "previousCommitIn:${arg<String>(1)}", link = "stash"))
+                )
               }
               every {
-                repository.getGitMetadataByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, CURRENT.name)
+                repository.getArtifactVersionByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, CURRENT.name)
               } answers {
-                GitMetadata(commit = "currentCommitIn${arg<String>(1)}",
-                  commitInfo = Commit(sha = "currentCommitIn:${arg<String>(1)}"))
+                PublishedArtifact(
+                  name = arg<DeliveryArtifact>(2).name,
+                  type = arg<DeliveryArtifact>(2).type,
+                  version = version1,
+                  gitMetadata = GitMetadata(commit = "currentCommitIn${arg<String>(1)}",
+                    commitInfo = Commit(sha = "currentCommitIn:${arg<String>(1)}", link = "stash"))
+                )
               }
 
               every {
@@ -530,15 +544,15 @@ class ApplicationServiceTests : JUnit5Minutests {
                 .withVersionInEnvironment(version3, "test") {
                   state.isEqualTo(CURRENT.name.toLowerCase())
                   compareLink
-                    .isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:test&sourceBranch=12345")
+                    .isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:test&sourceBranch=12345")
                 }
                 .withVersionInEnvironment(version2, "staging") {
                   state.isEqualTo(CURRENT.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:staging&sourceBranch=12345")
+                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:staging&sourceBranch=12345")
                 }
                 .withVersionInEnvironment(version1, "production") {
                   state.isEqualTo(CURRENT.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:production&sourceBranch=12345")
+                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:production&sourceBranch=12345")
                 }
             }
 
@@ -548,17 +562,16 @@ class ApplicationServiceTests : JUnit5Minutests {
                 .withVersionInEnvironment(version4, "test") {
                   state.isEqualTo(DEPLOYING.name.toLowerCase())
                   compareLink
-                    .isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:test&sourceBranch=12345")
+                    .isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:test&sourceBranch=12345")
                 }
             }
-
 
             test("compare links for previous --> current  are generated as expected, in the correct env") {
               val summaries = applicationService.getArtifactSummariesFor(application1)
               expectThat(summaries.first())
                 .withVersionInEnvironment(version0, "production") {
                   state.isEqualTo(PREVIOUS.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=12345&sourceBranch=12345")
+                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=12345&sourceBranch=12345")
                 }
             }
 
@@ -567,12 +580,55 @@ class ApplicationServiceTests : JUnit5Minutests {
               expectThat(summaries.first())
                 .withVersionInEnvironment(version3, "production") {
                   state.isEqualTo(PENDING.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:production&sourceBranch=12345")
+                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:production&sourceBranch=12345")
                 }
                 .withVersionInEnvironment(version3, "staging") {
                   state.isEqualTo(PENDING.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash.corp.netflix.com/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:staging&sourceBranch=12345")
+                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:staging&sourceBranch=12345")
                 }
+            }
+            context("pinned") {
+              before {
+                every {
+                  repository.getPinnedVersion(singleArtifactDeliveryConfig, "test", releaseArtifact.reference)
+                } returns version2
+
+                every {
+                  repository.getPinnedVersion(singleArtifactDeliveryConfig, "production", releaseArtifact.reference)
+                } returns version2
+
+                every {
+                  repository.getArtifactVersion(releaseArtifact, version2, RELEASE)
+                } answers {
+                  PublishedArtifact(
+                    name = arg<DeliveryArtifact>(0).name,
+                    type = arg<DeliveryArtifact>(0).type,
+                    version = arg<String>(1),
+                    gitMetadata = GitMetadata(
+                      commit = "version5",
+                      commitInfo = Commit(sha = "pinnedVersion", link = "stash"),
+                      repo = Repo(name = "keel"),
+                      project = "spkr"
+                    ),
+                    buildMetadata = buildMetadata
+                  )
+                }
+              }
+              test ("get the correct compare link when pinning forward") {
+                val summaries = applicationService.getArtifactSummariesFor(application1)
+                expectThat(summaries.first())
+                  .withVersionInEnvironment(version1, "production") {
+                    compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=12345&sourceBranch=pinnedVersion")
+                  }
+              }
+
+              test ("get the correct compare link when pinning backwards") {
+                val summaries = applicationService.getArtifactSummariesFor(application1)
+                expectThat(summaries.first())
+                  .withVersionInEnvironment(version3, "test") {
+                    compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=pinnedVersion&sourceBranch=12345")
+                  }
+              }
             }
           }
         }
