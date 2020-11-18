@@ -1130,6 +1130,29 @@ class SqlArtifactRepository(
     }
   }
 
+  override fun getPinnedVersion(
+    deliveryConfig: DeliveryConfig,
+    targetEnvironment: String,
+    reference: String
+  ): String? {
+    return sqlRetry.withRetry(READ) {
+      jooq.select(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION)
+        .from(DELIVERY_ARTIFACT)
+        .innerJoin(ENVIRONMENT_ARTIFACT_PIN)
+        .on(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
+        .innerJoin(ENVIRONMENT)
+        .on(ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
+        .where(
+          DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name),
+          DELIVERY_ARTIFACT.REFERENCE.eq(reference),
+          ENVIRONMENT.NAME.eq(targetEnvironment),
+          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid)
+        )
+        .fetch(ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_VERSION)
+        .firstOrNull()
+    }
+  }
+
   override fun deletePin(
     deliveryConfig: DeliveryConfig,
     targetEnvironment: String,
@@ -1154,12 +1177,12 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun getGitMetadataByPromotionStatus(
+  override fun getArtifactVersionByPromotionStatus(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifact: DeliveryArtifact,
     promotionStatus: String
-  ): GitMetadata? {
+  ): PublishedArtifact? {
     //only CURRENT and PREVIOUS are supported, as they can be sorted by deploy_at
     require(promotionStatus in listOf(CURRENT.name, PREVIOUS.name)) { "Invalid promotion status used to query" }
 
@@ -1174,21 +1197,35 @@ class SqlArtifactRepository(
         .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
         .firstOrNull()
 
-      if (version != null) {
+          if (version != null) {
         jooq
           .select(
-            ARTIFACT_VERSIONS.GIT_METADATA
+            ARTIFACT_VERSIONS.NAME,
+            ARTIFACT_VERSIONS.TYPE,
+            ARTIFACT_VERSIONS.VERSION,
+            ARTIFACT_VERSIONS.RELEASE_STATUS,
+            ARTIFACT_VERSIONS.CREATED_AT,
+            ARTIFACT_VERSIONS.GIT_METADATA,
+            ARTIFACT_VERSIONS.BUILD_METADATA,
           )
           .from(ARTIFACT_VERSIONS)
           .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
           .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
           .and(ARTIFACT_VERSIONS.VERSION.eq(version))
-          .fetchOne { (gitMetadata) ->
-            gitMetadata?.let { objectMapper.readValue(it) }
+          .fetchOne { (name, type, version, status, createdAt, gitMetadata, buildMetadata) ->
+            PublishedArtifact(
+              name = name,
+              type = type,
+              version = version,
+              status = status?.let { ArtifactStatus.valueOf(it) },
+              createdAt = createdAt?.toInstant(UTC),
+              gitMetadata = gitMetadata?.let { objectMapper.readValue(it) },
+              buildMetadata = buildMetadata?.let { objectMapper.readValue(it) },
+            )
           }
       } else {
-        null
-      }
+            null
+          }
     }
   }
 

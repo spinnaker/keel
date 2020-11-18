@@ -1102,25 +1102,53 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       }
 
       test ("no metadata for version which is not persisted") {
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.PREVIOUS.name))
+        expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.PREVIOUS.name))
           .isNull()
       }
 
       test ("get git metadata for deploying status") {
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name))
+        expectThat(subject.getArtifactVersionByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name)?.gitMetadata)
           .isEqualTo(artifactMetadata.gitMetadata)
         }
 
       test ("get a single results (and newest) data per status") {
         subject.markAsSuccessfullyDeployedTo(manifest, versionedReleaseDebian, version2, testEnvironment.name)
-        expectThat(subject.getGitMetadataByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name))
+        expectThat(subject.getArtifactVersionByPromotionStatus(manifest,testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT.name)?.gitMetadata)
           .get { this?.commit }.isEqualTo("12345")
       }
 
       test ("unsupported promotion status throws exception") {
         expectThrows<IllegalArgumentException> {
-          subject.getGitMetadataByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.DEPLOYING.name)
+          subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.DEPLOYING.name)
         }
+      }
+    }
+
+    context("pinned version") {
+      before {
+        persist(manifest)
+        subject.register(versionedReleaseDebian)
+      }
+      test ("there isn't any pinned version in any environment") {
+        expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
+          .isNull()
+        expectThat(subject.getPinnedVersion(manifest, stagingEnvironment.name, versionedReleaseDebian.reference))
+          .isNull()
+      }
+
+      test ("there is one pinned version in test, non in staging") {
+        subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version1, null, null))
+        expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
+          .isEqualTo(version1)
+        expectThat(subject.getPinnedVersion(manifest, stagingEnvironment.name, versionedReleaseDebian.reference))
+          .isNull()
+      }
+
+      test ("pinned two versions, get only the latest pinned version") {
+        subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version1, null, null))
+        subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version2, null, null))
+        expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
+          .isEqualTo(version2)
       }
     }
   }
