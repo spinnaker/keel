@@ -27,7 +27,7 @@ class ManualJudgementNotifier(
   private val keelNotificationConfig: KeelNotificationConfig,
   private val echoService: EchoService,
   private val repository: KeelRepository,
-  @Value("\${services.gate.baseUrl}") private val spinnakerBaseUrl: String
+  @Value("\${gate.baseUrl}") private val spinnakerBaseUrl: String
 ) {
   companion object {
     const val MANUAL_JUDGEMENT_DOC_URL =

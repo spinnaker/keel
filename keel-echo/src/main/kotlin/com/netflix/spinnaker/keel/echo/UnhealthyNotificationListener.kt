@@ -31,7 +31,7 @@ class UnhealthyNotificationListener(
   private val unhealthyRepository: UnhealthyRepository,
   private val publisher: ApplicationEventPublisher,
   private val springEnv: Environment,
-  @Value("\${services.gate.baseUrl}") private val spinnakerBaseUrl: String
+  @Value("\${gate.baseUrl}") private val spinnakerBaseUrl: String
 ) {
 
   private val notificationsEnabled: Boolean
