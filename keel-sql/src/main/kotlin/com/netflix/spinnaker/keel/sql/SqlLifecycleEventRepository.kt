@@ -5,8 +5,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.lifecycle.LifecycleStep
 import com.netflix.spinnaker.keel.lifecycle.isEndingStatus
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LIFECYCLE
@@ -15,6 +13,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
 import java.time.Clock
+import java.time.ZoneOffset.UTC
 import java.util.Deque
 import java.util.LinkedList
 
@@ -26,13 +25,14 @@ class SqlLifecycleEventRepository(
 ) : LifecycleEventRepository {
   override fun saveEvent(event: LifecycleEvent) {
     sqlRetry.withRetry(WRITE) {
+      val id = event.id ?: ULID().nextULID(clock.millis()) //random if not given
       jooq.insertInto(LIFECYCLE)
         .set(LIFECYCLE.UID, ULID().nextULID(clock.millis()))
         .set(LIFECYCLE.SCOPE, event.scope.name)
-        .set(LIFECYCLE.REF, event.artifact.toLifecycleRef())
+        .set(LIFECYCLE.REF, event.artifactRef)
         .set(LIFECYCLE.ARTIFACT_VERSION, event.artifactVersion)
         .set(LIFECYCLE.TYPE, event.type.name)
-        .set(LIFECYCLE.ID, event.id ?: ULID().nextULID(clock.millis())) //random if not given
+        .set(LIFECYCLE.ID, id)
         .set(LIFECYCLE.STATUS, event.status.name)
         .set(LIFECYCLE.TIMESTAMP, clock.timestamp())
         .set(LIFECYCLE.JSON, objectMapper.writeValueAsString(event))
@@ -42,35 +42,33 @@ class SqlLifecycleEventRepository(
 
   override fun getEvents(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleEvent> {
     return sqlRetry.withRetry(READ) {
-      jooq.select(LIFECYCLE.JSON)
+      jooq.select(LIFECYCLE.JSON, LIFECYCLE.TIMESTAMP)
         .from(LIFECYCLE)
         .where(LIFECYCLE.REF.eq(artifact.toLifecycleRef()))
         .and(LIFECYCLE.ARTIFACT_VERSION.eq(artifactVersion))
         .orderBy(LIFECYCLE.TIMESTAMP.asc()) // oldest first
         .fetch()
-        .map { (json) ->
-          objectMapper.readValue<LifecycleEvent>(json)
+        .map { (json, timestamp) ->
+          val event = objectMapper.readValue<LifecycleEvent>(json)
+          event.copy(timestamp = timestamp.toInstant(UTC))
         }
     }
   }
 
-  override fun getEvent(
-    scope: LifecycleEventScope,
-    type: LifecycleEventType,
-    artifact: DeliveryArtifact,
-    artifactVersion: String,
-    id: String
-  ) : LifecycleEvent {
-    TODO("not implemented")
-  }
-
+  /**
+   * Sorts events into chronological groups by id then time.
+   * Batches each group of id up into a summary by 'replaying' each event.
+   *
+   * @return a list of steps sorted in ascending order (oldest start time first)
+   */
   override fun getSteps(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleStep> {
     val events = getEvents(artifact, artifactVersion)
+      .sortedBy { it.id }
     val steps: Deque<LifecycleStep> = LinkedList()
 
     events.forEach { event ->
       var lastStep = steps.pollFirst()
-      if (sameStep(event, lastStep)) { // maybe we need to make sure this isn't a starting event also?
+      if (sameStep(event, lastStep)) {
         lastStep = lastStep.copy(status = event.status)
         if (event.text != null) {
           lastStep = lastStep.copy(text = event.text)
@@ -83,36 +81,17 @@ class SqlLifecycleEventRepository(
         }
         steps.push(lastStep)
       } else {
-        val step = event.toStep() //todo eb: probably other way around
+        if (lastStep != null) {
+          steps.push(lastStep)
+        }
+        val step = event.toStep()
         steps.push(step)
-        // fill in text and link here? or somewhere else?
       }
     }
 
-    /*
-      todo eb:
-        - think through all the statuses, what "ends" the event?
-        - who adds the text for the event?
-          is it in the event every time?
-          is it a property in the subclass of the step?
-        - events need to have other data
-        - what if we get multiple start / middle / end events?
-          is that an error? I'm not sure.
-     */
-
-    return steps.toList()
+    return steps.toList().sortedBy { it.startTime }
   }
 
   private fun sameStep(event: LifecycleEvent, step: LifecycleStep?): Boolean =
     step != null && event.id == step.id && event.scope == step.scope && event.type == step.type
-
-  override fun deleteEvent(
-    scope: LifecycleEventScope,
-    type: LifecycleEventType,
-    artifact: DeliveryArtifact,
-    artifactVersion: String,
-    id: String
-  ) {
-    TODO("not implemented")
-  }
 }

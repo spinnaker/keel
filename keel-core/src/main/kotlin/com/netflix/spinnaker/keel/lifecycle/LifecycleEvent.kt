@@ -1,11 +1,10 @@
 package com.netflix.spinnaker.keel.lifecycle
 
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import java.time.Instant
 
 data class LifecycleEvent(
   val scope: LifecycleEventScope,
-  val artifact: DeliveryArtifact,
+  val artifactRef: String,
   val artifactVersion: String,
   val type: LifecycleEventType,
   val id: String? = null,
@@ -16,10 +15,8 @@ data class LifecycleEvent(
 ) {
   fun toStep(): LifecycleStep =
     LifecycleStep(
-      artifact = artifact,
       scope = scope,
       type = type,
-      artifactVersion = artifactVersion,
       id = id,
       status = status,
       text = text,

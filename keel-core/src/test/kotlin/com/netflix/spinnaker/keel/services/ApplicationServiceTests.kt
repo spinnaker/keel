@@ -36,7 +36,6 @@ import com.netflix.spinnaker.keel.core.api.PromotionStatus.PREVIOUS
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventService
-import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.ResourceStatus.CREATED
 import com.netflix.spinnaker.keel.test.DummyArtifact
@@ -159,7 +158,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
 
     private val lifecycleEventService : LifecycleEventService = mockk() {
-      every { getEventsForArtifactAndVersion(any(), any()) } returns emptyList()
+      every { getStepsForArtifactAndVersion(any(), any()) } returns emptyList()
     }
 
     private val scmInfo = mockk<ScmInfo>() {

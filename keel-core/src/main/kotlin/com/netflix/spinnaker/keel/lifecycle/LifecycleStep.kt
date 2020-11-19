@@ -10,8 +10,6 @@ import java.time.Instant
  * Events are identified by the artifact, version, scope, type, and id.
  * We create an id for the artifact by calling [artifact.toLifecycleEventId()].
  *
- * [artifactVersion] is the version of the artifact that this event pertains to.
- *
  * [scope] and [type] control where the event is shown, right now there is only one of each.
  * [id] is a caller-provided id: if the caller wants to be able to update the event,
  *  it should not be random. If the event is fire and forget, the id can be null.
@@ -19,8 +17,6 @@ import java.time.Instant
  * [text] is the text for the even that is shown to the user.
  */
 data class LifecycleStep(
-  val artifact: DeliveryArtifact,
-  val artifactVersion: String,
   val scope: LifecycleEventScope,
   val type: LifecycleEventType,
   val id: String?,

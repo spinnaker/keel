@@ -43,7 +43,6 @@ import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
 import com.netflix.spinnaker.keel.exceptions.UnsupportedScmType
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventService
 import com.netflix.spinnaker.keel.persistence.ArtifactNotFoundException
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -389,7 +388,7 @@ class ApplicationService(
         ?: artifactSupplier.parseDefaultBuildMetadata(artifactInstance, artifact.sortingStrategy),
       git = artifactInstance.gitMetadata
         ?: artifactSupplier.parseDefaultGitMetadata(artifactInstance, artifact.sortingStrategy),
-      lifecycleEvents = lifecycleEventService.getEventsForArtifactAndVersion(artifact, artifactInstance.version)
+      lifecycleSteps = lifecycleEventService.getStepsForArtifactAndVersion(artifact, artifactInstance.version)
     )
   }
 

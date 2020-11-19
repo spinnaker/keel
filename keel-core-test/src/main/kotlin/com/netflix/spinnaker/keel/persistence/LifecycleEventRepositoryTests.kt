@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope.PRE_DEPLOYMENT
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.FAILED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.RUNNING
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.SUCCEEDED
@@ -13,6 +14,8 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import strikt.api.expect
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
+import strikt.assertions.isNull
 import java.time.Clock
 
 abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUnit5Minutests {
@@ -29,7 +32,7 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
   val version = "123.4"
   val event = LifecycleEvent(
     scope = PRE_DEPLOYMENT,
-    artifact = artifact,
+    artifactRef = artifact.toLifecycleRef(),
     artifactVersion = version,
     type = BAKE,
     status = NOT_STARTED,
@@ -37,6 +40,7 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
     text = "Submitting bake for version $version",
     link = "www.bake.com/$version"
   )
+  val anotherEvent = event.copy(id = "bake-$version-2")
 
   fun tests() = rootContext<Fixture<T>> {
     fixture {
@@ -55,6 +59,7 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
         expect {
           that(events.size).isEqualTo(1)
           that(events.first().status).isEqualTo(NOT_STARTED)
+          that(events.first().timestamp).isNotNull()
         }
       }
     }
@@ -69,27 +74,58 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
         expect {
           that(steps.size).isEqualTo(1)
           that(steps.first().status).isEqualTo(NOT_STARTED)
+          that(steps.first().startTime).isNotNull()
+          that(steps.first().endTime).isNull()
         }
       }
 
-      context("multiple events"){
+      context("multiple events single id"){
         before {
           clock.tickMinutes(1)
           subject.saveEvent(event.copy(status = RUNNING, text = null, link = null))
           clock.tickMinutes(1)
           subject.saveEvent(event.copy(status = SUCCEEDED, text = "Bake finished! Here's your cake", link = null))
         }
-        test("can transform single event to step") {
+        test("can transform multiple events to step") {
           val steps = subject.getSteps(artifact, version)
           expect {
             that(steps.size).isEqualTo(1)
             that(steps.first().status).isEqualTo(SUCCEEDED)
             that(steps.first().text).isEqualTo("Bake finished! Here's your cake")
             that(steps.first().link).isEqualTo("www.bake.com/$version")
+            that(steps.first().startTime).isNotNull()
+            that(steps.first().endTime).isNotNull()
+          }
+        }
+      }
+
+      context("multiple event ids") {
+        before {
+          clock.tickMinutes(1)
+          subject.saveEvent(anotherEvent)
+          clock.tickMinutes(1)
+          subject.saveEvent(event.copy(status = RUNNING, text = null, link = null))
+          clock.tickMinutes(1)
+          subject.saveEvent(anotherEvent.copy(status = RUNNING, text = null, link = null))
+          clock.tickMinutes(1)
+          subject.saveEvent(event.copy(status = FAILED, text = "Oops, this failed", link = null))
+          clock.tickMinutes(1)
+          subject.saveEvent(anotherEvent.copy(status = SUCCEEDED, text = "Bake succeeded", link = null))
+        }
+
+        test("can transform multiple events to multiple steps") {
+          val steps = subject.getSteps(artifact, version)
+          expect {
+            that(steps.size).isEqualTo(2)
+            that(steps.first().status).isEqualTo(FAILED)
+            that(steps.first().text).isEqualTo("Oops, this failed")
+            that(steps.first().link).isEqualTo("www.bake.com/$version")
+            that(steps.last().status).isEqualTo(SUCCEEDED)
+            that(steps.last().text).isEqualTo("Bake succeeded")
+            that(steps.last().link).isEqualTo("www.bake.com/$version")
           }
         }
       }
     }
-
   }
 }

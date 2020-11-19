@@ -7,6 +7,6 @@ import org.springframework.stereotype.Component
 class LifecycleEventService (
   val lifecycleEventRepository: LifecycleEventRepository
 ) {
-  fun getEventsForArtifactAndVersion(deliveryArtifact: DeliveryArtifact, version: String): List<LifecycleEvent> =
-    lifecycleEventRepository.getEvents(deliveryArtifact, version)
+  fun getStepsForArtifactAndVersion(deliveryArtifact: DeliveryArtifact, version: String): List<LifecycleStep> =
+    lifecycleEventRepository.getSteps(deliveryArtifact, version)
 }

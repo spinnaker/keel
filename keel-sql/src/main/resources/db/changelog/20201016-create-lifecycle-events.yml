@@ -80,3 +80,72 @@ databaseChangeLog:
                   name: artifact_version
               - column:
                   name: id
+  - changeSet:
+      id: create-lifecycle-monitor
+      author: emjburns
+      changes:
+        - createTable:
+            tableName: lifecycle_monitor
+            columns:
+              - column:
+                  name: uid
+                  type: char(26)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: link
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_checked
+                  type: timestamp(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: triggering_event
+                  type: json
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ignore
+                  type: boolean
+                  defaultValue: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: num_failures
+                  type: int
+                  defaultValue: 0
+                  constraints:
+                    nullable: false
+        - modifySql:
+            dbms: mysql
+            append:
+              value: " engine innodb"
+  - changeSet:
+      id: add-index-to-lifecycle-monitor
+      author: emjburns
+      changes:
+        - createIndex:
+            indexName: lifecyclemonitor_type_link_idx
+            tableName: lifecycle_monitor
+            columns:
+              - column:
+                  name: type
+              - column:
+                  name: link
+        - createIndex:
+            indexName: lifecycle_monitor_type_last_checked_idx
+            tableName: lifecycle_monitor
+            columns:
+              - column:
+                  name: type
+              - column:
+                  name: last_checked

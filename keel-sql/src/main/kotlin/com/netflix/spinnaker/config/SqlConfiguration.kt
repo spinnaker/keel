@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlDiffFingerprintRepository
 import com.netflix.spinnaker.keel.sql.SqlLifecycleEventRepository
+import com.netflix.spinnaker.keel.sql.SqlLifecycleMonitorRepository
 import com.netflix.spinnaker.keel.sql.SqlNotificationRepository
 import com.netflix.spinnaker.keel.sql.SqlPausedRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
@@ -144,4 +145,12 @@ class SqlConfiguration {
     properties: SqlProperties,
     objectMapper: ObjectMapper
   ) = SqlLifecycleEventRepository(clock, jooq, SqlRetry(sqlRetryProperties), objectMapper)
+
+  @Bean
+  fun lifecycleMonitorRepository(
+    jooq: DSLContext,
+    clock: Clock,
+    properties: SqlProperties,
+    objectMapper: ObjectMapper
+  ) = SqlLifecycleMonitorRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
 }
