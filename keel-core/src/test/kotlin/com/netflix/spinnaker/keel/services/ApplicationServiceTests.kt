@@ -500,7 +500,7 @@ class ApplicationServiceTests : JUnit5Minutests {
           context("compare links") {
             before {
               every {
-                repository.getArtifactVersionByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, PREVIOUS.name)
+                repository.getArtifactVersionByPromotionStatus(singleArtifactDeliveryConfig, any(), releaseArtifact, PREVIOUS.name, any())
               } answers {
                 PublishedArtifact(
                   name = arg<DeliveryArtifact>(2).name,
