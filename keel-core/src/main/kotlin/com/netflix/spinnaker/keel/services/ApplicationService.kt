@@ -420,7 +420,7 @@ class ApplicationService(
 
   private fun getUrl(version1: PublishedArtifact?, version2: PublishedArtifact?, artifact: DeliveryArtifact): String? {
     return if (version1 != null && version2 != null) {
-      return if (artifact.sortingStrategy.comparator.compare(version1, version2) < 0) {
+      return if (artifact.sortingStrategy.comparator.compare(version1, version2) > 0) { //these comparators sort in dec order, so condition is flipped
         //version2 is newer than version1
         generateCompareLink(version2.gitMetadata, version1.gitMetadata)
       } else {
