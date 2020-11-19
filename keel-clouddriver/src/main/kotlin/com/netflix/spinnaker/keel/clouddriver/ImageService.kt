@@ -166,40 +166,6 @@ class ImageService(
       } ?: throw BaseAmiNotFound(baseImageName)
   }
 
-  private fun getAllTags(image: NamedImage): Map<String, String> {
-    val allTags = HashMap<String, String>()
-    image.tagsByImageId.forEach { (_, tags) ->
-      tags?.forEach { k, v ->
-        if (v != null) {
-          allTags[k] = v
-        }
-      }
-    }
-    return allTags
-  }
-
-  private fun amiMatches(
-    tags: Map<String, String>,
-    buildHost: String,
-    buildName: String,
-    buildNumber: String
-  ): Boolean {
-    if (!tags.containsKey("build_host") || !tags.containsKey("appversion") || tags["build_host"] != buildHost) {
-      return false
-    }
-
-    val appversion = tags["appversion"]?.split("/") ?: error("appversion tag is missing")
-
-    if (appversion.size != 3) {
-      return false
-    }
-
-    if (appversion[1] != buildName || appversion[2] != buildNumber) {
-      return false
-    }
-    return true
-  }
-
   private fun tagsExistForAllAmis(tagsByImageId: Map<String, Map<String, String?>?>): Boolean {
     tagsByImageId.keys.forEach { key ->
       val tags = tagsByImageId[key]
