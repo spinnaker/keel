@@ -246,13 +246,13 @@ class ApplicationService(
 
     return when (status) {
       PENDING -> {
-        val olderGitMetadata = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
+        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
         ArtifactSummaryInEnvironment(
           environment = environmentName,
           version = version,
           state = status.name.toLowerCase(),
           // comparing PENDING (version in question, new code) vs. CURRENT (old code)
-          compareLink = getUrl(currentArtifact, olderGitMetadata, artifact)
+          compareLink = getUrl(currentArtifact, olderArtifactVersion, artifact)
         )
       }
       SKIPPED -> {
@@ -268,25 +268,25 @@ class ApplicationService(
       }
 
       DEPLOYING, APPROVED -> {
-        val olderGitMetadata = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
+        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT.name)
         potentialSummary?.copy(
           // comparing DEPLOYING/APPROVED (version in question, new code) vs. CURRENT (old code)
-          compareLink = getUrl(currentArtifact, olderGitMetadata, artifact)
+          compareLink = getUrl(currentArtifact, olderArtifactVersion, artifact)
         )
       }
       PREVIOUS -> {
-        val newerGitMetadata = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it) }
+        val newerArtifactVersion = potentialSummary?.replacedBy?.let { getArtifactInstance(artifact, it) }
         potentialSummary?.copy(
           //comparing PREVIOUS (version in question, old code) vs. the version which replaced it (new code)
           //pinned artifact should not be consider here, as we know exactly which version replace the current one
-          compareLink = getUrl(currentArtifact, newerGitMetadata, artifact)
+          compareLink = getUrl(currentArtifact, newerArtifactVersion, artifact)
         )
       }
       CURRENT -> {
-        val olderGitMetadata = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, PREVIOUS.name)
+        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, PREVIOUS.name)
         potentialSummary?.copy(
           // comparing CURRENT (version in question, new code) vs. PREVIOUS (old code)
-          compareLink = getUrl(currentArtifact, olderGitMetadata, artifact)
+          compareLink = getUrl(currentArtifact, olderArtifactVersion, artifact)
         )
       }
       else -> potentialSummary
