@@ -52,7 +52,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import strikt.api.Assertion
-import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.all
 import strikt.assertions.first
@@ -538,98 +537,6 @@ class ApplicationServiceTests : JUnit5Minutests {
               }
             }
 
-            test("compare links for previous-->current are generated as expected, in the correct env") {
-              val summaries = applicationService.getArtifactSummariesFor(application1)
-              expectThat(summaries.first())
-                .withVersionInEnvironment(version3, "test") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                  compareLink
-                    .isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:test&sourceBranch=12345")
-                }
-                .withVersionInEnvironment(version2, "staging") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:staging&sourceBranch=12345")
-                }
-                .withVersionInEnvironment(version1, "production") {
-                  state.isEqualTo(CURRENT.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=previousCommitIn:production&sourceBranch=12345")
-                }
-            }
-
-            test("compare links for current --> deploying are generated as expected, in the correct env") {
-              val summaries = applicationService.getArtifactSummariesFor(application1)
-              expectThat(summaries.first())
-                .withVersionInEnvironment(version4, "test") {
-                  state.isEqualTo(DEPLOYING.name.toLowerCase())
-                  compareLink
-                    .isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:test&sourceBranch=12345")
-                }
-            }
-
-            test("compare links for previous --> current  are generated as expected, in the correct env") {
-              val summaries = applicationService.getArtifactSummariesFor(application1)
-              expectThat(summaries.first())
-                .withVersionInEnvironment(version0, "production") {
-                  state.isEqualTo(PREVIOUS.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=12345&sourceBranch=12345")
-                }
-            }
-
-            test("compare links for pending --> current  are generated as expected, in the correct env") {
-              val summaries = applicationService.getArtifactSummariesFor(application1)
-              expectThat(summaries.first())
-                .withVersionInEnvironment(version3, "production") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:production&sourceBranch=12345")
-                }
-                .withVersionInEnvironment(version3, "staging") {
-                  state.isEqualTo(PENDING.name.toLowerCase())
-                  compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=currentCommitIn:staging&sourceBranch=12345")
-                }
-            }
-            context("pinned") {
-              before {
-                every {
-                  repository.getPinnedVersion(singleArtifactDeliveryConfig, "test", releaseArtifact.reference)
-                } returns version2
-
-                every {
-                  repository.getPinnedVersion(singleArtifactDeliveryConfig, "production", releaseArtifact.reference)
-                } returns version2
-
-                every {
-                  repository.getArtifactVersion(releaseArtifact, version2, RELEASE)
-                } answers {
-                  PublishedArtifact(
-                    name = arg<DeliveryArtifact>(0).name,
-                    type = arg<DeliveryArtifact>(0).type,
-                    version = arg<String>(1),
-                    gitMetadata = GitMetadata(
-                      commit = "version5",
-                      commitInfo = Commit(sha = "pinnedVersion", link = "stash"),
-                      repo = Repo(name = "keel"),
-                      project = "spkr"
-                    ),
-                    buildMetadata = buildMetadata
-                  )
-                }
-              }
-              test ("get the correct compare link when pinning forward") {
-                val summaries = applicationService.getArtifactSummariesFor(application1)
-                expectThat(summaries.first())
-                  .withVersionInEnvironment(version1, "production") {
-                    compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=12345&sourceBranch=pinnedVersion")
-                  }
-              }
-
-              test ("get the correct compare link when pinning backwards") {
-                val summaries = applicationService.getArtifactSummariesFor(application1)
-                expectThat(summaries.first())
-                  .withVersionInEnvironment(version3, "test") {
-                    compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=pinnedVersion&sourceBranch=12345")
-                  }
-              }
-            }
           }
         }
 
@@ -1021,7 +928,7 @@ class ApplicationServiceTests : JUnit5Minutests {
     }
   }
 
-  private fun Assertion.Builder<ArtifactSummary>.withVersionInEnvironment(
+  fun Assertion.Builder<ArtifactSummary>.withVersionInEnvironment(
     version: String,
     environment: String,
     block: Assertion.Builder<ArtifactSummaryInEnvironment>.() -> Unit
@@ -1037,10 +944,7 @@ class ApplicationServiceTests : JUnit5Minutests {
   val Assertion.Builder<ArtifactSummaryInEnvironment>.state: Assertion.Builder<String>
     get() = get { state }
 
-  val Assertion.Builder<ArtifactSummaryInEnvironment>.compareLink: DescribeableBuilder<String?>
-    get() = get { compareLink }
-
-  private fun Fixture.toEnvironmentSummary(env: Environment, block: () -> ArtifactVersionStatus): EnvironmentSummary {
+   private fun Fixture.toEnvironmentSummary(env: Environment, block: () -> ArtifactVersionStatus): EnvironmentSummary {
     return EnvironmentSummary(
       env,
       setOf(
