@@ -62,8 +62,9 @@ class ComparableLinksTests : JUnit5Minutests {
     val version1 = "fnord-1.0.1-h1.b1b1b1b"
     val version2 = "fnord-1.0.2-h2.c2c2c2c"
     val version3 = "fnord-1.0.3-h3.d3d3d3d"
+    val version4 = "fnord-1.0.4-h4.e4e4e4e"
 
-    val versions = listOf(version0, version1, version2, version3)
+    val versions = listOf(version0, version1, version2, version3, version4)
 
     val singleArtifactEnvironments = listOf("test", "staging").associateWith { name ->
       Environment(
@@ -179,7 +180,8 @@ class ComparableLinksTests : JUnit5Minutests {
               "test" -> ArtifactVersionStatus(
                 previous = listOf(version0, version1),
                 current = version2,
-                deploying = version3
+                deploying = version3,
+                pending = listOf(version4)
               )
               "staging" -> ArtifactVersionStatus(
                 previous = listOf(version0),
@@ -197,7 +199,7 @@ class ComparableLinksTests : JUnit5Minutests {
         } answers {
           when (val environment = arg<String>(1)) {
             "test" -> when (val version = arg<String>(3)) {
-              version0,
+              version0 -> ArtifactSummaryInEnvironment(environment, version, "previous", replacedBy = version1)
               version1 -> ArtifactSummaryInEnvironment(environment, version, "previous", replacedBy = version2)
               version2 -> ArtifactSummaryInEnvironment(environment, version, "current")
               version3 -> ArtifactSummaryInEnvironment(environment, version, "deploying")
@@ -359,11 +361,27 @@ class ComparableLinksTests : JUnit5Minutests {
             )
           }
         }
-        test ("get the correct compare link when pinning forward") {
+        test ("get the correct compare link when pinning forward (current)") {
           val summaries = applicationService.getArtifactSummariesFor(application1)
           expectThat(summaries.first())
             .withVersionInEnvironment(version1, "staging") {
               compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=fnord-1.0.1-h1.b1b1b1b&sourceBranch=pinnedVersion")
+            }
+        }
+
+        test ("get the correct compare link when pinning forward (pending)") {
+          val summaries = applicationService.getArtifactSummariesFor(application1)
+          expectThat(summaries.first())
+            .withVersionInEnvironment(version4, "test") {
+              compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=pinnedVersion&sourceBranch=fnord-1.0.4-h4.e4e4e4e")
+            }
+        }
+
+        test ("get the correct compare link when pinning forward (prev)") {
+          val summaries = applicationService.getArtifactSummariesFor(application1)
+          expectThat(summaries.first())
+            .withVersionInEnvironment(version1, "test") {
+              compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=fnord-1.0.1-h1.b1b1b1b&sourceBranch=fnord-1.0.2-h2.c2c2c2c")
             }
         }
 
@@ -373,6 +391,21 @@ class ComparableLinksTests : JUnit5Minutests {
             .withVersionInEnvironment(version2, "test") {
               compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=pinnedVersion&sourceBranch=fnord-1.0.2-h2.c2c2c2c")
             }
+        }
+
+        context ("pin version == current version") {
+          before {
+            every {
+              repository.getPinnedVersion(singleArtifactDeliveryConfig, "staging", releaseArtifact.reference)
+            } returns version1
+          }
+          test("generate the right compare link") {
+            val summaries = applicationService.getArtifactSummariesFor(application1)
+            expectThat(summaries.first())
+              .withVersionInEnvironment(version1, "staging") {
+                compareLink.isEqualTo("https://stash/projects/spkr/repos/keel/compare/commits?targetBranch=staging:fnord-1.0.0-h0.a0a0a0a&sourceBranch=fnord-1.0.1-h1.b1b1b1b")
+              }
+          }
         }
       }
     }
