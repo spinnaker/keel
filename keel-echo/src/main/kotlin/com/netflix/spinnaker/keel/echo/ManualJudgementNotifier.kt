@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.event.EventListener
+import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 import java.lang.Exception
 
@@ -32,6 +33,7 @@ class ManualJudgementNotifier(
   private val echoService: EchoService,
   private val repository: KeelRepository,
   private val scmInfo: ScmInfo,
+  private val springEnv: Environment,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) {
   companion object {
@@ -40,6 +42,9 @@ class ManualJudgementNotifier(
   }
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
+  private val seeChangesButton: Boolean
+    get() = springEnv.getProperty("keel.echo.seeChangesButton", Boolean::class.java, false)
 
   @EventListener(ConstraintStateChanged::class)
   fun constraintStateChanged(event: ConstraintStateChanged) {
@@ -74,6 +79,7 @@ class ManualJudgementNotifier(
     val currentArtifactInEnvironment = repository.getArtifactVersionByPromotionStatus(deliveryConfig, currentState.environmentName , artifact, PromotionStatus.CURRENT.name)
 
     var details = ""
+    var compareLink = ""
 
     if (gitMetadata != null) {
       if (!gitMetadata.commitInfo?.message.isNullOrEmpty()) {
@@ -82,10 +88,7 @@ class ManualJudgementNotifier(
 
       if (currentArtifactInEnvironment?.gitMetadata != null) {
         try {
-          val compareLink = generateCompareLink(scmInfo, currentDeployableArtifact, currentArtifactInEnvironment, artifact)
-          if (compareLink != null) {
-            details += "*See full diff:* <${compareLink}>\n>"
-          }
+          compareLink += generateCompareLink(scmInfo, currentDeployableArtifact, currentArtifactInEnvironment, artifact)
         } catch (ex: Exception) {
           log.warn("Can't create comparable link for artifact ${currentArtifactInEnvironment.version}", ex)
         }
@@ -123,6 +126,28 @@ class ManualJudgementNotifier(
     if (!keelNotificationConfig.enabled) {
       details += "<br/>Please consult the <$MANUAL_JUDGEMENT_DOC_URL|documentation> on how to approve the deployment."
     }
+    val interactiveActions = mutableListOf(
+      EchoNotification.ButtonAction(
+        name = "manual-judgement",
+        label = "Approve",
+        value = ConstraintStatus.OVERRIDE_PASS.name
+      ),
+      EchoNotification.ButtonAction(
+        name = "manual-judgement",
+        label = "Reject",
+        value = ConstraintStatus.OVERRIDE_FAIL.name
+      ),
+    )
+
+    //if we have something to compare against, and the seeChangesButton FP is true, add this button to notification
+    if (compareLink != "" && seeChangesButton) {
+      interactiveActions.add(
+        EchoNotification.ButtonAction(
+          name = "manual-judgement",
+          label = "See changes",
+          value = compareLink
+      ))
+    }
 
     return EchoNotification(
       notificationType = EchoNotification.Type.valueOf(config.type.name.toUpperCase()),
@@ -141,18 +166,7 @@ class ManualJudgementNotifier(
         EchoNotification.InteractiveActions(
           callbackServiceId = "keel",
           callbackMessageId = currentState.uid?.toString() ?: error("ConstraintState.uid not present"),
-          actions = listOf(
-            EchoNotification.ButtonAction(
-              name = "manual-judgement",
-              label = "Approve",
-              value = ConstraintStatus.OVERRIDE_PASS.name
-            ),
-            EchoNotification.ButtonAction(
-              name = "manual-judgement",
-              label = "Reject",
-              value = ConstraintStatus.OVERRIDE_FAIL.name
-            )
-          ),
+          actions = interactiveActions,
           color = "#fcba03"
         )
       } else {

@@ -39,7 +39,6 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isNull
-import strikt.assertions.isTrue
 
 internal class ManualJudgementNotifierTests : JUnit5Minutests {
 
@@ -64,7 +63,9 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         mapOf("stash" to "https://stash")
       }
     }
-    val subject = ManualJudgementNotifier(keelNotificationConfig, echoService, repository, scmInfo, baseUrl)
+
+    val springEnv: org.springframework.core.env.Environment = mockk(relaxed = true)
+    val subject = ManualJudgementNotifier(keelNotificationConfig, echoService, repository, scmInfo, springEnv, baseUrl)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -121,6 +122,10 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
         every {
           repository.getArtifactVersion(artifact, "v1.0.0", any())
         } returns null
+
+        every {
+          springEnv.getProperty("keel.echo.seeChangesButton", Boolean::class.java, false)
+        } returns false
       }
 
       test("throws an exception if the constraint state uid is not present") {
@@ -271,9 +276,55 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
               commitInfo = Commit(message = "A test commit #2", link = "stash", sha = "v2.0.0")
             )
           )
+
+          every {
+            repository.getArtifactVersionByPromotionStatus(any(), any(), artifact, PromotionStatus.CURRENT.name)
+          } returns PublishedArtifact(
+            name = "mypkg",
+            type = DEBIAN,
+            version = "v1.0.0",
+            gitMetadata = GitMetadata(
+              commit = "e5f6g7h",
+              author = "joesmith",
+              project = "myproj",
+              branch = "master",
+              repo = Repo("myapp"),
+              commitInfo = Commit(message = "A test commit", link = "stash", sha = "v1.0.0")
+            )
+          )
+          every {
+            springEnv.getProperty("keel.echo.seeChangesButton", Boolean::class.java, false)
+          } returns true
         }
 
-        test("when there is a single artifact in the environment, compare link is unavailable") {
+        test("create the right comparable link") {
+          val compareLink = "https://stash/projects/myproj/repos/myapp/compare/commits?targetBranch=v1.0.0&sourceBranch=v2.0.0"
+
+          val expectedInteractiveActions = with(event) {
+            EchoNotification.InteractiveActions(
+              callbackServiceId = "keel",
+              callbackMessageId = currentState.uid!!.toString(),
+              actions = listOf(
+                EchoNotification.ButtonAction(
+                  name = "manual-judgement",
+                  label = "Approve",
+                  value = ConstraintStatus.OVERRIDE_PASS.name
+                ),
+                EchoNotification.ButtonAction(
+                  name = "manual-judgement",
+                  label = "Reject",
+                  value = ConstraintStatus.OVERRIDE_FAIL.name
+                ),
+                EchoNotification.ButtonAction(
+                  name = "manual-judgement",
+                  label = "See changes",
+                  value = compareLink
+                )
+              ),
+              color = "#fcba03"
+            )
+          }
+
           subject.constraintStateChanged(event)
 
           val notification = slot<EchoNotification>()
@@ -282,42 +333,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
             echoService.sendNotification(capture(notification))
           }
 
-          val notificationBody = notification.captured.additionalContext!!["body"].toString()
-          expectThat(notificationBody.contains("*See full diff:*"))
-            .isTrue()
-        }
-
-        context("more artifact in an environment") {
-          before {
-            every {
-              repository.getArtifactVersionByPromotionStatus(any(), any(), artifact, PromotionStatus.CURRENT.name)
-            } returns PublishedArtifact(
-              name = "mypkg",
-              type = DEBIAN,
-              version = "v1.0.0",
-              gitMetadata = GitMetadata(
-                commit = "e5f6g7h",
-                author = "joesmith",
-                project = "myproj",
-                branch = "master",
-                repo = Repo("myapp"),
-                commitInfo = Commit(message = "A test commit", link = "stash", sha = "v1.0.0")
-              )
-            )
-          }
-          test("create the right comparable link") {
-            subject.constraintStateChanged(event)
-
-            val notification = slot<EchoNotification>()
-
-            coVerify {
-              echoService.sendNotification(capture(notification))
-            }
-
-            val notificationBody = notification.captured.additionalContext!!["body"].toString()
-            expectThat(notificationBody)
-              .contains("*See full diff:* <https://stash/projects/myproj/repos/myapp/compare/commits?targetBranch=v1.0.0&sourceBranch=v2.0.0>")
-          }
+          expectThat(notification.captured.interactiveActions).isEqualTo(expectedInteractiveActions)
         }
       }
     }
