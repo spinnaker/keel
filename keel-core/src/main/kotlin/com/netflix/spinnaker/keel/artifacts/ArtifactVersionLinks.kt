@@ -25,7 +25,7 @@ fun generateCompareLink(scmInfo: ScmInfo, version1: PublishedArtifact?, version2
 //Generating a SCM compare link between source (new version) and target (old version) versions (the order matter!)
 private fun generateCompareLink(scmInfo: ScmInfo, newerGitMetadata: GitMetadata?, olderGitMetadata: GitMetadata?): String? {
   val baseScmUrl = newerGitMetadata?.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
-  return if (baseScmUrl != null && olderGitMetadata != null) {
+  return if (baseScmUrl != null && olderGitMetadata != null && !(olderGitMetadata.commitInfo?.sha.isNullOrEmpty())) {
     "$baseScmUrl/projects/${newerGitMetadata.project}/repos/${newerGitMetadata.repo?.name}/compare/commits?" +
       "targetBranch=${olderGitMetadata.commitInfo?.sha}&sourceBranch=${newerGitMetadata.commitInfo?.sha}"
   } else {

@@ -284,7 +284,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
           }
 
           val notificationBody = notification.captured.additionalContext!!["body"].toString()
-          expectThat(notificationBody.contains("*See full diff:*"))
+          expectThat(notificationBody.contains("*See changes*"))
             .isFalse()
         }
 
