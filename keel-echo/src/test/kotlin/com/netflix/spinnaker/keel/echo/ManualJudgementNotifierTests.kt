@@ -317,7 +317,7 @@ internal class ManualJudgementNotifierTests : JUnit5Minutests {
 
             val notificationBody = notification.captured.additionalContext!!["body"].toString()
             expectThat(notificationBody)
-              .contains("*See changes:* <https://stash/projects/myproj/repos/myapp/compare/commits?targetBranch=v1.0.0&sourceBranch=v2.0.0|Click for changes>")
+              .contains("<https://stash/projects/myproj/repos/myapp/compare/commits?targetBranch=v1.0.0&sourceBranch=v2.0.0|*See changes*>")
           }
         }
       }
