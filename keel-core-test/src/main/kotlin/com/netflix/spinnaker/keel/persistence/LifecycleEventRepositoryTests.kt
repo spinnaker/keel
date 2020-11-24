@@ -74,8 +74,8 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
         expect {
           that(steps.size).isEqualTo(1)
           that(steps.first().status).isEqualTo(NOT_STARTED)
-          that(steps.first().startTime).isNotNull()
-          that(steps.first().endTime).isNull()
+          that(steps.first().startedAt).isNotNull()
+          that(steps.first().completedAt).isNull()
         }
       }
 
@@ -93,8 +93,8 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
             that(steps.first().status).isEqualTo(SUCCEEDED)
             that(steps.first().text).isEqualTo("Bake finished! Here's your cake")
             that(steps.first().link).isEqualTo("www.bake.com/$version")
-            that(steps.first().startTime).isNotNull()
-            that(steps.first().endTime).isNotNull()
+            that(steps.first().startedAt).isNotNull()
+            that(steps.first().completedAt).isNotNull()
           }
         }
       }

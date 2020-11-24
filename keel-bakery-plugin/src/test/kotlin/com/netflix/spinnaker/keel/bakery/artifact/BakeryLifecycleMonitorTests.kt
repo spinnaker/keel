@@ -31,7 +31,7 @@ import strikt.assertions.isTrue
 import java.lang.RuntimeException
 import java.time.Instant
 
-class BakeryLifecycleMontiorTests : JUnit5Minutests {
+class BakeryLifecycleMonitorTests : JUnit5Minutests {
 
   internal class Fixture {
     val monitorRepository: LifecycleMonitorRepository = mockk(relaxUnitFun = true)
@@ -64,13 +64,8 @@ class BakeryLifecycleMontiorTests : JUnit5Minutests {
   fun tests() = rootContext<Fixture> {
     fixture { Fixture() }
 
-    context("type handled"){
-      test("is bake") {
-        expectThat(subject.typeHandled()).isEqualTo(BAKE)
-      }
-      test("event handled") {
-        expectThat(subject.handles(event)).isTrue()
-      }
+    test("handles bakes") {
+      expectThat(subject.handles(BAKE)).isTrue()
     }
 
     context("updating status") {

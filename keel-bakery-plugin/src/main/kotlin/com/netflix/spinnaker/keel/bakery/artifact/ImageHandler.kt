@@ -15,11 +15,8 @@ import com.netflix.spinnaker.keel.clouddriver.model.Image
 import com.netflix.spinnaker.keel.core.NoKnownArtifactVersions
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope.PRE_DEPLOYMENT
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BAKE
 import com.netflix.spinnaker.keel.model.Job
 import com.netflix.spinnaker.keel.parseAppVersion

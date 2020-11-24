@@ -2,9 +2,9 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BAKE
 import com.netflix.spinnaker.keel.lifecycle.LifecycleMonitorRepository
 import com.netflix.spinnaker.keel.lifecycle.MonitoredTask
@@ -16,15 +16,18 @@ import strikt.assertions.isEqualTo
 import java.time.Clock
 import java.time.Duration
 
-abstract class LifecycleMonitorRepositoryTests<T : LifecycleMonitorRepository> : JUnit5Minutests {
-  abstract fun factory(clock: Clock): T
+abstract class LifecycleMonitorRepositoryTests<T : LifecycleMonitorRepository, EVENT : LifecycleEventRepository> : JUnit5Minutests {
+  abstract fun monitorFactory(clock: Clock): T
+  abstract fun eventFactory(clock: Clock): EVENT
 
   open fun T.flush() {}
+  open fun EVENT.flush() {}
 
   val clock = MutableClock()
 
-  data class Fixture<T : LifecycleMonitorRepository>(
-    val subject: T
+  data class Fixture<T : LifecycleMonitorRepository, EVENT : LifecycleEventRepository>(
+    val subject: T,
+    val eventRepository: EVENT
   )
   val artifact = DockerArtifact(name = "my-artifact", deliveryConfigName = "my-config")
   val version = "123.4"
@@ -40,26 +43,30 @@ abstract class LifecycleMonitorRepositoryTests<T : LifecycleMonitorRepository> :
   )
   val task = MonitoredTask(type = BAKE, link = "www.bake.com/$version", triggeringEvent = event)
 
-  fun tests() = rootContext<Fixture<T>> {
+  fun tests() = rootContext<Fixture<T, EVENT>> {
     fixture {
-      Fixture(subject = factory(clock))
+      Fixture(subject = monitorFactory(clock), eventRepository = eventFactory(clock))
     }
 
-    after { subject.flush() }
+    after {
+      subject.flush()
+      eventRepository.flush()
+    }
 
     context("adding task") {
       before {
+        eventRepository.saveEvent(event)
         subject.save(task)
       }
       test("immediately due for check") {
-        val tasks = subject.tasksDueForCheck(BAKE, Duration.ofMinutes(1), 1)
+        val tasks = subject.tasksDueForCheck(Duration.ofMinutes(1), 1)
         expectThat(tasks.size).isEqualTo(1)
       }
 
       test("due only once") {
-        var tasks = subject.tasksDueForCheck(BAKE, Duration.ofMinutes(1), 1)
+        var tasks = subject.tasksDueForCheck(Duration.ofMinutes(1), 1)
         expectThat(tasks.size).isEqualTo(1)
-        tasks = subject.tasksDueForCheck(BAKE, Duration.ofMinutes(1), 1)
+        tasks = subject.tasksDueForCheck(Duration.ofMinutes(1), 1)
         expectThat(tasks.size).isEqualTo(0)
       }
 

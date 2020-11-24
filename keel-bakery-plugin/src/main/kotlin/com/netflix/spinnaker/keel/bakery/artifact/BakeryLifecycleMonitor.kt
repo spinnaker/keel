@@ -8,21 +8,28 @@ import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BAKE
 import com.netflix.spinnaker.keel.lifecycle.LifecycleMonitor
 import com.netflix.spinnaker.keel.lifecycle.LifecycleMonitorRepository
+import com.netflix.spinnaker.keel.lifecycle.LinkNotFound
 import com.netflix.spinnaker.keel.lifecycle.MonitoredTask
 import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.BUFFERED
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.RUNNING
 import com.netflix.spinnaker.keel.orca.OrcaService
-import io.github.resilience4j.retry.Retry
-import io.github.resilience4j.retry.RetryConfig
-import io.vavr.control.Try
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
-import java.time.Duration
 
+/**
+ * A monitor for bake tasks.
+ *
+ * This class expects the link from [MonitoredTask] to be an orca task id.
+ * It uses this to fetch the execution status for that task.
+ * It emits [LifecycleEvent]s based on the execution status.
+ *
+ * When the task is complete [SUCCEEDED, FAILED], it removes the [MonitoredTask]
+ *   from the [LifecycleMonitorRepository].
+ */
 @Component
 @EnableConfigurationProperties(LifecycleConfig::class)
 class BakeryLifecycleMonitor(
@@ -34,14 +41,12 @@ class BakeryLifecycleMonitor(
 ): LifecycleMonitor(monitorRepository, publisher, lifecycleConfig) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun handles(event: LifecycleEvent): Boolean =
-    event.type == BAKE
-
-  override fun typeHandled(): LifecycleEventType = BAKE
+  override fun handles(type: LifecycleEventType): Boolean =
+    type == BAKE
 
   override suspend fun monitor(task: MonitoredTask) {
     kotlin.runCatching {
-       orcaService.getOrchestrationExecution(task.link, DEFAULT_SERVICE_ACCOUNT)
+      orcaService.getOrchestrationExecution(task.link, DEFAULT_SERVICE_ACCOUNT)
     }
       .onSuccess { execution ->
         when {

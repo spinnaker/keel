@@ -36,83 +36,14 @@ abstract class LifecycleMonitor(
   open val monitorRepository: LifecycleMonitorRepository,
   open val publisher: ApplicationEventPublisher,
   open val lifecycleConfig: LifecycleConfig
-) : CoroutineScope {
-  override val coroutineContext: CoroutineContext = Dispatchers.IO
-
-  private val enabled = AtomicBoolean(false)
-
-  @EventListener(ApplicationUp::class)
-  fun onApplicationUp() {
-    log.info("Application up, enabling scheduled lifecycle monitoring")
-    enabled.set(true)
-  }
-
-  @EventListener(ApplicationDown::class)
-  fun onApplicationDown() {
-    log.info("Application down, disabling scheduled lifecycle monitoring")
-    enabled.set(false)
-  }
+) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   /**
-   * @return true if this monitor can handle the event
+   * @return true if this monitor can handle the event type
    */
-  abstract fun handles(event: LifecycleEvent): Boolean
-
-  /**
-   * @return the type of event this class can monitor
-   */
-  abstract fun typeHandled(): LifecycleEventType
-
-  /**
-   * Listens for a not started event that a subclass can handle, and saves that into
-   * the database for monitoring.
-   */
-  @EventListener(LifecycleEvent::class)
-  fun onLifecycleEvent(event: LifecycleEvent) {
-    if (event.status == NOT_STARTED && handles(event) && event.link != null) {
-      log.debug("${this.javaClass.simpleName} saving monitor event $event")
-      monitorRepository.save(MonitoredTask(event, event.link))
-    }
-  }
-
-  @Scheduled(fixedDelayString = "\${keel.lifecycle-monitor.frequency:PT1S}")
-  fun invokeMonitoring() {
-    if (enabled.get()) {
-
-      val job: Job = launch {
-        supervisorScope {
-          runCatching {
-            monitorRepository
-              .tasksDueForCheck(typeHandled(), lifecycleConfig.minAgeDuration, lifecycleConfig.batchSize)
-          }
-            .onFailure {
-              publisher.publishEvent(LifecycleMonitorLoadFailed(it))
-            }
-            .onSuccess { tasks ->
-              tasks.forEach {task ->
-                try {
-                  /**
-                   * Allow individual monitoring to timeout but catch the `CancellationException`
-                   * to prevent the cancellation of all coroutines under [job]
-                   */
-                  withTimeout(lifecycleConfig.timeoutDuration.toMillis()) {
-                    launch {
-                      monitor(task)
-                    }
-                  }
-                } catch (e: TimeoutCancellationException) {
-                  log.error("Timed out monitoring task $task", e)
-                  publisher.publishEvent(LifecycleMonitorTimedOut(task.type, task.link, task.triggeringEvent.artifactRef))
-                }
-              }
-            }
-        }
-      }
-      runBlocking { job.join() }
-    }
-  }
+  abstract fun handles(type: LifecycleEventType): Boolean
 
   /**
    * Checks the status of the task, and emits Lifecycle event

@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spectator.api.Registry
+import com.netflix.spectator.api.Spectator
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.events.PersistentEvent.Companion.clock
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
@@ -143,8 +145,9 @@ class SqlConfiguration {
     jooq: DSLContext,
     clock: Clock,
     properties: SqlProperties,
-    objectMapper: ObjectMapper
-  ) = SqlLifecycleEventRepository(clock, jooq, SqlRetry(sqlRetryProperties), objectMapper)
+    objectMapper: ObjectMapper,
+    spectator: Registry
+  ) = SqlLifecycleEventRepository(clock, jooq, SqlRetry(sqlRetryProperties), objectMapper, spectator)
 
   @Bean
   fun lifecycleMonitorRepository(

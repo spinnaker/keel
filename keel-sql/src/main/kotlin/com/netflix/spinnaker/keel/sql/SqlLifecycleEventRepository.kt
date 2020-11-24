@@ -1,97 +1,125 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.netflix.spectator.api.BasicTag
+import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleStep
 import com.netflix.spinnaker.keel.lifecycle.isEndingStatus
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LIFECYCLE
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LIFECYCLE_EVENT
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import java.time.Clock
+import java.time.Duration
 import java.time.ZoneOffset.UTC
-import java.util.Deque
-import java.util.LinkedList
 
 class SqlLifecycleEventRepository(
   private val clock: Clock,
   private val jooq: DSLContext,
   private val sqlRetry: SqlRetry,
-  private val objectMapper: ObjectMapper
+  private val objectMapper: ObjectMapper,
+  private val spectator: Registry
 ) : LifecycleEventRepository {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   override fun saveEvent(event: LifecycleEvent) {
     sqlRetry.withRetry(WRITE) {
-      val id = event.id ?: ULID().nextULID(clock.millis()) //random if not given
-      jooq.insertInto(LIFECYCLE)
-        .set(LIFECYCLE.UID, ULID().nextULID(clock.millis()))
-        .set(LIFECYCLE.SCOPE, event.scope.name)
-        .set(LIFECYCLE.REF, event.artifactRef)
-        .set(LIFECYCLE.ARTIFACT_VERSION, event.artifactVersion)
-        .set(LIFECYCLE.TYPE, event.type.name)
-        .set(LIFECYCLE.ID, id)
-        .set(LIFECYCLE.STATUS, event.status.name)
-        .set(LIFECYCLE.TIMESTAMP, clock.timestamp())
-        .set(LIFECYCLE.JSON, objectMapper.writeValueAsString(event))
+      jooq.insertInto(LIFECYCLE_EVENT)
+        .set(LIFECYCLE_EVENT.UID, ULID().nextULID(clock.millis()))
+        .set(LIFECYCLE_EVENT.SCOPE, event.scope.name)
+        .set(LIFECYCLE_EVENT.REF, event.artifactRef)
+        .set(LIFECYCLE_EVENT.ARTIFACT_VERSION, event.artifactVersion)
+        .set(LIFECYCLE_EVENT.TYPE, event.type.name)
+        .set(LIFECYCLE_EVENT.ID, event.id)
+        .set(LIFECYCLE_EVENT.STATUS, event.status.name)
+        .set(LIFECYCLE_EVENT.TIMESTAMP, clock.timestamp())
+        .set(LIFECYCLE_EVENT.JSON, objectMapper.writeValueAsString(event))
         .execute()
     }
   }
 
   override fun getEvents(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleEvent> {
     return sqlRetry.withRetry(READ) {
-      jooq.select(LIFECYCLE.JSON, LIFECYCLE.TIMESTAMP)
-        .from(LIFECYCLE)
-        .where(LIFECYCLE.REF.eq(artifact.toLifecycleRef()))
-        .and(LIFECYCLE.ARTIFACT_VERSION.eq(artifactVersion))
-        .orderBy(LIFECYCLE.TIMESTAMP.asc()) // oldest first
+      jooq.select(LIFECYCLE_EVENT.JSON, LIFECYCLE_EVENT.TIMESTAMP)
+        .from(LIFECYCLE_EVENT)
+        .where(LIFECYCLE_EVENT.REF.eq(artifact.toLifecycleRef()))
+        .and(LIFECYCLE_EVENT.ARTIFACT_VERSION.eq(artifactVersion))
+        .orderBy(LIFECYCLE_EVENT.TIMESTAMP.asc()) // oldest first
         .fetch()
         .map { (json, timestamp) ->
-          val event = objectMapper.readValue<LifecycleEvent>(json)
-          event.copy(timestamp = timestamp.toInstant(UTC))
-        }
+          try {
+            val event = objectMapper.readValue<LifecycleEvent>(json)
+            event.copy(timestamp = timestamp.toInstant(UTC))
+          } catch (e: JsonMappingException) {
+            log.error("Exception encountered parsing lifecycle event $json", e)
+            // returning null here so bad serialization doesn't break the whole view,
+            // it just removes the events
+            null
+          }
+        }.filterNotNull()
     }
   }
 
   /**
-   * Sorts events into chronological groups by id then time.
-   * Batches each group of id up into a summary by 'replaying' each event.
+   * For each id, look at the first and last event to create a current status
+   *  with a start time and end time (end time is added only if the step is "done".
    *
    * @return a list of steps sorted in ascending order (oldest start time first)
+   *
+   * This function is not optimized for reads, it recalculates the summaries on the fly.
+   * To optimize, we could change how we write events so that we don't write as many duplicate
+   * events while the event is being monitored (RUNNING status). We also store this record instead
+   * of the list of individual events. We could also cache finished steps.
    */
   override fun getSteps(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleStep> {
+    val startTime = clock.instant()
     val events = getEvents(artifact, artifactVersion)
-      .sortedBy { it.id }
-    val steps: Deque<LifecycleStep> = LinkedList()
+    val steps: MutableList<LifecycleStep> = mutableListOf()
 
-    events.forEach { event ->
-      var lastStep = steps.pollFirst()
-      if (sameStep(event, lastStep)) {
-        lastStep = lastStep.copy(status = event.status)
-        if (event.text != null) {
-          lastStep = lastStep.copy(text = event.text)
-        }
-        if (event.link != null) {
-          lastStep = lastStep.copy(link = event.link)
-        }
-        if (event.status.isEndingStatus()) {
-          lastStep = lastStep.copy(endTime = event.timestamp)
-        }
-        steps.push(lastStep)
-      } else {
-        if (lastStep != null) {
-          steps.push(lastStep)
-        }
-        val step = event.toStep()
-        steps.push(step)
-      }
+    val firstEventById = events.filter { it.status == NOT_STARTED }.associateBy { it.id }
+    val lastEventById = events.associateBy { it.id }
+
+    if (firstEventById.size != lastEventById.size) {
+      log.error("Missing a NOT_STARTED event for artifact ${artifact.toLifecycleRef()} with version $artifactVersion. " +
+        "This may lead to some wonky steps or no monitoring. " +
+        "firstEvents: $firstEventById, lastEvents: $lastEventById")
     }
 
-    return steps.toList().sortedBy { it.startTime }
+    firstEventById.forEach { (id, event) ->
+      var step = event.toStep()
+      val lastEvent = lastEventById[id]
+      if (lastEvent != null) {
+        if (lastEvent.status.isEndingStatus()) {
+          step = step.copy(completedAt = lastEvent.timestamp)
+        }
+        lastEvent.text?.let {
+          step = step.copy(text = it)
+        }
+        lastEvent.link?.let {
+          step = step.copy(link = it)
+        }
+        step = step.copy(status = lastEvent.status)
+      } else {
+        log.error("Somehow we have a NOT_STARTED event but no last event for $event. Not sure how this could happen.")
+      }
+      steps.add(step)
+    }
+
+    spectator.timer(
+      LIFECYCLE_STEP_CALCULATION_DURATION_ID,
+      listOf(BasicTag("artifactRef", artifact.toLifecycleRef()))
+    ).record(Duration.between(startTime, clock.instant()))
+
+    return steps.toList().sortedBy { it.startedAt }
   }
 
-  private fun sameStep(event: LifecycleEvent, step: LifecycleStep?): Boolean =
-    step != null && event.id == step.id && event.scope == step.scope && event.type == step.type
+  private val LIFECYCLE_STEP_CALCULATION_DURATION_ID = "keel.lifecycle.step.calculation.duration"
 }

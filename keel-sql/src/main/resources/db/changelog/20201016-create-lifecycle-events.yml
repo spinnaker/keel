@@ -4,7 +4,7 @@ databaseChangeLog:
       author: emjburns
       changes:
         - createTable:
-            tableName: lifecycle
+            tableName: lifecycle_event
             columns:
               - column:
                   name: uid
@@ -62,24 +62,12 @@ databaseChangeLog:
       changes:
         - createIndex:
             indexName: lifecycle_ref_version_idx
-            tableName: lifecycle
+            tableName: lifecycle_event
             columns:
               - column:
                   name: ref
               - column:
                   name: artifact_version
-        - createIndex:
-            indexName: lifecycle_scope_ref_versions_id_idx
-            tableName: lifecycle
-            columns:
-              - column:
-                  name: scope
-              - column:
-                  name: ref
-              - column:
-                  name: artifact_version
-              - column:
-                  name: id
   - changeSet:
       id: create-lifecycle-monitor
       author: emjburns
@@ -109,9 +97,11 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: triggering_event
-                  type: json
+                  name: triggering_event_uid
+                  type: char(26)
                   constraints:
+                    foreignKeyName: fk_triggering_event_uid
+                    references: lifecycle_event(uid)
                     nullable: false
               - column:
                   name: ignore
@@ -133,14 +123,6 @@ databaseChangeLog:
       id: add-index-to-lifecycle-monitor
       author: emjburns
       changes:
-        - createIndex:
-            indexName: lifecyclemonitor_type_link_idx
-            tableName: lifecycle_monitor
-            columns:
-              - column:
-                  name: type
-              - column:
-                  name: link
         - createIndex:
             indexName: lifecycle_monitor_type_last_checked_idx
             tableName: lifecycle_monitor
