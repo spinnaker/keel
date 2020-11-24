@@ -2,9 +2,12 @@ package com.netflix.spinnaker.keel.echo
 
 import com.netflix.spinnaker.config.KeelNotificationConfig
 import com.netflix.spinnaker.keel.api.NotificationConfig
+import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.events.ConstraintStateChanged
+import com.netflix.spinnaker.keel.artifacts.generateCompareLink
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
+import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -15,6 +18,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
+import java.lang.Exception
 
 @Component
 @Configuration
@@ -27,6 +31,7 @@ class ManualJudgementNotifier(
   private val keelNotificationConfig: KeelNotificationConfig,
   private val echoService: EchoService,
   private val repository: KeelRepository,
+  private val scmInfo: ScmInfo,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) {
   companion object {
@@ -63,14 +68,27 @@ class ManualJudgementNotifier(
     val deliveryConfig = repository.getDeliveryConfig(currentState.deliveryConfigName)
     val artifactUrl = "$spinnakerBaseUrl/#/applications/${deliveryConfig.application}/environments/${artifact.reference}/${currentState.artifactVersion}"
     val normalizedVersion = currentState.artifactVersion.removePrefix("${artifact.name}-")
-    val gitMetadata = repository.getArtifactVersion(artifact, currentState.artifactVersion, null)
+    val currentDeployableArtifact = repository.getArtifactVersion(artifact, currentState.artifactVersion, null)
+    val gitMetadata = currentDeployableArtifact
       ?.gitMetadata
+    val currentArtifactInEnvironment = repository.getArtifactVersionByPromotionStatus(deliveryConfig, currentState.environmentName , artifact, PromotionStatus.CURRENT.name)
 
     var details = ""
 
-    if (gitMetadata!= null) {
+    if (gitMetadata != null) {
       if (!gitMetadata.commitInfo?.message.isNullOrEmpty()) {
         details += "*Message:* ${gitMetadata.commitInfo!!.message}\n"
+      }
+
+      if (currentArtifactInEnvironment?.gitMetadata != null) {
+        try {
+          val compareLink = generateCompareLink(scmInfo, currentDeployableArtifact, currentArtifactInEnvironment, artifact)
+          if (compareLink != null) {
+            details += "*See full diff:* <${compareLink}>\n>"
+          }
+        } catch (ex: Exception) {
+          log.warn("Can't create comparable link for artifact ${currentArtifactInEnvironment.version}", ex)
+        }
       }
 
       if (gitMetadata.project != null && gitMetadata.repo?.name != null) {
