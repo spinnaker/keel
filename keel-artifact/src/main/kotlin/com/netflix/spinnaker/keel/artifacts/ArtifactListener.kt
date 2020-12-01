@@ -89,6 +89,7 @@ class ArtifactListener(
         val data: MutableMap<String,String?> = mutableMapOf()
         data["buildNumber"] = artifact.metadata["buildNumber"]?.toString()
         data["commitId"] = artifact.metadata["commitId"]?.toString()
+        data["fallbackLink"] = buildMetadata.job?.link
 
         repository
           .getAllArtifacts(artifact.artifactType, artifact.name)
@@ -106,7 +107,8 @@ class ArtifactListener(
                 status = NOT_STARTED,
                 text = "Monitoring build for ${artifact.version}",
                 link = buildMetadata.uid,
-                data = data
+                data = data,
+                timestamp = buildMetadata.getStartedAtInstant()
               ))
             }
           }
