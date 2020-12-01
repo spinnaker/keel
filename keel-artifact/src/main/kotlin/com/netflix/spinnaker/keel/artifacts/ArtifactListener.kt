@@ -12,6 +12,10 @@ import com.netflix.spinnaker.keel.api.events.ArtifactSyncEvent
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope.PRE_DEPLOYMENT
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BUILD
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
 import kotlinx.coroutines.launch
@@ -55,12 +59,10 @@ class ArtifactListener(
         if (repository.isRegistered(artifact.name, artifact.artifactType)) {
           val artifactSupplier = artifactSuppliers.supporting(artifact.artifactType)
           if (artifactSupplier.shouldProcessArtifact(artifact)) {
-            val enrichedArtifact = artifactSupplier.addMetadata(artifact.normalized())
-
             log.info("Registering version {} (status={}) of {} artifact {}",
               artifact.version, artifact.status, artifact.type, artifact.name)
 
-            repository.storeArtifactVersion(enrichedArtifact)
+            enrichAndStore(artifact.normalized(), artifactSupplier)
               .also { wasAdded ->
                 if (wasAdded) {
                   publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
@@ -72,6 +74,42 @@ class ArtifactListener(
         } else {
           log.debug("Artifact $artifact is not registered. Ignoring new artifact version.")
         }
+      }
+  }
+
+  /**
+   * Finds the delivery configs that are using an artifact,
+   * and publishes a build lifecycle event for them.
+   */
+  fun createBuildLifecycleEvent(artifact: PublishedArtifact) {
+    log.debug("Publishing build lifecycle event for artifact $artifact")
+    artifact.buildMetadata
+      ?.let { buildMetadata ->
+
+        val data: MutableMap<String,String?> = mutableMapOf()
+        data["buildNumber"] = artifact.metadata["buildNumber"]?.toString()
+        data["commitId"] = artifact.metadata["commitId"]?.toString()
+
+        repository
+          .getAllArtifacts(artifact.artifactType, artifact.name)
+          .forEach { deliveryArtifact ->
+            deliveryArtifact.deliveryConfigName?.let { configName ->
+
+              data["application"] = repository.getDeliveryConfig(configName).application
+
+              publisher.publishEvent(LifecycleEvent(
+                scope = PRE_DEPLOYMENT,
+                artifactRef = deliveryArtifact.toLifecycleRef(),
+                artifactVersion = artifact.version,
+                type = BUILD,
+                id = "build-${artifact.version}",
+                status = NOT_STARTED,
+                text = "Monitoring build for ${artifact.version}",
+                link = buildMetadata.uid,
+                data = data
+              ))
+            }
+          }
       }
   }
 
@@ -92,8 +130,7 @@ class ArtifactListener(
 
       if (latestArtifact != null) {
         log.debug("Storing latest version {} (status={}) for registered artifact {}", latestArtifact.version, latestArtifact.status, artifact)
-        val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
-        repository.storeArtifactVersion(enrichedArtifact)
+        enrichAndStore(latestArtifact.normalized(), artifactSupplier)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
       }
@@ -137,8 +174,7 @@ class ArtifactListener(
 
               if (hasNew) {
                 log.debug("$artifact has a missing version ${latestArtifact.version}, persisting.")
-                val enrichedArtifact = artifactSupplier.addMetadata(latestArtifact.normalized())
-                repository.storeArtifactVersion(enrichedArtifact)
+                enrichAndStore(latestArtifact.normalized(), artifactSupplier)
               } else {
                 log.debug("No new versions to persist for $artifact")
               }
@@ -147,6 +183,12 @@ class ArtifactListener(
         }
       }
     }
+  }
+
+  private fun enrichAndStore(artifact: PublishedArtifact, supplier: ArtifactSupplier<*,*>): Boolean {
+    val enrichedArtifact = supplier.addMetadata(artifact)
+    createBuildLifecycleEvent(enrichedArtifact)
+    return repository.storeArtifactVersion(enrichedArtifact)
   }
 
   private fun getLatestStoredVersion(artifact: DeliveryArtifact): PublishedArtifact? =
