@@ -167,6 +167,45 @@ class CheckScheduler(
     }
   }
 
+  @Scheduled(fixedDelayString = "\${keel.environment-verification.frequency:PT1S}")
+  fun verifyEnvironments() {
+    if (enabled.get()) {
+      log.debug("Starting scheduled environment verification…")
+      publisher.publishEvent(ScheduledEnvironmentVerificationStarting)
+
+      val job = launch {
+        supervisorScope {
+          repository
+            .deliveryConfigsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+            .forEach {
+              try {
+                /**
+                 * Sets the timeout to (checkTimeout * environmentCount), since a delivery-config's
+                 * environments are checked sequentially within one coroutine job.
+                 *
+                 * TODO: consider refactoring environmentPromotionChecker so that it can be called for
+                 *  individual environments, allowing fairer timeouts.
+                 */
+                withTimeout(checkTimeout.toMillis() * max(it.environments.size, 1)) {
+                  launch { environmentPromotionChecker.checkEnvironments(it) }
+                }
+              } catch (e: TimeoutCancellationException) {
+                log.error("Timed out checking environments for ${it.application}/${it.name}", e)
+                publisher.publishEvent(EnvironmentsCheckTimedOut(it.application, it.name))
+              } finally {
+                repository.markDeliveryConfigCheckComplete(it)
+              }
+            }
+        }
+      }
+
+      runBlocking { job.join() }
+      log.debug("Scheduled environment verification complete")
+    } else {
+      log.debug("Scheduled environment verification disabled")
+    }
+  }
+
   // todo eb: remove this loop in favor of transitioning the [OrcaTaskMonitoringAgent] to a
   //  [LifecycleMonitor]
   @Scheduled(fixedDelayString = "\${keel.scheduled.agent.frequency:PT1M}")

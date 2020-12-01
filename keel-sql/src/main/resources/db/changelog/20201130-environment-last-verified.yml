@@ -1,0 +1,21 @@
+databaseChangeLog:
+- changeSet:
+    id: environment-last-verified
+    author: fletch
+    changes:
+    - createTable:
+        tableName: environment_last_verified
+        columns:
+        - column:
+            name: environment_uid
+            type: char(26)
+            constraints:
+              primaryKey: true
+              foreignKeyName: fk_environment_last_verified_environment
+              referencedTableName: environment
+              referencedColumnNames: uid
+        - column:
+            name: at
+            type: timestamp(3)
+            constraints:
+              nullable: false

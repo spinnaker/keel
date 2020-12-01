@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
+import io.mockk.mockk
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import java.time.Clock
@@ -21,7 +22,7 @@ internal class SqlVerificationRepositoryTests :
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, Clock.systemUTC(), ResourceSpecIdentifier(), configuredObjectMapper(), sqlRetry)
   private val artifactRepository = SqlArtifactRepository(jooq, Clock.systemUTC(), configuredObjectMapper(), sqlRetry)
 
-  override fun createSubject() = SqlVerificationRepository(jooq, Clock.systemUTC())
+  override fun createSubject() = SqlVerificationRepository(jooq, Clock.systemUTC(), mockk(), configuredObjectMapper(), mockk())
 
   override fun VerificationContext.setup() {
     deliveryConfigRepository.store(deliveryConfig)

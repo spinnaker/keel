@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import java.time.Duration
 import java.time.Instant
 
 interface VerificationRepository {
@@ -24,6 +25,8 @@ interface VerificationRepository {
     verification: Verification,
     status: VerificationStatus
   )
+
+  fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<Pair<DeliveryConfig, Environment>>
 }
 
 data class VerificationState(
