@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.telemetry.ArtifactCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.EnvironmentsCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceLoadFailed
+import com.netflix.spinnaker.keel.telemetry.VerificationTimedOut
 import com.netflix.spinnaker.keel.verification.VerificationRunner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -191,7 +192,7 @@ class CheckScheduler(
                 }
               } catch (e: TimeoutCancellationException) {
                 log.error("Timed out verifying ${it.version} in ${it.deliveryConfig.application}/${it.environmentName}", e)
-//                publisher.publishEvent(EnvironmentsCheckTimedOut(it.application, it.name))
+                publisher.publishEvent(VerificationTimedOut(it))
               }
             }
         }
