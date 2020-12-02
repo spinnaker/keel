@@ -12,7 +12,6 @@ import com.netflix.spinnaker.kork.sql.test.SqlTestUtil
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import java.time.Clock
 
 internal class SqlVerificationRepositoryTests :
   VerificationRepositoryTests<SqlVerificationRepository>() {
@@ -23,20 +22,36 @@ internal class SqlVerificationRepositoryTests :
   private val artifactSuppliers = listOf(DockerArtifactSupplier(mockk(), mockk(), mockk()))
 
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(
-    jooq,
-    Clock.systemUTC(),
-    ResourceSpecIdentifier(),
-    configuredObjectMapper(),
-    sqlRetry,
-    artifactSuppliers
+    jooq = jooq,
+    clock = clock,
+    resourceSpecIdentifier = ResourceSpecIdentifier(),
+    objectMapper = configuredObjectMapper(),
+    sqlRetry = sqlRetry,
+    artifactSuppliers = artifactSuppliers
   )
-  private val artifactRepository =
-    SqlArtifactRepository(jooq, Clock.systemUTC(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
+  private val artifactRepository = SqlArtifactRepository(
+    jooq = jooq,
+    clock = clock,
+    objectMapper = configuredObjectMapper(),
+    sqlRetry = sqlRetry,
+    artifactSuppliers = artifactSuppliers
+  )
 
-  private val pausedRepository = SqlPausedRepository(jooq, sqlRetry, Clock.systemUTC())
+  private val pausedRepository = SqlPausedRepository(
+    jooq = jooq,
+    sqlRetry = sqlRetry,
+    clock = clock
+  )
 
   override fun createSubject() =
-    SqlVerificationRepository(jooq, Clock.systemUTC(), mockk(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
+    SqlVerificationRepository(
+      jooq = jooq,
+      clock = clock,
+      resourceSpecIdentifier = mockk(),
+      objectMapper = configuredObjectMapper(),
+      sqlRetry = sqlRetry,
+      artifactSuppliers = artifactSuppliers
+    )
 
   override fun VerificationContext.setup() {
     artifactRepository.register(artifact)

@@ -29,8 +29,7 @@ import org.jooq.impl.DSL.isnull
 import org.jooq.impl.DSL.select
 import java.time.Clock
 import java.time.Duration
-import java.time.Instant.EPOCH
-import java.time.ZoneOffset.UTC
+import java.time.LocalDateTime
 
 class SqlVerificationRepository(
   jooq: DSLContext,
@@ -50,9 +49,10 @@ class SqlVerificationRepository(
   specMigrators
 ), VerificationRepository {
 
-  private val epochTimestamp = EPOCH.atZone(UTC).toLocalDateTime()
-
-  override fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext> {
+  override fun nextEnvironmentsForVerification(
+    minTimeSinceLastCheck: Duration,
+    limit: Int
+  ): Collection<VerificationContext> {
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck).toTimestamp()
     return sqlRetry.withRetry(WRITE) {
@@ -83,23 +83,27 @@ class SqlVerificationRepository(
           .leftJoin(ENVIRONMENT_LAST_VERIFIED)
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           // has not been checked recently
-          .and(ENVIRONMENT_LAST_VERIFIED.AT.lessOrEqual(cutoff))
+          .where(isnull(ENVIRONMENT_LAST_VERIFIED.AT, LocalDateTime.MIN).lessOrEqual(cutoff))
           // order by last time checked with things never checked coming first
-          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, epochTimestamp))
+          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, LocalDateTime.MIN))
           .limit(limit)
           .forUpdate()
           .fetch()
           .onEach { (_, _, environmentUid, _, _) ->
             // TODO: this is not going to work right if there are multiple artifacts - need a 2nd FK on the table linking to artifact
-            update(ENVIRONMENT_LAST_VERIFIED)
+            insertInto(ENVIRONMENT_LAST_VERIFIED)
+              .set(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID, environmentUid)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
-              .where(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(environmentUid))
+              .onDuplicateKeyUpdate()
+              .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .execute()
           }
           .map { (_, deliveryConfigName, _, environmentName, artifactVersion) ->
-            deliveryConfigByName(deliveryConfigName).let { deliveryConfig ->
-              VerificationContext(deliveryConfig, environmentName, artifactVersion)
-            }
+            VerificationContext(
+              deliveryConfigByName(deliveryConfigName),
+              environmentName,
+              artifactVersion
+            )
           }
       }
     }

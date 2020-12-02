@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationStatus
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.PASSED
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.RUNNING
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
+import com.netflix.spinnaker.time.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -19,6 +20,7 @@ import strikt.api.expectCatching
 import strikt.assertions.hasSize
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
@@ -29,6 +31,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   abstract fun createSubject(): IMPLEMENTATION
 
+  val clock = MutableClock()
   val subject: IMPLEMENTATION by lazy { createSubject() }
 
   open fun VerificationContext.setup() {}
@@ -223,6 +226,29 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       }
 
       next().isSuccess().isEmpty()
+    }
+
+    @Test
+    fun `subsequent calls within the cutoff time do not return the same results`() {
+      with(context) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+
+      next().isSuccess().isNotEmpty()
+      next().isSuccess().isEmpty()
+    }
+
+    @Test
+    fun `once the cutoff time has passed the same results may be returned`() {
+      with(context) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+
+      next().isSuccess().isNotEmpty()
+      clock.incrementBy(minAge + Duration.ofSeconds(1))
+      next().isSuccess().isNotEmpty()
     }
   }
 }
