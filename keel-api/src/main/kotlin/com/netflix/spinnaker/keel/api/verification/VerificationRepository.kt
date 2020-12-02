@@ -26,7 +26,7 @@ interface VerificationRepository {
     status: VerificationStatus
   )
 
-  fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<Pair<DeliveryConfig, Environment>>
+  fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext>
 }
 
 data class VerificationState(

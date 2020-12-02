@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
+import com.netflix.spinnaker.keel.artifacts.DockerArtifactSupplier
 import com.netflix.spinnaker.keel.persistence.VerificationRepositoryTests
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
@@ -18,15 +20,41 @@ internal class SqlVerificationRepositoryTests :
   private val jooq = testDatabase.context
   private val retryProperties = RetryProperties(1, 0)
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
+  private val artifactSuppliers = listOf(DockerArtifactSupplier(mockk(), mockk(), mockk()))
 
-  private val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, Clock.systemUTC(), ResourceSpecIdentifier(), configuredObjectMapper(), sqlRetry)
-  private val artifactRepository = SqlArtifactRepository(jooq, Clock.systemUTC(), configuredObjectMapper(), sqlRetry)
+  private val deliveryConfigRepository = SqlDeliveryConfigRepository(
+    jooq,
+    Clock.systemUTC(),
+    ResourceSpecIdentifier(),
+    configuredObjectMapper(),
+    sqlRetry,
+    artifactSuppliers
+  )
+  private val artifactRepository =
+    SqlArtifactRepository(jooq, Clock.systemUTC(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
 
-  override fun createSubject() = SqlVerificationRepository(jooq, Clock.systemUTC(), mockk(), configuredObjectMapper(), mockk())
+  override fun createSubject() =
+    SqlVerificationRepository(jooq, Clock.systemUTC(), mockk(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
 
   override fun VerificationContext.setup() {
-    deliveryConfigRepository.store(deliveryConfig)
     artifactRepository.register(artifact)
+    deliveryConfigRepository.store(deliveryConfig)
+    artifactRepository.storeArtifactVersion(
+      PublishedArtifact(
+        artifact.name,
+        artifact.type,
+        version
+      )
+    )
+  }
+
+  override fun VerificationContext.setupCurrentArtifactVersion() {
+    artifactRepository.markAsSuccessfullyDeployedTo(
+      deliveryConfig,
+      artifact,
+      version,
+      environmentName
+    )
   }
 
   @AfterEach

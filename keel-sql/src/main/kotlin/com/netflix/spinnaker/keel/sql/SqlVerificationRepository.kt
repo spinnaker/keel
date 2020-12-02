@@ -1,8 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
@@ -10,12 +8,12 @@ import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
-import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_LAST_VERIFIED
-import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.VERIFICATION_STATE
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -25,9 +23,12 @@ import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.ResultQuery
 import org.jooq.Select
+import org.jooq.impl.DSL.isnull
 import org.jooq.impl.DSL.select
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant.EPOCH
+import java.time.ZoneOffset.UTC
 
 class SqlVerificationRepository(
   jooq: DSLContext,
@@ -47,7 +48,7 @@ class SqlVerificationRepository(
   specMigrators
 ), VerificationRepository {
 
-  override fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<Pair<DeliveryConfig, Environment>> {
+  override fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext> {
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck).toTimestamp()
     return sqlRetry.withRetry(WRITE) {
@@ -56,33 +57,43 @@ class SqlVerificationRepository(
           DELIVERY_CONFIG.UID,
           DELIVERY_CONFIG.NAME,
           ENVIRONMENT.UID,
-          ENVIRONMENT.NAME
+          ENVIRONMENT.NAME,
+          ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION
         )
-          .from(DELIVERY_CONFIG, ENVIRONMENT, ENVIRONMENT_LAST_VERIFIED)
-          .where(ENVIRONMENT.UID.eq(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID))
-          .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
+          .from(ENVIRONMENT)
+          // join delivery config
+          .join(DELIVERY_CONFIG)
+          .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+          // join currently deployed artifact version
+          .join(ENVIRONMENT_ARTIFACT_VERSIONS)
+          .on(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
+          // left join so we get results even if there is no row in ENVIRONMENT_LAST_VERIFIED
+          .leftJoin(ENVIRONMENT_LAST_VERIFIED)
+          .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           // has not been checked recently
           .and(ENVIRONMENT_LAST_VERIFIED.AT.lessOrEqual(cutoff))
           // the application is not paused
-          .andNotExists(
-            selectOne()
-              .from(PAUSED)
-              .where(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION))
-              .and(PAUSED.SCOPE.eq(APPLICATION.name))
-          )
-          .orderBy(ENVIRONMENT_LAST_VERIFIED.AT)
+          // TODO: implement once test in place
+//          .andNotExists(
+//            selectOne()
+//              .from(PAUSED)
+//              .where(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION))
+//              .and(PAUSED.SCOPE.eq(APPLICATION.name))
+//          )
+          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, EPOCH.atZone(UTC).toLocalDateTime()))
           .limit(limit)
           .forUpdate()
           .fetch()
-          .onEach { (_, _, environmentUid, _) ->
+          .onEach { (_, _, environmentUid, _, _) ->
             update(ENVIRONMENT_LAST_VERIFIED)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .where(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(environmentUid))
               .execute()
           }
-          .map { (_, deliveryConfigName, _, environmentName) ->
+          .map { (_, deliveryConfigName, _, environmentName, artifactVersion) ->
             deliveryConfigByName(deliveryConfigName).let { deliveryConfig ->
-              deliveryConfig to deliveryConfig.environments.first { it.name == environmentName }
+              VerificationContext(deliveryConfig, environmentName, artifactVersion)
             }
           }
       }

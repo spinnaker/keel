@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.telemetry.ArtifactCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.EnvironmentsCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckTimedOut
 import com.netflix.spinnaker.keel.telemetry.ResourceLoadFailed
+import com.netflix.spinnaker.keel.verification.VerificationRunner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -31,10 +32,14 @@ class CheckScheduler(
   private val repository: KeelRepository,
   private val resourceActuator: ResourceActuator,
   private val environmentPromotionChecker: EnvironmentPromotionChecker,
+  private val verificationRunner: VerificationRunner,
   private val artifactHandlers: Collection<ArtifactHandler>,
-  @Value("\${keel.resource-check.min-age-duration:60s}") private val resourceCheckMinAgeDuration: Duration,
+  @Value("\${keel.resource-check.min-age-duration:60s}") private val resourceCheckMinAge: Duration,
   @Value("\${keel.resource-check.batch-size:1}") private val resourceCheckBatchSize: Int,
   @Value("\${keel.resource-check.timeout-duration:2m}") private val checkTimeout: Duration,
+  @Value("\${keel.environment-verification.min-age-duration:60s}") private val environmentVerificationMinAge: Duration,
+  @Value("\${keel.environment-verification.batch-size:1}") private val environmentVerificationBatchSize: Int,
+
   private val publisher: ApplicationEventPublisher,
   private val agentLockRepository: AgentLockRepository
 ) : CoroutineScope {
@@ -63,7 +68,7 @@ class CheckScheduler(
         supervisorScope {
           runCatching {
             repository
-              .resourcesDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+              .resourcesDueForCheck(resourceCheckMinAge, resourceCheckBatchSize)
           }
             .onFailure {
               publisher.publishEvent(ResourceLoadFailed(it))
@@ -105,7 +110,7 @@ class CheckScheduler(
       val job = launch {
         supervisorScope {
           repository
-            .deliveryConfigsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+            .deliveryConfigsDueForCheck(resourceCheckMinAge, resourceCheckBatchSize)
             .forEach {
               try {
                 /**
@@ -142,7 +147,7 @@ class CheckScheduler(
       publisher.publishEvent(ScheduledArtifactCheckStarting)
       val job = launch {
         supervisorScope {
-          repository.artifactsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+          repository.artifactsDueForCheck(resourceCheckMinAge, resourceCheckBatchSize)
             .forEach { artifact ->
               try {
                 withTimeout(checkTimeout.toMillis()) {
@@ -176,24 +181,17 @@ class CheckScheduler(
       val job = launch {
         supervisorScope {
           repository
-            .deliveryConfigsDueForCheck(resourceCheckMinAgeDuration, resourceCheckBatchSize)
+            .nextEnvironmentsForVerification(environmentVerificationMinAge, environmentVerificationBatchSize)
             .forEach {
               try {
-                /**
-                 * Sets the timeout to (checkTimeout * environmentCount), since a delivery-config's
-                 * environments are checked sequentially within one coroutine job.
-                 *
-                 * TODO: consider refactoring environmentPromotionChecker so that it can be called for
-                 *  individual environments, allowing fairer timeouts.
-                 */
-                withTimeout(checkTimeout.toMillis() * max(it.environments.size, 1)) {
-                  launch { environmentPromotionChecker.checkEnvironments(it) }
+                withTimeout(checkTimeout.toMillis()) {
+                  launch {
+                    verificationRunner.runVerificationsFor(it)
+                  }
                 }
               } catch (e: TimeoutCancellationException) {
-                log.error("Timed out checking environments for ${it.application}/${it.name}", e)
-                publisher.publishEvent(EnvironmentsCheckTimedOut(it.application, it.name))
-              } finally {
-                repository.markDeliveryConfigCheckComplete(it)
+                log.error("Timed out verifying ${it.version} in ${it.deliveryConfig.application}/${it.environmentName}", e)
+//                publisher.publishEvent(EnvironmentsCheckTimedOut(it.application, it.name))
               }
             }
         }
