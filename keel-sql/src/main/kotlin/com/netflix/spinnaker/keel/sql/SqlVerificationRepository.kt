@@ -9,11 +9,13 @@ import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
+import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_LAST_VERIFIED
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.VERIFICATION_STATE
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -48,6 +50,8 @@ class SqlVerificationRepository(
   specMigrators
 ), VerificationRepository {
 
+  private val epochTimestamp = EPOCH.atZone(UTC).toLocalDateTime()
+
   override fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext> {
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck).toTimestamp()
@@ -64,6 +68,13 @@ class SqlVerificationRepository(
           // join delivery config
           .join(DELIVERY_CONFIG)
           .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+          // the application is not paused
+          .andNotExists(
+            selectOne()
+              .from(PAUSED)
+              .where(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION))
+              .and(PAUSED.SCOPE.eq(APPLICATION.name))
+          )
           // join currently deployed artifact version
           .join(ENVIRONMENT_ARTIFACT_VERSIONS)
           .on(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
@@ -73,19 +84,13 @@ class SqlVerificationRepository(
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           // has not been checked recently
           .and(ENVIRONMENT_LAST_VERIFIED.AT.lessOrEqual(cutoff))
-          // the application is not paused
-          // TODO: implement once test in place
-//          .andNotExists(
-//            selectOne()
-//              .from(PAUSED)
-//              .where(PAUSED.NAME.eq(DELIVERY_CONFIG.APPLICATION))
-//              .and(PAUSED.SCOPE.eq(APPLICATION.name))
-//          )
-          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, EPOCH.atZone(UTC).toLocalDateTime()))
+          // order by last time checked with things never checked coming first
+          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, epochTimestamp))
           .limit(limit)
           .forUpdate()
           .fetch()
           .onEach { (_, _, environmentUid, _, _) ->
+            // TODO: this is not going to work right if there are multiple artifacts - need a 2nd FK on the table linking to artifact
             update(ENVIRONMENT_LAST_VERIFIED)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .where(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(environmentUid))

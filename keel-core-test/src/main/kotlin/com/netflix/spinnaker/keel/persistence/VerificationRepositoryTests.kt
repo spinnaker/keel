@@ -33,6 +33,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   open fun VerificationContext.setup() {}
   open fun VerificationContext.setupCurrentArtifactVersion() {}
+  open fun VerificationContext.pauseApplication() {}
 
   private data class DummyVerification(override val id: String) : Verification {
     override val type = "dummy"
@@ -185,25 +186,25 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       version = "fnord-0.190.0-h378.eacb135"
     )
 
+    private fun next() = expectCatching {
+      subject.nextEnvironmentsForVerification(minAge, limit)
+    }
+
     @Test
     fun `nothing is returned to check if there is no current artifact version for any environment`() {
       context.setup()
 
-      expectCatching {
-        subject.nextEnvironmentsForVerification(minAge, limit)
-      }
-        .isSuccess()
-        .isEmpty()
+      next().isSuccess().isEmpty()
     }
 
     @Test
     fun `returns the current version if it has yet to be verified`() {
-      context.setup()
-      context.setupCurrentArtifactVersion()
-
-      expectCatching {
-        subject.nextEnvironmentsForVerification(minAge, limit)
+      with(context) {
+        setup()
+        setupCurrentArtifactVersion()
       }
+
+      next()
         .isSuccess()
         .hasSize(1)
         .withFirst {
@@ -211,6 +212,17 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
           get { environmentName } isEqualTo context.environmentName
           get { deliveryConfig.name } isEqualTo context.deliveryConfig.name
         }
+    }
+
+    @Test
+    fun `returns nothing if the application is paused`() {
+      with(context) {
+        setup()
+        setupCurrentArtifactVersion()
+        pauseApplication()
+      }
+
+      next().isSuccess().isEmpty()
     }
   }
 }

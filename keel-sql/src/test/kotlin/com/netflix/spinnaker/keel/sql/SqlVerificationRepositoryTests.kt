@@ -33,6 +33,8 @@ internal class SqlVerificationRepositoryTests :
   private val artifactRepository =
     SqlArtifactRepository(jooq, Clock.systemUTC(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
 
+  private val pausedRepository = SqlPausedRepository(jooq, sqlRetry, Clock.systemUTC())
+
   override fun createSubject() =
     SqlVerificationRepository(jooq, Clock.systemUTC(), mockk(), configuredObjectMapper(), sqlRetry, artifactSuppliers)
 
@@ -54,6 +56,13 @@ internal class SqlVerificationRepositoryTests :
       artifact,
       version,
       environmentName
+    )
+  }
+
+  override fun VerificationContext.pauseApplication() {
+    pausedRepository.pauseApplication(
+      deliveryConfig.application,
+      "fzlem@netflix.com"
     )
   }
 
