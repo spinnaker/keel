@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.deliveryConfigByName
 import org.jooq.DSLContext
+import org.jooq.Field
 import org.jooq.Record1
 import org.jooq.ResultQuery
 import org.jooq.Select
@@ -29,7 +30,9 @@ import org.jooq.impl.DSL.isnull
 import org.jooq.impl.DSL.select
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant.EPOCH
 import java.time.LocalDateTime
+import java.time.ZoneOffset.UTC
 
 class SqlVerificationRepository(
   jooq: DSLContext,
@@ -88,10 +91,10 @@ class SqlVerificationRepository(
           .leftJoin(ENVIRONMENT_LAST_VERIFIED)
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           .and(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
-          // has not been checked recently
-          .where(isnull(ENVIRONMENT_LAST_VERIFIED.AT, LocalDateTime.MIN).lessOrEqual(cutoff))
+          // has not been checked recently (or has never been checked)
+          .where(ENVIRONMENT_LAST_VERIFIED.AT.orEpoch().lessOrEqual(cutoff))
           // order by last time checked with things never checked coming first
-          .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, LocalDateTime.MIN))
+          .orderBy(ENVIRONMENT_LAST_VERIFIED.AT.orEpoch())
           .limit(limit)
           .forUpdate()
           .fetch()
@@ -158,6 +161,12 @@ class SqlVerificationRepository(
 
   private inline fun <reified RESULT> ResultQuery<*>.fetchOneInto() =
     fetchOneInto(RESULT::class.java)
+
+  /**
+   * Defaults a timestamp field to [EPOCH] if it is null.
+   */
+  private fun Field<LocalDateTime>.orEpoch(): Field<LocalDateTime> =
+    isnull(this, EPOCH.atZone(UTC).toLocalDateTime())
 
   private fun currentTimestamp() = clock.instant().toTimestamp()
 
