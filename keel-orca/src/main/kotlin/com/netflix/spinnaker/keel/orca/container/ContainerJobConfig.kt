@@ -23,20 +23,16 @@ data class ContainerJobConfig(
   val account: String,
   val region: String,
   val organization: String,
-
   /**
    * Repository name associated with the container, e.g.: "acme/widget"
    */
   val repository: String,
-
   val type: ImageVersionReference = TAG,
-
   /**
    * Either a tag (e.g., "latest") or a digest (e.g., "sha256:be93efc727ba59813adc896859bccf32fb0f02202fe0526a9cd76326b9729cb3),
    * depending on what [type] is
    */
   val versionIdentifier: String = "latest",
-
   /**
    * ID that identifies an image, e.g.:
    *
@@ -44,53 +40,29 @@ data class ContainerJobConfig(
    * acme/widget:sha256:780f11bfc03495da29f9e2d25bf55123330715fb494ac27f45c96f808fd2d4c5
    */
   val imageId: String = "$repository:$versionIdentifier",
-
   val desiredCapacity: Int= 1,
-
   val maxCapacity: Int = 1,
-
   val minCapacity: Int = 1,
-
   val cpus: Int = 2,
-
   val memoryMb: Int = 2048,
-
   val diskMb: Int = 256,
-
   val networkMbps: Int = 1024,
-
   val gpus: Int = 0,
-
   val entrypoint: String = "",
-
   val runtimeLimitSeconds: Int = 2700,
-
   val retries: Int = 0,
-
   val cloudProvider : String = "titus",
-
   val cloudProviderType: String = "aws",
-
   val serviceAccount: String,
-
   val iamInstanceProfile: String = application + "InstanceProfile",
-
   val securityGroups: List<String> = emptyList(),
-
   val capacityGroup: String = application,
-
   val credentials: String,
-
   val registry : String,
-
   val containerAttributes: Map<String, String> = emptyMap(),
-
   val environmentVariables: Map<String, String> = emptyMap(),
-
   val labels: Map<String, String> = emptyMap(),
-
   val deferredInitialization : Boolean = true,
-
   val waitForCompletion: Boolean = true
 ) {
 
