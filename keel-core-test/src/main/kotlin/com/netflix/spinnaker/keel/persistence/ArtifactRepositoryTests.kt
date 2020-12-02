@@ -178,8 +178,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       BuildMetadata(
         id = 1,
         uid = "1234",
-        startedAt = "2020-11-24T04:44:04.000",
-        completedAt = "2020-11-25T03:04:02.259",
+        startedAt = "2020-11-24T04:44:04.000Z",
+        completedAt = "2020-11-25T03:04:02.259Z",
         job = Job(
           name = "job bla bla",
           link = "enkins.com"

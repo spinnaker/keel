@@ -40,7 +40,7 @@ abstract class LifecycleEventRepositoryTests<T: LifecycleEventRepository> : JUni
     id = "bake-$version",
     text = "Submitting bake for version $version",
     link = "www.bake.com/$version",
-    data = mutableMapOf("hi" to "whatsup")
+    data = mapOf("hi" to "whatsup")
   )
   val anotherEvent = event.copy(id = "bake-$version-2")
 

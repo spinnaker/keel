@@ -62,7 +62,7 @@ class ArtifactListener(
             log.info("Registering version {} (status={}) of {} artifact {}",
               artifact.version, artifact.status, artifact.type, artifact.name)
 
-            enrichAndStore(artifact.normalized(), artifactSupplier)
+            enrichAndStore(artifact, artifactSupplier)
               .also { wasAdded ->
                 if (wasAdded) {
                   publisher.publishEvent(ArtifactVersionUpdated(artifact.name, artifact.artifactType))
@@ -80,16 +80,20 @@ class ArtifactListener(
   /**
    * Finds the delivery configs that are using an artifact,
    * and publishes a build lifecycle event for them.
+   *
+   * todo eb: If the status is complete, publish a NOT_STARTED and a completed event
+   *  maybe add a "monitor me" flag? that seems better
    */
   fun createBuildLifecycleEvent(artifact: PublishedArtifact) {
     log.debug("Publishing build lifecycle event for artifact $artifact")
     artifact.buildMetadata
       ?.let { buildMetadata ->
 
-        val data: MutableMap<String,String?> = mutableMapOf()
-        data["buildNumber"] = artifact.metadata["buildNumber"]?.toString()
-        data["commitId"] = artifact.metadata["commitId"]?.toString()
-        data["fallbackLink"] = buildMetadata.job?.link
+        val data = mutableMapOf(
+          "buildNumber" to artifact.metadata["buildNumber"]?.toString(),
+          "commitId" to artifact.metadata["commitId"]?.toString(),
+          "fallbackLink" to buildMetadata.job?.link
+        )
 
         repository
           .getAllArtifacts(artifact.artifactType, artifact.name)
@@ -108,7 +112,7 @@ class ArtifactListener(
                 text = "Monitoring build for ${artifact.version}",
                 link = buildMetadata.uid,
                 data = data,
-                timestamp = buildMetadata.getStartedAtInstant()
+                timestamp = buildMetadata.startedAtInstant
               ))
             }
           }
@@ -132,7 +136,7 @@ class ArtifactListener(
 
       if (latestArtifact != null) {
         log.debug("Storing latest version {} (status={}) for registered artifact {}", latestArtifact.version, latestArtifact.status, artifact)
-        enrichAndStore(latestArtifact.normalized(), artifactSupplier)
+        enrichAndStore(latestArtifact, artifactSupplier)
       } else {
         log.warn("No artifact versions found for ${artifact.type}:${artifact.name}")
       }
@@ -176,7 +180,7 @@ class ArtifactListener(
 
               if (hasNew) {
                 log.debug("$artifact has a missing version ${latestArtifact.version}, persisting.")
-                enrichAndStore(latestArtifact.normalized(), artifactSupplier)
+                enrichAndStore(latestArtifact, artifactSupplier)
               } else {
                 log.debug("No new versions to persist for $artifact")
               }
@@ -187,8 +191,14 @@ class ArtifactListener(
     }
   }
 
+  /**
+   * Normalizes an artifact by calling [PublishedArtifact.normalized],
+   * enriches it by adding metadata,
+   * creates the appropriate build lifecycle event,
+   * and stores in the database
+   */
   private fun enrichAndStore(artifact: PublishedArtifact, supplier: ArtifactSupplier<*,*>): Boolean {
-    val enrichedArtifact = supplier.addMetadata(artifact)
+    val enrichedArtifact = supplier.addMetadata(artifact.normalized())
     createBuildLifecycleEvent(enrichedArtifact)
     return repository.storeArtifactVersion(enrichedArtifact)
   }

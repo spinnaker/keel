@@ -11,7 +11,6 @@ import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BAKE
 import com.netflix.spinnaker.keel.lifecycle.LifecycleMonitor
 import com.netflix.spinnaker.keel.lifecycle.LifecycleMonitorRepository
-import com.netflix.spinnaker.keel.lifecycle.LinkNotFound
 import com.netflix.spinnaker.keel.lifecycle.MonitoredTask
 import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.BUFFERED
@@ -61,14 +60,14 @@ class BakeryLifecycleMonitor(
         }
 
         if (execution.status.isComplete()) {
-          endMonitoringOf(task)
+          endMonitoringOfTask(task)
         } else {
-          markSuccessFetching(task)
+          markSuccessFetchingStatus(task)
         }
       }
       .onFailure { exception ->
         log.error("Error fetching status for $task: ", exception)
-        handleFailureFetching(task)
+        handleFailureFetchingStatus(task)
       }
   }
 

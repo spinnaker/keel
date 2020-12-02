@@ -11,7 +11,7 @@ import org.springframework.context.ApplicationEventPublisher
  *
  * Implementations are responsible for doing the monitoring, emitting [LifecycleEvent]s
  * as the task transitions through different stages, updating the text / link to user
- * friendly things (w/in the [LifecycleEvent]s emitted), and calling [endMonitoringOf]
+ * friendly things (w/in the [LifecycleEvent]s emitted), and calling [endMonitoringOfTask]
  * when the monitoring is finished.
  */
 @EnableConfigurationProperties(LifecycleConfig::class)
@@ -44,7 +44,7 @@ abstract class LifecycleMonitor(
    * Should be called from inside the [monitor] function when we are done
    * monitoring the task.
    */
-  fun endMonitoringOf(task: MonitoredTask) {
+  fun endMonitoringOfTask(task: MonitoredTask) {
     log.debug("${this.javaClass.simpleName} has completed monitoring for $task")
     monitorRepository.delete(task)
   }
@@ -54,11 +54,11 @@ abstract class LifecycleMonitor(
    *
    * Call when there was a failure getting status.
    */
-  fun handleFailureFetching(task: MonitoredTask) {
+  fun handleFailureFetchingStatus(task: MonitoredTask) {
     if (task.numFailures >= lifecycleConfig.numFailuresAllowed - 1) {
       log.warn("Too many consecutive errors (${lifecycleConfig.numFailuresAllowed}) " +
         "fetching the task status for $task. Giving up.")
-      endMonitoringOf(task)
+      endMonitoringOfTask(task)
       publishExceptionEvent(task)
     } else {
       monitorRepository.markFailureGettingStatus(task)
@@ -70,7 +70,7 @@ abstract class LifecycleMonitor(
    *
    * Call when status has successfully been fetched.
    */
-  fun markSuccessFetching(task: MonitoredTask) {
+  fun markSuccessFetchingStatus(task: MonitoredTask) {
     if (task.numFailures > 0) {
       // we only care about consecutive failures, and we just had a success
       monitorRepository.clearFailuresGettingStatus(task)

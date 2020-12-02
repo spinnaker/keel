@@ -25,6 +25,10 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import retrofit2.HttpException
 
+/**
+ * A monitor for build status that reads artifact metadata from an external system,
+ * looks at the build data from that status, and emits events according to that status.
+ */
 @Component
 @EnableConfigurationProperties(LifecycleConfig::class)
 class BuildLifecycleMonitor(
@@ -33,7 +37,7 @@ class BuildLifecycleMonitor(
   override val lifecycleConfig: LifecycleConfig,
   val objectMapper: ObjectMapper,
   val artifactMetadataService: ArtifactMetadataService,
-  val front50Service: Front50Service,
+  val front50Service: Front50Service?,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) : LifecycleMonitor(monitorRepository, publisher, lifecycleConfig) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -43,38 +47,39 @@ class BuildLifecycleMonitor(
 
   override suspend fun monitor(task: MonitoredTask) {
     val buildData = parseAndValidate(task) ?: return
-    kotlin.runCatching {
+    runCatching {
       artifactMetadataService.getArtifactMetadata(buildData.buildNumber, buildData.commitId)
     }.onSuccess { metadata ->
       val buildMetadata = metadata?.buildMetadata
       if (buildMetadata == null) {
         log.error("Error fetching status for $task, response was null")
-        handleFailureFetching(task)
+        handleFailureFetchingStatus(task)
       } else {
         when (buildMetadata.status) {
           "BUILDING" -> publishRunningEvent(task)
           "SUCCESS" -> publishSucceededEvent(task, buildMetadata)
           "FAILURE" -> publishFailedEvent(task, buildMetadata)
           "ABORTED" -> publishAbortedEvent(task, buildMetadata)
+          // UNSTABLE means build passed but tests failed (might need to reevaluate status in the future)
           "UNSTABLE" -> publishSucceededEvent(task, buildMetadata)
           else -> publishUnknownStatusEvent(task, buildMetadata.status)
         }
 
         if (buildMetadata.isComplete()) {
-          endMonitoringOf(task)
+          endMonitoringOfTask(task)
         } else {
-          markSuccessFetching(task)
+          markSuccessFetchingStatus(task)
         }
       }
     }
       .onFailure { exception ->
         log.error("Error fetching status for $task: ", exception)
-        handleFailureFetching(task)
+        handleFailureFetchingStatus(task)
       }
   }
 
   /**
-   * Parses build data if format is correct, otherwise publish an Unknown event
+   * Parses build data if format is correct, otherwise publishes an Unknown event
    * and end monitoring of this task.
    */
   private fun parseAndValidate(task: MonitoredTask): BuildData? =
@@ -82,16 +87,12 @@ class BuildLifecycleMonitor(
       parseBuildData(task)
     } catch (e: IllegalArgumentException) {
       publishUnknownEvent(task)
-      endMonitoringOf(task)
+      endMonitoringOfTask(task)
       null
    }
 
   private fun parseBuildData(task: MonitoredTask): BuildData =
       objectMapper.convertValue(task.triggeringEvent.data)
-
-
-  private fun BuildMetadata.isComplete(): Boolean =
-    status == "SUCCESS" || status == "FAILED" || status == "ABORTED"
 
   private fun publishRunningEvent(task: MonitoredTask) {
     publisher.publishEvent(task.triggeringEvent.copy(
@@ -106,7 +107,7 @@ class BuildLifecycleMonitor(
       status = SUCCEEDED,
       link = chooseLink(task),
       text = "Build succeeded for version ${task.triggeringEvent.artifactVersion}",
-      timestamp = buildMetadata.getCompletedAtInstant()
+      timestamp = buildMetadata.startedAtInstant
     ))
   }
 
@@ -115,7 +116,7 @@ class BuildLifecycleMonitor(
       status = FAILED,
       link = chooseLink(task),
       text = "Build failed for version ${task.triggeringEvent.artifactVersion}",
-      timestamp = buildMetadata.getCompletedAtInstant()
+      timestamp = buildMetadata.completedAtInstant
     ))
   }
 
@@ -124,7 +125,7 @@ class BuildLifecycleMonitor(
       status = ABORTED,
       link = chooseLink(task),
       text = "Build aborted for version ${task.triggeringEvent.artifactVersion}",
-      timestamp = buildMetadata.getCompletedAtInstant()
+      timestamp = buildMetadata.completedAtInstant
     ))
   }
 
@@ -159,7 +160,7 @@ class BuildLifecycleMonitor(
     val buildData = parseBuildData(task)
     val app = runBlocking {
       try {
-        front50Service.applicationByName(buildData.application)
+        front50Service?.applicationByName(buildData.application)
       } catch (e: HttpException) {
         if (e.isNotFound) {
           null
