@@ -73,7 +73,7 @@ data class ContainerJobConfig(
 
   val serviceAccount: String,
 
-  val iamInstanceProfile: String = application + "instanceProfile",
+  val iamInstanceProfile: String = application + "InstanceProfile",
 
   val securityGroups: List<String> = emptyList(),
 
