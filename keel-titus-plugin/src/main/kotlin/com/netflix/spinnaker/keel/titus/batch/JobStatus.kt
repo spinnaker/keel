@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.orca.container
+package com.netflix.spinnaker.keel.titus.batch
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.orca.ExecutionDetailResponse
@@ -33,4 +33,4 @@ fun ExecutionDetailResponse.getJobStatus() : JobStatus? =
   this.variables
     ?.firstOrNull { it.key == "jobStatus" }
     ?.let { JobStatus.mapper.convertValue(it.value)
-}
+    }

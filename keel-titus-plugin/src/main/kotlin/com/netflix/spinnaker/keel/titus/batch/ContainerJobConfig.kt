@@ -1,6 +1,6 @@
-package com.netflix.spinnaker.keel.orca.container
+package com.netflix.spinnaker.keel.titus.batch
 
-import com.netflix.spinnaker.keel.orca.container.ImageVersionReference.*
+import com.netflix.spinnaker.keel.titus.batch.ImageVersionReference.*
 
 const val RUN_JOB_TYPE : String = "runJob"
 
