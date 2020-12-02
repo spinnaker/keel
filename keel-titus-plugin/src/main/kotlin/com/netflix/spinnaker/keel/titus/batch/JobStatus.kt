@@ -25,8 +25,7 @@ data class JobStatus(
 }
 
 data class CompletionDetails(
-  val taskId: String, // uuid
-  val instanceId: String // uuid
+  val taskId: String // uuid
 )
 
 fun ExecutionDetailResponse.getJobStatus() : JobStatus? =
