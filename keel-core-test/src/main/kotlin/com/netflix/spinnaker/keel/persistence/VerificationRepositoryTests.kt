@@ -305,5 +305,43 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
           get { version } isEqualTo context2.version
         }
     }
+
+    @Test
+    fun `can return both artifacts sequentially when an environment has more than one`() {
+      val artifact1 = DockerArtifact(
+        name = "artifact1",
+        deliveryConfigName = context.deliveryConfig.name,
+        reference = "ref-1"
+      )
+      val artifact2 = DockerArtifact(
+        name = "artifact2",
+        deliveryConfigName = context.deliveryConfig.name,
+        reference = "ref-2"
+      )
+      val deliveryConfig = context.deliveryConfig.copy(
+        artifacts = setOf(artifact1, artifact2)
+      )
+      val context1 = context.copy(
+        deliveryConfig = deliveryConfig,
+        artifactReference = artifact1.reference,
+        version = "artifact1-0.254.0-h645.4ce7392"
+      )
+      val context2 = context.copy(
+        deliveryConfig = deliveryConfig,
+        artifactReference = artifact2.reference,
+          version = "artifact2-0.390.0-h584.93a3040"
+      )
+      with(context1) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+      with(context2) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+
+      next().isSuccess().hasSize(1)
+      next().isSuccess().hasSize(1)
+    }
   }
 }

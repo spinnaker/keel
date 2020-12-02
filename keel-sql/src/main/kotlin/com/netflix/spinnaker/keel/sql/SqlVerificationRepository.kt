@@ -62,6 +62,7 @@ class SqlVerificationRepository(
           DELIVERY_CONFIG.NAME,
           ENVIRONMENT.UID,
           ENVIRONMENT.NAME,
+          DELIVERY_ARTIFACT.UID,
           DELIVERY_ARTIFACT.REFERENCE,
           ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION
         )
@@ -86,6 +87,7 @@ class SqlVerificationRepository(
           // left join so we get results even if there is no row in ENVIRONMENT_LAST_VERIFIED
           .leftJoin(ENVIRONMENT_LAST_VERIFIED)
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
+          .and(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
           // has not been checked recently
           .where(isnull(ENVIRONMENT_LAST_VERIFIED.AT, LocalDateTime.MIN).lessOrEqual(cutoff))
           // order by last time checked with things never checked coming first
@@ -93,16 +95,16 @@ class SqlVerificationRepository(
           .limit(limit)
           .forUpdate()
           .fetch()
-          .onEach { (_, _, environmentUid, _, _, _) ->
-            // TODO: this is not going to work right if there are multiple artifacts - need a 2nd FK on the table linking to artifact
+          .onEach { (_, _, environmentUid, _, artifactUid, _, _) ->
             insertInto(ENVIRONMENT_LAST_VERIFIED)
               .set(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID, environmentUid)
+              .set(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_UID, artifactUid)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .onDuplicateKeyUpdate()
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .execute()
           }
-          .map { (_, deliveryConfigName, _, environmentName, artifactReference, artifactVersion) ->
+          .map { (_, deliveryConfigName, _, environmentName, _, artifactReference, artifactVersion) ->
             VerificationContext(
               deliveryConfigByName(deliveryConfigName),
               environmentName,

@@ -15,6 +15,14 @@ databaseChangeLog:
               referencedTableName: environment
               referencedColumnNames: uid
         - column:
+            name: artifact_uid
+            type: char(26)
+            constraints:
+              primaryKey: true
+              foreignKeyName: fk_environment_last_verified_delivery_artifact
+              referencedTableName: delivery_artifact
+              referencedColumnNames: uid
+        - column:
             name: at
             type: timestamp(3)
             constraints:
