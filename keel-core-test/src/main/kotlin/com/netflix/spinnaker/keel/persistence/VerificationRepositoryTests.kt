@@ -24,6 +24,7 @@ import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isSuccess
+import strikt.assertions.one
 import strikt.assertions.withFirst
 import java.time.Duration
 
@@ -53,7 +54,8 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         artifacts = setOf(
           DockerArtifact(
             name = "fnord",
-            deliveryConfigName = "fnord-manifest"
+            deliveryConfigName = "fnord-manifest",
+            reference = "fnord-docker"
           )
         ),
         environments = setOf(
@@ -64,6 +66,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         )
       ),
       environmentName = "test",
+      artifactReference = "fnord-docker",
       version = "fnord-0.190.0-h378.eacb135"
     )
 
@@ -88,7 +91,8 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         artifacts = setOf(
           DockerArtifact(
             name = "fnord",
-            deliveryConfigName = "fnord-manifest"
+            deliveryConfigName = "fnord-manifest",
+            reference = "fnord-docker"
           )
         ),
         environments = setOf(
@@ -99,6 +103,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         )
       ),
       environmentName = "test",
+      artifactReference = "fnord-docker",
       version = "fnord-0.190.0-h378.eacb135"
     )
 
@@ -126,7 +131,8 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         artifacts = setOf(
           DockerArtifact(
             name = "fnord",
-            deliveryConfigName = "fnord-manifest"
+            deliveryConfigName = "fnord-manifest",
+            reference = "fnord-docker"
           )
         ),
         environments = setOf(
@@ -137,6 +143,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         )
       ),
       environmentName = "test",
+      artifactReference = "fnord-docker",
       version = "fnord-0.190.0-h378.eacb135"
     )
 
@@ -164,7 +171,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
   @Nested
   inner class NextCheckTests {
     private val minAge = Duration.ofMinutes(1)
-    private val limit = 1
 
     private val verification = DummyVerification("1")
     private val context = VerificationContext(
@@ -175,7 +181,8 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         artifacts = setOf(
           DockerArtifact(
             name = "fnord",
-            deliveryConfigName = "fnord-manifest"
+            deliveryConfigName = "fnord-manifest",
+            reference = "fnord-docker"
           )
         ),
         environments = setOf(
@@ -186,10 +193,11 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         )
       ),
       environmentName = "test",
+      artifactReference = "fnord-docker",
       version = "fnord-0.190.0-h378.eacb135"
     )
 
-    private fun next() = expectCatching {
+    private fun next(limit: Int = 1) = expectCatching {
       subject.nextEnvironmentsForVerification(minAge, limit)
     }
 
@@ -249,6 +257,53 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       next().isSuccess().isNotEmpty()
       clock.incrementBy(minAge + Duration.ofSeconds(1))
       next().isSuccess().isNotEmpty()
+    }
+
+    @Test
+    fun `can return both artifacts for an environment that uses more than one`() {
+      val artifact1 = DockerArtifact(
+        name = "artifact1",
+        deliveryConfigName = context.deliveryConfig.name,
+        reference = "ref-1"
+      )
+      val artifact2 = DockerArtifact(
+        name = "artifact2",
+        deliveryConfigName = context.deliveryConfig.name,
+        reference = "ref-2"
+      )
+      val deliveryConfig = context.deliveryConfig.copy(
+        artifacts = setOf(artifact1, artifact2)
+      )
+      val context1 = context.copy(
+        deliveryConfig = deliveryConfig,
+        artifactReference = artifact1.reference,
+        version = "artifact1-0.254.0-h645.4ce7392"
+      )
+      val context2 = context.copy(
+        deliveryConfig = deliveryConfig,
+        artifactReference = artifact2.reference,
+          version = "artifact2-0.390.0-h584.93a3040"
+      )
+      with(context1) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+      with(context2) {
+        setup()
+        setupCurrentArtifactVersion()
+      }
+
+      next(2)
+        .isSuccess()
+        .hasSize(2)
+        .one {
+          get { artifactReference } isEqualTo context1.artifactReference
+          get { version } isEqualTo context1.version
+        }
+        .one {
+          get { artifactReference } isEqualTo context2.artifactReference
+          get { version } isEqualTo context2.version
+        }
     }
   }
 }

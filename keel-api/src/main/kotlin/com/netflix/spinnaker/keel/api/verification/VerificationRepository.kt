@@ -42,11 +42,12 @@ enum class VerificationStatus(val complete: Boolean) {
 data class VerificationContext(
   val deliveryConfig: DeliveryConfig,
   val environmentName: String,
+  val artifactReference: String,
   val version: String
 ) {
   val environment: Environment =
     deliveryConfig.environments.first { it.name == environmentName }
 
   val artifact: DeliveryArtifact =
-    deliveryConfig.artifacts.first()
+    deliveryConfig.artifacts.first { it.reference == artifactReference }
 }

@@ -62,6 +62,7 @@ class SqlVerificationRepository(
           DELIVERY_CONFIG.NAME,
           ENVIRONMENT.UID,
           ENVIRONMENT.NAME,
+          DELIVERY_ARTIFACT.REFERENCE,
           ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION
         )
           .from(ENVIRONMENT)
@@ -79,6 +80,9 @@ class SqlVerificationRepository(
           .join(ENVIRONMENT_ARTIFACT_VERSIONS)
           .on(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name))
+          // join artifact
+          .join(DELIVERY_ARTIFACT)
+          .on(DELIVERY_ARTIFACT.UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID))
           // left join so we get results even if there is no row in ENVIRONMENT_LAST_VERIFIED
           .leftJoin(ENVIRONMENT_LAST_VERIFIED)
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
@@ -89,7 +93,7 @@ class SqlVerificationRepository(
           .limit(limit)
           .forUpdate()
           .fetch()
-          .onEach { (_, _, environmentUid, _, _) ->
+          .onEach { (_, _, environmentUid, _, _, _) ->
             // TODO: this is not going to work right if there are multiple artifacts - need a 2nd FK on the table linking to artifact
             insertInto(ENVIRONMENT_LAST_VERIFIED)
               .set(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID, environmentUid)
@@ -98,10 +102,11 @@ class SqlVerificationRepository(
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .execute()
           }
-          .map { (_, deliveryConfigName, _, environmentName, artifactVersion) ->
+          .map { (_, deliveryConfigName, _, environmentName, artifactReference, artifactVersion) ->
             VerificationContext(
               deliveryConfigByName(deliveryConfigName),
               environmentName,
+              artifactReference,
               artifactVersion
             )
           }
