@@ -111,6 +111,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(RUNNING)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
 
@@ -127,6 +128,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(SUCCEEDED)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
 
@@ -143,6 +145,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(FAILED)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
 
@@ -159,6 +162,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(ABORTED)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
 
@@ -175,6 +179,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(SUCCEEDED)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
 
@@ -191,6 +196,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(UNKNOWN)
+          expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
     }
@@ -218,6 +224,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
           monitorRepository.delete(failingTask)
         }
         expectThat(slot.captured.status).isEqualTo(UNKNOWN)
+        expectThat(slot.captured.monitor).isEqualTo(false)
       }
     }
 

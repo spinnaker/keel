@@ -14,7 +14,7 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope.PRE_DEPLOYMENT
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.RUNNING
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BUILD
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionUpdated
@@ -80,12 +80,9 @@ class ArtifactListener(
   /**
    * Finds the delivery configs that are using an artifact,
    * and publishes a build lifecycle event for them.
-   *
-   * todo eb: If the status is complete, publish a NOT_STARTED and a completed event
-   *  maybe add a "monitor me" flag? that seems better
    */
-  fun createBuildLifecycleEvent(artifact: PublishedArtifact) {
-    log.debug("Publishing build lifecycle event for artifact $artifact")
+  fun publishBuildLifecycleEvent(artifact: PublishedArtifact) {
+    log.debug("Publishing build lifecycle event for published artifact $artifact")
     artifact.buildMetadata
       ?.let { buildMetadata ->
 
@@ -99,7 +96,7 @@ class ArtifactListener(
           .getAllArtifacts(artifact.artifactType, artifact.name)
           .forEach { deliveryArtifact ->
             deliveryArtifact.deliveryConfigName?.let { configName ->
-
+              log.debug("Publishing build lifecycle event for delivery artifact $deliveryArtifact")
               data["application"] = repository.getDeliveryConfig(configName).application
 
               publisher.publishEvent(LifecycleEvent(
@@ -108,11 +105,15 @@ class ArtifactListener(
                 artifactVersion = artifact.version,
                 type = BUILD,
                 id = "build-${artifact.version}",
-                status = NOT_STARTED,
+                // the build has already started, and is maybe complete.
+                // We use running to convey that to users, and allow the [BuildLifecycleMonitor] to immediately
+                // update the status
+                status = RUNNING,
                 text = "Monitoring build for ${artifact.version}",
                 link = buildMetadata.uid,
                 data = data,
-                timestamp = buildMetadata.startedAtInstant
+                timestamp = buildMetadata.startedAtInstant,
+                monitor = true
               ))
             }
           }
@@ -199,7 +200,7 @@ class ArtifactListener(
    */
   private fun enrichAndStore(artifact: PublishedArtifact, supplier: ArtifactSupplier<*,*>): Boolean {
     val enrichedArtifact = supplier.addMetadata(artifact.normalized())
-    createBuildLifecycleEvent(enrichedArtifact)
+    publishBuildLifecycleEvent(enrichedArtifact)
     return repository.storeArtifactVersion(enrichedArtifact)
   }
 

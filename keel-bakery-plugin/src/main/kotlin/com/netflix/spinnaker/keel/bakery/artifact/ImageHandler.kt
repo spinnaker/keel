@@ -181,7 +181,8 @@ class ImageHandler(
         id = "bake-$desiredVersion",
         status = NOT_STARTED,
         text = "Launching bake for $version",
-        link = taskRef.id
+        link = taskRef.id,
+        monitor = true
       ))
       return listOf(Task(id = taskRef.id, name = description))
     } catch (e: Exception) {

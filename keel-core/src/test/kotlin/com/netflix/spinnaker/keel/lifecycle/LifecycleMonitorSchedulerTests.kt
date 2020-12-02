@@ -76,23 +76,13 @@ class LifecycleMonitorSchedulerTests : JUnit5Minutests {
       }
 
       context("storing events for monitoring") {
-        test("not started event") {
-          subject.onLifecycleEvent(event)
+        test("monitoring enabled") {
+          subject.onLifecycleEvent(event.copy(monitor = true))
           verify(exactly = 1) { monitorRepository.save(any()) }
         }
 
-        test("running event") {
-          subject.onLifecycleEvent(event.copy(status = RUNNING))
-          verify(exactly = 0) { monitorRepository.save(any()) }
-        }
-
-        test("failed event") {
-          subject.onLifecycleEvent(event.copy(status = FAILED))
-          verify(exactly = 0) { monitorRepository.save(any()) }
-        }
-
-        test("succeeded event") {
-          subject.onLifecycleEvent(event.copy(status = SUCCEEDED))
+        test("monitoring disabled") {
+          subject.onLifecycleEvent(event)
           verify(exactly = 0) { monitorRepository.save(any()) }
         }
       }
