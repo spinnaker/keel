@@ -16,6 +16,8 @@ import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.events.PersistentEvent.EventScope
+import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -31,6 +33,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_CONSTRAINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_QUEUED_APPROVAL
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_WITH_METADATA
@@ -136,11 +139,34 @@ class SqlDeliveryConfigRepository(
     val configUid = getUIDByApplication(application)
     val envUids = getEnvironmentUIDs(listOf(configUid))
     val resourceUids = getResourceUIDs(envUids)
+    val resourceIds = getResourceIDs(application)
     val artifactUids = getArtifactUIDs(configUid)
 
     sqlRetry.withRetry(WRITE) {
       jooq.transaction { config ->
         val txn = DSL.using(config)
+        // delete events
+        resourceUids.forEach { resourceUid ->
+          txn.deleteFrom(EVENT)
+            .where(EVENT.SCOPE.eq(EventScope.RESOURCE.name))
+            .and(EVENT.REF.eq(resourceUid))
+            .execute()
+        }
+        txn.deleteFrom(EVENT)
+          .where(EVENT.SCOPE.eq(EventScope.APPLICATION.name))
+          .and(EVENT.REF.eq(application))
+          .execute()
+        // delete pause records
+        resourceIds.forEach { resourceId ->
+          txn.deleteFrom(PAUSED)
+            .where(PAUSED.SCOPE.eq(PauseScope.RESOURCE.name))
+            .and(PAUSED.NAME.eq(resourceId))
+            .execute()
+        }
+        txn.deleteFrom(PAUSED)
+          .where(PAUSED.SCOPE.eq(PauseScope.APPLICATION.name))
+          .and(PAUSED.NAME.eq(application))
+          .execute()
         // delete resources
         txn.deleteFrom(RESOURCE)
           .where(RESOURCE.UID.`in`(resourceUids))
@@ -182,6 +208,15 @@ class SqlDeliveryConfigRepository(
         .from(ENVIRONMENT_RESOURCE)
         .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.`in`(environmentUids))
         .fetch(ENVIRONMENT_RESOURCE.RESOURCE_UID)
+    }
+
+  private fun getResourceIDs(application: String): List<String> =
+    sqlRetry.withRetry(READ) {
+      jooq
+        .select(RESOURCE.ID)
+        .from(RESOURCE)
+        .where(RESOURCE.APPLICATION.eq(application))
+        .fetch(RESOURCE.ID)
     }
 
   private fun getArtifactUIDs(deliveryConfigUid: String): List<String> =
