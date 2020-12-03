@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spinnaker.config.LifecycleConfig
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
+import com.netflix.spinnaker.keel.api.artifacts.Job
 import com.netflix.spinnaker.keel.front50.Front50Service
 import com.netflix.spinnaker.keel.front50.model.Application
 import com.netflix.spinnaker.keel.front50.model.DataSources
@@ -22,8 +23,8 @@ import com.netflix.spinnaker.keel.lifecycle.MonitoredTask
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.Called
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -42,11 +43,21 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
     val artifactMetadataService: ArtifactMetadataService = mockk()
     val front50Service: Front50Service = mockk()
     val spinnakerBaseUrl = "www.spin.com"
-    val id = "c9bb7369-8433-4014-bcaa-b0ef814234c3"
+    val uid = "c9bb7369-8433-4014-bcaa-b0ef814234c3"
     val fallbackLink = "www.jenkins.com/my-build"
     val objectMapper = configuredTestObjectMapper()
     val buildNumber = "4"
     val commitId = "56203b1"
+    val originalBuildMetadata = BuildMetadata(
+      id = 4,
+      number = buildNumber,
+      uid = uid,
+      job = Job(
+        link = fallbackLink,
+        name = "my jenkins job"
+      ),
+      status = "BUILDING"
+    )
 
     val event = LifecycleEvent(
       type = BUILD,
@@ -56,13 +67,22 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
       artifactRef = "my-config:my-artifact",
       artifactVersion = "123.4",
       text = "Starting build",
-      link = id,
+      link = uid,
       timestamp = Instant.now(),
       data = mapOf(
         "application" to "my-app",
         "buildNumber" to buildNumber,
         "commitId" to commitId,
-        "fallbackLink" to fallbackLink
+        "buildMetadata" to originalBuildMetadata
+      )
+    )
+
+    val eventThatIsFinished = event.copy(
+      data = mapOf(
+        "application" to "my-app",
+        "buildNumber" to buildNumber,
+        "commitId" to commitId,
+        "buildMetadata" to originalBuildMetadata.copy(status = "SUCCESS")
       )
     )
 
@@ -73,7 +93,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
     )
 
     val task = MonitoredTask(
-      link = id,
+      link = uid,
       triggeringEvent = event
     )
 
@@ -199,6 +219,25 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
           expectThat(slot.captured.monitor).isEqualTo(false)
         }
       }
+
+      context("job already complete") {
+        before {
+          runBlocking { subject.monitor(task.copy(triggeringEvent = eventThatIsFinished)) }
+        }
+
+        test("artifact metadata service not called") {
+          verify { artifactMetadataService wasNot Called}
+        }
+
+        test("emits success event") {
+          val slot = slot<LifecycleEvent>()
+          verify(exactly = 1) {
+            publisher.publishEvent(capture(slot))
+          }
+          expectThat(slot.captured.status).isEqualTo(SUCCEEDED)
+          expectThat(slot.captured.monitor).isEqualTo(false)
+        }
+      }
     }
 
     context("handle failure") {
@@ -300,7 +339,7 @@ class BuildLifecycleMonitorTests : JUnit5Minutests {
           verify(exactly = 1) {
             publisher.publishEvent(capture(slot))
           }
-          expectThat(slot.captured.link?.contains(id)).isEqualTo(true)
+          expectThat(slot.captured.link?.contains(uid)).isEqualTo(true)
         }
       }
     }

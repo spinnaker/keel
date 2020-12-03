@@ -50,9 +50,13 @@ class BuildLifecycleMonitor(
   override suspend fun monitor(task: MonitoredTask) {
     val buildData = parseAndValidate(task) ?: return
     runCatching {
-      artifactMetadataService.getArtifactMetadata(buildData.buildNumber, buildData.commitId)
-    }.onSuccess { metadata ->
-      val buildMetadata = metadata?.buildMetadata
+      if (buildData.buildMetadata.isComplete()) {
+        // no need to get fresh info, we're done monitoring.
+        buildData.buildMetadata
+      } else {
+        artifactMetadataService.getArtifactMetadata(buildData.buildNumber, buildData.commitId)?.buildMetadata
+      }
+    }.onSuccess { buildMetadata ->
       if (buildMetadata == null) {
         log.error("Error fetching status for $task, response was null")
         handleFailureFetchingStatus(task)
@@ -192,12 +196,12 @@ class BuildLifecycleMonitor(
     "$spinnakerBaseUrl/#/applications/${task.triggeringEvent.data["application"]}/builds/${task.link}/logs"
 
   private fun jenkinsLink(buildData: BuildData): String? =
-    buildData.fallbackLink
+    buildData.buildMetadata.job?.link
 
   data class BuildData(
     val buildNumber: String,
     val commitId: String,
     val application: String,
-    val fallbackLink: String? // the jenkins link to use if no ci view is configured
+    val buildMetadata: BuildMetadata
   )
 }

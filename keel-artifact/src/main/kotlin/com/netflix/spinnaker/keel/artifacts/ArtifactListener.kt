@@ -89,7 +89,7 @@ class ArtifactListener(
         val data = mutableMapOf(
           "buildNumber" to artifact.metadata["buildNumber"]?.toString(),
           "commitId" to artifact.metadata["commitId"]?.toString(),
-          "fallbackLink" to buildMetadata.job?.link
+          "buildMetadata" to buildMetadata
         )
 
         repository
