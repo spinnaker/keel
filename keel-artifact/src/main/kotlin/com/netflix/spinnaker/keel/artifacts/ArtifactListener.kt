@@ -113,7 +113,7 @@ class ArtifactListener(
                 link = buildMetadata.uid,
                 data = data,
                 timestamp = buildMetadata.startedAtInstant,
-                monitor = true
+                startMonitoring = true
               ))
             }
           }

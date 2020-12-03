@@ -54,7 +54,7 @@ class LifecycleMonitorScheduler(
    */
   @EventListener(LifecycleEvent::class)
   fun onLifecycleEvent(event: LifecycleEvent) {
-    if (event.monitor && monitors.any { it.handles(event.type) } && event.link != null) {
+    if (event.startMonitoring && monitors.any { it.handles(event.type) } && event.link != null) {
       log.debug("${this.javaClass.simpleName} saving monitor event $event")
       monitorRepository.save(MonitoredTask(event, event.link))
     }

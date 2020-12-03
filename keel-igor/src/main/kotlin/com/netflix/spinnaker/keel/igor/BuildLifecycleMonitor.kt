@@ -161,7 +161,7 @@ class BuildLifecycleMonitor(
       link = chooseLink(this),
       text = text,
       timestamp = timestamp,
-      monitor = false
+      startMonitoring = false
     ))
   }
 

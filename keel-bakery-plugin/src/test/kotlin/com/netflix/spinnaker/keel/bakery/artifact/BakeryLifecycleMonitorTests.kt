@@ -84,7 +84,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(NOT_STARTED)
-          expectThat(slot.captured.monitor).isEqualTo(false)
+          expectThat(slot.captured.startMonitoring).isEqualTo(false)
         }
       }
 
@@ -101,7 +101,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(LifecycleEventStatus.RUNNING)
-          expectThat(slot.captured.monitor).isEqualTo(false)
+          expectThat(slot.captured.startMonitoring).isEqualTo(false)
         }
       }
 
@@ -118,7 +118,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(LifecycleEventStatus.SUCCEEDED)
-          expectThat(slot.captured.monitor).isEqualTo(false)
+          expectThat(slot.captured.startMonitoring).isEqualTo(false)
         }
       }
 
@@ -135,7 +135,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(FAILED)
-          expectThat(slot.captured.monitor).isEqualTo(false)
+          expectThat(slot.captured.startMonitoring).isEqualTo(false)
         }
       }
       context("unknown") {
@@ -151,7 +151,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
             publisher.publishEvent(capture(slot))
           }
           expectThat(slot.captured.status).isEqualTo(UNKNOWN)
-          expectThat(slot.captured.monitor).isEqualTo(false)
+          expectThat(slot.captured.startMonitoring).isEqualTo(false)
         }
       }
     }
@@ -178,7 +178,7 @@ class BakeryLifecycleMonitorTests : JUnit5Minutests {
           monitorRepository.delete(failingTask)
         }
         expectThat(slot.captured.status).isEqualTo(UNKNOWN)
-        expectThat(slot.captured.monitor).isEqualTo(false)
+        expectThat(slot.captured.startMonitoring).isEqualTo(false)
       }
     }
 

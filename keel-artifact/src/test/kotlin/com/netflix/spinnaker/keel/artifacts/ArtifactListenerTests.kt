@@ -465,7 +465,7 @@ internal class ArtifactListenerTests : JUnit5Minutests {
           val slot = slot<LifecycleEvent>()
           verify(exactly = 1) { publisher.publishEvent(capture(slot)) }
           expectThat(slot.captured.status).isEqualTo(RUNNING)
-          expectThat(slot.captured.monitor).isEqualTo(true)
+          expectThat(slot.captured.startMonitoring).isEqualTo(true)
         }
       }
     }

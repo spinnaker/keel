@@ -182,7 +182,7 @@ class ImageHandler(
         status = NOT_STARTED,
         text = "Launching bake for $version",
         link = taskRef.id,
-        monitor = true
+        startMonitoring = true
       ))
       return listOf(Task(id = taskRef.id, name = description))
     } catch (e: Exception) {
