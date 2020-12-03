@@ -15,7 +15,7 @@ enum class ImageVersionReference {
 }
 
 /**
- * Holds the config info needed to execute a container via the Run Job stage
+ * Holds the config info needed to execute a batch job on Titus via the Run Job stage
  */
 data class ContainerJobConfig(
   val name : String,
@@ -27,6 +27,9 @@ data class ContainerJobConfig(
    * Repository name associated with the container, e.g.: "acme/widget"
    */
   val repository: String,
+  val serviceAccount: String,
+  val credentials: String,
+  val registry : String,
   val type: ImageVersionReference = TAG,
   /**
    * Either a tag (e.g., "latest") or a digest (e.g., "sha256:be93efc727ba59813adc896859bccf32fb0f02202fe0526a9cd76326b9729cb3),
@@ -53,12 +56,9 @@ data class ContainerJobConfig(
   val retries: Int = 0,
   val cloudProvider : String = "titus",
   val cloudProviderType: String = "aws",
-  val serviceAccount: String,
   val iamInstanceProfile: String = application + "InstanceProfile",
   val securityGroups: List<String> = emptyList(),
   val capacityGroup: String = application,
-  val credentials: String,
-  val registry : String,
   val containerAttributes: Map<String, String> = emptyMap(),
   val environmentVariables: Map<String, String> = emptyMap(),
   val labels: Map<String, String> = emptyMap(),
