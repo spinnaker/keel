@@ -87,34 +87,6 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
       from = ArtifactOriginFilterSpec(branch = BranchFilterSpec(name = "main"))
     )
 
-    val completeDeliveryConfig: DeliveryConfig = deliveryConfig.copy(
-      artifacts = setOf(
-        artifact, artifactFromBranch
-      ),
-      environments = setOf(
-        Environment(
-          name = "test",
-          resources = setOf(
-            resource(kind = parseKind("ec2/cluster@v1")),
-            resource(kind = parseKind("ec2/security-group@v1"))
-          )
-        ),
-        Environment(
-          name = "staging",
-          constraints = setOf(
-            DependsOnConstraint(
-              environment = "test"
-            ),
-            ManualJudgementConstraint()
-          ),
-          resources = setOf(
-            resource(kind = parseKind("ec2/cluster@v1")),
-            resource(kind = parseKind("ec2/security-group@v1"))
-          )
-        )
-      )
-    )
-
     fun getByName() = expectCatching {
       repository.get(deliveryConfig.name)
     }
@@ -238,7 +210,33 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
     context("storing a delivery config with artifacts and environments") {
       deriveFixture {
         copy(
-          deliveryConfig = completeDeliveryConfig
+          deliveryConfig = deliveryConfig.copy(
+            artifacts = setOf(
+              artifact, artifactFromBranch
+            ),
+            environments = setOf(
+              Environment(
+                name = "test",
+                resources = setOf(
+                  resource(kind = parseKind("ec2/cluster@v1")),
+                  resource(kind = parseKind("ec2/security-group@v1"))
+                )
+              ),
+              Environment(
+                name = "staging",
+                constraints = setOf(
+                  DependsOnConstraint(
+                    environment = "test"
+                  ),
+                  ManualJudgementConstraint()
+                ),
+                resources = setOf(
+                  resource(kind = parseKind("ec2/cluster@v1")),
+                  resource(kind = parseKind("ec2/security-group@v1"))
+                )
+              )
+            )
+          )
         )
       }
 
