@@ -50,11 +50,11 @@ class BuildLifecycleMonitor(
   override suspend fun monitor(task: MonitoredTask) {
     val buildData = parseAndValidate(task) ?: return
     runCatching {
-      if (buildData.buildMetadata.isComplete()) {
+      if (buildData.buildMetadata == null || !buildData.buildMetadata.isComplete()) {
+        artifactMetadataService.getArtifactMetadata(buildData.buildNumber, buildData.commitId)?.buildMetadata
+      } else {
         // no need to get fresh info, we're done monitoring.
         buildData.buildMetadata
-      } else {
-        artifactMetadataService.getArtifactMetadata(buildData.buildNumber, buildData.commitId)?.buildMetadata
       }
     }.onSuccess { buildMetadata ->
       if (buildMetadata == null) {
@@ -66,7 +66,7 @@ class BuildLifecycleMonitor(
           "SUCCESS" -> publishSucceededEvent(task, buildMetadata)
           "FAILURE" -> publishFailedEvent(task, buildMetadata)
           "ABORTED" -> publishAbortedEvent(task, buildMetadata)
-          // UNSTABLE means build passed but tests failed (might need to reevaluate status in the future)
+          // UNSTABLE means build passed but tests failed (might need to reevaluate success status choice in the future)
           "UNSTABLE" -> publishSucceededEvent(task, buildMetadata)
           else -> publishUnknownStatusEvent(task, buildMetadata.status)
         }
@@ -196,12 +196,13 @@ class BuildLifecycleMonitor(
     "$spinnakerBaseUrl/#/applications/${task.triggeringEvent.data["application"]}/builds/${task.link}/logs"
 
   private fun jenkinsLink(buildData: BuildData): String? =
-    buildData.buildMetadata.job?.link
+    buildData.buildMetadata?.job?.link ?: buildData.fallbackLink
 
   data class BuildData(
     val buildNumber: String,
     val commitId: String,
     val application: String,
-    val buildMetadata: BuildMetadata
+    val buildMetadata: BuildMetadata?,
+    val fallbackLink: String? // todo eb: for backwards compatibility, remove
   )
 }
