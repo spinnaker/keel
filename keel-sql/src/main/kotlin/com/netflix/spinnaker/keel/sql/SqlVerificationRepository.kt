@@ -91,16 +91,18 @@ class SqlVerificationRepository(
           .leftJoin(ENVIRONMENT_LAST_VERIFIED)
           .on(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
           .and(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
+          .and(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_VERSION.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION))
           // has not been checked recently (or has never been checked)
           .where(ENVIRONMENT_LAST_VERIFIED.AT.orEpoch().lessOrEqual(cutoff))
           // order by last time checked with things never checked coming first
           .orderBy(ENVIRONMENT_LAST_VERIFIED.AT.orEpoch())
           .limit(limit)
           .fetch()
-          .onEach { (_, _, environmentUid, _, artifactUid, _, _) ->
+          .onEach { (_, _, environmentUid, _, artifactUid, _, artifactVersion) ->
             insertInto(ENVIRONMENT_LAST_VERIFIED)
               .set(ENVIRONMENT_LAST_VERIFIED.ENVIRONMENT_UID, environmentUid)
               .set(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_UID, artifactUid)
+              .set(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_VERSION, artifactVersion)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())
               .onDuplicateKeyUpdate()
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now.toTimestamp())

@@ -23,6 +23,11 @@ databaseChangeLog:
               referencedTableName: delivery_artifact
               referencedColumnNames: uid
         - column:
+            name: artifact_version
+            type: varchar(255)
+            constraints:
+              primaryKey: true
+        - column:
             name: at
             type: timestamp(3)
             constraints:

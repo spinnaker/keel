@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import strikt.api.expectCatching
+import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
@@ -245,6 +246,23 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
       next().isSuccess().isNotEmpty()
       next().isSuccess().isEmpty()
+    }
+
+    @Test
+    fun `a new artifact version will get checked right away`() {
+      with(context) {
+        setup()
+        setupCurrentArtifactVersion()
+
+        next().isSuccess().isNotEmpty().first().get { version } isEqualTo version
+      }
+
+      with(context.copy(version = "fnord-0.191.0-h379.eef6bbd")) {
+        setup()
+        setupCurrentArtifactVersion()
+
+        next().isSuccess().isNotEmpty().first().get { version } isEqualTo version
+      }
     }
 
     @Test
