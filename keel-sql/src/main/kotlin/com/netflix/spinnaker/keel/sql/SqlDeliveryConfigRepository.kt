@@ -189,28 +189,22 @@ class SqlDeliveryConfigRepository(
     } ?: throw NoDeliveryConfigForApplication(application)
 
   private fun getResourceUIDs(application: String): SelectConditionStep<Record1<String>>? =
-    sqlRetry.withRetry(READ) {
-      jooq
-        .select(RESOURCE.UID)
-        .from(RESOURCE)
-        .where(RESOURCE.APPLICATION.eq(application))
-    }
+    jooq
+      .select(RESOURCE.UID)
+      .from(RESOURCE)
+      .where(RESOURCE.APPLICATION.eq(application))
 
   private fun getResourceIDs(application: String): SelectConditionStep<Record1<String>>? =
-    sqlRetry.withRetry(READ) {
-      jooq
-        .select(RESOURCE.ID)
-        .from(RESOURCE)
-        .where(RESOURCE.APPLICATION.eq(application))
-    }
+    jooq
+      .select(RESOURCE.ID)
+      .from(RESOURCE)
+      .where(RESOURCE.APPLICATION.eq(application))
 
   private fun getArtifactUIDs(deliveryConfigUid: String): SelectConditionStep<Record1<String>>? =
-    sqlRetry.withRetry(READ) {
-      jooq
-        .select(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID)
-        .from(DELIVERY_CONFIG_ARTIFACT)
-        .where(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
-    }
+    jooq
+      .select(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID)
+      .from(DELIVERY_CONFIG_ARTIFACT)
+      .where(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
 
   // todo: queries in this function aren't inherently retryable because of the cross-repository interactions
   // from where this is called: https://github.com/spinnaker/keel/issues/740
