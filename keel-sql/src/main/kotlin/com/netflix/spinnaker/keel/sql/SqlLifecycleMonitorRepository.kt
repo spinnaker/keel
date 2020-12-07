@@ -78,20 +78,23 @@ class SqlLifecycleMonitorRepository(
     }
 
   fun LifecycleEvent.getUid(jooq: DSLContext): String {
-    return jooq.select(LIFECYCLE_EVENT.UID)
-      .from(LIFECYCLE_EVENT)
-      .where(LIFECYCLE_EVENT.SCOPE.eq(scope.name))
-      .and(LIFECYCLE_EVENT.TYPE.eq(type.name))
-      .and(LIFECYCLE_EVENT.REF.eq(artifactRef))
-      .and(LIFECYCLE_EVENT.ARTIFACT_VERSION.eq(artifactVersion))
-      .and(LIFECYCLE_EVENT.ID.eq(id))
-      .and(LIFECYCLE_EVENT.STATUS.eq(status.name))
-      .fetch(LIFECYCLE_EVENT.UID)
-      .first()
+    return sqlRetry.withRetry(READ) {
+      jooq.select(LIFECYCLE_EVENT.UID)
+        .from(LIFECYCLE_EVENT)
+        .where(LIFECYCLE_EVENT.SCOPE.eq(scope.name))
+        .and(LIFECYCLE_EVENT.TYPE.eq(type.name))
+        .and(LIFECYCLE_EVENT.REF.eq(artifactRef))
+        .and(LIFECYCLE_EVENT.ARTIFACT_VERSION.eq(artifactVersion))
+        .and(LIFECYCLE_EVENT.ID.eq(id))
+        .and(LIFECYCLE_EVENT.STATUS.eq(status.name))
+        .fetch(LIFECYCLE_EVENT.UID)
+        .first()
+    }
   }
 
   override fun save(task: MonitoredTask) {
     sqlRetry.withRetry(WRITE) {
+      //todo eb: don't add new one if triggering uid is the same!
       val triggeringEventUid = task.triggeringEvent.getUid(jooq)
       jooq.insertInto(LIFECYCLE_MONITOR)
         .set(LIFECYCLE_MONITOR.UID, ULID().nextULID(clock.millis()))
