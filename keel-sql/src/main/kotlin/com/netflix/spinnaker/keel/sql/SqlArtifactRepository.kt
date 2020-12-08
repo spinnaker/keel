@@ -1150,6 +1150,25 @@ class SqlArtifactRepository(
     }
   }
 
+  override fun getCurrentVersionInEnv(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String? =
+    sqlRetry.withRetry(READ) {
+      jooq.select(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .from(DELIVERY_ARTIFACT)
+        .innerJoin(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .on(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
+        .innerJoin(ENVIRONMENT)
+        .on(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ENVIRONMENT.UID))
+        .where(
+          DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name),
+          DELIVERY_ARTIFACT.REFERENCE.eq(reference),
+          ENVIRONMENT.NAME.eq(targetEnvironment),
+          ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid),
+          ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT.name)
+        )
+        .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION)
+        .firstOrNull()
+    }
+
   override fun deletePin(
     deliveryConfig: DeliveryConfig,
     targetEnvironment: String,

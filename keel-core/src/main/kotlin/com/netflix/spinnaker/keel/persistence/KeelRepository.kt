@@ -214,6 +214,11 @@ interface KeelRepository : KeelReadOnlyRepository {
    */
   fun getPinnedVersion(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String?
 
+  /**
+   * Returns the current version running in an environment, or null if no version is running
+   */
+  fun getCurrentVersionInEnv(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String?
+
   // END ArtifactRepository methods
 
   // START VerificationRepository methods

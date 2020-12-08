@@ -21,14 +21,17 @@ import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.SUCCEEDED
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus.TERMINAL
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.orca.TaskRefResponse
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.Called
 import io.mockk.MockKAnswerScope
 import io.mockk.Runs
 import io.mockk.coEvery as every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import java.time.Clock
 import java.time.Instant
 import strikt.api.expectThat
@@ -47,6 +50,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
   ) {
     val clock: Clock = Clock.systemUTC()
     val repository: ConstraintRepository = mockk()
+    val keelRepository: KeelRepository = mockk()
     val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
 
     val type = "pipeline"
@@ -74,7 +78,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
     val capturedId = slot<String>()
     val capturedTrigger = slot<HashMap<String, Any>>()
     val persistedState = slot<ConstraintState>()
-    val subject = PipelineConstraintEvaluator(orcaService, repository, eventPublisher, clock)
+    val subject = PipelineConstraintEvaluator(orcaService, repository, eventPublisher, clock, keelRepository)
 
     var result: Boolean? = null
 
@@ -102,6 +106,8 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
         every {
           repository.storeConstraintState(capture(persistedState))
         } just Runs
+
+        every { keelRepository.getCurrentVersionInEnv(any(), any(), any()) } returns version
       }
 
       context("first pass") {
@@ -109,7 +115,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
           every {
             repository.getConstraintState(manifest.name, environment.name, version, type, artifact.reference)
           } answers {
-            canaryConstraintState(NOT_EVALUATED)
+            pipelineConstraintState(NOT_EVALUATED)
           }
 
           evaluate()
@@ -152,12 +158,40 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
         }
       }
 
+      context("first pass but the environment is not running the right version") {
+        before {
+          every {
+            repository.getConstraintState(manifest.name, environment.name, version, type, artifact.reference)
+          } answers {
+            pipelineConstraintState(NOT_EVALUATED)
+          }
+
+          every { keelRepository.getCurrentVersionInEnv(any(), any(), any()) } returns "0.0.0.1"
+          evaluate()
+        }
+
+        test("does not trigger a pipeline") {
+          verify { orcaService wasNot Called }
+        }
+
+        test("persists failed state") {
+          expectThat(persistedState)
+            .captured
+            .and {
+              get { attributes }.isNull()
+            }
+            .and {
+              get { status }.isEqualTo(FAIL)
+            }
+        }
+      }
+
       context("a pipeline was previously launched") {
         before {
           every {
             repository.getConstraintState(manifest.name, environment.name, version, type, artifact.reference)
           } answers {
-            canaryConstraintState(
+            pipelineConstraintState(
               status = PENDING,
               attributes = PipelineConstraintStateAttributes(
                 executionId = executionId,
@@ -252,7 +286,7 @@ internal class PipelineConstraintEvaluatorTests : JUnit5Minutests {
     }
   }
 
-  fun MockKAnswerScope<*, *>.canaryConstraintState(
+  fun MockKAnswerScope<*, *>.pipelineConstraintState(
     status: ConstraintStatus,
     attributes: PipelineConstraintStateAttributes? = null
   ) = ConstraintState(

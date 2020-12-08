@@ -418,6 +418,9 @@ class CombinedRepository(
   override fun getPinnedVersion(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String)
     = artifactRepository.getPinnedVersion(deliveryConfig, targetEnvironment, reference)
 
+  override fun getCurrentVersionInEnv(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String? =
+    artifactRepository.getCurrentVersionInEnv(deliveryConfig, targetEnvironment, reference)
+
   // END ArtifactRepository methods
 
   // START VerificationRepository methods

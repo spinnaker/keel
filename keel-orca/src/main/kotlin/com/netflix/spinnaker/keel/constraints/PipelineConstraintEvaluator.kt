@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.core.api.PipelineConstraint
 import com.netflix.spinnaker.keel.model.toOrcaNotification
 import com.netflix.spinnaker.keel.orca.OrcaExecutionStatus
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.KeelRepository
 import java.time.Clock
 import java.util.HashMap
 import kotlinx.coroutines.runBlocking
@@ -43,7 +44,8 @@ class PipelineConstraintEvaluator(
   private val orcaService: OrcaService,
   repository: ConstraintRepository,
   override val eventPublisher: EventPublisher,
-  private val clock: Clock
+  private val clock: Clock,
+  private val keelRepository: KeelRepository
 ) : StatefulConstraintEvaluator<PipelineConstraint, PipelineConstraintStateAttributes>(repository) {
   override val supportedType = SupportedConstraintType<PipelineConstraint>("pipeline")
   override val attributeType = SupportedConstraintAttributesType<PipelineConstraintStateAttributes>("pipeline")
@@ -66,6 +68,25 @@ class PipelineConstraintEvaluator(
     }
 
     val judge = "pipeline:${constraint.pipelineId}"
+
+    val currentVersion = keelRepository
+      .getCurrentVersionInEnv(deliveryConfig, targetEnvironment.name, artifact.reference)
+
+    if (currentVersion != version) {
+      log.warn("Pipeline constraint wants to run against $version, " +
+        "but the current version in env ${targetEnvironment.name} is $currentVersion. Failing the constraint.")
+      repository
+        .storeConstraintState(
+          state.copy(
+            status = FAIL,
+            comment = "Pipeline constraint wants to run against $version, " +
+              "but the current version in env ${targetEnvironment.name} is $currentVersion.",
+            judgedAt = clock.instant(),
+            judgedBy = "keel"
+          )
+        )
+      return false
+    }
 
     // TODO: if the constraint has timed out but the pipeline is still running, should we cancel it?
     if (timedOut(constraint, state, attributes)) {

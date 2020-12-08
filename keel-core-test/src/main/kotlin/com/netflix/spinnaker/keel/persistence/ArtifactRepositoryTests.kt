@@ -247,6 +247,13 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       .versions
   }
 
+  private fun Fixture<T>.currentIn(
+    environment: Environment,
+    artifact: DeliveryArtifact = versionedSnapshotDebian
+  ): String? {
+    return subject.getCurrentVersionInEnv(manifest, environment.name, artifact.reference)
+  }
+
   fun tests() = rootContext<Fixture<T>> {
     fixture { Fixture(factory(clock)) }
 
@@ -444,6 +451,10 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
           }
         }
 
+        test("current in is null") {
+          expectThat(currentIn(testEnvironment)).isNull()
+        }
+
         test("an artifact version can be vetoed even if it was not previously deployed") {
           val veto = EnvironmentArtifactVeto(
             targetEnvironment = testEnvironment.name,
@@ -574,6 +585,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
               get(ArtifactVersionStatus::deploying).isNull()
               get(ArtifactVersionStatus::previous).isEmpty()
             }
+            expectThat(currentIn(testEnvironment)).isEqualTo(version1)
           }
 
           context("a new version is promoted to the same environment") {

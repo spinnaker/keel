@@ -228,6 +228,11 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun getPinnedVersion(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String?
 
   /**
+   * Returns the current version running in an environment, or null if no version is running
+   */
+  fun getCurrentVersionInEnv(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): String?
+
+  /**
    * Return the published artifact for the last deployed version that matches the promotion status
    */
   fun getArtifactVersionByPromotionStatus(
