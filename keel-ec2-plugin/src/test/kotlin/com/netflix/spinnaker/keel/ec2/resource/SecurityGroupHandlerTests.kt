@@ -333,7 +333,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
               SecurityGroupRule(
                 protocol = "tcp",
                 portRanges = listOf(SecurityGroupRulePortRange(443, 443)),
-                securityGroup = SecurityGroupRuleReference("otherapp", vpcOtherAccount.account, vpcOtherAccount.region, vpcOtherAccount.id),
+                securityGroup = SecurityGroupRuleReference(id="sg-12345", name="otherapp", accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
                 range = null
               ),
               // multi-port range self-referencing ingress
@@ -344,6 +344,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
                   SecurityGroupRulePortRange(7102, 7102)
                 ),
                 securityGroup = SecurityGroupRuleReference(
+                  cloudDriverResponse1.id,
                   cloudDriverResponse1.name,
                   cloudDriverResponse1.accountName,
                   cloudDriverResponse1.region,
@@ -389,6 +390,44 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
           .isNotEmpty()
           .get { get(vpcRegion1.region)!!.inboundRules }
           .hasSize(cloudDriverResponse1.inboundRules.size + 1)
+      }
+    }
+
+    context("only inbound rule points to a non-existent security group") {
+
+      deriveFixture {
+        copy(
+          cloudDriverResponse1 = cloudDriverResponse1.copy(
+            inboundRules = setOf(
+              // Rule to a non-exist group, note the name is null
+              SecurityGroupRule(
+                protocol = "tcp",
+                portRanges = listOf(SecurityGroupRulePortRange(443, 443)),
+                securityGroup = SecurityGroupRuleReference(id="sg-12345", name=null, accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
+                range = null
+              )
+            )
+          )
+        )
+      }
+
+      before {
+        with(vpcOtherAccount) {
+          every { cloudDriverCache.networkBy(name, account, region) } returns this
+          every { cloudDriverCache.networkBy(id) } returns this
+        }
+
+        cloudDriverSecurityGroupReturns()
+      }
+
+      test("resolved resource has no inbound rules") {
+        val response = runBlocking {
+          handler.current(resource)
+        }
+        expectThat(response)
+          .isNotEmpty()
+          .get { get(vpcRegion1.region)!!.inboundRules }
+          .isEmpty()
       }
     }
   }
