@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.titus.batch
 
 import com.netflix.spinnaker.keel.titus.batch.ImageVersionReference.*
 
-const val RUN_JOB_TYPE : String = "runJob"
+const val RUN_JOB_TYPE: String = "runJob"
 
 /**
  * Containers can be identified by either:
@@ -18,7 +18,7 @@ enum class ImageVersionReference {
  * Holds the config info needed to execute a batch job on Titus via the Run Job stage
  */
 data class ContainerJobConfig(
-  val name : String,
+  val name: String,
   val application: String,
   val account: String,
   val region: String,
@@ -29,7 +29,7 @@ data class ContainerJobConfig(
   val repository: String,
   val serviceAccount: String,
   val credentials: String,
-  val registry : String,
+  val registry: String,
   val type: ImageVersionReference = TAG,
   /**
    * Either a tag (e.g., "latest") or a digest (e.g., "sha256:be93efc727ba59813adc896859bccf32fb0f02202fe0526a9cd76326b9729cb3),
@@ -43,7 +43,7 @@ data class ContainerJobConfig(
    * acme/widget:sha256:780f11bfc03495da29f9e2d25bf55123330715fb494ac27f45c96f808fd2d4c5
    */
   val imageId: String = "$repository:$versionIdentifier",
-  val desiredCapacity: Int= 1,
+  val desiredCapacity: Int = 1,
   val maxCapacity: Int = 1,
   val minCapacity: Int = 1,
   val cpus: Int = 2,
@@ -54,7 +54,7 @@ data class ContainerJobConfig(
   val entrypoint: String = "",
   val runtimeLimitSeconds: Int = 2700,
   val retries: Int = 0,
-  val cloudProvider : String = "titus",
+  val cloudProvider: String = "titus",
   val cloudProviderType: String = "aws",
   val iamInstanceProfile: String = application + "InstanceProfile",
   val securityGroups: List<String> = emptyList(),
@@ -62,7 +62,7 @@ data class ContainerJobConfig(
   val containerAttributes: Map<String, String> = emptyMap(),
   val environmentVariables: Map<String, String> = emptyMap(),
   val labels: Map<String, String> = emptyMap(),
-  val deferredInitialization : Boolean = true,
+  val deferredInitialization: Boolean = true,
   val waitForCompletion: Boolean = true
 ) {
 
@@ -73,51 +73,50 @@ data class ContainerJobConfig(
    * https://github.com/spinnaker/clouddriver/blob/master/clouddriver-titus/src/main/groovy/com/netflix/spinnaker/clouddriver/titus/client/model/SubmitJobRequest.java
    */
   fun createRunJobStage() =
-      mutableMapOf(
-        "type" to RUN_JOB_TYPE,
-        "name" to name,
-        "cloudProviderType" to cloudProviderType,
-        "cluster" to mapOf(
-          "capacity" to mapOf(
-            "min" to minCapacity,
-            "max" to maxCapacity,
-            "desired" to desiredCapacity
-          ),
-          "application" to application,
-          "containerAttributes" to containerAttributes,
-          "env" to environmentVariables,
-          "labels" to labels,
-          "resources" to mapOf(
-            "cpu" to cpus,
-            "disk" to diskMb,
-            "gpu" to gpus,
-            "memory" to memoryMb,
-            "networkMbps" to networkMbps,
-          ),
-          "retries" to retries,
-          "runtimeLimitSecs" to runtimeLimitSeconds,
-          "securityGroups" to securityGroups,
-          "iamProfile" to iamInstanceProfile,
-          "region" to region,
-          "capacityGroup" to capacityGroup,
-          "imageId" to imageId,
-          "entryPoint" to entrypoint
+    mutableMapOf(
+      "type" to RUN_JOB_TYPE,
+      "name" to name,
+      "cloudProviderType" to cloudProviderType,
+      "cluster" to mapOf(
+        "capacity" to mapOf(
+          "min" to minCapacity,
+          "max" to maxCapacity,
+          "desired" to desiredCapacity
         ),
-
-        "waitForCompletion" to waitForCompletion,
-        "cloudProvider" to cloudProvider,
-        "deferredInitialization" to deferredInitialization,
-        "credentials" to credentials,
-        "registry" to registry,
-        "account" to account,
-        "organization" to organization,
-        "repository" to repository,
-        when(type) {
-          TAG -> "tag"
-          DIGEST -> "digest"
-        } to versionIdentifier,
-
+        "application" to application,
+        "containerAttributes" to containerAttributes,
+        "env" to environmentVariables,
+        "labels" to labels,
+        "resources" to mapOf(
+          "cpu" to cpus,
+          "disk" to diskMb,
+          "gpu" to gpus,
+          "memory" to memoryMb,
+          "networkMbps" to networkMbps,
+        ),
+        "retries" to retries,
+        "runtimeLimitSecs" to runtimeLimitSeconds,
+        "securityGroups" to securityGroups,
+        "iamProfile" to iamInstanceProfile,
         "region" to region,
+        "capacityGroup" to capacityGroup,
+        "imageId" to imageId,
+        "entryPoint" to entrypoint
+      ),
+
+      "waitForCompletion" to waitForCompletion,
+      "cloudProvider" to cloudProvider,
+      "deferredInitialization" to deferredInitialization,
+      "credentials" to credentials,
+      "registry" to registry,
+      "account" to account,
+      "organization" to organization,
+      "repository" to repository,
+      when (type) {
+        TAG -> "tag"
+        DIGEST -> "digest"
+      } to versionIdentifier,
+
+      "region" to region,
     )
 }
-
