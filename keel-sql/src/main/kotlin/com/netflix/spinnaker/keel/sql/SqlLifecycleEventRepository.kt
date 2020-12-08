@@ -41,7 +41,7 @@ class SqlLifecycleEventRepository(
       jooq.transaction { config ->
         val txn = DSL.using(config)
         // if event exists, only update timestamp
-        var uid: String? = null
+        var eventExists = false
         txn.select(LIFECYCLE_EVENT.UID, LIFECYCLE_EVENT.JSON)
           .from(LIFECYCLE_EVENT)
           .where(LIFECYCLE_EVENT.SCOPE.eq(event.scope.name))
@@ -52,22 +52,24 @@ class SqlLifecycleEventRepository(
           .and(LIFECYCLE_EVENT.STATUS.eq(event.status.name))
           .limit(1)
           .fetch()
-          .map { (savedUid: String, savedEvent: String) ->
-            uid = savedUid
-            objectMapper.readValue<LifecycleEvent>(savedEvent)
-          }
           .firstOrNull()
-          ?.let { existingEvent: LifecycleEvent ->
-            if (existingEvent.copy(timestamp = null) == event.copy(timestamp = null)) {
-              // events are the same except time
-              txn.update(LIFECYCLE_EVENT)
-                .set(LIFECYCLE_EVENT.TIMESTAMP, timestamp)
-                .where(LIFECYCLE_EVENT.UID.eq(uid))
-                .execute()
+          ?.let { (uid, savedEvent) ->
+            eventExists = true
+            try {
+              val existingEvent = objectMapper.readValue<LifecycleEvent>(savedEvent)
+              if (event == existingEvent.copy(timestamp = event.timestamp)) {
+                // events are the same except time
+                txn.update(LIFECYCLE_EVENT)
+                  .set(LIFECYCLE_EVENT.TIMESTAMP, timestamp)
+                  .where(LIFECYCLE_EVENT.UID.eq(uid))
+                  .execute()
+              }
+            } catch (e: JsonMappingException) {
+              // ignore existing event with incorrect serialization, just store a new one.
             }
           }
 
-        if (uid == null) {
+        if (!eventExists) {
           txn.insertInto(LIFECYCLE_EVENT)
             .set(LIFECYCLE_EVENT.UID, ULID().nextULID(clock.millis()))
             .set(LIFECYCLE_EVENT.SCOPE, event.scope.name)

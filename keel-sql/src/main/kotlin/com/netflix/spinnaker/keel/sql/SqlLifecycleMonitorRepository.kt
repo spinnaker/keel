@@ -77,7 +77,7 @@ class SqlLifecycleMonitorRepository(
         }
     }
 
-  fun LifecycleEvent.getUid(jooq: DSLContext): String {
+  fun LifecycleEvent.getUid(): String {
     return sqlRetry.withRetry(READ) {
       jooq.select(LIFECYCLE_EVENT.UID)
         .from(LIFECYCLE_EVENT)
@@ -94,8 +94,7 @@ class SqlLifecycleMonitorRepository(
 
   override fun save(task: MonitoredTask) {
     sqlRetry.withRetry(WRITE) {
-      //todo eb: don't add new one if triggering uid is the same!
-      val triggeringEventUid = task.triggeringEvent.getUid(jooq)
+      val triggeringEventUid = task.triggeringEvent.getUid()
       jooq.insertInto(LIFECYCLE_MONITOR)
         .set(LIFECYCLE_MONITOR.UID, ULID().nextULID(clock.millis()))
         .set(LIFECYCLE_MONITOR.TYPE, task.type.name)
@@ -108,7 +107,7 @@ class SqlLifecycleMonitorRepository(
 
   override fun delete(task: MonitoredTask) {
     sqlRetry.withRetry(WRITE) {
-      val triggeringEventUid = task.triggeringEvent.getUid(jooq)
+      val triggeringEventUid = task.triggeringEvent.getUid()
       jooq.deleteFrom(LIFECYCLE_MONITOR)
         .where(LIFECYCLE_MONITOR.TYPE.eq(task.type.name))
         .and(LIFECYCLE_MONITOR.TRIGGERING_EVENT_UID.eq(triggeringEventUid))
@@ -118,7 +117,7 @@ class SqlLifecycleMonitorRepository(
 
   override fun markFailureGettingStatus(task: MonitoredTask) {
     sqlRetry.withRetry(WRITE) {
-      val triggeringEventUid = task.triggeringEvent.getUid(jooq)
+      val triggeringEventUid = task.triggeringEvent.getUid()
       jooq.update(LIFECYCLE_MONITOR)
         .set(LIFECYCLE_MONITOR.NUM_FAILURES,LIFECYCLE_MONITOR.NUM_FAILURES.plus(1))
         .where(LIFECYCLE_MONITOR.TYPE.eq(task.type.name))
@@ -129,7 +128,7 @@ class SqlLifecycleMonitorRepository(
 
   override fun clearFailuresGettingStatus(task: MonitoredTask) {
     sqlRetry.withRetry(WRITE) {
-      val triggeringEventUid = task.triggeringEvent.getUid(jooq)
+      val triggeringEventUid = task.triggeringEvent.getUid()
       jooq.update(LIFECYCLE_MONITOR)
         .set(LIFECYCLE_MONITOR.NUM_FAILURES, 0)
         .where(LIFECYCLE_MONITOR.TYPE.eq(task.type.name))
