@@ -393,17 +393,31 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
       }
     }
 
-    context("only inbound rule points to a non-existent security group") {
+    context("one of the three inbound rules points to a non-existent security group") {
 
       deriveFixture {
         copy(
           cloudDriverResponse1 = cloudDriverResponse1.copy(
             inboundRules = setOf(
+              // cross account ingress rule from another app
+              SecurityGroupRule(
+                protocol = "tcp",
+                portRanges = listOf(SecurityGroupRulePortRange(443, 443)),
+                securityGroup = SecurityGroupRuleReference(id="sg-12345", name="otherapp", accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
+                range = null
+              ),
               // Rule to a non-exist group, note the name is null
               SecurityGroupRule(
                 protocol = "tcp",
                 portRanges = listOf(SecurityGroupRulePortRange(443, 443)),
-                securityGroup = SecurityGroupRuleReference(id="sg-12345", name=null, accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
+                securityGroup = SecurityGroupRuleReference(id="sg-ffffff", name=null, accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
+                range = null
+              ),
+              // cross account ingress rule from yet another app
+              SecurityGroupRule(
+                protocol = "tcp",
+                portRanges = listOf(SecurityGroupRulePortRange(443, 443)),
+                securityGroup = SecurityGroupRuleReference(id="sg-12346", name="yetotherapp", accountName=vpcOtherAccount.account, region=vpcOtherAccount.region, vpcId=vpcOtherAccount.id),
                 range = null
               )
             )
@@ -420,14 +434,14 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
         cloudDriverSecurityGroupReturns()
       }
 
-      test("resolved resource has no inbound rules") {
+      test("resolved resource does not have dangling inbound rule") {
         val response = runBlocking {
           handler.current(resource)
         }
         expectThat(response)
           .isNotEmpty()
           .get { get(vpcRegion1.region)!!.inboundRules }
-          .isEmpty()
+          .hasSize(2)
       }
     }
   }
