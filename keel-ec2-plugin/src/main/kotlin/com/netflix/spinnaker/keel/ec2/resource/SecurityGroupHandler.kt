@@ -282,7 +282,7 @@ class SecurityGroupHandler(
          * field. We silently ignore these inbound rules, since they have no effect.
          */
         ingressGroup?.let { group ->
-          if(group.name == null) {
+          if (group.name == null) {
             log.warn("security group $name ($accountName, $region) has inbound rule that references non-existent security group ${group.id} (${group.accountName}, ${group.region}, ${group.vpcId})")
             return@flatMap emptyList()
           }
