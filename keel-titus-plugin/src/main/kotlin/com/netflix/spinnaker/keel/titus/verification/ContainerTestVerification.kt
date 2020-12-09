@@ -4,8 +4,8 @@ import com.netflix.spinnaker.keel.api.Verification
 
 data class ContainerTestVerification(
   val repository: String,
-  val versionIdentifier: String = "latest"
+  val tag: String = "latest"
 ) : Verification {
   override val type: String = "container-tests"
-  override val id: String = "$repository/$versionIdentifier"
+  override val id: String = "$repository/$tag"
 }

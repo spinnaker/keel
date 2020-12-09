@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -127,14 +128,22 @@ class SqlVerificationRepository(
         .select(
           VERIFICATION_STATE.STATUS,
           VERIFICATION_STATE.STARTED_AT,
-          VERIFICATION_STATE.ENDED_AT
+          VERIFICATION_STATE.ENDED_AT,
+          VERIFICATION_STATE.METADATA
         )
         .from(VERIFICATION_STATE)
         .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
         .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
         .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
         .and(VERIFICATION_STATE.VERIFICATION_ID.eq(verification.id))
-        .fetchOneInto<VerificationState>()
+        .fetchOne { (status, startedAt, endedAt, metadata) ->
+          VerificationState(
+            status,
+            startedAt,
+            endedAt,
+            objectMapper.readValue(metadata)
+          )
+        }
     }
 
   override fun getStates(context: VerificationContext): Map<String, VerificationState>
@@ -159,12 +168,18 @@ class SqlVerificationRepository(
   override fun updateState(
     context: VerificationContext,
     verification: Verification,
-    status: VerificationStatus
+    status: VerificationStatus,
+    metadata: Map<String, Any?>?
   ) {
     with(context) {
       jooq
         .insertInto(VERIFICATION_STATE)
         .set(VERIFICATION_STATE.STATUS, status)
+        .apply {
+          if (metadata != null) {
+            set(VERIFICATION_STATE.METADATA, objectMapper.writeValueAsString(metadata))
+          }
+        }
         .set(status.timestampColumn, currentTimestamp())
         .set(VERIFICATION_STATE.ENVIRONMENT_UID, environmentUid)
         .set(VERIFICATION_STATE.ARTIFACT_UID, artifact.uid)
