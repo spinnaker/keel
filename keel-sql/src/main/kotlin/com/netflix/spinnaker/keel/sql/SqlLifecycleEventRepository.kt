@@ -8,7 +8,6 @@ import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventRepository
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleStep
 import com.netflix.spinnaker.keel.lifecycle.isEndingStatus
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LIFECYCLE_EVENT
@@ -20,7 +19,6 @@ import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Duration
-import java.time.ZoneOffset.UTC
 
 class SqlLifecycleEventRepository(
   private val clock: Clock,
@@ -31,12 +29,9 @@ class SqlLifecycleEventRepository(
 ) : LifecycleEventRepository {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  /**
-   * Only saves event if a field other than the timestamp changes.
-   * If only the timestamp changed, update the timestamp on the existing row.
-   */
-  override fun saveEvent(event: LifecycleEvent) {
-    val timestamp = event.timestamp?.toTimestamp() ?: clock.timestamp()
+  override fun saveEvent(event: LifecycleEvent): String {
+    val timestamp = event.timestamp ?: clock.instant()
+    var eventUid = ULID().nextULID(clock.millis())
     sqlRetry.withRetry(WRITE) {
       jooq.transaction { config ->
         val txn = DSL.using(config)
@@ -55,6 +50,7 @@ class SqlLifecycleEventRepository(
           .firstOrNull()
           ?.let { (uid, savedEvent) ->
             eventExists = true
+            eventUid = uid
             try {
               val existingEvent = objectMapper.readValue<LifecycleEvent>(savedEvent)
               if (event == existingEvent.copy(timestamp = event.timestamp)) {
@@ -71,7 +67,7 @@ class SqlLifecycleEventRepository(
 
         if (!eventExists) {
           txn.insertInto(LIFECYCLE_EVENT)
-            .set(LIFECYCLE_EVENT.UID, ULID().nextULID(clock.millis()))
+            .set(LIFECYCLE_EVENT.UID, eventUid)
             .set(LIFECYCLE_EVENT.SCOPE, event.scope.name)
             .set(LIFECYCLE_EVENT.REF, event.artifactRef)
             .set(LIFECYCLE_EVENT.ARTIFACT_VERSION, event.artifactVersion)
@@ -84,6 +80,7 @@ class SqlLifecycleEventRepository(
         }
       }
     }
+    return eventUid
   }
 
   override fun getEvents(artifact: DeliveryArtifact, artifactVersion: String): List<LifecycleEvent> {
@@ -97,7 +94,7 @@ class SqlLifecycleEventRepository(
         .map { (json, timestamp) ->
           try {
             val event = objectMapper.readValue<LifecycleEvent>(json)
-            event.copy(timestamp = timestamp.toInstant(UTC))
+            event.copy(timestamp = timestamp)
           } catch (e: JsonMappingException) {
             log.error("Exception encountered parsing lifecycle event $json", e)
             // returning null here so bad serialization doesn't break the whole view,
@@ -128,10 +125,12 @@ class SqlLifecycleEventRepository(
     // get first and last event by sorting both ways
     val firstEventById = events.sortedByDescending { it.timestamp }.associateBy { it.id }
     val lastEventById = events.associateBy { it.id }
+    // sometimes an ending event will be out of order, so we need to grab those events
+    val endingEventsById = events.filter { it.status.isEndingStatus() }.associateBy { it.id }
 
     firstEventById.forEach { (id, event) ->
       var step = event.toStep()
-      val lastEvent = lastEventById[id]
+      val lastEvent = endingEventsById[id] ?: lastEventById[id] // if there's an ending status, use that as the last event
       if (lastEvent != null) {
         if (lastEvent.status.isEndingStatus()) {
           step = step.copy(completedAt = lastEvent.timestamp)
@@ -143,8 +142,6 @@ class SqlLifecycleEventRepository(
           step = step.copy(link = it)
         }
         step = step.copy(status = lastEvent.status)
-      } else {
-        log.error("Somehow we have a starting event but no last event for $event. Not sure how this could happen.")
       }
       steps.add(step)
     }
