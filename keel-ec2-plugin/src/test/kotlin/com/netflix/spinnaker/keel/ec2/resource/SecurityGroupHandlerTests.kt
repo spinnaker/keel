@@ -398,7 +398,7 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
       deriveFixture {
         copy(
           cloudDriverResponse1 = cloudDriverResponse1.copy(
-            inboundRules = setOf(
+            inboundRules = sortedSetOf(
               // cross account ingress rule from another app
               SecurityGroupRule(
                 protocol = "tcp",
