@@ -33,7 +33,6 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
     val previousEnvironment = Environment(
       name = "test"
     )
-
     val manifest = DeliveryConfig(
       name = "my-manifest",
       application = "fnord",
