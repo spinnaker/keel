@@ -294,7 +294,7 @@ class SecurityGroupHandler(
               ?.map { it.toPortRange() }
               ?.map { portRange ->
                 when {
-                  ingressGroup.accountName != accountName || ingressGroup.vpcId != vpcId -> CrossAccountReferenceRule(
+                  isCrossAccountReferenceRule(ingressGroup) -> CrossAccountReferenceRule(
                     protocol,
                     ingressGroup.name!!,
                     ingressGroup.accountName!!,
@@ -323,6 +323,9 @@ class SecurityGroupHandler(
       }
         .toSet()
     )
+
+  private fun SecurityGroupModel.isCrossAccountReferenceRule(ingressGroup: SecurityGroupModel.SecurityGroupRuleReference) =
+    ingressGroup.accountName != accountName || ingressGroup.vpcId != vpcId
 
   private fun SecurityGroupModel.SecurityGroupRulePortRange.toPortRange(): IngressPorts =
     (startPort to endPort).let { (start, end) ->
