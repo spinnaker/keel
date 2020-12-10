@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
@@ -116,6 +117,25 @@ class SqlVerificationRepository(
       }
     }
   }
+
+  override fun wasSuccessfullyVerifiedIn(
+    deliveryConfig: DeliveryConfig,
+    artifactReference: String,
+    version: String,
+    environmentName: String,
+    verification : Verification
+  ) =
+    getState(
+      VerificationContext(
+        deliveryConfig,
+        environmentName,
+        artifactReference,
+        version
+      ),
+      verification
+    )
+      ?.let { state -> state.status == VerificationStatus.PASSED }
+      ?: false
 
   override fun getState(
     context: VerificationContext,

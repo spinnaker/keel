@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator.Companion.getConstraintForEnvironment
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import org.springframework.stereotype.Component
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component
 @Component
 class DependsOnConstraintEvaluator(
   private val artifactRepository: ArtifactRepository,
+  private val verificationRepository: VerificationRepository,
   override val eventPublisher: EventPublisher
 ) : ConstraintEvaluator<DependsOnConstraint> {
 
@@ -38,6 +40,27 @@ class DependsOnConstraintEvaluator(
       artifact,
       version,
       requiredEnvironment.name
+    ) && allVerificationsSucceededIn(
+      deliveryConfig,
+      artifact,
+      version,
+      requiredEnvironment
     )
   }
+
+  private fun allVerificationsSucceededIn(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    version: String,
+    environment: Environment
+  ): Boolean =
+    environment.verifyWith.all { verification ->
+      verificationRepository.wasSuccessfullyVerifiedIn(
+        deliveryConfig,
+        artifact.reference,
+        version,
+        environment.name,
+        verification
+      )
+    }
 }

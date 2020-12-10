@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
@@ -32,6 +33,7 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
     val previousEnvironment = Environment(
       name = "test"
     )
+
     val manifest = DeliveryConfig(
       name = "my-manifest",
       application = "fnord",
@@ -42,7 +44,9 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
 
     val artifactRepository: ArtifactRepository = mockk(relaxUnitFun = true)
 
-    val subject = DependsOnConstraintEvaluator(artifactRepository, mockk())
+    val verificationRepository : VerificationRepository = mockk()
+
+    val subject = DependsOnConstraintEvaluator(artifactRepository, verificationRepository, mockk())
   }
 
   fun tests() = rootContext<Fixture> {

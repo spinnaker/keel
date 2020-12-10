@@ -27,6 +27,14 @@ interface VerificationRepository {
   )
 
   fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext>
+
+  fun wasSuccessfullyVerifiedIn(
+    deliveryConfig: DeliveryConfig,
+    artifactReference: String,
+    version: String,
+    environmentName: String,
+    verification : Verification
+  ): Boolean
 }
 
 data class VerificationState(
