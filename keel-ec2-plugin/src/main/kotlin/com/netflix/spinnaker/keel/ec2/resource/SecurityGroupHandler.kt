@@ -275,7 +275,6 @@ class SecurityGroupHandler(
         val ingressGroup = rule.securityGroup
         val ingressRange = rule.range
         val protocol = rule.protocol!!.clouddriverProtocolToKeel()
-
         when {
           ingressGroup?.name != null ->
             rule.portRanges
