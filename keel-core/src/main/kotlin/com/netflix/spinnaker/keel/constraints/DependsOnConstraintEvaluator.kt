@@ -60,11 +60,15 @@ class DependsOnConstraintEvaluator(
     artifact: DeliveryArtifact,
     version: String,
     environment: Environment
-  ) =
-    environment.verifyWith
+  ) : Boolean {
+
+    val context = VerificationContext(deliveryConfig, environment.name, artifact.reference, version)
+    val states = verificationRepository.getStates(context)
+
+    return environment.verifyWith
       .map { it.id }
       .all { id ->
-        when (verificationStatus(deliveryConfig, environment, artifact, version, id)) {
+        when (states[id]?.status) {
           PASSED -> true.also {
             log.info("verification ($id) passed against version $version for app ${deliveryConfig.application}")
           }
@@ -79,18 +83,5 @@ class DependsOnConstraintEvaluator(
           }
         }
       }
-
-  private fun verificationStatus(
-    deliveryConfig: DeliveryConfig,
-    environment: Environment,
-    artifact: DeliveryArtifact,
-    version: String,
-    verificationId: String
-  ) : VerificationStatus? {
-
-    val context = VerificationContext(deliveryConfig, environment.name, artifact.reference, version)
-    val states = verificationRepository.getStates(context)
-
-    return states[verificationId]?.status
   }
 }
