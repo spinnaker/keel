@@ -4,7 +4,10 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
+import com.netflix.spinnaker.keel.api.verification.VerificationState
+import com.netflix.spinnaker.keel.api.verification.VerificationStatus.*
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
@@ -46,6 +49,8 @@ class DependsOnConstraintEvaluatorWithVerificationsTests : JUnit5Minutests {
       artifacts = setOf(artifact),
       environments = setOf(previousEnvironment, constrainedEnvironment)
     )
+
+    val verContext = VerificationContext( manifest, previousEnvironment.name, artifact.reference, "1.1")
   }
 
   val artifactRepository: ArtifactRepository = mockk(relaxUnitFun = true)
@@ -54,8 +59,10 @@ class DependsOnConstraintEvaluatorWithVerificationsTests : JUnit5Minutests {
 
   val subject = DependsOnConstraintEvaluator(artifactRepository, verificationRepository, mockk())
 
+
   fun tests() = rootContext<Fixture> {
     fixture { Fixture }
+
 
     before {
       every {
@@ -72,10 +79,10 @@ class DependsOnConstraintEvaluatorWithVerificationsTests : JUnit5Minutests {
     context("verification succeeded") {
       before {
         every {
-          verificationRepository.wasSuccessfullyVerifiedIn(
-            manifest, artifact.reference, "1.1", previousEnvironment.name, verification
+          verificationRepository.getStates(
+            verContext
           )
-        } returns true
+        } returns mapOf("fake-id" to VerificationState(status=PASSED, startedAt=mockk(), endedAt=mockk()))
       }
 
       test("promotion is allowed") {
@@ -87,10 +94,10 @@ class DependsOnConstraintEvaluatorWithVerificationsTests : JUnit5Minutests {
     context("verification did not succeed") {
       before {
         every {
-          verificationRepository.wasSuccessfullyVerifiedIn(
-            manifest, artifact.reference, "1.1", previousEnvironment.name, verification
+          verificationRepository.getStates(
+            verContext
           )
-        } returns false
+        } returns mapOf("fake-id" to VerificationState(status=FAILED, startedAt=mockk(), endedAt=mockk()))
       }
 
       test("promotion is not allowed") {

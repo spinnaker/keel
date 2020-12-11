@@ -35,17 +35,6 @@ interface VerificationRepository {
   )
 
   fun nextEnvironmentsForVerification(minTimeSinceLastCheck: Duration, limit: Int) : Collection<VerificationContext>
-
-  fun wasSuccessfullyVerifiedIn(
-    deliveryConfig: DeliveryConfig,
-    artifactReference: String,
-    version: String,
-    environmentName: String,
-    verification : Verification
-  ): Boolean
-
-
-
 }
 
 data class VerificationState(
@@ -69,4 +58,6 @@ data class VerificationContext(
 
   val artifact: DeliveryArtifact =
     deliveryConfig.artifacts.first { it.reference == artifactReference }
+
+  val verifications: Collection<Verification> = environment.verifyWith
 }

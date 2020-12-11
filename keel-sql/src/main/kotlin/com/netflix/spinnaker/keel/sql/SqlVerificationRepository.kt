@@ -118,25 +118,6 @@ class SqlVerificationRepository(
     }
   }
 
-  override fun wasSuccessfullyVerifiedIn(
-    deliveryConfig: DeliveryConfig,
-    artifactReference: String,
-    version: String,
-    environmentName: String,
-    verification: Verification
-  ) =
-    getState(
-      VerificationContext(
-        deliveryConfig,
-        environmentName,
-        artifactReference,
-        version
-      ),
-      verification
-    )
-      ?.let { state -> state.status == VerificationStatus.PASSED }
-      ?: false
-
   override fun getState(
     context: VerificationContext,
     verification: Verification
@@ -158,19 +139,21 @@ class SqlVerificationRepository(
 
   override fun getStates(context: VerificationContext): Map<String, VerificationState>
     = with(context) {
-      jooq
-        .select(
-          VERIFICATION_STATE.VERIFICATION_ID,
-          VERIFICATION_STATE.STATUS,
-          VERIFICATION_STATE.STARTED_AT,
-          VERIFICATION_STATE.ENDED_AT
-        )
+    when {
+      verifications.isEmpty() -> emptyMap() // Optimization: don't hit the db if we know there are no entries
+      else -> jooq.select(
+        VERIFICATION_STATE.VERIFICATION_ID,
+        VERIFICATION_STATE.STATUS,
+        VERIFICATION_STATE.STARTED_AT,
+        VERIFICATION_STATE.ENDED_AT
+      )
         .from(VERIFICATION_STATE)
         .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
         .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
         .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
         .fetch()
         .associate { (id, status, started_at, ended_at) -> Pair(id, VerificationState(status, started_at, ended_at)) }
+    }
   }
 
   override fun updateState(
