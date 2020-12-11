@@ -18,6 +18,14 @@ interface VerificationRepository {
   ): VerificationState?
 
   /**
+   * @return a map of the current states of all verifications as run against [context]. The key of the map
+   * is the id of the Verification object
+   */
+  fun getStates(
+    context: VerificationContext,
+  ) : Map<String, VerificationState>
+
+  /**
    * Updates the state of [verification] as run against [context].
    */
   fun updateState(
@@ -35,6 +43,9 @@ interface VerificationRepository {
     environmentName: String,
     verification : Verification
   ): Boolean
+
+
+
 }
 
 data class VerificationState(
