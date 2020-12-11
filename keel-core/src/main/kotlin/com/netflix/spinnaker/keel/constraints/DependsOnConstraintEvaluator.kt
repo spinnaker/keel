@@ -70,21 +70,17 @@ class DependsOnConstraintEvaluator(
       .map { it.id }
       .all { id ->
         when (states[id]?.status) {
-          PASSED -> {
+          PASSED -> true.also {
             log.info("verification ($id) passed against version $version for app ${deliveryConfig.application}")
-            true
           }
-          FAILED -> {
+          FAILED -> false.also {
             log.info("verification ($id) failed against version $version for app ${deliveryConfig.application}")
-            false
           }
-          RUNNING -> {
+          RUNNING -> false.also {
             log.info("verification ($id) still running against version $version for app ${deliveryConfig.application}")
-            false
           }
-          null -> {
+          null -> false.also {
             log.info("no database entry for verification ($id) against version $version for app ${deliveryConfig.application}")
-            false
           }
         }
       }
