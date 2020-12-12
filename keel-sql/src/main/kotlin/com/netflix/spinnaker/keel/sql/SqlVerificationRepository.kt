@@ -1,8 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
@@ -25,7 +23,6 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.deliveryConfigByName
 import org.jooq.DSLContext
 import org.jooq.Record1
-import org.jooq.ResultQuery
 import org.jooq.Select
 import org.jooq.impl.DSL.isnull
 import org.jooq.impl.DSL.select
@@ -136,34 +133,29 @@ class SqlVerificationRepository(
         .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
         .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
         .and(VERIFICATION_STATE.VERIFICATION_ID.eq(verification.id))
-        .fetchOne { (status, startedAt, endedAt, metadata) ->
-          VerificationState(
-            status,
-            startedAt,
-            endedAt,
-            objectMapper.readValue(metadata)
-          )
-        }
+        .fetchOneInto<VerificationState>()
     }
 
-  override fun getStates(context: VerificationContext): Map<String, VerificationState>
-    = with(context) {
-    when {
-      verifications.isEmpty() -> emptyMap() // Optimization: don't hit the db if we know there are no entries
-      else -> jooq.select(
-        VERIFICATION_STATE.VERIFICATION_ID,
-        VERIFICATION_STATE.STATUS,
-        VERIFICATION_STATE.STARTED_AT,
-        VERIFICATION_STATE.ENDED_AT
-      )
-        .from(VERIFICATION_STATE)
-        .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
-        .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
-        .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
-        .fetch()
-        .associate { (id, status, started_at, ended_at) -> Pair(id, VerificationState(status, started_at, ended_at)) }
+  override fun getStates(context: VerificationContext): Map<String, VerificationState> =
+    with(context) {
+      when {
+        verifications.isEmpty() -> emptyMap() // Optimization: don't hit the db if we know there are no entries
+        else -> jooq.select(
+          VERIFICATION_STATE.VERIFICATION_ID,
+          VERIFICATION_STATE.STATUS,
+          VERIFICATION_STATE.STARTED_AT,
+          VERIFICATION_STATE.ENDED_AT
+        )
+          .from(VERIFICATION_STATE)
+          .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
+          .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
+          .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
+          .fetch()
+          .associate { (id, status, started_at, ended_at) ->
+            id to VerificationState(status, started_at, ended_at)
+          }
+      }
     }
-  }
 
   override fun updateState(
     context: VerificationContext,
@@ -175,11 +167,7 @@ class SqlVerificationRepository(
       jooq
         .insertInto(VERIFICATION_STATE)
         .set(VERIFICATION_STATE.STATUS, status)
-        .apply {
-          if (metadata != null) {
-            set(VERIFICATION_STATE.METADATA, objectMapper.writeValueAsString(metadata))
-          }
-        }
+        .set(VERIFICATION_STATE.METADATA, metadata)
         .set(status.timestampColumn, currentTimestamp())
         .set(VERIFICATION_STATE.ENVIRONMENT_UID, environmentUid)
         .set(VERIFICATION_STATE.ARTIFACT_UID, artifact.uid)
@@ -191,9 +179,6 @@ class SqlVerificationRepository(
         .execute()
     }
   }
-
-  private inline fun <reified RESULT> ResultQuery<*>.fetchOneInto() =
-    fetchOneInto(RESULT::class.java)
 
   private fun currentTimestamp() = clock.instant()
 
