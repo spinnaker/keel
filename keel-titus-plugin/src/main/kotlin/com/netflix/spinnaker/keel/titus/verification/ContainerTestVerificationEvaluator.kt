@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.titus.verification
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.FAILED
@@ -10,7 +11,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationStatus.PASSED
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.RUNNING
 import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.titus.batch.ContainerJobConfig
-import com.netflix.spinnaker.keel.titus.batch.ImageVersionReference.TAG
+import com.netflix.spinnaker.keel.titus.batch.createRunJobStage
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -55,17 +56,16 @@ class ContainerTestVerificationEvaluator(
     }
 
     val containerJobConfig = ContainerJobConfig(
-      name = "TODO: value",
       application = context.deliveryConfig.application,
-      account = "TODO: value",
-      region = "TODO: value",
-      organization = "TODO: value",
+      location = TitusServerGroup.Location(
+        account = "TODO: value",
+        region = "TODO: value"
+      ),
       repository = verification.repository,
       serviceAccount = context.deliveryConfig.serviceAccount,
       credentials = "TODO: value",
-      registry = "TODO: value",
-      type = TAG,
-      versionIdentifier = verification.tag
+      tag = verification.tag,
+      digest = null
     )
 
     return runBlocking {
