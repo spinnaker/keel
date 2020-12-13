@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.titus.verification
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
-import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.FAILED
@@ -55,19 +54,6 @@ class ContainerTestVerificationEvaluator(
       "Expected a ${ContainerTestVerification::class.simpleName} but received a ${verification.javaClass.simpleName}"
     }
 
-    val containerJobConfig = ContainerJobConfig(
-      application = context.deliveryConfig.application,
-      location = TitusServerGroup.Location(
-        account = "TODO: value",
-        region = "TODO: value"
-      ),
-      repository = verification.repository,
-      serviceAccount = context.deliveryConfig.serviceAccount,
-      credentials = "TODO: value",
-      tag = verification.tag,
-      digest = null
-    )
-
     return runBlocking {
       withContext(IO) {
         taskLauncher.submitJob(
@@ -77,7 +63,17 @@ class ContainerTestVerificationEvaluator(
           user = context.deliveryConfig.serviceAccount,
           application = context.deliveryConfig.application,
           notifications = emptySet(),
-          stages = listOf(containerJobConfig.createRunJobStage())
+          stages = listOf(
+            ContainerJobConfig(
+              application = context.deliveryConfig.application,
+              location = verification.location,
+              repository = verification.repository,
+              serviceAccount = context.deliveryConfig.serviceAccount,
+              credentials = verification.location.account,
+              tag = verification.tag,
+              digest = null
+            ).createRunJobStage()
+          )
         )
       }
         .let { task ->

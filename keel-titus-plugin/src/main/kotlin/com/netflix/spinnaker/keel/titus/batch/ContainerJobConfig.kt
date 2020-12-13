@@ -15,7 +15,7 @@ data class ContainerJobConfig(
    * Repository name associated with the container, e.g.: "acme/widget"
    */
   val repository: String,
-  val tag: String? = "stable",
+  val tag: String? = "latest",
   val digest: String? = null,
   val application: String,
   val location: TitusServerGroup.Location,

@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.titus.verification
 
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
+import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.api.verification.VerificationStatus.FAILED
@@ -38,7 +39,13 @@ internal class ContainerTestVerificationEvaluatorTests {
     artifactReference = "fnord",
     version = "1.1"
   )
-  private val verification = ContainerTestVerification("illuminati/fnord")
+  private val verification = ContainerTestVerification(
+    repository = "illuminati/fnord",
+    location = Location(
+      account = "titustestvpc",
+      region = "ap-south-1"
+    )
+  )
 
   @Test
   fun `starting verification launches a container job via orca`() {
