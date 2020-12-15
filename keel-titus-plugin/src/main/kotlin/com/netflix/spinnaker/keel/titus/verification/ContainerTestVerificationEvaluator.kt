@@ -59,9 +59,9 @@ class ContainerTestVerificationEvaluator(
     return runBlocking {
       withContext(IO) {
         taskLauncher.submitJob(
-          subject = "container integration test",
-          description = "Verifying environment ${context.environmentName} with test container ${verification.container}",
-          correlationId = "keel-run-container-test",
+          subject = "container integration test for ${context.deliveryConfig.application}.${context.environmentName}",
+          description = "Verifying environment ${context.environmentName} with test container ${verification.repository}/${verification.tag}",
+          correlationId = "${supportedVerification.first}:${context.deliveryConfig.application}.${context.environmentName}",
           user = context.deliveryConfig.serviceAccount,
           application = context.deliveryConfig.application,
           notifications = emptySet(),
