@@ -19,13 +19,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class ContainerTestVerificationEvaluator(
+class TestContainerVerificationEvaluator(
   private val orca: OrcaService,
   private val taskLauncher: TaskLauncher
-) : VerificationEvaluator<ContainerTestVerification> {
+) : VerificationEvaluator<TestContainerVerification> {
 
-  override val supportedVerification: Pair<String, Class<ContainerTestVerification>> =
-    "container-tests" to ContainerTestVerification::class.java
+  override val supportedVerification: Pair<String, Class<TestContainerVerification>> =
+    TestContainerVerification.TYPE to TestContainerVerification::class.java
 
   override fun evaluate(
     context: VerificationContext,
@@ -53,8 +53,8 @@ class ContainerTestVerificationEvaluator(
   }
 
   override fun start(context: VerificationContext, verification: Verification): Map<String, Any?> {
-    require(verification is ContainerTestVerification) {
-      "Expected a ${ContainerTestVerification::class.simpleName} but received a ${verification.javaClass.simpleName}"
+    require(verification is TestContainerVerification) {
+      "Expected a ${TestContainerVerification::class.simpleName} but received a ${verification.javaClass.simpleName}"
     }
 
     return runBlocking {

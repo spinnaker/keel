@@ -28,11 +28,11 @@ import java.time.Instant.now
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
-internal class ContainerTestVerificationEvaluatorTests {
+internal class TestContainerVerificationEvaluatorTests {
 
   private val orca = mockk<OrcaService>()
   private val taskLauncher = mockk<TaskLauncher>()
-  private val subject = ContainerTestVerificationEvaluator(orca, taskLauncher)
+  private val subject = TestContainerVerificationEvaluator(orca, taskLauncher)
 
   private val context = VerificationContext(
     deliveryConfig = deliveryConfig(),
@@ -40,7 +40,7 @@ internal class ContainerTestVerificationEvaluatorTests {
     artifactReference = "fnord",
     version = "1.1"
   )
-  private val verification = ContainerTestVerification(
+  private val verification = TestContainerVerification(
     repository = "illuminati/fnord",
     location = Location(
       account = "titustestvpc",
