@@ -65,7 +65,7 @@ internal class ContainerTestVerificationEvaluatorTests {
 
     expectCatching {subject.start(context, verification)}
       .isSuccess()
-      .get("taskId") isEqualTo taskId
+      .get(TASK_ID) isEqualTo taskId
 
     verify {
       taskLauncher.submitJob(
@@ -159,6 +159,6 @@ internal class ContainerTestVerificationEvaluatorTests {
       status = RUNNING,
       startedAt = now().minusSeconds(120),
       endedAt = null,
-      metadata = mapOf("taskId" to taskId)
+      metadata = mapOf(TASK_ID to taskId)
     )
 }

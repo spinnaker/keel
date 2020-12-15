@@ -30,7 +30,7 @@ class ContainerTestVerificationEvaluator(
     verification: Verification,
     metadata: Map<String, Any?>
   ): VerificationStatus {
-    val taskId = metadata["taskId"]
+    val taskId = metadata[TASK_ID]
     require(taskId is String) {
       "No task id found in previous verification state"
     }
@@ -77,8 +77,10 @@ class ContainerTestVerificationEvaluator(
         )
       }
         .let { task ->
-          mapOf("taskId" to task.id)
+          mapOf(TASK_ID to task.id)
         }
     }
   }
 }
+
+internal const val TASK_ID = "taskId"
