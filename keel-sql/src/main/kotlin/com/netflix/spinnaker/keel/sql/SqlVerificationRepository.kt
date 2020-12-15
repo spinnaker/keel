@@ -144,15 +144,16 @@ class SqlVerificationRepository(
           VERIFICATION_STATE.VERIFICATION_ID,
           VERIFICATION_STATE.STATUS,
           VERIFICATION_STATE.STARTED_AT,
-          VERIFICATION_STATE.ENDED_AT
+          VERIFICATION_STATE.ENDED_AT,
+          VERIFICATION_STATE.METADATA
         )
           .from(VERIFICATION_STATE)
           .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
           .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
           .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
           .fetch()
-          .associate { (id, status, started_at, ended_at) ->
-            id to VerificationState(status, started_at, ended_at)
+          .associate { (id, status, started_at, ended_at, metadata) ->
+            id to VerificationState(status, started_at, ended_at, metadata)
           }
       }
     }
