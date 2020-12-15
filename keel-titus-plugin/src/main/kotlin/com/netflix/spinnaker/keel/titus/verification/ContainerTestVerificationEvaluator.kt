@@ -60,7 +60,7 @@ class ContainerTestVerificationEvaluator(
       withContext(IO) {
         taskLauncher.submitJob(
           subject = "container integration test",
-          description = "testing running a container",
+          description = "Verifying environment ${context.environmentName} with test container ${verification.container}",
           correlationId = "keel-run-container-test",
           user = context.deliveryConfig.serviceAccount,
           application = context.deliveryConfig.application,

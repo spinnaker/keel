@@ -48,7 +48,7 @@ internal class ContainerTestVerificationEvaluatorTests {
   )
 
   @Test
-  fun `starting verification launches a container job via orca`() {
+  fun `starting verification launches a container job via task launcher`() {
     val taskId = ULID().nextULID()
 
     every {
