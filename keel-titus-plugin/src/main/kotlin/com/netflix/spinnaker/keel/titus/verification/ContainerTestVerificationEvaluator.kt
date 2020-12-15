@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.titus.batch.createRunJobStage
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
@@ -40,6 +41,7 @@ class ContainerTestVerificationEvaluator(
         orca.getOrchestrationExecution(taskId)
       }
         .let { response ->
+          log.debug("Container test task $taskId status: ${response.status.name}")
           when {
             response.status.isSuccess() -> PASSED
             response.status.isIncomplete() -> RUNNING
@@ -77,10 +79,13 @@ class ContainerTestVerificationEvaluator(
         )
       }
         .let { task ->
+          log.debug("Launched container test task ${task.id} for ${context.deliveryConfig.application} environment ${context.environmentName}")
           mapOf(TASK_ID to task.id)
         }
     }
   }
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }
 
 internal const val TASK_ID = "taskId"
