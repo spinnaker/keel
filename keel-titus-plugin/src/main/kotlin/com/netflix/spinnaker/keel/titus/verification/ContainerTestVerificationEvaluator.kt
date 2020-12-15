@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
+/**
+ * A [VerificationEvaluator] that runs a test container to verify an environment.
+ */
 class ContainerTestVerificationEvaluator(
   private val orca: OrcaService,
   private val taskLauncher: TaskLauncher
