@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.titus.batch
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ec2.Capacity
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
 import java.time.Duration
@@ -107,6 +106,4 @@ fun ContainerJobConfig.createRunJobStage() =
     "credentials" to credentials,
     "account" to location.account,
     "region" to location.region,
-  ).also {
-    println(ObjectMapper().writeValueAsString(it))
-  }
+  )
