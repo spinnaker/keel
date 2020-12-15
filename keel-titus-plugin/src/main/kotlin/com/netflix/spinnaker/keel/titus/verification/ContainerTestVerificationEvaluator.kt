@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.titus.verification
 
 import com.netflix.spinnaker.keel.api.Verification
+import com.netflix.spinnaker.keel.api.actuation.SubjectType.VERIFICATION
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
@@ -59,6 +60,7 @@ class ContainerTestVerificationEvaluator(
     return runBlocking {
       withContext(IO) {
         taskLauncher.submitJob(
+          type = VERIFICATION,
           subject = "container integration test for ${context.deliveryConfig.application}.${context.environmentName}",
           description = "Verifying environment ${context.environmentName} with test container ${verification.repository}/${verification.tag}",
           correlationId = "${supportedVerification.first}:${context.deliveryConfig.application}.${context.environmentName}",

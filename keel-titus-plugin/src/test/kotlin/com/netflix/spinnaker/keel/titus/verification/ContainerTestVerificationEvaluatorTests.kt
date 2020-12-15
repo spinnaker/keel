@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.titus.verification
 
+import com.netflix.spinnaker.keel.api.actuation.SubjectType.VERIFICATION
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
@@ -53,6 +54,7 @@ internal class ContainerTestVerificationEvaluatorTests {
 
     every {
       taskLauncher.submitJob(
+        type = any(),
         user = any(),
         application = any(),
         notifications = any(),
@@ -69,6 +71,7 @@ internal class ContainerTestVerificationEvaluatorTests {
 
     verify {
       taskLauncher.submitJob(
+        type = VERIFICATION,
         user = any(),
         application = any(),
         notifications = any(),
