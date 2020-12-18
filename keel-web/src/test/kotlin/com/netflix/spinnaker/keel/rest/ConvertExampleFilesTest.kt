@@ -32,12 +32,13 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import strikt.api.expectCatching
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = NONE)
 class ConvertExampleFilesTest @Autowired constructor(
 
   private val mapper: YAMLMapper
