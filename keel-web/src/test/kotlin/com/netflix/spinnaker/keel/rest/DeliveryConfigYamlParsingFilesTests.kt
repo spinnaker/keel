@@ -114,9 +114,8 @@ class DeliveryConfigYamlParsingFilesTests @Autowired constructor(
    */
   fun parseSuccessfully(fileName: String) =
     expectCatching {
-      val text = this.javaClass.getResource("/examples/$fileName") .readText()
+      val text = this.javaClass.getResource("/examples/$fileName").readText()
 
       mapper.readValue<SubmittedDeliveryConfig>(text)
     }.isSuccess()
 }
-
