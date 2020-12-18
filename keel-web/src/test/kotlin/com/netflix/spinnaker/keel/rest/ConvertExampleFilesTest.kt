@@ -39,8 +39,6 @@ import strikt.assertions.isSuccess
 
 @SpringBootTest
 class ConvertExampleFilesTest : JUnit5Minutests {
-  @Autowired
-  lateinit var mapper : YAMLMapper
 
   fun tests() = rootContext<Unit> {
     context("ec2 cluster") {
