@@ -38,7 +38,11 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 
 @SpringBootTest
-class ConvertExampleFilesTest : JUnit5Minutests {
+class ConvertExampleFilesTest @Autowired constructor(
+
+  private val mapper: YAMLMapper
+
+): JUnit5Minutests {
 
   fun tests() = rootContext<Unit> {
     context("ec2 cluster") {
