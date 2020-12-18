@@ -11,7 +11,7 @@ environments:
       regions:
         - name: us-east-1
     resources:
-      - kind: ec2/cluster@v1.1
+      - kind: titus/cluster@v1
         spec:
           moniker:
              app: acme
