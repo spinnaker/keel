@@ -153,7 +153,7 @@ class ConvertExampleFilesTest @Autowired constructor(
     context("titus cluster with test container") {
       val file = this.javaClass.getResource("/examples/titus-cluster-with-test-container.yml").readText()
 
-      test("yml can be parsed") {
+      test("yaml can be parsed") {
         expectCatching {
           mapper.readValue<SubmittedDeliveryConfig>(file)
         }
