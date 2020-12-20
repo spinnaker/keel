@@ -6,7 +6,12 @@ databaseChangeLog:
     - dropIndex:
         tableName: delivery_artifact
         indexName: delivery_artifact_byref_idx
-    - addUniqueConstraint:
+    - createIndex:
         tableName: delivery_artifact
-        columnNames: delivery_config_name, reference
-        constraintName: delivery_artifact_byref_idx
+        indexName: delivery_artifact_byref_idx
+        columns:
+        - column:
+            name: delivery_config_name
+        - column:
+            name: reference
+        unique: true
