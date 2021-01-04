@@ -39,7 +39,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 
 @SpringBootTest(webEnvironment = NONE)
-class DeliveryConfigYamlParsingFilesTests @Autowired constructor(
+class DeliveryConfigYamlParsingTests @Autowired constructor(
 
   private val mapper: YAMLMapper
 
