@@ -45,7 +45,7 @@ class DeliveryConfigYamlParsingFilesTests @Autowired constructor(
 
 ): JUnit5Minutests {
 
-  fun tests() = rootContext<Unit> {
+  fun tests() = rootContext {
     test("ec2 cluster") {
       parseSuccessfully("cluster-example.yml")
         .get { environments.first().resources.first().spec }
