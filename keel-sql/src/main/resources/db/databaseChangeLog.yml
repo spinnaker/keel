@@ -218,3 +218,12 @@ databaseChangeLog:
   - include:
       file: changelog/20201218-add-environment-verify-with.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20201219-add-artifact-unique-index.yml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog/20201220-fix-verification-state-columns.yml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog/20201221-shorten-environment-last-verified-pk.yml
+      relativeToChangelogFile: true

@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.Verification
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
@@ -55,6 +54,7 @@ class SqlVerificationRepository(
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck)
     return sqlRetry.withRetry(WRITE) {
+      // TODO: only consider environments that have verifications
       jooq.inTransaction {
         select(
           DELIVERY_CONFIG.UID,
@@ -101,19 +101,20 @@ class SqlVerificationRepository(
               .set(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_VERSION, artifactVersion)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now)
               .onDuplicateKeyUpdate()
+              .set(ENVIRONMENT_LAST_VERIFIED.ARTIFACT_VERSION, artifactVersion)
               .set(ENVIRONMENT_LAST_VERIFIED.AT, now)
               .execute()
           }
-          .map { (_, deliveryConfigName, _, environmentName, _, artifactReference, artifactVersion) ->
-            VerificationContext(
-              deliveryConfigByName(deliveryConfigName),
-              environmentName,
-              artifactReference,
-              artifactVersion
-            )
-          }
       }
     }
+      .map { (_, deliveryConfigName, _, environmentName, _, artifactReference, artifactVersion) ->
+        VerificationContext(
+          deliveryConfigByName(deliveryConfigName),
+          environmentName,
+          artifactReference,
+          artifactVersion
+        )
+      }
   }
 
   override fun getState(
@@ -130,7 +131,7 @@ class SqlVerificationRepository(
         )
         .from(VERIFICATION_STATE)
         .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
-        .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
+        .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifactUid))
         .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
         .and(VERIFICATION_STATE.VERIFICATION_ID.eq(verification.id))
         .fetchOneInto<VerificationState>()
@@ -149,7 +150,7 @@ class SqlVerificationRepository(
         )
           .from(VERIFICATION_STATE)
           .where(VERIFICATION_STATE.ENVIRONMENT_UID.eq(environmentUid))
-          .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifact.uid))
+          .and(VERIFICATION_STATE.ARTIFACT_UID.eq(artifactUid))
           .and(VERIFICATION_STATE.ARTIFACT_VERSION.eq(version))
           .fetch()
           .associate { (id, status, started_at, ended_at, metadata) ->
@@ -162,29 +163,48 @@ class SqlVerificationRepository(
     context: VerificationContext,
     verification: Verification,
     status: VerificationStatus,
-    metadata: Map<String, Any?>?
+    metadata: Map<String, Any?>
   ) {
     with(context) {
       jooq
         .insertInto(VERIFICATION_STATE)
         .set(VERIFICATION_STATE.STATUS, status)
         .set(VERIFICATION_STATE.METADATA, metadata)
-        .set(status.timestampColumn, currentTimestamp())
+        .set(VERIFICATION_STATE.STARTED_AT, currentTimestamp())
+        .run {
+          if (status.complete) {
+            set(VERIFICATION_STATE.ENDED_AT, currentTimestamp())
+          } else {
+            setNull(VERIFICATION_STATE.ENDED_AT)
+          }
+        }
         .set(VERIFICATION_STATE.ENVIRONMENT_UID, environmentUid)
-        .set(VERIFICATION_STATE.ARTIFACT_UID, artifact.uid)
+        .set(VERIFICATION_STATE.ARTIFACT_UID, artifactUid)
         .set(VERIFICATION_STATE.ARTIFACT_VERSION, version)
         .set(VERIFICATION_STATE.VERIFICATION_ID, verification.id)
         .onDuplicateKeyUpdate()
         .set(VERIFICATION_STATE.STATUS, status)
-        .set(status.timestampColumn, currentTimestamp())
+        .run {
+          if (status.complete) {
+            set(VERIFICATION_STATE.ENDED_AT, currentTimestamp())
+          } else {
+            setNull(VERIFICATION_STATE.ENDED_AT)
+          }
+        }
+        .run {
+          // we only want to overwrite metadata if new metadata was supplied
+          // TODO: figure out how to use MySQL's json_merge function in JOOQ
+          if (metadata.isNotEmpty()) {
+            set(VERIFICATION_STATE.METADATA, metadata)
+          } else {
+            this
+          }
+        }
         .execute()
     }
   }
 
   private fun currentTimestamp() = clock.instant()
-
-  private val VerificationStatus.timestampColumn
-    get() = if (complete) VERIFICATION_STATE.ENDED_AT else VERIFICATION_STATE.STARTED_AT
 
   private val VerificationContext.environmentUid: Select<Record1<String>>
     get() = select(ENVIRONMENT.UID)
@@ -193,9 +213,9 @@ class SqlVerificationRepository(
       .and(ENVIRONMENT.NAME.eq(environment.name))
       .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
 
-  private val DeliveryArtifact.uid: Select<Record1<String>>
+  private val VerificationContext.artifactUid: Select<Record1<String>>
     get() = select(DELIVERY_ARTIFACT.UID)
       .from(DELIVERY_ARTIFACT)
-      .where(DELIVERY_ARTIFACT.NAME.eq(name))
-      .and(DELIVERY_ARTIFACT.TYPE.eq(type))
+      .where(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
+      .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifactReference))
 }
