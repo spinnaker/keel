@@ -10,7 +10,7 @@ data class TestContainerVerification(
   val application: String? = null
 ) : Verification {
   override val type = TYPE
-  override val id = "$repository/$tag"
+  override val id = "$repository:$tag"
 
   companion object {
     const val TYPE = "test-container"
