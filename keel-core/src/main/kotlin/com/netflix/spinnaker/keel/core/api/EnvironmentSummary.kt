@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 @JsonPropertyOrder(value = ["name"])
 data class EnvironmentSummary(
   @JsonIgnore val environment: Environment,
-  val artifacts: Set<ArtifactVersions>,
+  val artifacts: Set<ArtifactVersions>
 ) {
   val name: String
     get() = environment.name
