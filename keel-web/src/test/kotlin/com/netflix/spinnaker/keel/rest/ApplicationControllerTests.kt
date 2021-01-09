@@ -228,7 +228,7 @@ internal class ApplicationControllerTests
           verify { applicationService.getArtifactSummariesFor(application, 10) }
         }
 
-        test("environments contains verifications") {
+        test("environments list contains verifications") {
           val request = get("/application/$application?entities=environments")
             .accept(APPLICATION_JSON_VALUE)
 
