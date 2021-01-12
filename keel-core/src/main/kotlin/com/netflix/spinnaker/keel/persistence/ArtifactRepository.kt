@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Duration
+import java.time.Instant
 
 interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
@@ -29,6 +30,8 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun get(name: String, type: ArtifactType, reference: String, deliveryConfigName: String): DeliveryArtifact
 
   fun get(deliveryConfigName: String, reference: String): DeliveryArtifact
+
+  fun get(artifactUid: String): DeliveryArtifact
 
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
@@ -204,7 +207,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   /**
    * Pin an environment to only deploy a specific DeliveryArtifact version
    */
-  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin)
+  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin): Instant
 
   /**
    * @return list of [PinnedEnvironment]'s if any of the environments in
@@ -215,12 +218,12 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   /**
    * Removes all artifact pins from [targetEnvironment].
    */
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String)
+  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String): Pair<String, Instant>?
 
   /**
    * Removes a specific pin from [targetEnvironment], by [reference].
    */
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String)
+  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): Pair<String, Instant>?
 
   /**
    * Return a specific artifact version if is pinned, from [targetEnvironment], by [reference], if exists.

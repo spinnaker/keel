@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
@@ -196,6 +197,9 @@ class CombinedRepository(
   override fun environmentFor(resourceId: String): Environment =
     deliveryConfigRepository.environmentFor(resourceId)
 
+  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>? =
+    deliveryConfigRepository.environmentNotifications(deliveryConfigName, environmentName)
+
   override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     deliveryConfigRepository.deliveryConfigFor(resourceId)
 
@@ -318,6 +322,9 @@ class CombinedRepository(
   override fun getArtifact(deliveryConfigName: String, reference: String): DeliveryArtifact =
     artifactRepository.get(deliveryConfigName, reference)
 
+  override fun getArtifact(artifactUid: String): DeliveryArtifact =
+    artifactRepository.get(artifactUid)
+
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     artifactRepository.isRegistered(name, type)
 
@@ -372,7 +379,7 @@ class CombinedRepository(
   override fun pinnedEnvironments(deliveryConfig: DeliveryConfig): List<PinnedEnvironment> =
     artifactRepository.getPinnedEnvironments(deliveryConfig)
 
-  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String?) =
+  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String?): Pair<String, Instant>? =
     if (reference != null) {
       artifactRepository.deletePin(deliveryConfig, targetEnvironment, reference)
     } else {

@@ -45,6 +45,7 @@ import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
+import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
@@ -1100,7 +1101,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         subject.markAsSuccessfullyDeployedTo(manifest, versionedReleaseDebian, version1, testEnvironment.name)
       }
 
-      test ("no vertsions for version which is not persisted") {
+      test ("no versions exists if not persisted") {
         expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.PREVIOUS))
           .isNull()
       }
@@ -1154,6 +1155,38 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version2, null, null))
         expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
           .isEqualTo(version2)
+      }
+    }
+
+    context ("delivery artifact by uid") {
+      before {
+        persist(manifest)
+        subject.register(versionedReleaseDebian)
+        subject.pinEnvironment(manifest, EnvironmentArtifactPin(
+          targetEnvironment = testEnvironment.name,
+          reference = versionedReleaseDebian.reference,
+          version = version1,
+          null,
+          null
+          ))
+      }
+
+      test("delete pin returns the uid, and successfully retrieve a delivery artifact object for existing artifactUid") {
+        val pair = subject.deletePin(manifest, testEnvironment.name)
+        if (pair != null) {
+          expectThat(pair.first)
+            .isNotEmpty()
+          expectThat(subject.get(pair.first))
+            .get {
+              reference
+            }.isEqualTo(versionedReleaseDebian.reference)
+        }
+      }
+
+      test("throw exception if uid does not exists") {
+        expectThrows<ArtifactNotFoundException> {
+          subject.get("01EVT5KC6SKBNOTAREALONE")
+        }
       }
     }
   }
