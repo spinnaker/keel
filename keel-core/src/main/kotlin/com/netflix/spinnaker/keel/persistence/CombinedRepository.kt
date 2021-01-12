@@ -322,6 +322,9 @@ class CombinedRepository(
   override fun getArtifact(deliveryConfigName: String, reference: String): DeliveryArtifact =
     artifactRepository.get(deliveryConfigName, reference)
 
+  override fun getArtifact(artifactUid: String): DeliveryArtifact =
+    artifactRepository.get(artifactUid)
+
   override fun isRegistered(name: String, type: ArtifactType): Boolean =
     artifactRepository.isRegistered(name, type)
 
@@ -376,7 +379,7 @@ class CombinedRepository(
   override fun pinnedEnvironments(deliveryConfig: DeliveryConfig): List<PinnedEnvironment> =
     artifactRepository.getPinnedEnvironments(deliveryConfig)
 
-  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String?) =
+  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String?): Pair<String, Instant>? =
     if (reference != null) {
       artifactRepository.deletePin(deliveryConfig, targetEnvironment, reference)
     } else {

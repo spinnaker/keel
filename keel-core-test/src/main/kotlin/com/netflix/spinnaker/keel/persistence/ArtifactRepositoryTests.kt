@@ -1158,5 +1158,36 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       }
     }
 
+    context ("delivery artifact by uid") {
+      before {
+        persist(manifest)
+        subject.register(versionedReleaseDebian)
+        subject.pinEnvironment(manifest, EnvironmentArtifactPin(
+          targetEnvironment = testEnvironment.name,
+          reference = versionedReleaseDebian.reference,
+          version = version1,
+          null,
+          null
+          ))
+      }
+
+      test("delete pin returns the uid, and successfully retrieve a delivery artifact object for existing artifactUid") {
+        val pair = subject.deletePin(manifest, testEnvironment.name)
+        if (pair != null) {
+          expectThat(pair.first)
+            .isNotEmpty()
+          expectThat(subject.get(pair.first))
+            .get {
+              reference
+            }.isEqualTo(versionedReleaseDebian.reference)
+        }
+      }
+
+      test("throw exception if uid does not exists") {
+        expectThrows<ArtifactNotFoundException> {
+          subject.get("01EVT5KC6SKBNOTAREALONE")
+        }
+      }
+    }
   }
 }

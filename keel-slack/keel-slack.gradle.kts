@@ -14,5 +14,4 @@ dependencies {
   testImplementation("dev.minutest:minutest")
   testImplementation("io.strikt:strikt-core")
   testImplementation(project(":keel-test"))
-  testImplementation(project(":keel-core-test"))
 }
