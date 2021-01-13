@@ -42,7 +42,8 @@ class VerificationController(
       verificationRepository.updateState(
         context = this,
         verification = verification(status.verificationId),
-        status = status.status
+        status = status.status,
+        mapOf("overriddenBy" to user, "comment" to status.comment)
       )
     }
   }

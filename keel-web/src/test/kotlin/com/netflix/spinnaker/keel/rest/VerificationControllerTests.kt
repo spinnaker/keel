@@ -74,9 +74,9 @@ internal class VerificationControllerTests
       status = OVERRIDE_PASS,
       comment = "I swear this is fine"
     )
-
+    val user = "fzlem@netflix.com"
     val request = post("/${deliveryConfig.application}/environment/test/verifications")
-      .header("X-SPINNAKER-USER", "fzlem@netflix.com")
+      .header("X-SPINNAKER-USER", user)
       .contentType(APPLICATION_JSON)
       .accept(APPLICATION_JSON)
       .content(jsonMapper.writeValueAsString(payload))
@@ -89,7 +89,8 @@ internal class VerificationControllerTests
           it.deliveryConfig == deliveryConfig
         },
         verification,
-        payload.status
+        payload.status,
+        mapOf("overriddenBy" to user, "comment" to payload.comment)
       )
     }
   }
