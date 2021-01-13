@@ -1173,15 +1173,15 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       test("delete pin returns the uid, and successfully retrieve a delivery artifact object for existing artifactUid") {
         val pair = subject.deletePin(manifest, testEnvironment.name)
-        if (pair != null) {
-          expectThat(pair.first)
+        expectThat(pair)
+          .isNotNull()
+        expectThat(pair!!.first)
             .isNotEmpty()
-          expectThat(subject.get(pair.first))
+        expectThat(subject.get(pair.first))
             .get {
               reference
             }.isEqualTo(versionedReleaseDebian.reference)
         }
-      }
 
       test("throw exception if uid does not exists") {
         expectThrows<ArtifactNotFoundException> {
