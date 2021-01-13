@@ -354,7 +354,7 @@ class SqlDeliveryConfigRepository(
         }
     } ?: throw OrphanedResourceException(resourceId)
 
-  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>? =
+  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig> =
     sqlRetry.withRetry(READ) {
       val uid = jooq
         .select(DELIVERY_CONFIG.UID)
