@@ -1,6 +1,8 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.OVERRIDE_FAIL
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.OVERRIDE_PASS
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -33,6 +35,9 @@ class VerificationController(
     @PathVariable("environment") environment: String,
     @RequestBody status: UpdatedVerificationStatus
   ) {
+    require(status.status in listOf(OVERRIDE_PASS, OVERRIDE_FAIL)) {
+      "Only override statuses may be set via this endpoint."
+    }
     VerificationContext(
       deliveryConfig = deliveryConfigRepository.getByApplication(application),
       environmentName = environment,

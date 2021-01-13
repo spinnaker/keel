@@ -4,13 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
-import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.OVERRIDE_PASS
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -65,13 +67,14 @@ internal class VerificationControllerTests
     } returns deliveryConfig
   }
 
-  @Test
-  fun `verification status can be overridden by user request`() {
+  @ParameterizedTest(name = "verification status can be overridden with {0}")
+  @EnumSource(ConstraintStatus::class, names = ["OVERRIDE_PASS", "OVERRIDE_FAIL"])
+  fun `verification status can be overridden by user request`(status: ConstraintStatus) {
     val payload = VerificationController.UpdatedVerificationStatus(
       verificationId = verification.id,
       artifactReference = artifact.reference,
       artifactVersion = "1.0.0",
-      status = OVERRIDE_PASS,
+      status = status,
       comment = "I swear this is fine"
     )
     val user = "fzlem@netflix.com"
@@ -92,6 +95,30 @@ internal class VerificationControllerTests
         payload.status,
         mapOf("overriddenBy" to user, "comment" to payload.comment)
       )
+    }
+  }
+
+  @ParameterizedTest(name = "verification cannot be overridden with {0}")
+  @EnumSource(ConstraintStatus::class, names = ["OVERRIDE_PASS", "OVERRIDE_FAIL"], mode = EXCLUDE)
+  fun `only override statuses are accepted`(status: ConstraintStatus) {
+    val payload = VerificationController.UpdatedVerificationStatus(
+      verificationId = verification.id,
+      artifactReference = artifact.reference,
+      artifactVersion = "1.0.0",
+      status = status,
+      comment = "I swear this is fine"
+    )
+    val user = "fzlem@netflix.com"
+    val request = post("/${deliveryConfig.application}/environment/test/verifications")
+      .header("X-SPINNAKER-USER", user)
+      .contentType(APPLICATION_JSON)
+      .accept(APPLICATION_JSON)
+      .content(jsonMapper.writeValueAsString(payload))
+
+    mvc.perform(request).andExpect(status().is4xxClientError)
+
+    verify(exactly = 0) {
+      verificationRepository.updateState(any(), any(), any(), any())
     }
   }
 }
