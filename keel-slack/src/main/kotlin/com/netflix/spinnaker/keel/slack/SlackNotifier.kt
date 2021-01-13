@@ -27,9 +27,7 @@ class SlackNotifier(
       log.debug("starting slack notification")
       val slack = Slack.getInstance()
 
-      val actualToken = token?.let {
-        slackConfig.token
-      }?: token
+      val actualToken = token ?: slackConfig.token
 
       val response = slack.methods(actualToken).chatPostMessage { req ->
         req
