@@ -1,5 +1,8 @@
 package com.netflix.spinnaker.keel.slack.notifications
 
+import com.netflix.spinnaker.keel.api.ScmInfo
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.artifacts.getScmBaseLink
 import com.netflix.spinnaker.keel.events.SlackPinnedNotification
 import com.netflix.spinnaker.keel.slack.SlackNotifier
 import com.slack.api.model.kotlin_extension.block.withBlocks
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Component
 @Component
 class PinnedNotification (
   private val slackNotifier: SlackNotifier,
+  private val scmInfo: ScmInfo,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ){
 
@@ -24,6 +28,7 @@ class PinnedNotification (
     with(event) {
       val env = Strings.toRootUpperCase(pin.targetEnvironment)
       val pinnedArtifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${pinnedArtifact?.reference}/${pinnedArtifact?.version}"
+      val repoLink = generateRepoLink(currentArtifact?.gitMetadata)
       var details = ""
       val blocks = withBlocks {
         header {
@@ -42,9 +47,9 @@ class PinnedNotification (
 
         section {
           with(event.currentArtifact?.gitMetadata) {
-            details +="<http://repo|${this?.project}/" +
+            details +="<$repoLink|${this?.project}/" +
               "${this?.repo?.name}> › " +
-              "<http://branch|${this?.branch}"
+              "<$repoLink/branches|${this?.branch}> › "
 
             if (Strings.isNotEmpty(this?.pullRequest?.number)) {
               details += "<${this?.pullRequest?.url}|PR#${this?.pullRequest?.number}> ›"
@@ -58,7 +63,6 @@ class PinnedNotification (
                 //TODO: figure out which action id to send here
               actionId("button-action")
               url(pinnedArtifactUrl)
-           //   value("click_me_123")
             }
           }
         }
@@ -72,4 +76,10 @@ class PinnedNotification (
       slackNotifier.sendSlackNotification(event.notificationConfig.address, blocks)
     }
   }
+
+  private fun generateRepoLink(gitMetadata: GitMetadata?): String {
+    val baseScmUrl = gitMetadata?.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
+    return "$baseScmUrl/projects/${gitMetadata?.project}/repos/${gitMetadata?.repo?.name}"
+  }
+
 }
