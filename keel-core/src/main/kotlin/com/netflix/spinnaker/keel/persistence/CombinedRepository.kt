@@ -197,7 +197,7 @@ class CombinedRepository(
   override fun environmentFor(resourceId: String): Environment =
     deliveryConfigRepository.environmentFor(resourceId)
 
-  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig> =
+  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>? =
     deliveryConfigRepository.environmentNotifications(deliveryConfigName, environmentName)
 
   override fun deliveryConfigFor(resourceId: String): DeliveryConfig =

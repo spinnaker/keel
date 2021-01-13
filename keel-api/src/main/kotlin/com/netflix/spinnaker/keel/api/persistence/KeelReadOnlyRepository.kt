@@ -20,7 +20,7 @@ interface KeelReadOnlyRepository {
 
   fun environmentFor(resourceId: String): Environment
 
-  fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>
+  fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>?
 
   fun deliveryConfigFor(resourceId: String): DeliveryConfig
 
