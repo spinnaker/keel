@@ -608,7 +608,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
             .isEqualTo(2)
         }
 
-        test ("environment without notifications will return null") {
+        test ("environment without notifications will return an empty set") {
           expectThat(repository.environmentNotifications(deliveryConfig.name, "staging"))
             .isNull()
         }

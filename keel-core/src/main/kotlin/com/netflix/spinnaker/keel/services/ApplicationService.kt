@@ -118,7 +118,7 @@ class ApplicationService(
     val pinnedArtifact = repository.getArtifactVersion(deliveryArtifact, pin.version, null)
     val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, pin.targetEnvironment, deliveryArtifact, CURRENT)
 
-    envNotifications.forEach { notificationConfig ->
+    envNotifications?.forEach { notificationConfig ->
       if (notificationConfig.type == NotificationType.slack) {
         publisher.publishEvent(SlackPinnedNotification(
           notificationConfig = notificationConfig,
@@ -146,7 +146,7 @@ class ApplicationService(
 
       val latestApprovedArtifact = repository.latestVersionApprovedIn(config, deliveryArtifact, targetEnvironment)
       val latestArtifact = latestApprovedArtifact?.let { repository.getArtifactVersion(deliveryArtifact, it, null) }
-      envNotifications.forEach { notificationConfig ->
+      envNotifications?.forEach { notificationConfig ->
         if (notificationConfig.type == NotificationType.slack) {
           publisher.publishEvent(SlackUnpinnedNotification(
             notificationConfig = notificationConfig,
