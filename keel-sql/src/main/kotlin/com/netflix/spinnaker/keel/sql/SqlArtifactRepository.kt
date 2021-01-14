@@ -168,21 +168,6 @@ class SqlArtifactRepository(
       } ?: throw ArtifactNotFoundException(reference, deliveryConfigName)
   }
 
-  override fun get(artifactUid: String): DeliveryArtifact {
-    return sqlRetry.withRetry(READ) {
-      jooq
-        .select(DELIVERY_ARTIFACT.NAME, DELIVERY_ARTIFACT.DETAILS, DELIVERY_ARTIFACT.REFERENCE, DELIVERY_ARTIFACT.TYPE, DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME)
-        .from(DELIVERY_ARTIFACT)
-        .where(
-          DELIVERY_ARTIFACT.UID.eq(artifactUid)
-        )
-        .fetchOne()
-    }
-      ?.let { (name, details, reference, type, deliveryConfigName) ->
-        mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)
-      } ?: throw ArtifactNotFoundException(artifactUid, null)
-  }
-
   override fun delete(artifact: DeliveryArtifact) {
     requireNotNull(artifact.deliveryConfigName) { "Error removing artifact - it has no delivery config!" }
     jooq.transaction { config ->
@@ -1061,7 +1046,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin): Instant {
+  override fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin) {
     with(environmentArtifactPin) {
       val environment = deliveryConfig.environmentNamed(targetEnvironment)
       val artifact = get(deliveryConfig.name, reference)
@@ -1081,7 +1066,6 @@ class SqlArtifactRepository(
           .set(ENVIRONMENT_ARTIFACT_PIN.COMMENT, MySQLDSL.values(ENVIRONMENT_ARTIFACT_PIN.COMMENT))
           .execute()
       }
-      return now
     }
   }
 
@@ -1127,8 +1111,7 @@ class SqlArtifactRepository(
     }
   }
 
-  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String): Pair<String, Instant>? {
-    var deletePinResult: Pair<String, Instant>? = null
+  override fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String) {
     sqlRetry.withRetry(WRITE) {
       jooq.select(ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID, ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID)
         .from(ENVIRONMENT_ARTIFACT_PIN)
@@ -1139,10 +1122,9 @@ class SqlArtifactRepository(
           ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid)
         )
         .fetch { (envUid, artUid) ->
-          deletePinResult = deletePin(envUid, artUid)
+          deletePin(envUid, artUid)
         }
     }
-    return deletePinResult
   }
 
   override fun getPinnedVersion(
@@ -1172,8 +1154,7 @@ class SqlArtifactRepository(
     deliveryConfig: DeliveryConfig,
     targetEnvironment: String,
     reference: String
-  ): Pair<String, Instant>? {
-    var deletePinResult: Pair<String, Instant>? = null
+  ){
     sqlRetry.withRetry(WRITE) {
       jooq.select(ENVIRONMENT_ARTIFACT_PIN.ENVIRONMENT_UID, ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID)
         .from(DELIVERY_ARTIFACT)
@@ -1188,10 +1169,9 @@ class SqlArtifactRepository(
           ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid)
         )
         .fetch { (envUid, artUid) ->
-          deletePinResult = deletePin(envUid, artUid)
+           deletePin(envUid, artUid)
         }
     }
-    return deletePinResult
   }
 
   override fun getArtifactVersionByPromotionStatus(
@@ -1355,7 +1335,7 @@ class SqlArtifactRepository(
     }
   }
 
-  private fun deletePin(envUid: String, artUid: String): Pair<String, Instant> {
+  private fun deletePin(envUid: String, artUid: String) {
     // Deletes rows by primary key
     jooq.deleteFrom(ENVIRONMENT_ARTIFACT_PIN)
       .where(
@@ -1363,7 +1343,6 @@ class SqlArtifactRepository(
         ENVIRONMENT_ARTIFACT_PIN.ARTIFACT_UID.eq(artUid)
       )
       .execute()
-    return Pair(artUid, clock.instant())
   }
 
   private fun DeliveryConfig.environmentNamed(name: String): Environment =

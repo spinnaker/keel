@@ -75,12 +75,12 @@ class AdminController(
     adminService.backFillArtifactMetadata(type)
   }
 
-  @PostMapping(
-    path = ["/notifications/test"]
-  )
-  fun sendNotificationEvent(
-    @RequestBody event: NotificationEvent
-  ) {
-    adminService.sendNotificationEvent(event)
-  }
+//  @PostMapping(
+//    path = ["/notifications/test"]
+//  )
+//  fun sendNotificationEvent(
+//    @RequestBody event: NotificationEvent
+//  ) {
+//    adminService.sendNotificationEvent(event)
+//  }
 }

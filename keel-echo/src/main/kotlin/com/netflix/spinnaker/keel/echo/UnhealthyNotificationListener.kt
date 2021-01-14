@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.events.ClearNotificationEvent
 import com.netflix.spinnaker.keel.events.NotificationEvent
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
+import com.netflix.spinnaker.keel.events.UnhealthyNotificationEvent
 import com.netflix.spinnaker.keel.notifications.ClusterViewParams
 import com.netflix.spinnaker.keel.notifications.Notification
 import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
@@ -48,7 +49,7 @@ class UnhealthyNotificationListener(
         val unhealthyDuration = unhealthyRepository.durationUnhealthy(event.resource)
         if (unhealthyDuration > config.minUnhealthyDuration) {
           publisher.publishEvent(
-            NotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event, unhealthyDuration))
+            UnhealthyNotificationEvent(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event, unhealthyDuration))
           )
         }
       }
