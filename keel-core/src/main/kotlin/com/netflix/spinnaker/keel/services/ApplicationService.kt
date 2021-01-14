@@ -40,8 +40,8 @@ import com.netflix.spinnaker.keel.core.api.ResourceSummary
 import com.netflix.spinnaker.keel.core.api.StatefulConstraintSummary
 import com.netflix.spinnaker.keel.core.api.StatelessConstraintSummary
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
-import com.netflix.spinnaker.keel.events.SlackPinnedNotification
-import com.netflix.spinnaker.keel.events.SlackUnpinnedNotification
+import com.netflix.spinnaker.keel.events.PinnedNotification
+import com.netflix.spinnaker.keel.events.UnpinnedNotification
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
 import com.netflix.spinnaker.keel.exceptions.InvalidSystemStateException
 import com.netflix.spinnaker.keel.exceptions.InvalidVetoException
@@ -109,55 +109,18 @@ class ApplicationService(
 
   fun pin(user: String, application: String, pin: EnvironmentArtifactPin) {
     val config = repository.getDeliveryConfigForApplication(application)
-    val time = repository.pinEnvironment(config, pin.copy(pinnedBy = user))
-
-    val envNotifications = repository.environmentNotifications(config.name, pin.targetEnvironment)
-    val deliveryArtifact = pin.reference.let {
-      repository.getArtifact(config.name, it)
-    }
-    val pinnedArtifact = repository.getArtifactVersion(deliveryArtifact, pin.version, null)
-    val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, pin.targetEnvironment, deliveryArtifact, CURRENT)
-
-    envNotifications?.forEach { notificationConfig ->
-      if (notificationConfig.type == NotificationType.slack) {
-        publisher.publishEvent(SlackPinnedNotification(
-          notificationConfig = notificationConfig,
-          pin = pin,
-          currentArtifact = currentArtifact,
-          pinnedArtifact = pinnedArtifact,
-          application = config.application,
-          time = time
-        ))
-      }
-    }
+    repository.pinEnvironment(config, pin.copy(pinnedBy = user))
+    publisher.publishEvent(PinnedNotification(config, pin))
   }
 
   fun deletePin(user: String, application: String, targetEnvironment: String, reference: String? = null) {
     val config = repository.getDeliveryConfigForApplication(application)
-    val artifactAndTime = repository.deletePin(config, targetEnvironment, reference)
+    val pinnedEnvironment = repository.pinnedEnvironments(config).find { it.targetEnvironment == targetEnvironment }
+    repository.deletePin(config, targetEnvironment, reference)
 
-    if (artifactAndTime != null) {
-      val pinnedVersion = artifactAndTime.first
-      val time = artifactAndTime.second
-      val envNotifications = repository.environmentNotifications(config.name, targetEnvironment)
-      val deliveryArtifact =  repository.getArtifact(pinnedVersion)
-
-      val pinnedArtifact = repository.getArtifactVersion(deliveryArtifact, pinnedVersion, null)
-
-      val latestApprovedArtifact = repository.latestVersionApprovedIn(config, deliveryArtifact, targetEnvironment)
-      val latestArtifact = latestApprovedArtifact?.let { repository.getArtifactVersion(deliveryArtifact, it, null) }
-      envNotifications?.forEach { notificationConfig ->
-        if (notificationConfig.type == NotificationType.slack) {
-          publisher.publishEvent(SlackUnpinnedNotification(
-            notificationConfig = notificationConfig,
-            latestArtifact = latestArtifact,
-            pinnedArtifact = pinnedArtifact,
-            application = config.application,
-            time = time
-          ))
-        }
-      }
-    }
+    publisher.publishEvent(UnpinnedNotification(config,
+      pinnedEnvironment,
+      targetEnvironment))
   }
 
   fun markAsVetoedIn(user: String, application: String, veto: EnvironmentArtifactVeto, force: Boolean) {

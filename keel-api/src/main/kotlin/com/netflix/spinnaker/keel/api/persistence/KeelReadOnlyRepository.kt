@@ -54,8 +54,6 @@ interface KeelReadOnlyRepository {
 
   fun getArtifact(deliveryConfigName: String, reference: String): DeliveryArtifact
 
-  fun getArtifact(artifactUid: String): DeliveryArtifact
-
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
   fun artifactVersions(artifact: DeliveryArtifact, limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS): List<PublishedArtifact>

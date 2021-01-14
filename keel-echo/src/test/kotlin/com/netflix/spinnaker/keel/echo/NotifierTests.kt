@@ -9,7 +9,7 @@ import com.netflix.spinnaker.keel.api.NotificationType.email
 import com.netflix.spinnaker.keel.api.NotificationType.slack
 import com.netflix.spinnaker.keel.events.ClearNotificationEvent
 import com.netflix.spinnaker.keel.notifications.Notification
-import com.netflix.spinnaker.keel.events.UnhealthyNotification
+import com.netflix.spinnaker.keel.events.UnhealthyNotificationEvent
 import com.netflix.spinnaker.keel.notifications.NotificationScope.RESOURCE
 import com.netflix.spinnaker.keel.notifications.NotificationType.UNHEALTHY_RESOURCE
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -51,8 +51,10 @@ class NotifierTests : JUnit5Minutests {
       ),
       constraints = setOf()
     )
-    val event = UnhealthyNotification(
+    val event = UnhealthyNotificationEvent(
+      RESOURCE,
       r.id,
+      UNHEALTHY_RESOURCE,
       Notification("hi", "you")
     )
 

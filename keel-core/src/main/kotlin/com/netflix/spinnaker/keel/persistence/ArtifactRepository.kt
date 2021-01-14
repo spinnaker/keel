@@ -31,8 +31,6 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   fun get(deliveryConfigName: String, reference: String): DeliveryArtifact
 
-  fun get(artifactUid: String): DeliveryArtifact
-
   fun isRegistered(name: String, type: ArtifactType): Boolean
 
   fun getAll(type: ArtifactType? = null, name: String? = null): List<DeliveryArtifact>
@@ -207,7 +205,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   /**
    * Pin an environment to only deploy a specific DeliveryArtifact version
    */
-  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin): Instant
+  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin)
 
   /**
    * @return list of [PinnedEnvironment]'s if any of the environments in
@@ -218,12 +216,12 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   /**
    * Removes all artifact pins from [targetEnvironment].
    */
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String): Pair<String, Instant>?
+  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String)
 
   /**
    * Removes a specific pin from [targetEnvironment], by [reference].
    */
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String): Pair<String, Instant>?
+  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String)
 
   /**
    * Return a specific artifact version if is pinned, from [targetEnvironment], by [reference], if exists.

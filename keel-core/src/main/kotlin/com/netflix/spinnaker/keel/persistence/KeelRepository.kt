@@ -163,11 +163,11 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary>
 
-  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin): Instant
+  fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin)
 
   fun pinnedEnvironments(deliveryConfig: DeliveryConfig): List<PinnedEnvironment>
 
-  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String? = null): Pair<String, Instant>?
+  fun deletePin(deliveryConfig: DeliveryConfig, targetEnvironment: String, reference: String? = null)
 
   fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes>
 

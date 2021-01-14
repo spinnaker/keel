@@ -68,12 +68,12 @@ class PinnedNotification (
         }
         context {
           elements {
-            markdownText("${pin.pinnedBy} pinned on ${time}>: \"${pin.comment}\"")
+            markdownText("${pin.pinnedBy} pinned on ${time}: \"${pin.comment}\"")
           }
         }
 
       }
-      slackNotifier.sendSlackNotification(event.notificationConfig.address, blocks)
+      slackNotifier.sendSlackNotification(event.channel, blocks)
     }
   }
 
