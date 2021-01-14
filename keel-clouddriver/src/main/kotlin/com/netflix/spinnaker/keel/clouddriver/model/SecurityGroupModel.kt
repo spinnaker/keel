@@ -35,7 +35,7 @@ data class SecurityGroupModel(
     val portRanges: List<SecurityGroupRulePortRange>?,
     val securityGroup: SecurityGroupRuleReference?,
     val range: SecurityGroupRuleCidr?,
-    val description: String?
+    val description: String? = null
   )
 
   data class SecurityGroupRulePortRange(

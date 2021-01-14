@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.HealthCheckType.ELB
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.configuredTestYamlMapper
 import dev.minutest.junit.JUnit5Minutests
@@ -30,9 +31,11 @@ internal class ClusterSpecTests : JUnit5Minutests {
     context("a spec with multiple regions and minimal configuration") {
       fixture { Fixture() }
 
+      val serializationExtensionRegistry = SerializationExtensionRegistry()
+
       mapOf(
-        "YAML" to configuredTestYamlMapper().registerKeelEc2ApiModule(),
-        "JSON" to configuredTestObjectMapper().registerKeelEc2ApiModule()
+        "YAML" to configuredTestYamlMapper().registerKeelEc2ApiModule(serializationExtensionRegistry),
+        "JSON" to configuredTestObjectMapper().registerKeelEc2ApiModule(serializationExtensionRegistry)
       ).forEach { (format, mapper) ->
         test("can serialize and deserialize as $format") {
           val text = mapper.writeValueAsString(spec)
@@ -101,7 +104,7 @@ internal class ClusterSpecTests : JUnit5Minutests {
 
       derivedContext<Pair<ClusterSpec?, SubnetAwareLocations>>("a spec with location specified at the environment level") {
         deriveFixture {
-          with(configuredTestObjectMapper().registerKeelEc2ApiModule()) {
+          with(configuredTestObjectMapper().registerKeelEc2ApiModule(serializationExtensionRegistry)) {
             val tree = valueToTree<ObjectNode>(spec)
               .without<ObjectNode>("locations")
             val text = writeValueAsString(tree)

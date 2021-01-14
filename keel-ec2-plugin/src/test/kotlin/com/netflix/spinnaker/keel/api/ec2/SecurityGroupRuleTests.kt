@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.ALL
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.TCP
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import dev.minutest.TestContextBuilder
 import dev.minutest.junit.JUnit5Minutests
@@ -19,7 +20,7 @@ import strikt.assertions.propertiesAreEqualTo
 internal class SecurityGroupRuleTests : JUnit5Minutests {
 
   data class Fixture(
-    val mapper: ObjectMapper = configuredYamlMapper().registerKeelEc2ApiModule(),
+    val mapper: ObjectMapper = configuredYamlMapper().registerKeelEc2ApiModule(SerializationExtensionRegistry()),
     val yaml: String,
     val rule: SecurityGroupRule
   ) {

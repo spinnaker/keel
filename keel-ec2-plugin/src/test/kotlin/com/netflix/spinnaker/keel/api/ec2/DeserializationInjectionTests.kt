@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.jackson.registerKeelApiModule
 import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import org.junit.jupiter.api.Test
@@ -17,10 +18,9 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isSuccess
 
 internal class DeserializationInjectionTests {
-
   val mapper = configuredYamlMapper()
     .registerKeelApiModule()
-    .registerKeelEc2ApiModule()
+    .registerKeelEc2ApiModule(SerializationExtensionRegistry())
   val extensionRegistry = DefaultExtensionRegistry(listOf(mapper)).apply {
     register(
       baseType = ResourceSpec::class.java,

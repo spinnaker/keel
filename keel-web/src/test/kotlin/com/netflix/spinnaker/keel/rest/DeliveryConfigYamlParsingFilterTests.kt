@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -33,7 +34,7 @@ class DeliveryConfigYamlParsingFilterTests : JUnit5Minutests {
     val filter = DeliveryConfigYamlParsingFilter()
     val request = MockHttpServletRequest("POST", "/delivery-configs")
     val response = MockHttpServletResponse()
-    val objectMapper = configuredTestObjectMapper().registerKeelEc2ApiModule()
+    val objectMapper = configuredTestObjectMapper().registerKeelEc2ApiModule(SerializationExtensionRegistry())
 
     init {
       objectMapper.registerSubtypes(EC2_SECURITY_GROUP_V1.toNamedType())
