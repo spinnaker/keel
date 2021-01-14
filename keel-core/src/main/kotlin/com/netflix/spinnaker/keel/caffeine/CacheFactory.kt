@@ -52,7 +52,7 @@ class CacheFactory(
       .buildAsync(loader.toAsyncCacheLoader())
       .monitor(cacheName)
 
-  private fun builder(
+  fun builder(
     cacheName: String,
     defaultMaximumSize: Long,
     defaultExpireAfterWrite: Duration,

@@ -51,14 +51,28 @@ import com.netflix.spinnaker.keel.ec2.jackson.mixins.StepAdjustmentMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.StepScalingPolicyMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetGroupAttributesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetTrackingPolicyMixin
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 
-fun ObjectMapper.registerKeelEc2ApiModule(): ObjectMapper = registerModule(KeelEc2ApiModule)
+fun ObjectMapper.registerKeelEc2ApiModule(serializationExtensionRegistry: SerializationExtensionRegistry): ObjectMapper {
+  with(serializationExtensionRegistry) {
+    // deserializers
+    register(ActiveServerGroupImage::class.java, ActiveServerGroupImageDeserializer())
+    register(IngressPorts::class.java, IngressPortsDeserializer())
+    register(SecurityGroupSpec::class.java, SecurityGroupSpecDeserializer())
+    register(SecurityGroupRule::class.java, SecurityGroupRuleDeserializer())
+    // serializers
+    register(IngressPorts::class.java, IngressPortsSerializer())
+  }
+  return registerModule(KeelEc2ApiModule(serializationExtensionRegistry))
+}
 
-object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
+class KeelEc2ApiModule(
+  private val serializationExtensionRegistry: SerializationExtensionRegistry
+) : SimpleModule("Keel EC2 API") {
   override fun setupModule(context: SetupContext) {
     with(context) {
-      addSerializers(KeelEc2ApiSerializers)
-      addDeserializers(KeelEc2ApiDeserializers)
+      addSerializers(KeelEc2ApiSerializers(serializationExtensionRegistry))
+      addDeserializers(KeelEc2ApiDeserializers(serializationExtensionRegistry))
 
       setMixInAnnotations<ApplicationLoadBalancerSpec, ApplicationLoadBalancerSpecMixin>()
       // same annotations are required for this legacy model, so it can reuse the same mixin
@@ -85,23 +99,25 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
   }
 }
 
-internal object KeelEc2ApiSerializers : Serializers.Base() {
+internal class KeelEc2ApiSerializers(
+  private val serializationExtensionRegistry: SerializationExtensionRegistry
+) : Serializers.Base() {
   override fun findSerializer(config: SerializationConfig, type: JavaType, beanDesc: BeanDescription): JsonSerializer<*>? =
-    when {
-      IngressPorts::class.java.isAssignableFrom(type.rawClass) -> IngressPortsSerializer()
-      else -> null
+    serializationExtensionRegistry.serializers.keys.find {
+      it.isAssignableFrom(type.rawClass)
     }
+      ?.let { serializationExtensionRegistry.serializers[it] }
 }
 
-internal object KeelEc2ApiDeserializers : Deserializers.Base() {
-  override fun findBeanDeserializer(type: JavaType, config: DeserializationConfig, beanDesc: BeanDescription): JsonDeserializer<*>? =
-    when (type.rawClass) {
-      ActiveServerGroupImage::class.java -> ActiveServerGroupImageDeserializer()
-      IngressPorts::class.java -> IngressPortsDeserializer()
-      SecurityGroupSpec::class.java -> SecurityGroupSpecDeserializer()
-      SecurityGroupRule::class.java -> SecurityGroupRuleDeserializer()
-      else -> null
-    }
+internal class KeelEc2ApiDeserializers(
+  private val serializationExtensionRegistry: SerializationExtensionRegistry
+) : Deserializers.Base() {
+  override fun findBeanDeserializer(
+    type: JavaType,
+    config: DeserializationConfig,
+    beanDesc: BeanDescription
+  ): JsonDeserializer<*>? =
+    serializationExtensionRegistry.deserializers[type.rawClass]
 }
 
 private inline fun <reified TARGET, reified MIXIN> Module.SetupContext.setMixInAnnotations() {

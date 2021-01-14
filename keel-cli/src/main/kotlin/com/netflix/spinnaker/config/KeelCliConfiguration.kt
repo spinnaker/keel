@@ -7,6 +7,7 @@ import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.serialization.configureForKeel
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -19,6 +20,7 @@ import javax.annotation.PostConstruct
 class KeelCliConfiguration(
   private val extensionRegistry: ExtensionRegistry,
   private val objectMappers: List<ObjectMapper>,
+  private val serializationExtensionRegistry: SerializationExtensionRegistry
 ) {
   private val log: Logger = LoggerFactory.getLogger(javaClass)
 
@@ -29,7 +31,7 @@ class KeelCliConfiguration(
   fun registerApiExtensionsWithObjectMappers() {
     objectMappers.forEach {
       it.configureForKeel()
-      it.registerKeelEc2ApiModule()
+      it.registerKeelEc2ApiModule(serializationExtensionRegistry)
     }
   }
 

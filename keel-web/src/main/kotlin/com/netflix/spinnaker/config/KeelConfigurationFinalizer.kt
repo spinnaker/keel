@@ -20,6 +20,7 @@ import com.netflix.spinnaker.keel.api.support.extensionsOf
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.titus.jackson.registerKeelTitusApiModule
 import org.slf4j.LoggerFactory
@@ -40,7 +41,8 @@ class KeelConfigurationFinalizer(
   private val artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList(),
   private val objectMappers: List<ObjectMapper>,
   private val extensionRegistry: ExtensionRegistry,
-  private val resolvers: List<Resolver<*>>
+  private val resolvers: List<Resolver<*>>,
+  private val serializationExtensionRegistry: SerializationExtensionRegistry
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -49,7 +51,7 @@ class KeelConfigurationFinalizer(
   @PostConstruct
   fun registerApiExtensionsWithObjectMappers() {
     objectMappers.forEach {
-      it.registerKeelEc2ApiModule()
+      it.registerKeelEc2ApiModule(serializationExtensionRegistry)
       it.registerKeelTitusApiModule()
     }
   }

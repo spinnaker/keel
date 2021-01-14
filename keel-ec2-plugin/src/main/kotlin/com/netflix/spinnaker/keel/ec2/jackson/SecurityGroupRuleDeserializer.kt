@@ -6,7 +6,7 @@ import com.netflix.spinnaker.keel.api.ec2.ReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule
 import com.netflix.spinnaker.keel.jackson.PropertyNamePolymorphicDeserializer
 
-internal class SecurityGroupRuleDeserializer :
+open class SecurityGroupRuleDeserializer :
   PropertyNamePolymorphicDeserializer<SecurityGroupRule>(SecurityGroupRule::class.java) {
   override fun identifySubType(fieldNames: Collection<String>): Class<out SecurityGroupRule> =
     when {
