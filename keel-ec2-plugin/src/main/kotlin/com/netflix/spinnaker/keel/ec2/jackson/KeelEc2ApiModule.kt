@@ -32,6 +32,7 @@ import com.netflix.spinnaker.keel.api.ec2.StepScalingPolicy
 import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1Spec
+import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1_1Spec
 import com.netflix.spinnaker.keel.api.ec2.old.ClusterV1Spec
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.BuildInfoMixin
@@ -61,7 +62,8 @@ object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
       addDeserializers(KeelEc2ApiDeserializers)
 
       setMixInAnnotations<ApplicationLoadBalancerSpec, ApplicationLoadBalancerSpecMixin>()
-      // same annotations are required for this legacy model, so it can reuse the same mixin
+      // same annotations are required for this legacy models, so they can reuse the same mixin
+      setMixInAnnotations<ApplicationLoadBalancerV1_1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<ApplicationLoadBalancerV1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<BuildInfo, BuildInfoMixin>()
       setMixInAnnotations<ClassicLoadBalancerSpec, ClassicLoadBalancerSpecMixin>()

@@ -12,7 +12,7 @@ import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancer
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.CLOUD_PROVIDER
-import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_1
+import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_2
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerDependencies
 import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.plugins.ResolvableResourceHandler
@@ -39,7 +39,7 @@ class ApplicationLoadBalancerHandler(
   resolvers: List<Resolver<*>>
 ) : ResolvableResourceHandler<ApplicationLoadBalancerSpec, Map<String, ApplicationLoadBalancer>>(resolvers) {
 
-  override val supportedKind = EC2_APPLICATION_LOAD_BALANCER_V1_1
+  override val supportedKind = EC2_APPLICATION_LOAD_BALANCER_V1_2
 
   override suspend fun toResolvedType(resource: Resource<ApplicationLoadBalancerSpec>):
     Map<String, ApplicationLoadBalancer> =
@@ -232,7 +232,11 @@ class ApplicationLoadBalancerHandler(
                     ApplicationLoadBalancerSpec.Listener(
                       port = l.port,
                       protocol = l.protocol,
-                      certificateArn = l.certificates?.firstOrNull()?.certificateArn,
+                      certificates = l.certificates?.mapTo(mutableSetOf()) {
+                       ApplicationLoadBalancerSpec.Certificate(
+                         certificateArn = it.certificateArn
+                       )
+                      } ?: emptySet(),
                       // TODO: filtering out default rules seems wrong, see TODO in ApplicationLoadBalancerNormalizer
                       rules = l.rules.filter { !it.default }.map { it.toEc2Api() }.toSet(),
                       defaultActions = l.defaultActions.map { it.toEc2Api() }.toSet()
