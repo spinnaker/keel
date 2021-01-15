@@ -91,7 +91,7 @@ class UnhealthyNotificationListenerTests : JUnit5Minutests {
           subject.onResourceHealthEvent(event)
           verify(exactly = 1) {
             publisher.publishEvent(
-              UnhealthyNotification(RESOURCE, r.id, UNHEALTHY_RESOURCE, subject.message(event, Duration.ofMinutes(6)))
+              UnhealthyNotification(r.id,  subject.message(event, Duration.ofMinutes(6)))
             )
           }
         }

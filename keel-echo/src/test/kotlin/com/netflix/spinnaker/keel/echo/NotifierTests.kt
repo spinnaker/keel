@@ -52,9 +52,7 @@ class NotifierTests : JUnit5Minutests {
       constraints = setOf()
     )
     val event = UnhealthyNotification(
-      RESOURCE,
       r.id,
-      UNHEALTHY_RESOURCE,
       Notification("hi", "you")
     )
 
