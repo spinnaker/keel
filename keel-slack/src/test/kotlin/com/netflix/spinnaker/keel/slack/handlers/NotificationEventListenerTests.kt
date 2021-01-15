@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.slack
+package com.netflix.spinnaker.keel.slack.handlers
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
@@ -9,15 +9,14 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.events.PinnedNotification
-import com.netflix.spinnaker.keel.events.SlackPinnedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.slack.NotificationEventListener
 import com.netflix.spinnaker.keel.test.DummyArtifact
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.time.ZoneId

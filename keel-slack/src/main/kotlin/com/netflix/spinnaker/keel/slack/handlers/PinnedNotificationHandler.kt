@@ -1,11 +1,10 @@
-package com.netflix.spinnaker.keel.slack.notifications
+package com.netflix.spinnaker.keel.slack.handlers
 
 import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.artifacts.getScmBaseLink
-import com.netflix.spinnaker.keel.events.SlackPinnedNotification
+import com.netflix.spinnaker.keel.slack.SlackPinnedNotification
 import com.netflix.spinnaker.keel.notifications.NotificationType
-import com.netflix.spinnaker.keel.slack.SlackNotificationHandler
 import com.netflix.spinnaker.keel.slack.SlackNotifier
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import org.apache.logging.log4j.util.Strings
@@ -23,7 +22,6 @@ class PinnedNotificationHandler (
   override val type: NotificationType = NotificationType.PINNED
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  //@EventListener(SlackPinnedNotification::class)
   override fun constructMessage(notification: SlackPinnedNotification) {
     log.debug("Sending pinnedEnvironment notification for application ${notification.application}")
 

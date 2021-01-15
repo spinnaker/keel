@@ -1,12 +1,10 @@
-package com.netflix.spinnaker.keel.slack.notifications
+package com.netflix.spinnaker.keel.slack.handlers
 
-import com.netflix.spinnaker.keel.events.SlackUnpinnedNotification
+import com.netflix.spinnaker.keel.slack.SlackUnpinnedNotification
 import com.netflix.spinnaker.keel.notifications.NotificationType
-import com.netflix.spinnaker.keel.slack.SlackNotificationHandler
 import com.netflix.spinnaker.keel.slack.SlackNotifier
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
 @Component

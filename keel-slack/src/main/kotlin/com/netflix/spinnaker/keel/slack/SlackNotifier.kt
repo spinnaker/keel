@@ -9,6 +9,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 
+/**
+ * This notifier is responsible on actually sending the slack notification,
+ * based on the [channel] and the [blocks] it gets from the different handlers.
+ */
 @Component
 @EnableConfigurationProperties(SlackConfiguration::class)
 class SlackNotifier(
