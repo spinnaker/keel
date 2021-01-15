@@ -14,7 +14,7 @@ abstract class NotificationEvent{
   open val message: Notification? = null
 }
 
-data class UnhealthyNotificationEvent(
+data class UnhealthyNotification(
   override val scope: NotificationScope,
   override val ref: String?,
   override val type: NotificationType,
@@ -24,7 +24,7 @@ data class UnhealthyNotificationEvent(
 data class PinnedNotification(
   val config: DeliveryConfig,
   val pin: EnvironmentArtifactPin
-):NotificationEvent() {
+): NotificationEvent() {
   override val type = NotificationType.PINNED
   override val scope = NotificationScope.ARTIFACT
 }
@@ -32,7 +32,8 @@ data class PinnedNotification(
 data class UnpinnedNotification(
   val config: DeliveryConfig,
   val pinnedEnvironment: PinnedEnvironment?,
-  val targetEnvironment: String
+  val targetEnvironment: String,
+  val user: String
 ): NotificationEvent() {
   override val type = NotificationType.UNPINNED
   override val scope = NotificationScope.ARTIFACT
