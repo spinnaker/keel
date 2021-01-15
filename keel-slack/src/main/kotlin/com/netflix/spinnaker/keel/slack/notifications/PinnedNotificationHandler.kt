@@ -4,28 +4,30 @@ import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.artifacts.getScmBaseLink
 import com.netflix.spinnaker.keel.events.SlackPinnedNotification
+import com.netflix.spinnaker.keel.notifications.NotificationType
+import com.netflix.spinnaker.keel.slack.SlackNotificationHandler
 import com.netflix.spinnaker.keel.slack.SlackNotifier
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import org.apache.logging.log4j.util.Strings
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
 @Component
-class PinnedNotification (
+class PinnedNotificationHandler (
   private val slackNotifier: SlackNotifier,
   private val scmInfo: ScmInfo,
-  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
-){
+  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
+): SlackNotificationHandler<SlackPinnedNotification> {
 
+  override val type: NotificationType = NotificationType.PINNED
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  @EventListener(SlackPinnedNotification::class)
-  fun onPinnedEvent(event: SlackPinnedNotification) {
-    log.debug("Sending pinnedEnvironment notification for application ${event.application}")
+  //@EventListener(SlackPinnedNotification::class)
+  override fun constructMessage(notification: SlackPinnedNotification) {
+    log.debug("Sending pinnedEnvironment notification for application ${notification.application}")
 
-    with(event) {
+    with(notification) {
       val env = Strings.toRootUpperCase(pin.targetEnvironment)
       val pinnedArtifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${pinnedArtifact?.reference}/${pinnedArtifact?.version}"
       val repoLink = generateRepoLink(currentArtifact?.gitMetadata)
@@ -36,7 +38,7 @@ class PinnedNotification (
         }
 
         section {
-          markdownText("*Version:* ~#${event.currentArtifact?.buildMetadata?.number}~ → <$pinnedArtifactUrl|#${pinnedArtifact?.buildMetadata?.number}> " +
+          markdownText("*Version:* ~#${notification.currentArtifact?.buildMetadata?.number}~ → <$pinnedArtifactUrl|#${pinnedArtifact?.buildMetadata?.number}> " +
             "by ${pinnedArtifact?.gitMetadata?.author}\n " +
             "*Where:* $env\n\n " +
             "${pinnedArtifact?.gitMetadata?.commitInfo?.message}")
@@ -46,7 +48,7 @@ class PinnedNotification (
         }
 
         section {
-          with(event.currentArtifact?.gitMetadata) {
+          with(notification.currentArtifact?.gitMetadata) {
             details +="<$repoLink|${this?.project}/" +
               "${this?.repo?.name}> › " +
               "<$repoLink/branches|${this?.branch}> › "
@@ -73,7 +75,7 @@ class PinnedNotification (
         }
 
       }
-      slackNotifier.sendSlackNotification(event.channel, blocks)
+      slackNotifier.sendSlackNotification(notification.channel, blocks)
     }
   }
 
@@ -81,5 +83,6 @@ class PinnedNotification (
     val baseScmUrl = gitMetadata?.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
     return "$baseScmUrl/projects/${gitMetadata?.project}/repos/${gitMetadata?.repo?.name}"
   }
+
 
 }

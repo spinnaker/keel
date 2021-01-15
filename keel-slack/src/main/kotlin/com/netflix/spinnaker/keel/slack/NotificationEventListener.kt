@@ -1,7 +1,10 @@
-package com.netflix.spinnaker.keel.events
+package com.netflix.spinnaker.keel.slack
 
 import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.events.PinnedNotification
+import com.netflix.spinnaker.keel.events.SlackUnpinnedNotification
+import com.netflix.spinnaker.keel.events.UnpinnedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -17,7 +20,8 @@ import java.time.Clock
 class NotificationEventListener(
   private val repository: KeelRepository,
   private val publisher: ApplicationEventPublisher,
-  private val clock: Clock
+  private val clock: Clock,
+  private val handlers: List<SlackNotificationHandler<*>>
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -33,14 +37,19 @@ class NotificationEventListener(
 
       envNotifications?.forEach { notificationConfig ->
         if (notificationConfig.type == NotificationType.slack) {
-          publisher.publishEvent(SlackPinnedNotification(
-            channel = notificationConfig.address,
-            pin = pin,
-            currentArtifact = currentArtifact,
-            pinnedArtifact = pinnedArtifact,
-            application = config.application,
-            time = clock.instant()
-          ))
+          handlers.find { hand ->
+            hand.type == notification.type
+          }?.let {
+            //TODO: figure out why it's not working as expected
+//            it?.constructMessage(SlackPinnedNotification(
+//              channel = notificationConfig.address,
+//              pin = pin,
+//              currentArtifact = currentArtifact,
+//              pinnedArtifact = pinnedArtifact,
+//              application = config.application,
+//              time = clock.instant()
+//            ))
+          }
         }
       }
     }
@@ -52,17 +61,18 @@ class NotificationEventListener(
       val envNotifications = repository.environmentNotifications(config.name, targetEnvironment)
 
       if (pinnedEnvironment != null) {
-        val latestApprovedArtifactVersion = repository.latestVersionApprovedIn(config, pinnedEnvironment.artifact, targetEnvironment)
-        val latestArtifact = latestApprovedArtifactVersion?.let { repository.getArtifactVersion(pinnedEnvironment.artifact, it, null) }
+        val latestApprovedArtifactVersion = repository.latestVersionApprovedIn(config, pinnedEnvironment!!.artifact, targetEnvironment)
+        val latestArtifact = latestApprovedArtifactVersion?.let { repository.getArtifactVersion(pinnedEnvironment!!.artifact, it, null) }
 
         envNotifications?.forEach { notificationConfig ->
           if (notificationConfig.type == NotificationType.slack) {
             publisher.publishEvent(SlackUnpinnedNotification(
               channel = notificationConfig.address,
               latestArtifact = latestArtifact,
-              pinnedVersion = pinnedEnvironment.version,
+              pinnedVersion = pinnedEnvironment!!.version,
               application = config.application,
-              time = clock.instant()
+              time = clock.instant(),
+              user = user
             ))
           }
         }

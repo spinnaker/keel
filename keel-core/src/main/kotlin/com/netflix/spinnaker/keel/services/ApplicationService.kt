@@ -120,7 +120,8 @@ class ApplicationService(
 
     publisher.publishEvent(UnpinnedNotification(config,
       pinnedEnvironment,
-      targetEnvironment))
+      targetEnvironment,
+      user))
   }
 
   fun markAsVetoedIn(user: String, application: String, veto: EnvironmentArtifactVeto, force: Boolean) {
