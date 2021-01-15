@@ -48,38 +48,38 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     override val id: String = "$type:$value"
   }
 
-  @Test
-  fun `an unknown verification has a null state`() {
-    val verification = DummyVerification("1")
-    val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker-stable"
-          ),
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker-unstable"
-          )
+  private val verification = DummyVerification("1")
+  private val context = VerificationContext(
+    deliveryConfig = DeliveryConfig(
+      application = "fnord",
+      name = "fnord-manifest",
+      serviceAccount = "jamm@illuminati.org",
+      artifacts = setOf(
+        DockerArtifact(
+          name = "fnord",
+          deliveryConfigName = "fnord-manifest",
+          reference = "fnord-docker-stable"
         ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification)
-          )
+        DockerArtifact(
+          name = "fnord",
+          deliveryConfigName = "fnord-manifest",
+          reference = "fnord-docker-unstable"
         )
       ),
-      environmentName = "test",
-      artifactReference = "fnord-docker-stable",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
+      environments = setOf(
+        Environment(
+          name = "test",
+          verifyWith = listOf(verification)
+        )
+      )
+    ),
+    environmentName = "test",
+    artifactReference = "fnord-docker-stable",
+    version = "fnord-0.190.0-h378.eacb135"
+  )
 
+  @Test
+  fun `an unknown verification has a null state`() {
     context.setup()
 
     expectCatching {
@@ -92,31 +92,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
   @ParameterizedTest
   @EnumSource(ConstraintStatus::class)
   fun `after initial creation a verification state can be retrieved`(status: ConstraintStatus) {
-    val verification = DummyVerification("1")
-    val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker"
-          )
-        ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification)
-          )
-        )
-      ),
-      environmentName = "test",
-      artifactReference = "fnord-docker",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
-
     context.setup()
 
     val metadata = mapOf("taskId" to ULID().nextULID())
@@ -133,31 +108,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   @Test
   fun `successive updates do not wipe out metadata`() {
-    val verification = DummyVerification("1")
-    val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker"
-          )
-        ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification)
-          )
-        )
-      ),
-      environmentName = "test",
-      artifactReference = "fnord-docker",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
-
     context.setup()
 
     subject.updateState(context, verification, PENDING)
@@ -176,31 +126,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   @Test
   fun `successive updates can add and update metadata`() {
-    val verification = DummyVerification("1")
-    val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker"
-          )
-        ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification)
-          )
-        )
-      ),
-      environmentName = "test",
-      artifactReference = "fnord-docker",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
-
     context.setup()
 
     subject.updateState(context, verification, PENDING)
@@ -220,42 +145,32 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   @Test
   fun `different verifications are isolated from one another`() {
-    val verification1 = DummyVerification("1")
     val verification2 = DummyVerification("2")
-    val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker"
+    val context = context.run {
+      copy(
+        deliveryConfig = deliveryConfig.run {
+          copy(
+            environments = setOf(
+              Environment(
+                name = "test",
+                verifyWith = listOf(verification, verification2)
+              )
+            )
           )
-        ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification1, verification2)
-          )
-        )
-      ),
-      environmentName = "test",
-      artifactReference = "fnord-docker",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
+        }
+      )
+    }
 
     context.setup()
 
     val metadata1 = mapOf("taskId" to ULID().nextULID())
     val metadata2 = mapOf("taskId" to ULID().nextULID())
 
-    subject.updateState(context, verification1, PASS, metadata1)
+    subject.updateState(context, verification, PASS, metadata1)
     subject.updateState(context, verification2, PENDING, metadata2)
 
     expectCatching {
-      subject.getState(context, verification1)
+      subject.getState(context, verification)
     }
       .isSuccess()
       .isNotNull()
@@ -275,31 +190,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
   @Nested
   inner class NextCheckTests {
     private val minAge = Duration.ofMinutes(1)
-
-    private val verification = DummyVerification("1")
-    private val context = VerificationContext(
-      deliveryConfig = DeliveryConfig(
-        application = "fnord",
-        name = "fnord-manifest",
-        serviceAccount = "jamm@illuminati.org",
-        artifacts = setOf(
-          DockerArtifact(
-            name = "fnord",
-            deliveryConfigName = "fnord-manifest",
-            reference = "fnord-docker"
-          )
-        ),
-        environments = setOf(
-          Environment(
-            name = "test",
-            verifyWith = listOf(verification)
-          )
-        )
-      ),
-      environmentName = "test",
-      artifactReference = "fnord-docker",
-      version = "fnord-0.190.0-h378.eacb135"
-    )
 
     private fun next(limit: Int = 1) = expectCatching {
       subject.nextEnvironmentsForVerification(minAge, limit)
