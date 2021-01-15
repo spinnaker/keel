@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * A registry to allow customization of JSON serializers and deserializers .
+ * A registry to allow customization of JSON serializers and deserializers.
  */
 @Component
 class SerializationExtensionRegistry {

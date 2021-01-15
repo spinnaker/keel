@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.deser.Deserializers
+import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.Serializers
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
@@ -57,11 +58,13 @@ import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetGroupAttributesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetTrackingPolicyMixin
 import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 
-fun ObjectMapper.registerKeelEc2ApiModule(
-  extensionRegistry: ExtensionRegistry, serializationExtensionRegistry: SerializationExtensionRegistry
-): ObjectMapper {
-  extensionRegistry.registerEc2Subtypes()
+val SECURITY_GROUP_RULE_SUBTYPES = mapOf(
+  ReferenceRule::class.java to "reference",
+  CrossAccountReferenceRule::class.java to "cross-account",
+  CidrRule::class.java to "cidr"
+)
 
+fun ObjectMapper.registerKeelEc2ApiModule(serializationExtensionRegistry: SerializationExtensionRegistry): ObjectMapper {
   with(serializationExtensionRegistry) {
     // deserializers
     register(ActiveServerGroupImage::class.java, ActiveServerGroupImageDeserializer())
@@ -72,13 +75,18 @@ fun ObjectMapper.registerKeelEc2ApiModule(
     register(IngressPorts::class.java, IngressPortsSerializer())
   }
   return registerModule(KeelEc2ApiModule(serializationExtensionRegistry))
+    .apply {
+      SECURITY_GROUP_RULE_SUBTYPES.forEach { (subType, discriminator) ->
+        registerSubtypes(NamedType(subType, discriminator))
+      }
+    }
 }
 
 fun ExtensionRegistry.registerEc2Subtypes() {
   // Note that the discriminators below are not used as sub-types are determined by the custom deserializer above
-  register<SecurityGroupRule>(ReferenceRule::class.java, "reference")
-  register<SecurityGroupRule>(CrossAccountReferenceRule::class.java, "cross-account")
-  register<SecurityGroupRule>(CidrRule::class.java, "cidr")
+  SECURITY_GROUP_RULE_SUBTYPES.forEach { (subType, discriminator) ->
+    register(SecurityGroupRule::class.java, subType, discriminator)
+  }
 }
 
 class KeelEc2ApiModule(

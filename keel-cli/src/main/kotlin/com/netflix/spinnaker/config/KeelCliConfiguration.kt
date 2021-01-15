@@ -31,7 +31,7 @@ class KeelCliConfiguration(
   fun registerApiExtensionsWithObjectMappers() {
     objectMappers.forEach {
       it.configureForKeel()
-      it.registerKeelEc2ApiModule(extensionRegistry, serializationExtensionRegistry)
+      it.registerKeelEc2ApiModule(serializationExtensionRegistry)
     }
   }
 

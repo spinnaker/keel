@@ -18,9 +18,11 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isSuccess
 
 internal class DeserializationInjectionTests {
-  val mapper = configuredYamlMapper()
+  private val mapper = configuredYamlMapper()
     .registerKeelApiModule()
     .registerKeelEc2ApiModule(SerializationExtensionRegistry())
+
+  // Needed because the extension registry configures the mapper
   val extensionRegistry = DefaultExtensionRegistry(listOf(mapper)).apply {
     register(
       baseType = ResourceSpec::class.java,
