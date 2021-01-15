@@ -3,9 +3,9 @@ package com.netflix.spinnaker.keel.slack
 import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.events.PinnedNotification
-import com.netflix.spinnaker.keel.events.SlackUnpinnedNotification
 import com.netflix.spinnaker.keel.events.UnpinnedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.slack.handlers.SlackNotificationHandler
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
@@ -35,20 +35,22 @@ class NotificationEventListener(
       val pinnedArtifact = repository.getArtifactVersion(deliveryArtifact, pin.version, null)
       val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, pin.targetEnvironment, deliveryArtifact, PromotionStatus.CURRENT)
 
+      //handlers.supporting<SlackPinnedNotification>(type)
+
       envNotifications?.forEach { notificationConfig ->
         if (notificationConfig.type == NotificationType.slack) {
-          handlers.find { hand ->
+          val handler = handlers.find { hand ->
             hand.type == notification.type
-          }?.let {
-            //TODO: figure out why it's not working as expected
-//            it?.constructMessage(SlackPinnedNotification(
-//              channel = notificationConfig.address,
-//              pin = pin,
-//              currentArtifact = currentArtifact,
-//              pinnedArtifact = pinnedArtifact,
-//              application = config.application,
-//              time = clock.instant()
-//            ))
+          } as? SlackNotificationHandler<SlackPinnedNotification>
+          handler?.let {
+            it.constructMessage(SlackPinnedNotification(
+              channel = notificationConfig.address,
+              pin = pin,
+              currentArtifact = currentArtifact,
+              pinnedArtifact = pinnedArtifact,
+              application = config.application,
+              time = clock.instant()
+            ))
           }
         }
       }
