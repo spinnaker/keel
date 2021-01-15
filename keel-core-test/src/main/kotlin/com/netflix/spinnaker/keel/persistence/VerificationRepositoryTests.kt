@@ -21,7 +21,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import strikt.api.expectCatching
 import strikt.assertions.first
+import strikt.assertions.get
 import strikt.assertions.hasSize
+import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
@@ -141,6 +143,26 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       .isNotNull()
       .with(VerificationState::status) { isEqualTo(OVERRIDE_PASS) }
       .with(VerificationState::metadata) { isEqualTo(initialMetadata + newMetadata) }
+  }
+
+  @Test
+  fun `successive updates can append to arrays in the metadata`() {
+    context.setup()
+
+    subject.updateState(context, verification, PENDING)
+    val initialMetadata = mapOf("tasks" to listOf(mapOf("id" to ULID().nextULID())))
+    subject.updateState(context, verification, FAIL, initialMetadata)
+    val newMetadata = mapOf("tasks" to listOf(mapOf("id" to ULID().nextULID())))
+    subject.updateState(context, verification, PASS, newMetadata)
+
+    expectCatching {
+      subject.getState(context, verification)
+    }
+      .isSuccess()
+      .isNotNull()
+      .with(VerificationState::metadata) {
+        get("tasks").isA<List<*>>().hasSize(2)
+      }
   }
 
   @Test
