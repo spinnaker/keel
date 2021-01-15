@@ -96,7 +96,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
   fun `after initial creation a verification state can be retrieved`(status: ConstraintStatus) {
     context.setup()
 
-    val metadata = mapOf("taskId" to ULID().nextULID())
+    val metadata = mapOf("tasks" to listOf(ULID().nextULID()))
     subject.updateState(context, verification, status, metadata)
 
     expectCatching {
@@ -113,7 +113,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     context.setup()
 
     subject.updateState(context, verification, PENDING)
-    val metadata = mapOf("taskId" to ULID().nextULID())
+    val metadata = mapOf("tasks" to listOf(ULID().nextULID()))
     subject.updateState(context, verification, PENDING, metadata)
     subject.updateState(context, verification, PASS)
 
@@ -131,7 +131,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     context.setup()
 
     subject.updateState(context, verification, PENDING)
-    val initialMetadata = mapOf("taskId" to ULID().nextULID())
+    val initialMetadata = mapOf("tasks" to listOf(ULID().nextULID()))
     subject.updateState(context, verification, FAIL, initialMetadata)
     val newMetadata = mapOf("overriddenBy" to "flzlem@netflix.com", "comment" to "flaky test!")
     subject.updateState(context, verification, OVERRIDE_PASS, newMetadata)
@@ -150,9 +150,9 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     context.setup()
 
     subject.updateState(context, verification, PENDING)
-    val initialMetadata = mapOf("tasks" to listOf(mapOf("id" to ULID().nextULID())))
+    val initialMetadata = mapOf("tasks" to listOf(ULID().nextULID()))
     subject.updateState(context, verification, FAIL, initialMetadata)
-    val newMetadata = mapOf("tasks" to listOf(mapOf("id" to ULID().nextULID())))
+    val newMetadata = mapOf("tasks" to listOf(ULID().nextULID()))
     subject.updateState(context, verification, PASS, newMetadata)
 
     expectCatching {

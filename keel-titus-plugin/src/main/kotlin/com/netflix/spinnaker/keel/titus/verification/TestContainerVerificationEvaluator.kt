@@ -37,7 +37,7 @@ class TestContainerVerificationEvaluator(
     metadata: Map<String, Any?>
   ): ConstraintStatus {
     @Suppress("UNCHECKED_CAST")
-    val taskId = (metadata[TASKS] as List<Map<String, String>>?)?.last()?.get("id")
+    val taskId = (metadata[TASKS] as Iterable<String>?)?.last()
     require(taskId is String) {
       "No task id found in previous verification state"
     }
@@ -86,7 +86,7 @@ class TestContainerVerificationEvaluator(
       }
         .let { task ->
           log.debug("Launched container test task ${task.id} for ${context.deliveryConfig.application} environment ${context.environmentName}")
-          mapOf(TASKS to task.id)
+          mapOf(TASKS to listOf(task.id))
         }
     }
   }

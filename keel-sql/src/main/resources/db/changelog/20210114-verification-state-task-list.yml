@@ -7,7 +7,5 @@ databaseChangeLog:
         sql: |-
           update verification_state
           set metadata = json_object(
-            'tasks', json_array(
-              json_object('id', metadata -> '$.taskId')
-            )
+            'tasks', json_array(metadata -> '$.taskId')
           )
