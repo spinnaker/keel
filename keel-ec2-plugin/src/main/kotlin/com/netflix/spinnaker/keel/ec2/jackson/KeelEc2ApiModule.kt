@@ -12,11 +12,13 @@ import com.fasterxml.jackson.databind.deser.Deserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.Serializers
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
+import com.netflix.spinnaker.keel.api.ec2.CidrRule
 import com.netflix.spinnaker.keel.api.ec2.ClassicLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.HealthSpec
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
+import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.CustomizedMetricSpecification
 import com.netflix.spinnaker.keel.api.ec2.IngressPorts
 import com.netflix.spinnaker.keel.api.ec2.InstanceProvider
@@ -33,6 +35,8 @@ import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
 import com.netflix.spinnaker.keel.api.ec2.TargetTrackingPolicy
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1Spec
 import com.netflix.spinnaker.keel.api.ec2.old.ClusterV1Spec
+import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
+import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ApplicationLoadBalancerSpecMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.BuildInfoMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.ClassicLoadBalancerSpecMixin
@@ -53,7 +57,11 @@ import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetGroupAttributesMixin
 import com.netflix.spinnaker.keel.ec2.jackson.mixins.TargetTrackingPolicyMixin
 import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
 
-fun ObjectMapper.registerKeelEc2ApiModule(serializationExtensionRegistry: SerializationExtensionRegistry): ObjectMapper {
+fun ObjectMapper.registerKeelEc2ApiModule(
+  extensionRegistry: ExtensionRegistry, serializationExtensionRegistry: SerializationExtensionRegistry
+): ObjectMapper {
+  extensionRegistry.registerEc2Subtypes()
+
   with(serializationExtensionRegistry) {
     // deserializers
     register(ActiveServerGroupImage::class.java, ActiveServerGroupImageDeserializer())
@@ -64,6 +72,13 @@ fun ObjectMapper.registerKeelEc2ApiModule(serializationExtensionRegistry: Serial
     register(IngressPorts::class.java, IngressPortsSerializer())
   }
   return registerModule(KeelEc2ApiModule(serializationExtensionRegistry))
+}
+
+fun ExtensionRegistry.registerEc2Subtypes() {
+  // Note that the discriminators below are not used as sub-types are determined by the custom deserializer above
+  register<SecurityGroupRule>(ReferenceRule::class.java, "reference")
+  register<SecurityGroupRule>(CrossAccountReferenceRule::class.java, "cross-account")
+  register<SecurityGroupRule>(CidrRule::class.java, "cidr")
 }
 
 class KeelEc2ApiModule(

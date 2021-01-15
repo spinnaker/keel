@@ -34,7 +34,7 @@ class DeliveryConfigYamlParsingFilterTests : JUnit5Minutests {
     val filter = DeliveryConfigYamlParsingFilter()
     val request = MockHttpServletRequest("POST", "/delivery-configs")
     val response = MockHttpServletResponse()
-    val objectMapper = configuredTestObjectMapper().registerKeelEc2ApiModule(SerializationExtensionRegistry())
+    val objectMapper = configuredTestObjectMapper().registerKeelEc2ApiModule(mockk(), SerializationExtensionRegistry())
 
     init {
       objectMapper.registerSubtypes(EC2_SECURITY_GROUP_V1.toNamedType())

@@ -51,7 +51,7 @@ class KeelConfigurationFinalizer(
   @PostConstruct
   fun registerApiExtensionsWithObjectMappers() {
     objectMappers.forEach {
-      it.registerKeelEc2ApiModule(serializationExtensionRegistry)
+      it.registerKeelEc2ApiModule(extensionRegistry, serializationExtensionRegistry)
       it.registerKeelTitusApiModule()
     }
   }
