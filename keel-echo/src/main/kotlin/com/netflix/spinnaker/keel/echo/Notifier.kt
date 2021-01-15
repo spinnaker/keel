@@ -7,7 +7,7 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.echo.model.EchoNotification.InteractiveActions
 import com.netflix.spinnaker.keel.events.ClearNotificationEvent
-import com.netflix.spinnaker.keel.events.NotificationEvent
+import com.netflix.spinnaker.keel.events.RepeatedNotificationEvent
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceException
 import com.netflix.spinnaker.keel.persistence.NotificationRepository
@@ -56,13 +56,13 @@ class Notifier(
   private val notificationsEnabled: Boolean
     get() = springEnv.getProperty("keel.notifications.resource", Boolean::class.java, true)
 
-  @EventListener(NotificationEvent::class)
-  fun onResourceNotificationEvent(event: NotificationEvent) {
+  @EventListener(RepeatedNotificationEvent::class)
+  fun onResourceNotificationEvent(event: RepeatedNotificationEvent) {
     if (notificationsEnabled){
-      val shouldNotify = event.ref?.let { notificationRepository.addNotification(event.scope, it, event.type) }
-      if (shouldNotify == true) {
+      val shouldNotify = notificationRepository.addNotification(event.scope, event.ref, event.type)
+      if (shouldNotify) {
         notify(event)
-        event.ref?.let { notificationRepository.markSent(event.scope, it, event.type) }
+        notificationRepository.markSent(event.scope, event.ref, event.type)
         spectator.counter(
           NOTIFICATION_SENT_ID,
           listOf(BasicTag("type", event.type.name))
@@ -79,18 +79,16 @@ class Notifier(
    * This method assumes we're notifying about a resource.
    * If / when we notify about something else, we will need to update this assumption
    */
-  private fun notify(event: NotificationEvent) {
+  private fun notify(event: RepeatedNotificationEvent) {
     log.debug("Sending notifications for ${event.scope.name.toLowerCase()} ${event.ref} with content ${event.message}")
     try {
-      val application = event.ref?.let { keelRepository.getResource(it).application }
-      val env = event.ref?.let { keelRepository.environmentFor(it) }
-      env?.notifications?.forEach { notificationConfig ->
-        val notification = application?.let { notificationConfig.toEchoNotification(it, event) }
+      val application = keelRepository.getResource(event.ref).application
+      val env = keelRepository.environmentFor(event.ref)
+      env.notifications.forEach { notificationConfig ->
+        val notification = notificationConfig.toEchoNotification(application, event)
         log.debug("Sending notification for resource ${event.ref} with config $notification")
         runBlocking {
-          if (notification != null) {
-            echoService.sendNotification(notification)
-          }
+          echoService.sendNotification(notification)
         }
       }
     } catch (e: Exception) {
@@ -109,7 +107,7 @@ class Notifier(
 
   }
 
-  private fun NotificationConfig.toEchoNotification(application: String, event: NotificationEvent): EchoNotification {
+  private fun NotificationConfig.toEchoNotification(application: String, event: RepeatedNotificationEvent): EchoNotification {
     return EchoNotification(
       notificationType = EchoNotification.Type.valueOf(type.name.toUpperCase()),
       to = listOf(address),
@@ -119,10 +117,10 @@ class Notifier(
       ),
       additionalContext = mapOf(
         "formatter" to "MARKDOWN",
-        "subject" to event.message?.subject,
-        "body" to event.message?.body
+        "subject" to event.message.subject,
+        "body" to event.message.body
       ),
-      interactiveActions = event.message?.color?.let { generateInteractiveConfig(event.ref!!, event.type.name, it) }
+      interactiveActions = generateInteractiveConfig(event.ref, event.type.name, event.message.color)
     )
   }
 

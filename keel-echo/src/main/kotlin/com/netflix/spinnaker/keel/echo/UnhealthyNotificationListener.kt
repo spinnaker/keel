@@ -48,7 +48,7 @@ class UnhealthyNotificationListener(
         val unhealthyDuration = unhealthyRepository.durationUnhealthy(event.resource)
         if (unhealthyDuration > config.minUnhealthyDuration) {
           publisher.publishEvent(
-            UnhealthyNotification(RESOURCE, event.resource.id, UNHEALTHY_RESOURCE, message(event, unhealthyDuration))
+            UnhealthyNotification(event.resource.id,  message(event, unhealthyDuration))
           )
         }
       }
