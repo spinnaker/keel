@@ -604,13 +604,13 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
           ))
         }
         test ("get stored notifications") {
-          expectThat(repository.environmentNotifications(deliveryConfig.name, "prod")?.size)
+          expectThat(repository.environmentNotifications(deliveryConfig.name, "prod").size)
             .isEqualTo(2)
         }
 
         test ("environment without notifications will return an empty set") {
           expectThat(repository.environmentNotifications(deliveryConfig.name, "staging"))
-            .isNull()
+            .isEmpty()
         }
       }
     }
