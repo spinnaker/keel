@@ -9,3 +9,4 @@ databaseChangeLog:
           set metadata = json_object(
             'tasks', json_array(metadata -> '$.taskId')
           )
+          where metadata -> '$.taskId' is not null
