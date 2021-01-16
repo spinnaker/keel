@@ -36,7 +36,7 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   /**
    * Retrieve the [NotificationConfig] for an environment by environment name and delivery config name.
    */
-  fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>?
+  fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>
 
   /**
    * Retrieve the [DeliveryConfig] a resource belongs to (the parent of its environment).

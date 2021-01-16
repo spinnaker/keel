@@ -76,7 +76,7 @@ class NotifierTests : JUnit5Minutests {
 
       context("new notification") {
         before {
-          every { notificationRepository.addNotification(event.scope, event.ref!!, event.type)} returns true
+          every { notificationRepository.addNotification(event.scope, event.ref, event.type)} returns true
         }
 
         test("two notifications fire (slack and email)") {
@@ -87,7 +87,7 @@ class NotifierTests : JUnit5Minutests {
 
       context("notification already exists") {
         before {
-          every { notificationRepository.addNotification(event.scope, event.ref!!, event.type)} returns false
+          every { notificationRepository.addNotification(event.scope, event.ref, event.type)} returns false
         }
 
         test("no notifications fire") {
@@ -99,7 +99,7 @@ class NotifierTests : JUnit5Minutests {
 
     context("resource doesn't exist") {
       before {
-        every { notificationRepository.addNotification(event.scope, event.ref!!, event.type)} returns true
+        every { notificationRepository.addNotification(event.scope, event.ref, event.type)} returns true
         every { repository.getResource(r.id) } throws NoSuchResourceId(r.id)
       }
 
@@ -113,7 +113,7 @@ class NotifierTests : JUnit5Minutests {
 
     context("env doesn't exist") {
       before {
-        every { notificationRepository.addNotification(event.scope, event.ref!!, event.type)} returns true
+        every { notificationRepository.addNotification(event.scope, event.ref, event.type)} returns true
         every { repository.getResource(r.id) } returns r
         every { repository.environmentFor(r.id) } throws OrphanedResourceException(r.id)
       }
@@ -129,20 +129,20 @@ class NotifierTests : JUnit5Minutests {
     context("clearing notifications") {
       context("notification exists") {
         before {
-          every { notificationRepository.addNotification(event.scope, event.ref!!, event.type)} returns true
+          every { notificationRepository.addNotification(event.scope, event.ref, event.type)} returns true
           every { repository.getResource(r.id) } returns r
           every { repository.environmentFor(r.id) } returns env
         }
 
         test("clearing works") {
           subject.onClearNotificationEvent(clearEvent)
-          verify(exactly = 1) { notificationRepository.clearNotification(event.scope, event.ref!!, event.type) }
+          verify(exactly = 1) { notificationRepository.clearNotification(event.scope, event.ref, event.type) }
         }
       }
       context("nothing exists") {
         test("clearing works") {
           subject.onClearNotificationEvent(clearEvent)
-          verify(exactly = 1) { notificationRepository.clearNotification(event.scope, event.ref!!, event.type) }
+          verify(exactly = 1) { notificationRepository.clearNotification(event.scope, event.ref, event.type) }
         }
       }
 

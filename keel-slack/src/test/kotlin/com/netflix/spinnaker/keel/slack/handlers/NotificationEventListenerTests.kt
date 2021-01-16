@@ -25,7 +25,6 @@ class NotificationEventListenerTests : JUnit5Minutests {
 
   class Fixture {
     val repository: KeelRepository = mockk()
-    val publisher: ApplicationEventPublisher = mockk(relaxed = true)
     val releaseArtifact = DummyArtifact(reference = "release")
     val version0 = "fnord-1.0.0-h0.a0a0a0a"
     val version1 = "fnord-1.0.1-h1.b1b1b1b"
@@ -60,7 +59,7 @@ class NotificationEventListenerTests : JUnit5Minutests {
     )
 
     val pinnedNotification = PinnedNotification(singleArtifactDeliveryConfig, pin)
-    val subject = NotificationEventListener(repository, publisher, clock, emptyList())
+    val subject = NotificationEventListener(repository, clock, emptyList())
 
 
     fun Collection<String>.toArtifactVersions(artifact: DeliveryArtifact) =

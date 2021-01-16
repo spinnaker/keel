@@ -354,7 +354,7 @@ class SqlDeliveryConfigRepository(
         }
     } ?: throw OrphanedResourceException(resourceId)
 
-  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig>? =
+  override fun environmentNotifications(deliveryConfigName: String, environmentName: String): Set<NotificationConfig> =
     sqlRetry.withRetry(READ) {
       val uid = jooq
         .select(DELIVERY_CONFIG.UID)
@@ -370,8 +370,8 @@ class SqlDeliveryConfigRepository(
         .where(ENVIRONMENT.NAME.eq(environmentName))
         .and(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(uid))
         .fetchOne { (notificationsJson) ->
-             notificationsJson?.let { objectMapper.readValue(it) } ?: emptySet()
-        }
+             notificationsJson?.let { objectMapper.readValue(it) }
+        } ?: emptySet()
     }
 
   override fun deliveryConfigFor(resourceId: String): DeliveryConfig =

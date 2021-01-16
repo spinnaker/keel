@@ -4,20 +4,14 @@ import com.netflix.spinnaker.keel.notifications.NotificationType
 import com.netflix.spinnaker.keel.slack.SlackNotificationEvent
 
 /**
- * Implement this interface to send different types of slack notifications. Each notification is being consturct by [constructMessage]
+ * Implement this interface to send different types of slack notifications. Each notification is being construct by [sendMessage]
  * See: [PinnedNotificationHandler] for example
  */
 
 interface SlackNotificationHandler <T: SlackNotificationEvent> {
   val type: NotificationType
 
-  fun constructMessage(notification: T)
-
-//  fun List<SlackNotificationHandler<*>>.supporting(type: NotificationType) {
-//    find {
-//      it.type == type
-//    }
-//  }
+  fun sendMessage(notification: T)
 
   fun  <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(type: NotificationType) : SlackNotificationHandler<*>? {
     return find {

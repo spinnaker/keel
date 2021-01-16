@@ -19,10 +19,10 @@ class PinnedNotificationHandler (
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ): SlackNotificationHandler<SlackPinnedNotification> {
 
-  override val type: NotificationType = NotificationType.PINNED
+  override val type: NotificationType = NotificationType.PINNED_ARTIFACT
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun constructMessage(notification: SlackPinnedNotification) {
+  override fun sendMessage(notification: SlackPinnedNotification) {
     log.debug("Sending pinnedEnvironment notification for application ${notification.application}")
 
     with(notification) {

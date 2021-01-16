@@ -32,7 +32,7 @@ data class PinnedNotification(
   val config: DeliveryConfig,
   val pin: EnvironmentArtifactPin
 ): NotificationEvent() {
-  override val type = NotificationType.PINNED
+  override val type = NotificationType.PINNED_ARTIFACT
   override val scope = NotificationScope.ARTIFACT
 }
 
@@ -42,6 +42,6 @@ data class UnpinnedNotification(
   val targetEnvironment: String,
   val user: String
 ): NotificationEvent() {
-  override val type = NotificationType.UNPINNED
+  override val type = NotificationType.UNPINNED_ARTIFACT
   override val scope = NotificationScope.ARTIFACT
 }

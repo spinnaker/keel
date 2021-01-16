@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.slack
 import com.netflix.spinnaker.config.SlackConfiguration
 import com.slack.api.Slack
 import com.slack.api.model.block.LayoutBlock
-import com.slack.api.model.kotlin_extension.block.dsl.LayoutBlockDsl
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.core.env.Environment

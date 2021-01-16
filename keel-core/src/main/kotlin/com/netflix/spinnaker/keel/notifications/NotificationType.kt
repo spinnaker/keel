@@ -5,6 +5,6 @@ package com.netflix.spinnaker.keel.notifications
  */
 enum class NotificationType {
   UNHEALTHY_RESOURCE,
-  PINNED,
-  UNPINNED
+  PINNED_ARTIFACT,
+  UNPINNED_ARTIFACT
 }
