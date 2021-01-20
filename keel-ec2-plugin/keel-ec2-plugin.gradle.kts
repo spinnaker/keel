@@ -21,6 +21,7 @@ dependencies {
 
   testImplementation(project(":keel-test"))
   testImplementation(project(":keel-retrofit-test-support"))
+  testImplementation(project(":keel-spring-test-support"))
   testImplementation("io.strikt:strikt-jackson")
   testImplementation("dev.minutest:minutest")
   testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")

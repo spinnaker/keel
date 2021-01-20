@@ -5,8 +5,12 @@ import com.netflix.spinnaker.keel.api.ec2.CrossAccountReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.ReferenceRule
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule
 import com.netflix.spinnaker.keel.jackson.PropertyNamePolymorphicDeserializer
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.jackson.JsonComponent
 
-open class SecurityGroupRuleDeserializer :
+@JsonComponent
+@ConditionalOnMissingBean(SecurityGroupRuleDeserializer::class)
+class SecurityGroupRuleDeserializer :
   PropertyNamePolymorphicDeserializer<SecurityGroupRule>(SecurityGroupRule::class.java) {
   override fun identifySubType(fieldNames: Collection<String>): Class<out SecurityGroupRule> =
     when {

@@ -7,20 +7,25 @@ import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.ALL
 import com.netflix.spinnaker.keel.api.ec2.SecurityGroupRule.Protocol.TCP
-import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
-import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
-import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import dev.minutest.TestContextBuilder
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.propertiesAreEqualTo
 
+@SpringBootTest(
+  classes = [Ec2JsonTestConfiguration::class],
+  webEnvironment = NONE
+)
 internal class SecurityGroupRuleTests : JUnit5Minutests {
+  @Autowired
+  lateinit var mapper: ObjectMapper
 
   data class Fixture(
-    val mapper: ObjectMapper = configuredYamlMapper().registerKeelEc2ApiModule(SerializationExtensionRegistry()),
     val yaml: String,
     val rule: SecurityGroupRule
   ) {

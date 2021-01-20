@@ -1,14 +1,12 @@
 package com.netflix.spinnaker.keel.api.ec2
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
-import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
-import com.netflix.spinnaker.keel.jackson.SerializationExtensionRegistry
-import com.netflix.spinnaker.keel.jackson.registerKeelApiModule
-import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import strikt.api.expectCatching
 import strikt.assertions.hasSize
 import strikt.assertions.isA
@@ -17,19 +15,14 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isSuccess
 
+@SpringBootTest(
+  classes = [Ec2JsonTestConfiguration::class],
+  webEnvironment = NONE
+)
 internal class DeserializationInjectionTests {
-  private val mapper = configuredYamlMapper()
-    .registerKeelApiModule()
-    .registerKeelEc2ApiModule(SerializationExtensionRegistry())
 
-  // Needed because the extension registry configures the mapper
-  val extensionRegistry = DefaultExtensionRegistry(listOf(mapper)).apply {
-    register(
-      baseType = ResourceSpec::class.java,
-      extensionType = SecurityGroupSpec::class.java,
-      discriminator = EC2_SECURITY_GROUP_V1.kind.toString()
-    )
-  }
+  @Autowired
+  lateinit var mapper: ObjectMapper
 
   @Test
   fun `can deserialize a delivery config with injected locations and security group names`() {
