@@ -1,7 +1,8 @@
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
@@ -18,12 +19,15 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.propertiesAreEqualTo
 
 @SpringBootTest(
-  classes = [Ec2JsonTestConfiguration::class],
+  classes = [KeelApplication::class],
+  properties = [
+    "spring.liquibase.enabled = false" // TODO: ignored by kork's SpringLiquibaseProxy
+  ],
   webEnvironment = NONE
 )
 internal class SecurityGroupRuleTests : JUnit5Minutests {
   @Autowired
-  lateinit var mapper: ObjectMapper
+  lateinit var mapper: YAMLMapper
 
   data class Fixture(
     val yaml: String,
