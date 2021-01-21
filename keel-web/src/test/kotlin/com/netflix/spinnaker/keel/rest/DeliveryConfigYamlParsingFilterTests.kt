@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import com.netflix.spinnaker.keel.jackson.registerKeelApiModule
 import com.netflix.spinnaker.keel.rest.DeliveryConfigYamlParsingFilterTests.Ec2JsonTestConfiguration
+import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.Runs
@@ -58,7 +59,7 @@ class DeliveryConfigYamlParsingFilterTests : JUnit5Minutests {
     @Bean
     @Primary
     fun mapper(jsonComponentModule: JsonComponentModule): ObjectMapper =
-      com.netflix.spinnaker.keel.serialization.configuredYamlMapper()
+      configuredYamlMapper()
         .registerModule(jsonComponentModule)
         .registerKeelApiModule()
         .registerKeelEc2ApiModule()

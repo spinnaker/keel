@@ -5,7 +5,9 @@ import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.ec2.jackson.registerEc2Subtypes
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
+import com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry
 import com.netflix.spinnaker.keel.jackson.registerKeelApiModule
+import com.netflix.spinnaker.keel.serialization.configuredYamlMapper
 import org.springframework.boot.jackson.JsonComponentModule
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
@@ -18,23 +20,21 @@ import org.springframework.context.annotation.Primary
  */
 @Configuration
 @ComponentScan(basePackages = ["com.netflix.spinnaker.keel.ec2.jackson"])
-class Ec2JsonTestConfiguration {
+internal class Ec2JsonTestConfiguration {
   @Bean
   fun jsonComponentModule() = JsonComponentModule()
 
   @Bean
   @Primary
   fun mapper(jsonComponentModule: JsonComponentModule): ObjectMapper =
-    com.netflix.spinnaker.keel.serialization.configuredYamlMapper()
+    configuredYamlMapper()
       .registerModule(jsonComponentModule)
       .registerKeelApiModule()
       .registerKeelEc2ApiModule()
 
   @Bean
   fun registry(mappers: List<ObjectMapper>): ExtensionRegistry =
-    com.netflix.spinnaker.keel.extensions.DefaultExtensionRegistry(
-      mappers
-    )
+    DefaultExtensionRegistry(mappers)
       .also {
         it.registerEc2Subtypes()
         it.register(
