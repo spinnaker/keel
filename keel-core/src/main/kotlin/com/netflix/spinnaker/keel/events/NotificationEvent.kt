@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.events
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
+import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.notifications.Notification
 import com.netflix.spinnaker.keel.notifications.NotificationScope
@@ -43,5 +44,14 @@ data class UnpinnedNotification(
   val user: String
 ): NotificationEvent() {
   override val type = NotificationType.UNPINNED_ARTIFACT
+  override val scope = NotificationScope.ARTIFACT
+}
+
+data class MarkAsBadNotification(
+  val config: DeliveryConfig,
+  val user: String,
+  val veto: EnvironmentArtifactVeto
+): NotificationEvent() {
+  override val type = NotificationType.MARK_AS_BAD_ARTIFACT
   override val scope = NotificationScope.ARTIFACT
 }

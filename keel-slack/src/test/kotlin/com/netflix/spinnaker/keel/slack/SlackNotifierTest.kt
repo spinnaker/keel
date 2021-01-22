@@ -5,6 +5,7 @@ import com.slack.api.model.block.LayoutBlock
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.core.env.Environment
@@ -15,7 +16,7 @@ class SlackNotifierTest: JUnit5Minutests {
     val slackConfiguration = SlackConfiguration()
     val springEnv: Environment = mockk(relaxed = true)
 
-    val subject = SlackNotifier(
+    val subject = SlackService(
         springEnv,
         slackConfiguration
       )

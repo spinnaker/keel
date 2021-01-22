@@ -14,23 +14,24 @@ import org.springframework.stereotype.Component
  */
 @Component
 @EnableConfigurationProperties(SlackConfiguration::class)
-class SlackNotifier(
+class SlackService(
   private val springEnv: Environment,
-  val slackConfig: SlackConfiguration
+  final val slackConfig: SlackConfiguration
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
+  private val configToken = slackConfig.token
+  private val slack = Slack.getInstance()
+
   private val isSlackEnabled: Boolean
     get() = springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
 
-
   fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>, token: String? = null) {
     if (isSlackEnabled) {
-      log.debug("starting slack notification")
-      val slack = Slack.getInstance()
+      log.debug("sending slack notification for channel $channel")
 
-      val actualToken = token ?: slackConfig.token
+      val actualToken = token ?: configToken
 
       val response = slack.methods(actualToken).chatPostMessage { req ->
         req
@@ -44,5 +45,18 @@ class SlackNotifier(
     } else {
       log.debug("new slack integration is not enabled")
     }
+  }
+
+  fun getUserInfoByEmail(email: String): String? {
+    log.debug("lookup user id for email $email")
+    val response = slack.methods(configToken).usersLookupByEmail { req ->
+      req.email(email)
+    }
+    log.debug("slack returned ${response.isOk}")
+
+    if (response.user != null && response.user.name != null) {
+      return "@${response.user.name}"
+    }
+    return email
   }
 }
