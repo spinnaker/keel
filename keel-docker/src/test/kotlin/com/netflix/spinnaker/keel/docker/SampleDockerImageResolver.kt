@@ -33,7 +33,7 @@ class SampleDockerImageResolver(
   override val supportedKind = kind<SampleSpecWithContainer>("sample.resource/sample@v1")
 
   override fun getContainerFromSpec(resource: Resource<SampleSpecWithContainer>) =
-    if (resource.spec.container != null) resource.spec.container as ContainerProvider else ReferenceProviders()
+    if (resource.spec.container != null) resource.spec.container as ContainerProvider else MultiReferenceContainerProvider()
 
   override fun getAccountFromSpec(resource: Resource<SampleSpecWithContainer>) =
     resource.spec.account

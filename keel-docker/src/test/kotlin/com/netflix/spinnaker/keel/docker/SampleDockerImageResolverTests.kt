@@ -64,7 +64,7 @@ class SampleDockerImageResolverTests : JUnit5Minutests {
   )
 
   private val multiReferenceSpec = SampleSpecWithContainer(
-    container = ReferenceProviders(
+    container = MultiReferenceContainerProvider(
       references = setOf("spkr/keeldemo", "spkr/anotherkeeldemo")
     ),
     account = "test"
@@ -193,6 +193,10 @@ class SampleDockerImageResolverTests : JUnit5Minutests {
         }
       }
 
+      // Given the updateContainerInSpec behavior in SimpleDockerImageResolver, the test verifies that
+      // for multiple container references, the resource specification goes through the resolver twice
+      // and that the container reference is eventually overwritten by the last artifact. Hence the
+      // test verifies that the digest for the resolvedResource will be that of the second artifact.
       context("there is a version approved for each artifact") {
         before {
           every { repository.latestVersionApprovedIn(multiReferenceDeliveryConfig, artifacts.elementAt(0), "test") } returns "v0.0.1"

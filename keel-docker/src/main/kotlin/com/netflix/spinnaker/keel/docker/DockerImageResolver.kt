@@ -72,7 +72,7 @@ abstract class DockerImageResolver<T : ResourceSpec>(
 
   override fun invoke(resource: Resource<T>): Resource<T> {
     val container = getContainerFromSpec(resource)
-    if (container is DigestProvider || (container is ReferenceProviders && container.references.isEmpty())) {
+    if (container is DigestProvider || (container is MultiReferenceContainerProvider && container.references.isEmpty())) {
       return resource
     }
 
@@ -81,8 +81,10 @@ abstract class DockerImageResolver<T : ResourceSpec>(
     val account = getAccountFromSpec(resource)
 
     val containers = mutableListOf<ContainerProvider>()
-    if (container is ReferenceProviders) {
-      container.references.forEach{ containers.add(ReferenceProvider(it))}
+    if (container is MultiReferenceContainerProvider) {
+      container.references.forEach {
+        containers.add(ReferenceProvider(it))
+      }
     } else {
       containers.add(container)
     }
