@@ -25,7 +25,7 @@ data class UnhealthyNotification(
   override val ref: String,
   override val message: Notification
   ) :RepeatedNotificationEvent() {
-    override val type = NotificationType.UNHEALTHY_RESOURCE
+    override val type = NotificationType.RESOURCE_UNHEALTHY
     override val scope = NotificationScope.RESOURCE
   }
 
@@ -33,7 +33,7 @@ data class PinnedNotification(
   val config: DeliveryConfig,
   val pin: EnvironmentArtifactPin
 ): NotificationEvent() {
-  override val type = NotificationType.PINNED_ARTIFACT
+  override val type = NotificationType.ARTIFACT_PINNED
   override val scope = NotificationScope.ARTIFACT
 }
 
@@ -43,7 +43,7 @@ data class UnpinnedNotification(
   val targetEnvironment: String,
   val user: String
 ): NotificationEvent() {
-  override val type = NotificationType.UNPINNED_ARTIFACT
+  override val type = NotificationType.ARTIFACT_UNPINNED
   override val scope = NotificationScope.ARTIFACT
 }
 
@@ -52,6 +52,6 @@ data class MarkAsBadNotification(
   val user: String,
   val veto: EnvironmentArtifactVeto
 ): NotificationEvent() {
-  override val type = NotificationType.MARK_AS_BAD_ARTIFACT
+  override val type = NotificationType.ARTIFACT_MARK_AS_BAD
   override val scope = NotificationScope.ARTIFACT
 }

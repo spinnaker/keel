@@ -19,15 +19,15 @@ class PinnedNotificationHandler (
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ): SlackNotificationHandler<SlackPinnedNotification> {
 
-  override val type: NotificationType = NotificationType.PINNED_ARTIFACT
+ // override val type: NotificationType = NotificationType.ARTIFACT_PINNED
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun sendMessage(notification: SlackPinnedNotification) {
+  override fun sendMessage(notification: SlackPinnedNotification, channel: String) {
     log.debug("Sending pinned artifact notification for application ${notification.application}")
 
     with(notification) {
       val env = Strings.toRootUpperCase(pin.targetEnvironment)
-      val username = pin.pinnedBy?.let { slackService.getUserInfoByEmail(it) }
+      val username = pin.pinnedBy?.let { slackService.getUsernameByEmail(it) }
       val pinnedArtifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${pinnedArtifact.reference}/${pinnedArtifact.version}"
 
       val blocks = withBlocks {
@@ -55,7 +55,7 @@ class PinnedNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(notification.channel, blocks)
+      slackService.sendSlackNotification(channel, blocks)
     }
   }
 

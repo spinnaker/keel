@@ -9,17 +9,18 @@ import org.apache.logging.log4j.util.Strings
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
+/**
+ * Constructing a git related data block, which will be a part of a slack notification
+ */
 @Component
 class GitDataGenerator(
   private val scmInfo: ScmInfo,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) {
 
-  fun generateRepoLink(gitMetadata: GitMetadata?): String {
-    if (gitMetadata != null) {
+  fun generateStashRepoLink(gitMetadata: GitMetadata): String {
       val baseScmUrl = gitMetadata.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
       return "$baseScmUrl/projects/${gitMetadata.project}/repos/${gitMetadata.repo?.name}"
-    } else return Strings.EMPTY
   }
 
   /**
@@ -29,13 +30,12 @@ class GitDataGenerator(
    * Each component will have the corresponding link attached to SCM
    */
   fun generateData(sectionBlockBuilder: SectionBlockBuilder, application: String, artifact: PublishedArtifact): SectionBlockBuilder {
-//  protected fun SectionBlockBuilder.generateGitData(application: String, artifact: PublishedArtifact) {
     with(sectionBlockBuilder) {
       var details = ""
       val artifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${artifact.reference}/${artifact.version}"
 
       if (artifact.gitMetadata != null) {
-        val repoLink = generateRepoLink(artifact.gitMetadata)
+        val repoLink = generateStashRepoLink(artifact.gitMetadata!!)
         with(artifact.gitMetadata) {
 
           details += "<$repoLink|${this?.project}/" +

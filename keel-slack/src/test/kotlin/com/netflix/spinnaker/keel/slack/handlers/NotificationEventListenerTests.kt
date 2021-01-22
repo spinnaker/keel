@@ -11,13 +11,17 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.events.PinnedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.NotificationEventListener
+import com.netflix.spinnaker.keel.slack.SlackService
 import com.netflix.spinnaker.keel.test.DummyArtifact
 import com.netflix.spinnaker.time.MutableClock
+import com.slack.api.model.kotlin_extension.block.SectionBlockBuilder
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
-import org.springframework.context.ApplicationEventPublisher
+import io.mockk.verify
 import java.time.Instant
 import java.time.ZoneId
 
@@ -58,8 +62,16 @@ class NotificationEventListenerTests : JUnit5Minutests {
       environments = singleArtifactEnvironments.values.toSet()
     )
 
+    val slackService: SlackService = mockk()
+    val gitDataGenerator: GitDataGenerator = mockk()
+    val pinnedNotificationHandler : PinnedNotificationHandler = mockk(relaxUnitFun = true) {
+//      every {
+//        type
+//      } returns com.netflix.spinnaker.keel.notifications.NotificationType.ARTIFACT_PINNED
+    }
+
     val pinnedNotification = PinnedNotification(singleArtifactDeliveryConfig, pin)
-    val subject = NotificationEventListener(repository, clock, emptyList())
+    val subject = NotificationEventListener(repository, clock, listOf(pinnedNotificationHandler))
 
 
     fun Collection<String>.toArtifactVersions(artifact: DeliveryArtifact) =
@@ -74,14 +86,19 @@ class NotificationEventListenerTests : JUnit5Minutests {
     context("pin and unpin notifications") {
       before {
         every {
-          repository.environmentNotifications(any(), any())
-        } returns setOf(NotificationConfig(NotificationType.slack, "test", NotificationFrequency.verbose))
-
-        every { repository.getArtifactVersion(releaseArtifact, any(), any()) } returns versions.toArtifactVersions(releaseArtifact).first()
+          slackService.getUsernameByEmail(any())
+        } returns "@keel"
 
         every {
-          repository.getArtifact(any(), any())
-        } returns releaseArtifact
+          slackService.sendSlackNotification("test", any())
+        } just Runs
+
+        every {
+          gitDataGenerator.generateData(any(), any(), any())
+        } returns SectionBlockBuilder()
+
+
+        every { repository.getArtifactVersion(releaseArtifact, any(), any()) } returns versions.toArtifactVersions(releaseArtifact).first()
 
         every {
           repository.getArtifactVersionByPromotionStatus(any(), any(), any(), any())
@@ -95,7 +112,9 @@ class NotificationEventListenerTests : JUnit5Minutests {
 
 //        test("slack notification was sent out") {
 //          subject.onPinnedNotification(pinnedNotification)
-//          verify { publisher.publishEvent(ofType<SlackPinnedNotification>()) }
+//          verify  {
+//            pinnedNotificationHandler.sendMessage(any(), any())
+//          }
 //        }
       }
     }

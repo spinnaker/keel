@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.slack
 
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationType
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
@@ -11,11 +12,11 @@ import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.handlers.SlackNotificationHandler
+import com.netflix.spinnaker.keel.slack.handlers.supporting
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.time.Clock
-import com.netflix.spinnaker.keel.notifications.NotificationType as Type
 
 /**
  * Responsible to listening to notification events, and fetching the information needed
@@ -39,66 +40,54 @@ class NotificationEventListener(
       val pinnedArtifact = repository.getArtifactVersion(deliveryArtifact, pin.version, null)
       val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, pin.targetEnvironment, deliveryArtifact, PromotionStatus.CURRENT)
 
-      val handler = handlers.find {
-        it.type == notification.type
-      } as? SlackNotificationHandler<SlackPinnedNotification> ?: return
-
       if (pinnedArtifact == null || currentArtifact == null) {
-        log.warn("can't send notification as either pinned artifact or current artifacts information is missing")
-      } else {
-        config.environments.forEach { environment ->
-          environment.notifications.filter {
-            it.type == NotificationType.slack
-          }.onEach {
-            handler.sendMessage(SlackPinnedNotification(
-              channel = it.address,
-              pin = pin,
-              currentArtifact = currentArtifact,
-              pinnedArtifact = pinnedArtifact,
-              application = config.application,
-              time = clock.instant()
-            ))
-          }
-        }
+        log.debug("can't send notification as either pinned artifact or current artifacts information is missing")
+        return
+      }
+
+      config.environments.first { environment ->
+        environment.name == pin.targetEnvironment
+      }.also {
+        it.sendSlackMessage(SlackPinnedNotification(
+          pin = pin,
+          currentArtifact = currentArtifact,
+          pinnedArtifact = pinnedArtifact,
+          application = config.application,
+          time = clock.instant()
+        ))
       }
     }
   }
+
 
   @EventListener(UnpinnedNotification::class)
   fun onUnpinnedNotification(notification: UnpinnedNotification) {
     with(notification) {
       if (pinnedEnvironment == null) {
-        log.warn("no pinned artifacts exists for application ${config.application} and environment $targetEnvironment")
+        log.debug("no pinned artifacts exists for application ${config.application} and environment $targetEnvironment")
         return
       }
 
       val latestApprovedArtifactVersion = repository.latestVersionApprovedIn(config, pinnedEnvironment!!.artifact, targetEnvironment)
       if (latestApprovedArtifactVersion == null) {
-        log.warn("latestApprovedArtifactVersion is null for application ${config.application}, env $targetEnvironment. Can't send UnpinnedNotification")
+        log.debug("latestApprovedArtifactVersion is null for application ${config.application}, env $targetEnvironment. Can't send UnpinnedNotification")
         return
       }
 
       val latestArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, latestApprovedArtifactVersion, null)
       val pinnedArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, pinnedEnvironment!!.version, null)
 
-      val handler = handlers.find {
-        it.type == notification.type
-      } as? SlackNotificationHandler<SlackUnpinnedNotification> ?: return
-
-      config.environments.forEach { environment ->
-        environment.notifications.filter {
-          it.type == NotificationType.slack
-        }.onEach {
-          handler.sendMessage(SlackUnpinnedNotification(
-            channel = it.address,
-            latestArtifact = latestArtifact,
-            pinnedArtifact = pinnedArtifact,
-            application = config.application,
-            time = clock.instant(),
-            user = user,
-            targetEnvironment = targetEnvironment
-          ))
-        }
+      config.environments.first { environment ->
+        environment.name == targetEnvironment
+      }.also {
+        it.sendSlackMessage(SlackUnpinnedNotification(
+          latestArtifact = latestArtifact,
+          pinnedArtifact = pinnedArtifact,
+          application = config.application,
+          time = clock.instant(),
+          user = user,
+          targetEnvironment = targetEnvironment
+        ))
       }
     }
   }
@@ -112,28 +101,23 @@ class NotificationEventListener(
 
       val vetoedArtifact = repository.getArtifactVersion(deliveryArtifact, veto.version, null)
       if (vetoedArtifact == null) {
-        log.warn("vetoedArtifact is null for application ${config.application}. Can't send MarkAsBadNotification notification")
+        log.debug("vetoedArtifact is null for application ${config.application}. Can't send MarkAsBadNotification notification")
         return
       }
 
-      val handler = handlers.find {
-        it.type == notification.type
-      } as? SlackNotificationHandler<SlackMarkAsBadNotification> ?: return
-
-      config.environments.forEach { environment ->
-        environment.notifications.filter {
-          it.type == NotificationType.slack
-        }.onEach {
-          handler.sendMessage(SlackMarkAsBadNotification(
+      config.environments.first { environment ->
+        environment.name == veto.targetEnvironment
+      }.also {
+        it.sendSlackMessage(
+          SlackMarkAsBadNotification(
             vetoedArtifact = vetoedArtifact,
             user = user,
             targetEnvironment = veto.targetEnvironment,
-            channel = it.address,
             time = clock.instant(),
             application = config.name,
             comment = veto.comment
-          ))
-        }
+          )
+        )
       }
     }
   }
@@ -143,21 +127,12 @@ class NotificationEventListener(
     with(notification) {
       val config = repository.getDeliveryConfigForApplication(application)
 
-      val handler = handlers.find {
-        it.type == Type.PAUSED_APPLICATION
-      } as? SlackNotificationHandler<SlackPausedNotification> ?: return
-
       config.environments.forEach { environment ->
-        environment.notifications.filter {
-          it.type == NotificationType.slack
-        }.onEach {
-          handler.sendMessage(SlackPausedNotification(
-            user = triggeredBy,
-            channel = it.address,
-            time = clock.instant(),
-            application = application
-          ))
-        }
+        environment.sendSlackMessage(SlackPausedNotification(
+          user = triggeredBy,
+          time = clock.instant(),
+          application = application
+        ))
       }
     }
   }
@@ -167,21 +142,12 @@ class NotificationEventListener(
     with(notification) {
       val config = repository.getDeliveryConfigForApplication(application)
 
-      val handler = handlers.find {
-        it.type == Type.PAUSED_APPLICATION
-      } as? SlackNotificationHandler<SlackResumedNotification> ?: return
-
       config.environments.forEach { environment ->
-        environment.notifications.filter {
-          it.type == NotificationType.slack
-        }.onEach {
-          handler.sendMessage(SlackResumedNotification(
-            user = triggeredBy,
-            channel = it.address,
-            time = clock.instant(),
-            application = application
-          ))
-        }
+        environment.sendSlackMessage(SlackResumedNotification(
+          user = triggeredBy,
+          time = clock.instant(),
+          application = application
+        ))
       }
     }
   }
@@ -196,30 +162,36 @@ class NotificationEventListener(
 
       val artifact = repository.getArtifactVersion(deliveryArtifact, artifactVersion, null)
       if (artifact == null) {
-        log.warn("vetoedArtifact is null for application ${config.application}. Can't send MarkAsBadNotification notification")
+        log.debug("vetoedArtifact is null for application ${config.application}. Can't send MarkAsBadNotification notification")
         return
       }
 
-      val handler = handlers.find {
-        it.type == Type.LIFECYCLE_EVENT
-      } as? SlackNotificationHandler<SlackLifecycleNotification>? ?: return
-
       config.environments.forEach { environment ->
-        environment.notifications.filter {
-          it.type == NotificationType.slack
-        }.onEach {
-          //We only notifying when failure happens
-          if (status == LifecycleEventStatus.FAILED) {
-            handler.sendMessage(SlackLifecycleNotification(
-              channel = it.address,
-              time = clock.instant(),
-              artifact = artifact,
-              type = type,
-              application = config.application
-            ))
-          }
+        //We only notifying when failure happens
+        if (status == LifecycleEventStatus.FAILED) {
+          environment.sendSlackMessage(SlackLifecycleNotification(
+            time = clock.instant(),
+            artifact = artifact,
+            type = type,
+            application = config.application
+          ))
         }
       }
+    }
+  }
+
+
+  private inline fun <reified T : SlackNotificationEvent> Environment.sendSlackMessage(message: T) {
+    val handler: SlackNotificationHandler<T>? = handlers.supporting(T::class.java)
+    if (handler == null) {
+      log.debug("no handler was found for notification type ${T::class.java}. Can't send slack notification.")
+      return
+    }
+
+    this.notifications.filter {
+      it.type == NotificationType.slack
+    }.forEach {
+      handler.sendMessage(message, it.address)
     }
   }
 }

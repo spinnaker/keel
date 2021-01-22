@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.slack.handlers
 
-import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.notifications.NotificationType
 import com.netflix.spinnaker.keel.slack.SlackLifecycleNotification
@@ -21,10 +20,11 @@ class LifecycleEventNotificationHandler (
   private val gitDataGenerator: GitDataGenerator
 ) : SlackNotificationHandler<SlackLifecycleNotification> {
 
-  override val type: NotificationType = NotificationType.LIFECYCLE_EVENT
+ // override val type: NotificationType = NotificationType.LIFECYCLE_EVENT
+
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun sendMessage(notification: SlackLifecycleNotification) {
+  override fun sendMessage(notification: SlackLifecycleNotification, channel: String) {
     log.debug("Sending pinned artifact notification for application ${notification.application}")
 
     with(notification) {
@@ -55,7 +55,7 @@ class LifecycleEventNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(notification.channel, blocks)
+      slackService.sendSlackNotification(channel, blocks)
     }
   }
 

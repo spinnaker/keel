@@ -47,7 +47,7 @@ class SlackService(
     }
   }
 
-  fun getUserInfoByEmail(email: String): String? {
+  fun getUsernameByEmail(email: String): String {
     log.debug("lookup user id for email $email")
     val response = slack.methods(configToken).usersLookupByEmail { req ->
       req.email(email)

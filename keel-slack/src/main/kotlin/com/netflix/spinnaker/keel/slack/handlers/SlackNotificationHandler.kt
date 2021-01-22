@@ -9,14 +9,21 @@ import com.netflix.spinnaker.keel.slack.SlackNotificationEvent
  */
 
 interface SlackNotificationHandler <T: SlackNotificationEvent> {
-  val type: NotificationType
+ // val type: T
 
-  fun sendMessage(notification: T)
-
-  fun  <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(type: NotificationType) : SlackNotificationHandler<*>? {
-    return find {
-     it.type == type
-    } as? SlackNotificationHandler<*>
-  }
+  fun sendMessage(notification: T, address: String)
 
 }
+
+//fun <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(
+//  type: NotificationType
+//): SlackNotificationHandler<T>? =
+//  this.find { it. type == type } as? SlackNotificationHandler<T>
+
+
+fun <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(
+  type: Class<T>
+): SlackNotificationHandler<T>? =
+  this.find { handler ->
+    handler.javaClass == type }
+    as? SlackNotificationHandler<T>

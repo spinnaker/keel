@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.slack.handlers
 
 import com.netflix.spinnaker.keel.notifications.NotificationType
+import com.netflix.spinnaker.keel.slack.SlackNotificationEvent
 import com.netflix.spinnaker.keel.slack.SlackService
 import com.netflix.spinnaker.keel.slack.SlackPausedNotification
 import com.slack.api.model.kotlin_extension.block.withBlocks
@@ -14,17 +15,23 @@ import org.springframework.stereotype.Component
 @Component
 class PausedNotificationHandler (
   private val slackService: SlackService,
-  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
+  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) : SlackNotificationHandler<SlackPausedNotification>{
 
-  override val type: NotificationType = NotificationType.PAUSED_APPLICATION
+  //override val type: NotificationType = NotificationType.APPLICATION_PAUSED
+ // override val type: SlackPausedNotification
+//  override val type: SlackPausedNotification
+//    get() {
+//      TODO()
+//    }
+
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  override fun sendMessage(notification: SlackPausedNotification) {
+  override fun sendMessage(notification: SlackPausedNotification, channel: String) {
     log.debug("Sending paused notification for application ${notification.application}")
 
     with(notification) {
-      val username = user?.let { slackService.getUserInfoByEmail(it) }
+      val username = user?.let { slackService.getUsernameByEmail(it) }
       val appUrl = "$spinnakerBaseUrl/#/applications/${application}"
 
       val blocks = withBlocks {
@@ -52,7 +59,7 @@ class PausedNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(notification.channel, blocks)
+      slackService.sendSlackNotification(channel, blocks)
     }
   }
 

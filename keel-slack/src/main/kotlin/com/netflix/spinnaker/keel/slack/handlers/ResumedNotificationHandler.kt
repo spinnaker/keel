@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 /**
- * Sends notification when resuming managment for an application
+ * Sends notification when resuming management for an application
  */
 @Component
 class ResumedNotificationHandler (
@@ -17,15 +17,15 @@ class ResumedNotificationHandler (
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackResumedNotification>{
 
-  override val type: NotificationType = NotificationType.RESUMED_APPLICATION
+ // override val type: NotificationType = NotificationType.APPLICATION_RESUMED
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
 
-  override fun sendMessage(notification: SlackResumedNotification) {
+  override fun sendMessage(notification: SlackResumedNotification, channel: String) {
     log.debug("Sending resume management notification for application ${notification.application}")
     with(notification) {
       val appUrl = "$spinnakerBaseUrl/#/applications/${application}"
-      val username = user?.let { slackService.getUserInfoByEmail(it) }
+      val username = user?.let { slackService.getUsernameByEmail(it) }
 
       val blocks = withBlocks {
         header {
@@ -52,7 +52,7 @@ class ResumedNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(notification.channel, blocks)
+      slackService.sendSlackNotification(channel, blocks)
     }
   }
 
