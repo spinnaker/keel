@@ -37,5 +37,4 @@ dependencies {
   }
   testImplementation("org.testcontainers:mysql:${property("testContainersVersion")}")
   testImplementation(project(":keel-sql"))
-  testImplementation("org.liquibase:liquibase-core")
 }

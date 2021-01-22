@@ -4,7 +4,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.KeelApplication
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import liquibase.integration.spring.SpringLiquibase
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -29,9 +28,6 @@ internal class DeserializationInjectionTests {
 
   @Autowired
   lateinit var mapper: YAMLMapper
-
-  @Autowired
-  lateinit var liquibase: SpringLiquibase
 
   @Test
   fun `can deserialize a delivery config with injected locations and security group names`() {
