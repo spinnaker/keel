@@ -36,12 +36,16 @@ class PinnedNotificationHandler (
         }
 
         section {
-          markdownText("*Version:* ~#${notification.currentArtifact.buildMetadata?.number}~ → <$pinnedArtifactUrl|#${pinnedArtifact.buildMetadata?.number}> " +
-            "by @${pinnedArtifact.gitMetadata?.author}\n " +
-            "*Where:* $env\n\n " +
-            "${pinnedArtifact.gitMetadata?.commitInfo?.message}")
-          accessory {
-            image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/pinned.png", altText = "pinned")
+          with(pinnedArtifact) {
+            if (buildMetadata != null && gitMetadata != null && gitMetadata!!.commitInfo != null) {
+              markdownText("*Version:* ~#${currentArtifact.buildMetadata?.number}~ → <$pinnedArtifactUrl|#${buildMetadata?.number}> " +
+                "by @${gitMetadata?.author}\n " +
+                "*Where:* $env\n\n " +
+                "${gitMetadata?.commitInfo?.message}")
+              accessory {
+                image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/pinned.png", altText = "pinned")
+              }
+            }
           }
         }
 

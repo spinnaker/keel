@@ -11,7 +11,7 @@ import com.netflix.spinnaker.keel.slack.SlackNotificationEvent
 interface SlackNotificationHandler <T: SlackNotificationEvent> {
   val type: NotificationType
 
-  fun sendMessage(notification: T, address: String)
+  fun sendMessage(notification: T, channel: String)
 
 }
 

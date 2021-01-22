@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.artifacts.getScmBaseLink
 import com.slack.api.model.kotlin_extension.block.SectionBlockBuilder
 import org.apache.logging.log4j.util.Strings
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
@@ -17,6 +18,8 @@ class GitDataGenerator(
   private val scmInfo: ScmInfo,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) {
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   fun generateStashRepoLink(gitMetadata: GitMetadata): String {
       val baseScmUrl = gitMetadata.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
@@ -34,22 +37,29 @@ class GitDataGenerator(
       var details = ""
       val artifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${artifact.reference}/${artifact.version}"
 
-      if (artifact.gitMetadata != null) {
-        val repoLink = generateStashRepoLink(artifact.gitMetadata!!)
         with(artifact.gitMetadata) {
+          if (this != null) {
+            val repoLink = generateStashRepoLink(this)
 
-          details += "<$repoLink|${this?.project}/" +
-            "${this?.repo?.name}> › " +
-            "<$repoLink/branches|${this?.branch}> › "
+            if (project != null && repo != null && branch != null) {
+              details += "<$repoLink|$project/" +
+                "${repo!!.name}> › " +
+                "<$repoLink/branches|$branch> › "
+            }
+            //if the commit is not a part of a PR, don't include PR's data
+            if (Strings.isNotEmpty(pullRequest?.number)) {
+              details += "<${pullRequest?.url}|PR#${pullRequest?.number}> ›"
+            }
 
-          //if the commit is not a part of a PR, don't include PR's data
-          if (Strings.isNotEmpty(this?.pullRequest?.number)) {
-            details += "<${this?.pullRequest?.url}|PR#${this?.pullRequest?.number}> ›"
+            if (commitInfo != null && commitInfo!!.sha != null && commitInfo!!.sha?.length!! > 7) {
+              markdownText(details +
+                "<${commitInfo?.link}|${commitInfo?.sha?.substring(0, 7)}>")
+            }
+          } else {
+            log.debug("git metadata is empty for application $application")
           }
-          markdownText(details +
-            "<${this?.commitInfo?.link}|${this?.commitInfo?.sha?.substring(0, 7)}>")
         }
-      }
+
       accessory {
         button {
           text("More...")

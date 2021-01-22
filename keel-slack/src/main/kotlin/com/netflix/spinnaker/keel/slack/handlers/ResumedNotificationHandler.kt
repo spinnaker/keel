@@ -44,7 +44,6 @@ class ResumedNotificationHandler (
           accessory {
             button {
               text("More...")
-              //TODO: figure out which action id to send here
               actionId("button-action")
               url("$appUrl/environments")
             }

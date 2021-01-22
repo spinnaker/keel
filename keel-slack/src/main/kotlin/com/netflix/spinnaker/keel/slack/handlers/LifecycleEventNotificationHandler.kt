@@ -25,7 +25,7 @@ class LifecycleEventNotificationHandler (
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun sendMessage(notification: SlackLifecycleNotification, channel: String) {
-    log.debug("Sending pinned artifact notification for application ${notification.application}")
+    log.debug("Sending lifecycle event notification for application ${notification.application}")
 
     with(notification) {
       val imageUrl = when (type) {
@@ -42,11 +42,17 @@ class LifecycleEventNotificationHandler (
         }
 
         section {
-          markdownText("*Version:* <$artifactUrl|#${artifact.buildMetadata?.number}> " +
-            "by @${artifact.gitMetadata?.author}\n " +
-            "${artifact.gitMetadata?.commitInfo?.message}")
-          accessory {
-            image(imageUrl = imageUrl, altText = "lifecycle")
+          with(artifact) {
+            if (buildMetadata != null && gitMetadata != null && gitMetadata!!.commitInfo != null) {
+              markdownText("*Version:* <$artifactUrl|#${buildMetadata!!.number}> " +
+                "by @${gitMetadata!!.author}\n " +
+                "${gitMetadata!!.commitInfo?.message}")
+              accessory {
+                image(imageUrl = imageUrl, altText = "lifecycle")
+              }
+            } else {
+              log.debug("either git metadata or build metadata is null when trying to send SlackLifecycleNotification for application $application")
+            }
           }
         }
 

@@ -37,13 +37,17 @@ class UnpinnedNotificationHandler (
         }
 
         section {
-          markdownText("*Version:* ~#${pinnedArtifact?.buildMetadata?.number}~ → <$artifactUrl|#${latestArtifact?.buildMetadata?.number}> " +
-            "by @${latestArtifact?.gitMetadata?.author}\n " +
-            "*Where:* $env\n\n " +
-            "${latestArtifact?.gitMetadata?.commitInfo?.message}")
-          accessory {
-            image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/unpinned.png", altText = "unpinned")
-          }
+            if (latestArtifact?.buildMetadata != null
+              && latestArtifact.gitMetadata != null && latestArtifact.gitMetadata!!.commitInfo != null) {
+
+              markdownText("*Version:* ~#${pinnedArtifact?.buildMetadata?.number}~ → <$artifactUrl|#${latestArtifact.buildMetadata!!.number}> " +
+                "by @${latestArtifact.gitMetadata!!.author}\n " +
+                "*Where:* $env\n\n " +
+                "${latestArtifact.gitMetadata!!.commitInfo?.message}")
+              accessory {
+                image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/unpinned.png", altText = "unpinned")
+              }
+            }
         }
 
         section {

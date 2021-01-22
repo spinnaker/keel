@@ -28,20 +28,25 @@ class MarkAsBadNotificationHandler(
     with(notification) {
       val username = slackService.getUsernameByEmail(user)
       val env = Strings.toRootUpperCase(targetEnvironment)
+      val buildNumber = vetoedArtifact.buildMetadata?.number?: vetoedArtifact.buildMetadata?.id
 
       val vetoedArtifactUrl = "$spinnakerBaseUrl/#/applications/${application}/environments/${vetoedArtifact.reference}/${vetoedArtifact.version}"
       val blocks = withBlocks {
         header {
-          text("#${vetoedArtifact.buildMetadata?.number} Marked as bad in $env", emoji = true)
+          text("#$buildNumber Marked as bad in $env", emoji = true)
         }
 
         section {
-          markdownText("*Version:* <$vetoedArtifactUrl|#${vetoedArtifact.buildMetadata?.number}> " +
-            "by @${vetoedArtifact.gitMetadata?.author}\n " +
-            "*Where:* $env\n\n " +
-            "${vetoedArtifact.gitMetadata?.commitInfo?.message}")
-          accessory {
-            image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/marked_as_bad.png", altText = "vetoed")
+          with(vetoedArtifact) {
+            if (buildMetadata != null && gitMetadata != null && gitMetadata!!.commitInfo != null) {
+              markdownText("*Version:* <$vetoedArtifactUrl|#${buildMetadata?.number}> " +
+                "by @${gitMetadata?.author}\n " +
+                "*Where:* $env\n\n " +
+                "${gitMetadata?.commitInfo?.message}")
+              accessory {
+                image(imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/marked_as_bad.png", altText = "vetoed")
+              }
+            }
           }
         }
 
