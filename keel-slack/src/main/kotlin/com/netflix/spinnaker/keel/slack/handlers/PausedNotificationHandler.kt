@@ -18,12 +18,7 @@ class PausedNotificationHandler (
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
 ) : SlackNotificationHandler<SlackPausedNotification>{
 
-  //override val type: NotificationType = NotificationType.APPLICATION_PAUSED
- // override val type: SlackPausedNotification
-//  override val type: SlackPausedNotification
-//    get() {
-//      TODO()
-//    }
+  override val type: NotificationType = NotificationType.APPLICATION_PAUSED
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.time.Clock
-
+import com.netflix.spinnaker.keel.notifications.NotificationType as Type
 /**
  * Responsible to listening to notification events, and fetching the information needed
  * for sending a notification, based on NotificationType.
@@ -54,7 +54,8 @@ class NotificationEventListener(
           pinnedArtifact = pinnedArtifact,
           application = config.application,
           time = clock.instant()
-        ))
+        ),
+        Type.ARTIFACT_PINNED)
       }
     }
   }
@@ -87,7 +88,8 @@ class NotificationEventListener(
           time = clock.instant(),
           user = user,
           targetEnvironment = targetEnvironment
-        ))
+        ),
+        Type.ARTIFACT_UNPINNED)
       }
     }
   }
@@ -116,7 +118,8 @@ class NotificationEventListener(
             time = clock.instant(),
             application = config.name,
             comment = veto.comment
-          )
+          ),
+          Type.ARTIFACT_MARK_AS_BAD
         )
       }
     }
@@ -132,7 +135,8 @@ class NotificationEventListener(
           user = triggeredBy,
           time = clock.instant(),
           application = application
-        ))
+        ),
+        Type.APPLICATION_PAUSED)
       }
     }
   }
@@ -147,7 +151,8 @@ class NotificationEventListener(
           user = triggeredBy,
           time = clock.instant(),
           application = application
-        ))
+        ),
+          Type.APPLICATION_RESUMED)
       }
     }
   }
@@ -174,15 +179,17 @@ class NotificationEventListener(
             artifact = artifact,
             type = type,
             application = config.application
-          ))
+          ),
+          Type.LIFECYCLE_EVENT)
         }
       }
     }
   }
 
 
-  private inline fun <reified T : SlackNotificationEvent> Environment.sendSlackMessage(message: T) {
-    val handler: SlackNotificationHandler<T>? = handlers.supporting(T::class.java)
+  private inline fun <reified T : SlackNotificationEvent> Environment.sendSlackMessage(message: T, type: Type) {
+    val handler: SlackNotificationHandler<T>? = handlers.supporting(type)
+
     if (handler == null) {
       log.debug("no handler was found for notification type ${T::class.java}. Can't send slack notification.")
       return

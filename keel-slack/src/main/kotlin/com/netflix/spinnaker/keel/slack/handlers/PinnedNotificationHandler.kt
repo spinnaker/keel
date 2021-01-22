@@ -19,7 +19,7 @@ class PinnedNotificationHandler (
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ): SlackNotificationHandler<SlackPinnedNotification> {
 
- // override val type: NotificationType = NotificationType.ARTIFACT_PINNED
+  override val type: NotificationType = NotificationType.ARTIFACT_PINNED
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun sendMessage(notification: SlackPinnedNotification, channel: String) {

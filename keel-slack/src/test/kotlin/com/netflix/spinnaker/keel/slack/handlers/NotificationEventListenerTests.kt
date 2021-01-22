@@ -65,9 +65,9 @@ class NotificationEventListenerTests : JUnit5Minutests {
     val slackService: SlackService = mockk()
     val gitDataGenerator: GitDataGenerator = mockk()
     val pinnedNotificationHandler : PinnedNotificationHandler = mockk(relaxUnitFun = true) {
-//      every {
-//        type
-//      } returns com.netflix.spinnaker.keel.notifications.NotificationType.ARTIFACT_PINNED
+      every {
+        type
+      } returns com.netflix.spinnaker.keel.notifications.NotificationType.ARTIFACT_PINNED
     }
 
     val pinnedNotification = PinnedNotification(singleArtifactDeliveryConfig, pin)
@@ -110,12 +110,12 @@ class NotificationEventListenerTests : JUnit5Minutests {
 
       }
 
-//        test("slack notification was sent out") {
-//          subject.onPinnedNotification(pinnedNotification)
-//          verify  {
-//            pinnedNotificationHandler.sendMessage(any(), any())
-//          }
-//        }
+        test("slack notification was sent out") {
+          subject.onPinnedNotification(pinnedNotification)
+          verify  {
+            pinnedNotificationHandler.sendMessage(any(), any())
+          }
+        }
       }
     }
 }

@@ -20,7 +20,7 @@ class LifecycleEventNotificationHandler (
   private val gitDataGenerator: GitDataGenerator
 ) : SlackNotificationHandler<SlackLifecycleNotification> {
 
- // override val type: NotificationType = NotificationType.LIFECYCLE_EVENT
+  override val type: NotificationType = NotificationType.LIFECYCLE_EVENT
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

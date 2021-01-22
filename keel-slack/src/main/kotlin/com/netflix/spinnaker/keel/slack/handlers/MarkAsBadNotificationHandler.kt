@@ -19,7 +19,7 @@ class MarkAsBadNotificationHandler(
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackMarkAsBadNotification> {
 
- // override val type: NotificationType = NotificationType.ARTIFACT_MARK_AS_BAD
+  override val type: NotificationType = NotificationType.ARTIFACT_MARK_AS_BAD
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun sendMessage(notification: SlackMarkAsBadNotification, channel: String) {
