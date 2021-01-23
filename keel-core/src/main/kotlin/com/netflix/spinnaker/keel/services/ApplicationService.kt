@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.Locatable
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.StatefulConstraint
+import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
@@ -17,11 +18,14 @@ import com.netflix.spinnaker.keel.api.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.supporting
+import com.netflix.spinnaker.keel.api.verification.VerificationContext
+import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.artifacts.generateCompareLink
 import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintEvaluator
 import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
+import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionSummary
 import com.netflix.spinnaker.keel.core.api.DependOnConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
@@ -231,15 +235,21 @@ class ApplicationService(
     }
 
     val artifactSummaries = deliveryConfig.artifacts.map { artifact ->
-      val artifactVersionSummaries = repository.artifactVersions(artifact, limit).map { artifactVersion ->
+      val versions = repository.artifactVersions(artifact, limit)
+      val contexts : List<VerificationContext> = deliveryConfig.contexts(artifact, versions)
+      val states = repository.getStatesBatch(contexts)
+      val lookupTable = VerificationStateLookupTable(contexts, states)
+
+      val artifactVersionSummaries = versions.map { artifactVersion ->
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         envSummaries.forEach { environmentSummary ->
           val environment = deliveryConfig.environments.find { it.name == environmentSummary.name }!!
+          val verificationStatuses : Map<Verification, VerificationState> = lookupTable.get(artifact, environment, artifactVersion.version)
           environmentSummary.getArtifactPromotionStatus(artifact, artifactVersion.version)
             ?.let { status ->
               if ( artifact.isUsedIn(environment)) { // only add a summary if the artifact is used in the environment
-                buildArtifactSummaryInEnvironment(deliveryConfig, environment.name, artifact, artifactVersion.version, status)
+                buildArtifactSummaryInEnvironment(deliveryConfig, environment.name, artifact, artifactVersion.version, status, verificationStatuses)
                   ?.also {
                     artifactSummariesInEnvironments.add(
                       it.addStatefulConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
@@ -263,8 +273,16 @@ class ApplicationService(
     return artifactSummaries
   }
 
-  private fun buildArtifactSummaryInEnvironment(deliveryConfig: DeliveryConfig, environmentName: String, artifact: DeliveryArtifact, version: String, status: PromotionStatus): ArtifactSummaryInEnvironment? {
+  private fun buildArtifactSummaryInEnvironment(
+    deliveryConfig: DeliveryConfig,
+    environmentName: String,
+    artifact: DeliveryArtifact,
+    version: String,
+    status: PromotionStatus,
+    verificationStatuses: Map<Verification, VerificationState>
+  ): ArtifactSummaryInEnvironment? {
     val currentArtifact = getArtifactInstance(artifact, version)
+    val verifications: List<ArtifactVersionEnvironmentVerificationSummary> = verificationStatuses.entries.map { it.toSummary() }
 
     // some environments contain relevant info for skipped artifacts, so
     // try and find that summary before defaulting to less information
@@ -273,20 +291,27 @@ class ApplicationService(
         deliveryConfig = deliveryConfig,
         environmentName = environmentName,
         artifactReference = artifact.reference,
-        version = version
+        version = version,
+        verifications = verifications
       )
 
     val pinnedArtifact = getPinnedArtifact(deliveryConfig, environmentName, artifact, version)
 
     return when (status) {
       PENDING -> {
-        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT)
+        val olderArtifactVersion = pinnedArtifact ?: repository.getArtifactVersionByPromotionStatus(
+          deliveryConfig,
+          environmentName,
+          artifact,
+          CURRENT
+        )
         ArtifactSummaryInEnvironment(
           environment = environmentName,
           version = version,
           state = status.name.toLowerCase(),
           // comparing PENDING (version in question, new code) vs. CURRENT (old code)
-          compareLink = generateCompareLink(scmInfo, currentArtifact, olderArtifactVersion, artifact)
+          compareLink = generateCompareLink(scmInfo, currentArtifact, olderArtifactVersion, artifact),
+          verifications = verifications
         )
       }
       SKIPPED -> {
@@ -294,7 +319,8 @@ class ApplicationService(
           ArtifactSummaryInEnvironment(
             environment = environmentName,
             version = version,
-            state = status.name.toLowerCase()
+            state = status.name.toLowerCase(),
+            verifications = verifications
           )
         } else {
           potentialSummary
@@ -302,7 +328,12 @@ class ApplicationService(
       }
 
       DEPLOYING, APPROVED -> {
-        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, CURRENT)
+        val olderArtifactVersion = pinnedArtifact ?: repository.getArtifactVersionByPromotionStatus(
+          deliveryConfig,
+          environmentName,
+          artifact,
+          CURRENT
+        )
         potentialSummary?.copy(
           // comparing DEPLOYING/APPROVED (version in question, new code) vs. CURRENT (old code)
           compareLink = generateCompareLink(scmInfo, currentArtifact, olderArtifactVersion, artifact)
@@ -317,7 +348,12 @@ class ApplicationService(
         )
       }
       CURRENT -> {
-        val olderArtifactVersion = pinnedArtifact?: repository.getArtifactVersionByPromotionStatus(deliveryConfig, environmentName, artifact, PREVIOUS)
+        val olderArtifactVersion = pinnedArtifact ?: repository.getArtifactVersionByPromotionStatus(
+          deliveryConfig,
+          environmentName,
+          artifact,
+          PREVIOUS
+        )
         potentialSummary?.copy(
           // comparing CURRENT (version in question, new code) vs. PREVIOUS (old code)
           compareLink = generateCompareLink(scmInfo, currentArtifact, olderArtifactVersion, artifact)
@@ -437,5 +473,54 @@ class ApplicationService(
     val releaseStatus = repository.getReleaseStatus(artifact, version)
     return repository.getArtifactVersion(artifact, version, releaseStatus)
   }
-
 }
+
+class VerificationStateLookupTable(
+  val contexts: List<VerificationContext>,
+  val states: List<Map<String, VerificationState>> // [{id -> State}]
+) {
+  /**
+   *  Look up verification results for an artifact version in an environment
+   */
+  fun get(
+    artifact: DeliveryArtifact,
+    environment: Environment,
+    artifactVersion: String
+  ): Map<Verification, VerificationState> =
+    contexts.zip(states) // list of (Context, State) pairs
+      .filter { (ctx, _) -> ctx.matches(artifact, environment, artifactVersion) } // list of (Context, State) pairs
+      .map { (ctx, idToState) -> idToState.mapKeys { entry -> ctx.verification(entry.key) } }  // list of Verification->State maps
+      .flatten()
+}
+
+private fun DeliveryConfig.contexts(artifact: DeliveryArtifact, versions: List<PublishedArtifact>): List<VerificationContext> =
+  versions.flatMap { publishedArtifact ->
+    environments.map { env ->
+      VerificationContext(this, env.name, artifact.reference, publishedArtifact.version)}}
+
+/**
+ * Flatten a list of maps into a single map
+ *
+ * Assumes no duplicate keys, otherwise some values will be clobbered
+ */
+fun <K, V> List<Map<K, V>>.flatten() : Map<K, V> =
+  flatMap { it.asSequence() }.associate { it.key to it.value }
+
+
+fun VerificationContext.matches(artifact: DeliveryArtifact,
+                                environment: Environment,
+                                artifactVersion: String ): Boolean =
+  environmentName == environment.name &&
+    artifactReference == artifact.reference &&
+    version == artifactVersion
+
+
+fun Map.Entry<Verification, VerificationState>.toSummary() =
+  ArtifactVersionEnvironmentVerificationSummary(
+    id=key.id,
+    type=key.type,
+    status = value.status.toString(),
+    startedAt = value.startedAt,
+    completedAt = value.endedAt,
+    link = key.link(value)
+  )

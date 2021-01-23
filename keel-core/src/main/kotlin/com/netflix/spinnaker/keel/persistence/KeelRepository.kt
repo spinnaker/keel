@@ -11,8 +11,10 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.persistence.KeelReadOnlyRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
+import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
+import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -195,7 +197,8 @@ interface KeelRepository : KeelReadOnlyRepository {
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifactReference: String,
-    version: String
+    version: String,
+    verifications: List<ArtifactVersionEnvironmentVerificationSummary>
   ): ArtifactSummaryInEnvironment?
 
   /**
