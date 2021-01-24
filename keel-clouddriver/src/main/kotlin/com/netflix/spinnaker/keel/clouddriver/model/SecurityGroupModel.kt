@@ -16,7 +16,6 @@
 package com.netflix.spinnaker.keel.clouddriver.model
 
 import com.netflix.spinnaker.keel.api.Moniker
-import com.netflix.spinnaker.keel.api.support.Tag
 
 data class SecurityGroupModel(
   val type: String,
@@ -27,15 +26,13 @@ data class SecurityGroupModel(
   val region: String,
   val vpcId: String?,
   val inboundRules: Set<SecurityGroupRule> = setOf(),
-  val moniker: Moniker,
-  val tags: Set<Tag> = setOf()
+  val moniker: Moniker
 ) {
   data class SecurityGroupRule(
     val protocol: String?,
     val portRanges: List<SecurityGroupRulePortRange>?,
     val securityGroup: SecurityGroupRuleReference?,
-    val range: SecurityGroupRuleCidr?,
-    val description: String? = null
+    val range: SecurityGroupRuleCidr?
   )
 
   data class SecurityGroupRulePortRange(

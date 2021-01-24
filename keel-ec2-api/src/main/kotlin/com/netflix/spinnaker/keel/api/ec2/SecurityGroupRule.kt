@@ -18,10 +18,9 @@ package com.netflix.spinnaker.keel.api.ec2
 import com.netflix.spinnaker.keel.api.schema.Literal
 import com.netflix.spinnaker.keel.api.schema.Optional
 
-abstract class SecurityGroupRule {
+sealed class SecurityGroupRule {
   abstract val protocol: Protocol
   abstract val portRange: IngressPorts
-  open val description: String? = null
 
   enum class Protocol {
     ALL, TCP, UDP, ICMP
@@ -46,8 +45,7 @@ data class CrossAccountReferenceRule(
 data class CidrRule(
   override val protocol: Protocol,
   override val portRange: IngressPorts,
-  val blockRange: String,
-  override val description: String? = null
+  val blockRange: String
 ) : SecurityGroupRule()
 
 sealed class IngressPorts

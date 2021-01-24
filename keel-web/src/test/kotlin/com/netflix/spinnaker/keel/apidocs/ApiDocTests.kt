@@ -18,7 +18,6 @@ import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.docker.ContainerProvider
-import com.netflix.spinnaker.keel.ec2.jackson.registerEc2Subtypes
 import com.netflix.spinnaker.keel.schema.Generator
 import com.netflix.spinnaker.keel.schema.generateSchema
 import dev.minutest.experimental.SKIP
@@ -63,10 +62,6 @@ class ApiDocTests
     val extensionRegistry: ExtensionRegistry
   ): JUnit5Minutests {
 
-  init {
-    extensionRegistry.registerEc2Subtypes()
-  }
-
   val resourceSpecTypes
     get() = extensionRegistry.extensionsOf<ResourceSpec>()
 
@@ -74,7 +69,7 @@ class ApiDocTests
     get() = extensionRegistry.extensionsOf<Constraint>().values.toList()
 
   val securityGroupRuleTypes
-    get() = extensionRegistry.extensionsOf<SecurityGroupRule>().values
+    get() = SecurityGroupRule::class.sealedSubclasses.map(KClass<*>::java)
 
   val containerProviderTypes
     get() = ContainerProvider::class.sealedSubclasses.map(KClass<*>::java)

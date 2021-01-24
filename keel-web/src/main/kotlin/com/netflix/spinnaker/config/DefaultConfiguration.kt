@@ -19,7 +19,6 @@ import com.netflix.spinnaker.kork.web.interceptors.MetricsInterceptor
 import de.huxhorn.sulky.ulid.ULID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.jackson.JsonComponentModule
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -68,17 +67,12 @@ class DefaultConfiguration(
   @Bean
   fun idGenerator(): ULID = ULID()
 
-  @Bean
-  fun jsonComponentModule() = JsonComponentModule()
-
   @Bean(name = ["jsonMapper", "objectMapper"])
   @Primary
-  fun objectMapper(jsonComponentModule: JsonComponentModule): ObjectMapper =
-    configuredObjectMapper().registerModule(jsonComponentModule)
+  fun objectMapper(): ObjectMapper = configuredObjectMapper()
 
   @Bean(name = ["yamlMapper"])
-  fun yamlMapper(jsonComponentModule: JsonComponentModule): YAMLMapper =
-    configuredYamlMapper().registerModule(jsonComponentModule) as YAMLMapper
+  fun yamlMapper(): YAMLMapper = configuredYamlMapper()
 
   @Bean
   @ConditionalOnMissingBean(ResourceHandler::class)
