@@ -15,7 +15,6 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
-import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import com.netflix.spinnaker.keel.api.schema.Literal
 import com.netflix.spinnaker.keel.api.schema.Optional
 
@@ -46,9 +45,7 @@ data class CrossAccountReferenceRule(
 data class CidrRule(
   override val protocol: Protocol,
   override val portRange: IngressPorts,
-  val blockRange: String,
-  @get:ExcludedFromDiff
-  val description: String? = null
+  val blockRange: String
 ) : SecurityGroupRule()
 
 sealed class IngressPorts
