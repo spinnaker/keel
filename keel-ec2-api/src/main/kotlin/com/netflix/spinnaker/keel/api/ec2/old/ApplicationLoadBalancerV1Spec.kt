@@ -3,12 +3,12 @@ package com.netflix.spinnaker.keel.api.ec2.old
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerDependencies
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType.APPLICATION
 import com.netflix.spinnaker.keel.api.ec2.TargetGroupAttributes
+import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1_1Spec.ApplicationLoadBalancerOverrideV1_1
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1_1Spec.ListenerV1_1
 import com.netflix.spinnaker.keel.api.schema.Optional
 import java.time.Duration
@@ -21,7 +21,7 @@ data class ApplicationLoadBalancerV1Spec(
   override val idleTimeout: Duration = Duration.ofSeconds(60),
   val listeners: Set<ListenerV1_1>,
   val targetGroups: Set<TargetGroupV1>,
-  val overrides: Map<String, ApplicationLoadBalancerOverride> = emptyMap()
+  val overrides: Map<String, ApplicationLoadBalancerOverrideV1_1> = emptyMap()
 ) : LoadBalancerSpec, UnhappyControl {
 
   init {

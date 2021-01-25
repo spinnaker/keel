@@ -4,7 +4,6 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.UnhappyControl
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Rule
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.TargetGroup
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerDependencies
@@ -22,7 +21,7 @@ data class ApplicationLoadBalancerV1_1Spec(
   override val idleTimeout: Duration = Duration.ofSeconds(60),
   val listeners: Set<ListenerV1_1>,
   val targetGroups: Set<TargetGroup>,
-  val overrides: Map<String, ApplicationLoadBalancerOverride> = emptyMap()
+  val overrides: Map<String, ApplicationLoadBalancerOverrideV1_1> = emptyMap()
 ) : LoadBalancerSpec, UnhappyControl {
 
   init {
@@ -46,5 +45,11 @@ data class ApplicationLoadBalancerV1_1Spec(
     val certificateArn: String?,
     val rules: Set<Rule> = emptySet(),
     val defaultActions: Set<Action> = emptySet()
+  )
+
+  data class ApplicationLoadBalancerOverrideV1_1(
+    val dependencies: LoadBalancerDependencies? = null,
+    val listeners: Set<ListenerV1_1>? = null,
+    val targetGroups: Set<TargetGroup>? = null
   )
 }

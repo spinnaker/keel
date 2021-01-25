@@ -1,10 +1,12 @@
 package com.netflix.spinnaker.keel.ec2.migrators
 
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
-import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.TargetGroup
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Listener
 import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_2
 import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1_1Spec
+import com.netflix.spinnaker.keel.api.ec2.old.ApplicationLoadBalancerV1_1Spec.ListenerV1_1
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -27,33 +29,25 @@ class ApplicationLoadBalancerV1_1ToV1_2Migrator(
       internal = spec.internal,
       dependencies = spec.dependencies,
       idleTimeout = spec.idleTimeout,
-      listeners = spec.listeners.mapTo(mutableSetOf()) {
-        ApplicationLoadBalancerSpec.Listener(
-          port = it.port,
-          protocol = it.protocol,
-          certificate = it.certificateArn?.let { cloudDriverCache.certificateByArn(it).serverCertificateName },
-          rules = it.rules,
-          defaultActions = it.defaultActions
+      listeners = spec.listeners.migrate(),
+      targetGroups = spec.targetGroups,
+      overrides = spec.overrides.mapValues { (_, v) ->
+        ApplicationLoadBalancerOverride(
+          v.dependencies,
+          v.listeners?.migrate(),
+          v.targetGroups
         )
-      },
-      targetGroups = spec.targetGroups.mapTo(mutableSetOf()) {
-        TargetGroup(
-          name = it.name,
-          targetType = it.targetType,
-          protocol = it.protocol,
-          port = it.port,
-          healthCheckEnabled = it.healthCheckEnabled,
-          healthCheckTimeout = it.healthCheckTimeout,
-          healthCheckPort = it.healthCheckPort,
-          healthCheckProtocol = it.healthCheckProtocol,
-          healthCheckHttpCode = it.healthCheckHttpCode,
-          healthCheckPath = it.healthCheckPath,
-          healthCheckInterval = it.healthCheckInterval,
-          healthyThresholdCount = it.healthyThresholdCount,
-          unhealthyThresholdCount = it.unhealthyThresholdCount,
-          attributes = it.attributes
-        )
-      },
-      overrides = spec.overrides
+      }
     )
+
+  private fun Set<ListenerV1_1>.migrate(): Set<Listener> =
+    mapTo(mutableSetOf()) { listener ->
+      Listener(
+        port = listener.port,
+        protocol = listener.protocol,
+        certificate = listener.certificateArn?.let { cloudDriverCache.certificateByArn(it).serverCertificateName },
+        rules = listener.rules,
+        defaultActions = listener.defaultActions
+      )
+    }
 }
