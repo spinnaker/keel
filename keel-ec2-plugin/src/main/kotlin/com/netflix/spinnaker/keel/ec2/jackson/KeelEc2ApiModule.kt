@@ -73,7 +73,7 @@ internal object KeelEc2ApiModule : SimpleModule("Keel EC2 API") {
   override fun setupModule(context: SetupContext) {
     with(context) {
       setMixInAnnotations<ApplicationLoadBalancerSpec, ApplicationLoadBalancerSpecMixin>()
-      // same annotations are required for this legacy models, so they can reuse the same mixin
+      // same annotations are required for these legacy models, so they can reuse the same mixin
       setMixInAnnotations<ApplicationLoadBalancerV1_1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<ApplicationLoadBalancerV1Spec, ApplicationLoadBalancerSpecMixin>()
       setMixInAnnotations<BuildInfo, BuildInfoMixin>()
