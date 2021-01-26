@@ -332,7 +332,7 @@ class SqlVerificationRepository(
     private val artifactReference = "artifact_reference"
     private val artifactVersion = "artifact_version"
 
-    fun <T> f(s : String, t: Class<T>) : Field<T> = field(name(alias, s), t)
+    fun <T> typedField(s : String, t: Class<T>) : Field<T> = field(name(alias, s), t)
 
     // These behave like regular jOOQ table field names when building SQL queries
 
