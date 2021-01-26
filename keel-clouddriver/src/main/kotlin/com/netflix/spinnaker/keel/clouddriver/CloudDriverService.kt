@@ -67,11 +67,10 @@ interface CloudDriverService {
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
   ): SecurityGroupSummary
 
-  @GET("/networks/{cloudProvider}")
+  @GET("/networks")
   suspend fun listNetworks(
-    @Path("cloudProvider") cloudProvider: String,
     @Header("X-SPINNAKER-USER") user: String = DEFAULT_SERVICE_ACCOUNT
-  ): Set<Network>
+  ): Map<String, Set<Network>>
 
   @GET("/subnets/{cloudProvider}")
   suspend fun listSubnets(
