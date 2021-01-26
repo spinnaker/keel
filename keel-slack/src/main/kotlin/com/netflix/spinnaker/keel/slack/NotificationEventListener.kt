@@ -45,17 +45,22 @@ class NotificationEventListener(
         return
       }
 
-      config.environments.first { environment ->
-        environment.name == pin.targetEnvironment
-      }.also {
-        it.sendSlackMessage(SlackPinnedNotification(
-          pin = pin,
-          currentArtifact = currentArtifact,
-          pinnedArtifact = pinnedArtifact,
-          application = config.application,
-          time = clock.instant()
-        ),
-        Type.ARTIFACT_PINNED)
+      try {
+        config.environments.first { environment ->
+          environment.name == pin.targetEnvironment
+        }.also {
+          it.sendSlackMessage(SlackPinnedNotification(
+            pin = pin,
+            currentArtifact = currentArtifact,
+            pinnedArtifact = pinnedArtifact,
+            application = config.application,
+            time = clock.instant()
+          ),
+            Type.ARTIFACT_PINNED)
+        }
+      } catch (ex: NoSuchElementException) {
+        log.debug("no environment ${pin.targetEnvironment} was found in the config named ${config.name}")
+        throw ex
       }
     }
   }
@@ -78,18 +83,23 @@ class NotificationEventListener(
       val latestArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, latestApprovedArtifactVersion, null)
       val pinnedArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, pinnedEnvironment!!.version, null)
 
-      config.environments.first { environment ->
-        environment.name == targetEnvironment
-      }.also {
-        it.sendSlackMessage(SlackUnpinnedNotification(
-          latestArtifact = latestArtifact,
-          pinnedArtifact = pinnedArtifact,
-          application = config.application,
-          time = clock.instant(),
-          user = user,
-          targetEnvironment = targetEnvironment
-        ),
-        Type.ARTIFACT_UNPINNED)
+      try {
+        config.environments.first { environment ->
+          environment.name == targetEnvironment
+        }.also {
+          it.sendSlackMessage(SlackUnpinnedNotification(
+            latestArtifact = latestArtifact,
+            pinnedArtifact = pinnedArtifact,
+            application = config.application,
+            time = clock.instant(),
+            user = user,
+            targetEnvironment = targetEnvironment
+          ),
+            Type.ARTIFACT_UNPINNED)
+        }
+      } catch (ex: NoSuchElementException) {
+        log.debug("no environment $targetEnvironment was found in the config named ${config.name}")
+        throw ex
       }
     }
   }
@@ -107,20 +117,25 @@ class NotificationEventListener(
         return
       }
 
-      config.environments.first { environment ->
-        environment.name == veto.targetEnvironment
-      }.also {
-        it.sendSlackMessage(
-          SlackMarkAsBadNotification(
-            vetoedArtifact = vetoedArtifact,
-            user = user,
-            targetEnvironment = veto.targetEnvironment,
-            time = clock.instant(),
-            application = config.name,
-            comment = veto.comment
-          ),
-          Type.ARTIFACT_MARK_AS_BAD
-        )
+      try {
+        config.environments.first { environment ->
+          environment.name == veto.targetEnvironment
+        }.also {
+          it.sendSlackMessage(
+            SlackMarkAsBadNotification(
+              vetoedArtifact = vetoedArtifact,
+              user = user,
+              targetEnvironment = veto.targetEnvironment,
+              time = clock.instant(),
+              application = config.name,
+              comment = veto.comment
+            ),
+            Type.ARTIFACT_MARK_AS_BAD
+          )
+        }
+      } catch (ex: NoSuchElementException) {
+        log.debug("no environment ${veto.targetEnvironment} was found in the config named ${config.name}")
+        throw ex
       }
     }
   }

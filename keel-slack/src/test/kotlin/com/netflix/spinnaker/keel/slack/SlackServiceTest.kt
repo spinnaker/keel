@@ -10,7 +10,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.core.env.Environment
 
-class SlackNotifierTest: JUnit5Minutests {
+class SlackServiceTest: JUnit5Minutests {
 
   class Fixture {
     val slackConfiguration = SlackConfiguration()
