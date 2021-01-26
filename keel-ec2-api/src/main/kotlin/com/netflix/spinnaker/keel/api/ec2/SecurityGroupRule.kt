@@ -15,13 +15,13 @@
  */
 package com.netflix.spinnaker.keel.api.ec2
 
+import com.netflix.spinnaker.keel.api.ExcludedFromDiff
 import com.netflix.spinnaker.keel.api.schema.Literal
 import com.netflix.spinnaker.keel.api.schema.Optional
 
 abstract class SecurityGroupRule {
   abstract val protocol: Protocol
   abstract val portRange: IngressPorts
-  open val description: String? = null
 
   enum class Protocol {
     ALL, TCP, UDP, ICMP
@@ -47,8 +47,27 @@ data class CidrRule(
   override val protocol: Protocol,
   override val portRange: IngressPorts,
   val blockRange: String,
-  override val description: String? = null
-) : SecurityGroupRule()
+  @get:ExcludedFromDiff
+  val description: String? = null
+) : SecurityGroupRule() {
+  // DO NOT REMOVE! Required due to https://github.com/SQiShER/java-object-diff/issues/216
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+
+    return other is CidrRule
+      && other.protocol == this.protocol
+      && other.portRange == this.portRange
+      && other.blockRange == this.blockRange
+  }
+
+  // DO NOT REMOVE! Required due to https://github.com/SQiShER/java-object-diff/issues/216
+  override fun hashCode(): Int {
+    var result = protocol.hashCode()
+    result = 31 * result + portRange.hashCode()
+    result = 31 * result + blockRange.hashCode()
+    return result
+  }
+}
 
 sealed class IngressPorts
 
