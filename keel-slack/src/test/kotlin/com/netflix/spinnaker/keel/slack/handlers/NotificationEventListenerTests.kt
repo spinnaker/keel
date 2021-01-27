@@ -137,7 +137,7 @@ class NotificationEventListenerTests : JUnit5Minutests {
         } returns "@keel"
 
         every {
-          slackService.sendSlackNotification("test", any())
+          slackService.sendSlackNotification("test", any(), any(), any(), any())
         } just Runs
 
         every {

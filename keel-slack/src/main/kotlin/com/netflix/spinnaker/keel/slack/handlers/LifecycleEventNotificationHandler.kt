@@ -28,7 +28,7 @@ class LifecycleEventNotificationHandler (
     log.debug("Sending lifecycle event notification for application ${notification.application}")
 
     with(notification) {
-      val imageUrl = when (type) {
+      val imageUrl = when (eventType) {
           LifecycleEventType.BAKE -> "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/bake_fail.png"
           LifecycleEventType.BUILD -> "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/build_fail.png"
           else -> Strings.EMPTY
@@ -38,7 +38,7 @@ class LifecycleEventNotificationHandler (
 
       val blocks = withBlocks {
         header {
-          text("${type.name} failed", emoji = true)
+          text("${eventType.name} failed", emoji = true)
         }
 
         section {
@@ -61,7 +61,7 @@ class LifecycleEventNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = type)
     }
   }
 

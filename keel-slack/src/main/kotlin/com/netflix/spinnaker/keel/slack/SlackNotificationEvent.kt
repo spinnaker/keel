@@ -52,7 +52,7 @@ data class SlackResumedNotification(
 
 data class SlackLifecycleNotification(
   val artifact: PublishedArtifact,
-  val type: LifecycleEventType,
+  val eventType: LifecycleEventType,
   override val time: Instant,
   override val application: String
 ) : SlackNotificationEvent(time, application)

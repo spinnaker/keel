@@ -1,6 +1,10 @@
 package com.netflix.spinnaker.keel.slack
 
+import com.netflix.spectator.api.BasicTag
+import com.netflix.spectator.api.Counter
+import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.config.SlackConfiguration
+import com.netflix.spinnaker.keel.notifications.NotificationType
 import com.slack.api.Slack
 import com.slack.api.model.block.LayoutBlock
 import org.slf4j.LoggerFactory
@@ -16,7 +20,8 @@ import org.springframework.stereotype.Component
 @EnableConfigurationProperties(SlackConfiguration::class)
 class SlackService(
   private val springEnv: Environment,
-  final val slackConfig: SlackConfiguration
+  final val slackConfig: SlackConfiguration,
+  private val spectator: Registry
 ) {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -27,7 +32,8 @@ class SlackService(
   private val isSlackEnabled: Boolean
     get() = springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
 
-  fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>, token: String? = null) {
+  fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>, token: String? = null,
+                            application: String, type: NotificationType) {
     if (isSlackEnabled) {
       log.debug("sending slack notification for channel $channel")
 
@@ -37,6 +43,16 @@ class SlackService(
         req
           .channel(channel)
           .blocks(blocks)
+      }
+
+      if (response.isOk) {
+        spectator.counter(
+          SLACK_MESSAGE_SENT,
+          listOf(
+            BasicTag("notificationType", type.name),
+            BasicTag("application", application)
+          )
+        ).safeIncrement()
       }
 
       log.debug("response: ${response.message}")
@@ -59,4 +75,15 @@ class SlackService(
     }
     return email
   }
+
+  companion object {
+    private const val SLACK_MESSAGE_SENT = "keel.slack.message.sent"
+  }
+
+  private fun Counter.safeIncrement() =
+    try {
+      increment()
+    } catch (ex: Exception) {
+      log.error("Exception incrementing {} counter: {}", id().name(), ex.message)
+    }
 }

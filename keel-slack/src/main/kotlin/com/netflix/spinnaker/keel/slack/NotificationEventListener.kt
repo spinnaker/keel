@@ -192,7 +192,7 @@ class NotificationEventListener(
           environment.sendSlackMessage(SlackLifecycleNotification(
             time = clock.instant(),
             artifact = artifact,
-            type = type,
+            eventType = type,
             application = config.application
           ),
           Type.LIFECYCLE_EVENT)

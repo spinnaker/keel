@@ -53,7 +53,7 @@ class PausedNotificationHandler (
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = type)
     }
   }
 
