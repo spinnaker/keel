@@ -75,6 +75,13 @@ class NotificationEventListenerTests : JUnit5Minutests {
             address = "staging",
             frequency = NotificationFrequency.verbose
           )
+        ),
+        resources = setOf(
+          resource(
+            spec = DummyArtifactReferenceResourceSpec(
+              artifactReference = releaseArtifact.reference
+            )
+          )
         )
       ),
       Environment(
@@ -236,7 +243,7 @@ class NotificationEventListenerTests : JUnit5Minutests {
 
       test("send notifications to relevant environments only"){
         subject.onLifecycleEvent(lifecycleEvent)
-          verify(exactly = 1) {
+          verify(exactly = 2) {
             lifecycleEventNotificationHandler.sendMessage(any(), any())
           }
       }

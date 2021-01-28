@@ -197,10 +197,9 @@ class NotificationEventListener(
     //if targetEnvironment is not null, use only its notifications. Else, use all notifications configured for all environments.
     val environments: Set<Environment> = config.environments.filter {
       targetEnvironment == null || it.name == targetEnvironment
-    }.also { it ->
-      it.filter {
-        artifact == null || artifact.isUsedIn(it)
-      }
+    }.filter {
+      //if artifact is not null, make sure it used in the environment prior to sending the notification
+      artifact == null || artifact.isUsedIn(it)
     }.toSet()
 
     environments.flatMap { it.notifications }
