@@ -19,11 +19,3 @@ fun <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.support
   type: NotificationType
 ): SlackNotificationHandler<T>? =
   this.find { it.type == type } as? SlackNotificationHandler<T>
-
-
-fun <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(
-  type: Class<T>
-): SlackNotificationHandler<T>? =
-  this.find { handler ->
-    handler.javaClass == type }
-    as? SlackNotificationHandler<T>

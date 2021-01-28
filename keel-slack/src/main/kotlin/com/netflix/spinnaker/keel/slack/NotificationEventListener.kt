@@ -1,7 +1,9 @@
 package com.netflix.spinnaker.keel.slack
 
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationType
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
 import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
@@ -45,24 +47,19 @@ class NotificationEventListener(
         return
       }
 
-      try {
-        config.environments.first { environment ->
-          environment.name == pin.targetEnvironment
-        }.also {
-          it.sendSlackMessage(SlackPinnedNotification(
-            pin = pin,
-            currentArtifact = currentArtifact,
-            pinnedArtifact = pinnedArtifact,
-            application = config.application,
-            time = clock.instant()
-          ),
-            Type.ARTIFACT_PINNED)
-        }
-      } catch (ex: NoSuchElementException) {
-        log.debug("no environment ${pin.targetEnvironment} was found in the config named ${config.name}")
-        throw ex
-      }
+      sendSlackMessage(
+        config,
+        SlackPinnedNotification(
+          pin = pin,
+          currentArtifact = currentArtifact,
+          pinnedArtifact = pinnedArtifact,
+          application = config.application,
+          time = clock.instant()
+        ),
+        Type.ARTIFACT_PINNED,
+        pin.targetEnvironment)
     }
+
   }
 
 
@@ -83,24 +80,20 @@ class NotificationEventListener(
       val latestArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, latestApprovedArtifactVersion, null)
       val pinnedArtifact = repository.getArtifactVersion(pinnedEnvironment!!.artifact, pinnedEnvironment!!.version, null)
 
-      try {
-        config.environments.first { environment ->
-          environment.name == targetEnvironment
-        }.also {
-          it.sendSlackMessage(SlackUnpinnedNotification(
-            latestArtifact = latestArtifact,
-            pinnedArtifact = pinnedArtifact,
-            application = config.application,
-            time = clock.instant(),
-            user = user,
-            targetEnvironment = targetEnvironment
-          ),
-            Type.ARTIFACT_UNPINNED)
-        }
-      } catch (ex: NoSuchElementException) {
-        log.debug("no environment $targetEnvironment was found in the config named ${config.name}")
-        throw ex
-      }
+      sendSlackMessage(config,
+        SlackUnpinnedNotification(
+        latestArtifact = latestArtifact,
+        pinnedArtifact = pinnedArtifact,
+        application = config.application,
+        time = clock.instant(),
+        user = user,
+        targetEnvironment = targetEnvironment
+      ),
+        Type.ARTIFACT_UNPINNED,
+        targetEnvironment)
+
+      log.debug("no environment $targetEnvironment was found in the config named ${config.name}")
+
     }
   }
 
@@ -117,26 +110,18 @@ class NotificationEventListener(
         return
       }
 
-      try {
-        config.environments.first { environment ->
-          environment.name == veto.targetEnvironment
-        }.also {
-          it.sendSlackMessage(
-            SlackMarkAsBadNotification(
-              vetoedArtifact = vetoedArtifact,
-              user = user,
-              targetEnvironment = veto.targetEnvironment,
-              time = clock.instant(),
-              application = config.name,
-              comment = veto.comment
-            ),
-            Type.ARTIFACT_MARK_AS_BAD
-          )
-        }
-      } catch (ex: NoSuchElementException) {
-        log.debug("no environment ${veto.targetEnvironment} was found in the config named ${config.name}")
-        throw ex
-      }
+      sendSlackMessage(config,
+        SlackMarkAsBadNotification(
+          vetoedArtifact = vetoedArtifact,
+          user = user,
+          targetEnvironment = veto.targetEnvironment,
+          time = clock.instant(),
+          application = config.name,
+          comment = veto.comment
+        ),
+        Type.ARTIFACT_MARK_AS_BAD,
+        veto.targetEnvironment
+      )
     }
   }
 
@@ -145,15 +130,15 @@ class NotificationEventListener(
     with(notification) {
       val config = repository.getDeliveryConfigForApplication(application)
 
-      config.environments.forEach { environment ->
-        environment.sendSlackMessage(SlackPausedNotification(
-          user = triggeredBy,
-          time = clock.instant(),
-          application = application
-        ),
+      sendSlackMessage(config,
+        SlackPausedNotification(
+        user = triggeredBy,
+        time = clock.instant(),
+        application = application
+      ),
         Type.APPLICATION_PAUSED)
-      }
     }
+
   }
 
   @EventListener(ApplicationActuationResumed::class)
@@ -161,14 +146,13 @@ class NotificationEventListener(
     with(notification) {
       val config = repository.getDeliveryConfigForApplication(application)
 
-      config.environments.forEach { environment ->
-        environment.sendSlackMessage(SlackResumedNotification(
-          user = triggeredBy,
-          time = clock.instant(),
-          application = application
-        ),
-          Type.APPLICATION_RESUMED)
-      }
+      sendSlackMessage(config,
+        SlackResumedNotification(
+        user = triggeredBy,
+        time = clock.instant(),
+        application = application
+      ),
+        Type.APPLICATION_RESUMED)
     }
   }
 
@@ -182,27 +166,27 @@ class NotificationEventListener(
 
       val artifact = repository.getArtifactVersion(deliveryArtifact, artifactVersion, null)
       if (artifact == null) {
-        log.debug("vetoedArtifact is null for application ${config.application}. Can't send MarkAsBadNotification notification")
+        log.debug("delivery artifact is null for application ${config.application}. Can't send $type notification")
         return
       }
 
-      config.environments.forEach { environment ->
-        //We only notifying when failure happens
-        if (status == LifecycleEventStatus.FAILED) {
-          environment.sendSlackMessage(SlackLifecycleNotification(
-            time = clock.instant(),
-            artifact = artifact,
-            eventType = type,
-            application = config.application
-          ),
-          Type.LIFECYCLE_EVENT)
-        }
+      if (status == LifecycleEventStatus.FAILED) {
+        sendSlackMessage(config,
+          SlackLifecycleNotification(
+          time = clock.instant(),
+          artifact = artifact,
+          eventType = type,
+          application = config.application
+        ),
+          Type.LIFECYCLE_EVENT,
+          artifact = deliveryArtifact)
       }
     }
   }
 
-
-  private inline fun <reified T : SlackNotificationEvent> Environment.sendSlackMessage(message: T, type: Type) {
+  private inline fun <reified T : SlackNotificationEvent> sendSlackMessage(config: DeliveryConfig, message: T, type: Type,
+                                                                           targetEnvironment: String? = null,
+                                                                           artifact: DeliveryArtifact? = null) {
     val handler: SlackNotificationHandler<T>? = handlers.supporting(type)
 
     if (handler == null) {
@@ -210,11 +194,21 @@ class NotificationEventListener(
       return
     }
 
-    this.notifications.filter {
-      it.type == NotificationType.slack
-    }.forEach {
-      handler.sendMessage(message, it.address)
-    }
+    //if targetEnvironment is not null, use only its notifications. Else, use all notifications configured for all environments.
+    val environments: Set<Environment> = config.environments.filter {
+      targetEnvironment == null || it.name == targetEnvironment
+    }.also { it ->
+      it.filter {
+        artifact == null || artifact.isUsedIn(it)
+      }
+    }.toSet()
+
+    environments.flatMap { it.notifications }
+      .filter { it.type == NotificationType.slack }
+      .groupBy { it.address }
+      .forEach { (channel, _) ->
+        handler.sendMessage(message, channel)
+      }
   }
 }
 

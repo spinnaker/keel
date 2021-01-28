@@ -51,7 +51,7 @@ class GitDataGenerator(
               details += "<${pullRequest?.url}|PR#${pullRequest?.number}> ›"
             }
 
-            if (commitInfo != null && commitInfo!!.sha != null && commitInfo!!.sha?.length!! > 7) {
+            if (commitInfo != null && commitInfo!!.sha != null && commitInfo!!.sha?.length!! >= 7) {
               markdownText(details +
                 "<${commitInfo?.link}|${commitInfo?.sha?.substring(0, 7)}>")
             }

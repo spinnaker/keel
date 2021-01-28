@@ -10,10 +10,16 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
 import com.netflix.spinnaker.keel.events.PinnedNotification
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus
+import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.NotificationEventListener
 import com.netflix.spinnaker.keel.slack.SlackService
 import com.netflix.spinnaker.keel.test.DummyArtifact
+import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
+import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.time.MutableClock
 import com.slack.api.model.kotlin_extension.block.SectionBlockBuilder
 import dev.minutest.junit.JUnit5Minutests
@@ -23,7 +29,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import strikt.api.expectThrows
 import java.time.Instant
 import java.time.ZoneId
 import com.netflix.spinnaker.keel.notifications.NotificationType as Type
@@ -52,6 +57,13 @@ class NotificationEventListenerTests : JUnit5Minutests {
             type = NotificationType.slack,
             address = "test",
             frequency = NotificationFrequency.verbose
+          )
+        ),
+        resources = setOf(
+          resource(
+            spec = DummyArtifactReferenceResourceSpec(
+              artifactReference = releaseArtifact.reference
+            )
           )
         )
       ),
@@ -92,7 +104,7 @@ class NotificationEventListenerTests : JUnit5Minutests {
       application = application1,
       serviceAccount = "keel@spinnaker",
       artifacts = setOf(releaseArtifact),
-      environments = singleArtifactEnvironments.toSet()
+      environments = singleArtifactEnvironments.toSet(),
     )
 
     val slackService: SlackService = mockk()
@@ -115,10 +127,27 @@ class NotificationEventListenerTests : JUnit5Minutests {
       } returns Type.APPLICATION_PAUSED
     }
 
+    val lifecycleEventNotificationHandler: LifecycleEventNotificationHandler = mockk(relaxUnitFun = true) {
+      every {
+        type
+      } returns Type.LIFECYCLE_EVENT
+    }
 
+
+    val lifecycleEvent = LifecycleEvent(
+      type = LifecycleEventType.BAKE,
+      scope = LifecycleEventScope.PRE_DEPLOYMENT,
+      status = LifecycleEventStatus.FAILED,
+      artifactRef = releaseArtifact.toLifecycleRef(),
+      artifactVersion = version0,
+      id = "bake-$version0",
+    )
     val pinnedNotification = PinnedNotification(singleArtifactDeliveryConfig, pin)
     val pausedNotification = ApplicationActuationPaused(application1, clock.instant(), "user1")
-    val subject = NotificationEventListener(repository, clock, listOf(pinnedNotificationHandler, pausedNotificationHandler, unpinnedNotificationHandler))
+    val subject = NotificationEventListener(repository, clock, listOf(pinnedNotificationHandler,
+      pausedNotificationHandler,
+      unpinnedNotificationHandler,
+      lifecycleEventNotificationHandler))
 
 
     fun Collection<String>.toArtifactVersions(artifact: DeliveryArtifact) =
@@ -167,16 +196,17 @@ class NotificationEventListenerTests : JUnit5Minutests {
         }
       }
 
-      test("only slack notifications are sending out") {
+      test("only slack notifications are sent out") {
         subject.onPinnedNotification(pinnedNotification.copy(pin = pin.copy(targetEnvironment = "production")))
         verify(exactly = 2) {
           pinnedNotificationHandler.sendMessage(any(), any())
         }
       }
 
-      test("catch an NoSuchElementException exception if an environment was not found") {
-        expectThrows<NoSuchElementException> {
-          subject.onPinnedNotification(pinnedNotification.copy(pin = pin.copy(targetEnvironment = "test#2")))
+      test("don't send a notification if an environment was not found") {
+        subject.onPinnedNotification(pinnedNotification.copy(pin = pin.copy(targetEnvironment = "test#2")))
+        verify(exactly = 0) {
+          pinnedNotificationHandler.sendMessage(any(), any())
         }
       }
     }
@@ -192,6 +222,23 @@ class NotificationEventListenerTests : JUnit5Minutests {
         verify(exactly = 4) {
           pausedNotificationHandler.sendMessage(any(), any())
         }
+      }
+    }
+
+    context("lifecycle notifications") {
+      before {
+        every {
+          repository.getDeliveryConfig(any())
+        } returns singleArtifactDeliveryConfig
+
+        every { repository.getArtifactVersion(releaseArtifact, any(), any()) } returns versions.toArtifactVersions(releaseArtifact).first()
+      }
+
+      test("send notifications to relevant environments only"){
+        subject.onLifecycleEvent(lifecycleEvent)
+          verify(exactly = 1) {
+            lifecycleEventNotificationHandler.sendMessage(any(), any())
+          }
       }
     }
   }
