@@ -442,9 +442,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     subject.updateState(c2, v2, PENDING)
 
 
-    //
-    // Code under test
-    //
     val result = subject.getStatesBatch(contexts)
 
     expect {
