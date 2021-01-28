@@ -469,7 +469,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
         .and {
           get { get(v2.id) }
             .isNotNull()
-            .with(VerificationState::status) { isEqualTo(PENDING) }
+            .get(VerificationState::status) isEqualTo PENDING
         }
     }
   }
