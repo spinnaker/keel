@@ -320,7 +320,30 @@ class SqlVerificationRepository(
   /**
    * Helper class for [getStatesBatch]
    *
+   * This class enables the caller to construct a [Table] object from a list of [contexts].
+   * The table is accessed via the [table] property.
    *
+   * his table object does not correspond to an actual table in keel's database. Instead, it constructs
+   * a query from the [contexts] that can be used as a subselect. The query would be used like this
+   *
+   * ```
+   * SELECT ...
+   * FROM
+   * (
+   * -- empty dummy record added to provide column names
+   * SELECT NULL ind, NULL environment_name, NULL artifact_reference, NULL artifact_version FROM dual WHERE 1 = 0 UNION ALL
+   * -- the actual values
+   * SELECT 0, "staging", "myapp", "myapp-h123-v23.4" FROM dual UNION ALL
+   * SELECT 1, "staging", "myapp", "myapp-h124-v23.5" FROM dual UNION ALL
+   * SELECT 2, "staging", "myapp", "myapp-h124-v23.6"
+   * ) verification_contexts
+   * ...
+   * ```
+   *
+   * Note that `dual` is a dummy table, c.f.: https://en.wikipedia.org/wiki/DUAL_table
+   *
+   * The query essentially emulates the VALUES() table constructor, which we can't use because it's not supported in MySQL 5.7:
+   * https://www.jooq.org/doc/3.0/manual/sql-building/table-expressions/values/
    */
   @Suppress("PropertyName")
   private class ContextTable(
@@ -349,8 +372,14 @@ class SqlVerificationRepository(
     val table : Table<Record4<Int, String, String, String>>
       get() =
         contexts
+          // Creates a SELECT statement from each element of [contexts], where every column is a constant. e.g.:
+          // SELECT 0, "staging", "myapp", "myapp-h123-v23.4" FROM dual
           .mapIndexed { idx, v -> jooq.select(inline(idx), inline(v.environmentName), inline(v.artifactReference), inline(v.version)) as SelectOrderByStep<Record4<Int, String, String, String>> }
+
+          // Apply UNION ALL to the list of SELECT statements so they form a single query
           .reduce { s1, s2 -> s1.unionAll(s2) }
+
+          // Convert the result to a [Table] object
           .asTable(alias, ind, environmentName, artifactReference, artifactVersion)
   }
 
