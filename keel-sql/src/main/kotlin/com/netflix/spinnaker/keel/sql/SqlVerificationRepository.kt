@@ -319,6 +319,8 @@ class SqlVerificationRepository(
 
   /**
    * Helper class for [getStatesBatch]
+   *
+   *
    */
   @Suppress("PropertyName")
   private class ContextTable(
@@ -336,10 +338,10 @@ class SqlVerificationRepository(
 
     // These behave like regular jOOQ table field names when building SQL queries
 
-    val IND  = f(ind, Long::class.java)
-    val ENVIRONMENT_NAME = f(environmentName, String::class.java)
-    val ARTIFACT_REFERENCE = f(artifactReference, String::class.java)
-    val ARTIFACT_VERSION = f(artifactVersion, String::class.java)
+    val IND  = typedField(ind, Long::class.java)
+    val ENVIRONMENT_NAME = typedField(environmentName, String::class.java)
+    val ARTIFACT_REFERENCE = typedField(artifactReference, String::class.java)
+    val ARTIFACT_VERSION = typedField(artifactVersion, String::class.java)
 
     /**
      * return a jOOQ table that contains the [contexts] data represented as a table that can be selected against
