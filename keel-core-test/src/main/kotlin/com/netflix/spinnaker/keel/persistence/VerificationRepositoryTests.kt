@@ -419,9 +419,6 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
 
   @Test
   fun `multiple contexts, multiple verifications`() {
-    //
-    // setup
-    //
     val c1 = context
     val c2 = VerificationContext(
       deliveryConfig = deliveryConfig,
