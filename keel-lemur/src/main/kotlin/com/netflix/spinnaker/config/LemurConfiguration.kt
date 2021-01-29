@@ -6,8 +6,9 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.springframework.beans.factory.BeanCreationException
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders.AUTHORIZATION
@@ -16,19 +17,18 @@ import retrofit2.converter.jackson.JacksonConverterFactory
 
 @Configuration
 @ConditionalOnProperty("lemur.base-url")
+@EnableConfigurationProperties(LemurProperties::class)
 class LemurConfiguration {
   @Bean
-  fun lemurEndpoint(
-    @Value("\${lemur.base-url}") lemurBaseUrl: String
-  ): HttpUrl =
-    lemurBaseUrl.toHttpUrlOrNull()
-      ?: throw BeanCreationException("Invalid URL: $lemurBaseUrl")
+  fun lemurEndpoint(lemurProperties: LemurProperties): HttpUrl =
+    lemurProperties.baseUrl?.toHttpUrlOrNull()
+      ?: throw BeanCreationException("Invalid URL: ${lemurProperties.baseUrl}")
 
   @Bean
   fun lemurService(
     objectMapper: ObjectMapper,
     lemurEndpoint: HttpUrl,
-    @Value("\${lemur.token}") token: String
+    lemurProperties: LemurProperties
   ): LemurService {
     val client = OkHttpClient
       .Builder()
@@ -37,7 +37,7 @@ class LemurConfiguration {
           chain
             .request()
             .newBuilder()
-            .header(AUTHORIZATION, "Bearer $token")
+            .header(AUTHORIZATION, "Bearer ${lemurProperties.token}")
             .build()
         )
       }
@@ -49,4 +49,10 @@ class LemurConfiguration {
       .build()
       .create(LemurService::class.java)
   }
+}
+
+@ConfigurationProperties(prefix = "lemur")
+class LemurProperties {
+  var baseUrl: String? = null
+  var token: String? = null
 }
