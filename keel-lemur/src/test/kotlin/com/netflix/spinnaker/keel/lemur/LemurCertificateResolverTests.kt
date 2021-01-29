@@ -190,6 +190,19 @@ class LemurCertificateResolverTests {
       .get { spec.listeners.first().certificate } isEqualTo "my-certificate-v3"
   }
 
+  @Test
+  fun `an empty response from Lemur is handled`() {
+    every { lemurService.certificateByName(httpsListener.certificate!!)} returns LemurCertificateResponse(
+      items = emptyList()
+    )
+
+    expectCatching {
+      subject.invoke(resource.withListener(httpsListener))
+    }
+      .isFailure()
+      .isA<CertificateNotFound>()
+  }
+
   private fun Resource<ApplicationLoadBalancerSpec>.withListener(listener: Listener) =
     copy(
       spec = spec.copy(

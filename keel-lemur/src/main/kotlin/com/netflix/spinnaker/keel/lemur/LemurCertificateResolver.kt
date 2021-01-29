@@ -30,20 +30,25 @@ class LemurCertificateResolver(
     )
 
   private suspend fun findCurrentCertificate(name: String): String {
-    val certificate = lemurService.certificateByName(name).items.first()
-    return if (certificate.active) {
-      certificate.name
-    } else {
-      val replacement = certificate.replacedBy.firstOrNull { it.active }
-      replacement?.name
-        ?: if (certificate.replacedBy.isNotEmpty()) {
-          findCurrentCertificate(certificate.replacedBy.first().name)
-        } else {
-          throw CertificateExpired(certificate)
-        }
+    val certificate = lemurService.certificateByName(name).items.firstOrNull()
+    return when {
+      certificate == null -> throw CertificateNotFound(name)
+      certificate.active -> certificate.name
+      else -> {
+        val replacement = certificate.replacedBy.firstOrNull { it.active }
+        replacement?.name
+          ?: if (certificate.replacedBy.isNotEmpty()) {
+            findCurrentCertificate(certificate.replacedBy.first().name)
+          } else {
+            throw CertificateExpired(certificate)
+          }
+      }
     }
   }
 }
+
+class CertificateNotFound(name: String) :
+  ConstraintViolationException("No certificate named \"$name\" is found on Lemur")
 
 class CertificateExpired(certificate: LemurCertificate) :
   ConstraintViolationException("Certificate ${certificate.name} is inactive since ${certificate.validityEnd} and has no replacement specified in Lemur")
