@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_2
 import com.netflix.spinnaker.keel.api.plugins.Resolver
+import com.netflix.spinnaker.kork.exceptions.ConstraintViolationException
 import kotlinx.coroutines.runBlocking
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Component
@@ -21,20 +22,28 @@ class LemurCertificateResolver(
         listeners = resource.spec.listeners.mapTo(mutableSetOf()) { listener ->
           listener.certificate?.let { name ->
             listener.copy(
-              certificate = findCurrentCertificate(name)
+              certificate = runBlocking { findCurrentCertificate(name) }
             )
           } ?: listener
         }
       )
     )
 
-  private fun findCurrentCertificate(name: String) =
-    runBlocking {
-      val certificate = lemurService.certificateByName(name).items.first()
-      if (certificate.active) {
-        certificate.name
-      } else {
-        certificate.replacedBy.first { it.active }.name
-      }
+  private suspend fun findCurrentCertificate(name: String): String {
+    val certificate = lemurService.certificateByName(name).items.first()
+    return if (certificate.active) {
+      certificate.name
+    } else {
+      val replacement = certificate.replacedBy.firstOrNull { it.active }
+      replacement?.name
+        ?: if (certificate.replacedBy.isNotEmpty()) {
+          findCurrentCertificate(certificate.replacedBy.first().name)
+        } else {
+          throw CertificateExpired(certificate)
+        }
     }
+  }
 }
+
+class CertificateExpired(certificate: LemurCertificate) :
+  ConstraintViolationException("Certificate ${certificate.name} is inactive since ${certificate.validityEnd} and has no replacement specified in Lemur")

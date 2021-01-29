@@ -11,7 +11,9 @@ import com.netflix.spinnaker.keel.test.resource
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import strikt.api.expectCatching
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFailure
 import strikt.assertions.isSuccess
 import java.time.Instant
 import java.time.temporal.ChronoUnit.DAYS
@@ -87,7 +89,7 @@ class LemurCertificateResolverTests {
   }
 
   @Test
-  fun `a listener with an inactive certificate is updated to the new certificate`() {
+  fun `an expires certificate with a replacement is updated to the new certificate`() {
     every { lemurService.certificateByName(httpsListener.certificate!!)} returns LemurCertificateResponse(
       items = listOf(
         LemurCertificate(
@@ -114,6 +116,78 @@ class LemurCertificateResolverTests {
     }
       .isSuccess()
       .get { spec.listeners.first().certificate } isEqualTo "my-certificate-v2"
+  }
+
+  @Test
+  fun `an expired certificate with no replacement results in an exception being thrown`() {
+    every { lemurService.certificateByName(httpsListener.certificate!!)} returns LemurCertificateResponse(
+      items = listOf(
+        LemurCertificate(
+          commonName = "my-certificate",
+          name = httpsListener.certificate!!,
+          active = false,
+          validityStart = Instant.now().minus(57, DAYS),
+          validityEnd = Instant.now().minus(28, DAYS)
+        )
+      )
+    )
+
+    expectCatching {
+      subject.invoke(resource.withListener(httpsListener))
+    }
+      .isFailure()
+      .isA<CertificateExpired>()
+  }
+
+  @Test
+  fun `an expired certificate with an expired replacement results in looking further up the chain`() {
+    every { lemurService.certificateByName(httpsListener.certificate!!)} returns LemurCertificateResponse(
+      items = listOf(
+        LemurCertificate(
+          commonName = "my-certificate",
+          name = httpsListener.certificate!!,
+          active = false,
+          validityStart = Instant.now().minus(114, DAYS),
+          validityEnd = Instant.now().minus(57, DAYS),
+          replacedBy = listOf(
+            LemurCertificate(
+              commonName = "my-certificate",
+              name = "my-certificate-v2",
+              active = false,
+              validityStart = Instant.now().minus(57, DAYS),
+              validityEnd = Instant.now().minus(28, DAYS)
+            )
+          )
+        )
+      )
+    )
+
+    every { lemurService.certificateByName("my-certificate-v2")} returns LemurCertificateResponse(
+      items = listOf(
+        LemurCertificate(
+          commonName = "my-certificate",
+          name = "my-certificate-v2",
+          active = false,
+          validityStart = Instant.now().minus(57, DAYS),
+          validityEnd = Instant.now().minus(28, DAYS),
+          replacedBy = listOf(
+            LemurCertificate(
+              commonName = "my-certificate",
+              name = "my-certificate-v3",
+              active = true,
+              validityStart = Instant.now().minus(28, DAYS),
+              validityEnd = Instant.now().plus(28, DAYS)
+            )
+          )
+        )
+      )
+    )
+
+    expectCatching {
+      subject.invoke(resource.withListener(httpsListener))
+    }
+      .isSuccess()
+      .get { spec.listeners.first().certificate } isEqualTo "my-certificate-v3"
   }
 
   private fun Resource<ApplicationLoadBalancerSpec>.withListener(listener: Listener) =
