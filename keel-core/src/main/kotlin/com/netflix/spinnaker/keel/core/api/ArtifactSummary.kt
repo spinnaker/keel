@@ -84,6 +84,6 @@ data class DependOnConstraintMetadata(
 ) : ConstraintMetadata()
 
 data class AllowedTimesConstraintMetadata(
-  val windows: List<TimeWindow>,
+  val windows: List<TimeWindowNumeric>,
   val timezone: String? = null
 ) : ConstraintMetadata()
