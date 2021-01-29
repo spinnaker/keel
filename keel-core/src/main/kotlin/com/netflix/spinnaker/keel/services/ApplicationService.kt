@@ -385,7 +385,7 @@ class ApplicationService(
           currentlyPassing = it.canPromote(artifact, version = version, deliveryConfig = deliveryConfig, targetEnvironment = environment),
           attributes = when (constraint) {
             is DependsOnConstraint -> DependOnConstraintMetadata(constraint.environment)
-            is TimeWindowConstraint -> translateAllowedTimesConstraint(constraint)
+            is TimeWindowConstraint -> AllowedTimesConstraintMetadata(constraint)
             else -> null
           }
         )
@@ -396,15 +396,6 @@ class ApplicationService(
       statelessConstraints = statelessConstraints
     )
   }
-
-  /**
-   * Translates the stored time window constraint format to numeric format for display
-   */
-  private fun translateAllowedTimesConstraint(constraint: TimeWindowConstraint) =
-    AllowedTimesConstraintMetadata(
-      AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint),
-      constraint.tz
-    )
 
   /**
    * Takes an artifact version, plus information about the type of artifact, and constructs a summary view.
