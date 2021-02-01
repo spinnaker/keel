@@ -243,6 +243,10 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       every {
         clusterExportHelper.discoverDeploymentStrategy("aws", "test", "keel", any())
       } returns RedBlack()
+
+      every {
+        springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
+      } returns false
     }
 
     after {

@@ -231,6 +231,10 @@ internal class ClusterExportTests : JUnit5Minutests {
       coEvery {
         clusterExportHelper.discoverDeploymentStrategy("aws", "test", "keel", any())
       } returns RedBlack()
+
+      coEvery {
+        springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
+      } returns false
     }
 
     after {

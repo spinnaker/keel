@@ -274,6 +274,10 @@ internal class SecurityGroupHandlerTests : JUnit5Minutests {
 
     before {
       setupVpc()
+
+      io.mockk.coEvery {
+        springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
+      } returns false
     }
 
     context("no matching security group exists") {

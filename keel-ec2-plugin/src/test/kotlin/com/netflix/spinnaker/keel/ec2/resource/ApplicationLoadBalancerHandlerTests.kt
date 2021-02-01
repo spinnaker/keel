@@ -196,6 +196,10 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
         every { securityGroupByName(vpc.account, vpc.region, sg1.name) } returns sg1
         every { certificateByName(cert.serverCertificateName) } returns cert
         every { certificateByArn(cert.arn) } returns cert
+
+        every {
+          springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
+        } returns false
       }
 
       every { orcaService.orchestrate("keel@spinnaker", any()) } returns TaskRefResponse("/tasks/${UUID.randomUUID()}")
