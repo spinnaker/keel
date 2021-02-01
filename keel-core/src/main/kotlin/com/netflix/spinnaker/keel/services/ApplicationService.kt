@@ -237,7 +237,7 @@ class ApplicationService(
     val artifactSummaries = deliveryConfig.artifacts.map { artifact ->
       val versions = repository.artifactVersions(artifact, limit)
       val contexts : List<VerificationContext> = deliveryConfig.contexts(artifact, versions)
-      val states = repository.getStatesBatch(contexts)
+      val states = repository.getVerificationStatesBatch(contexts)
       val lookupTable = VerificationStateLookupTable(contexts, states)
 
       val artifactVersionSummaries = versions.map { artifactVersion ->
