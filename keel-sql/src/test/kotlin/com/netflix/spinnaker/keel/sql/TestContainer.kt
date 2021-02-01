@@ -5,16 +5,17 @@ import org.jooq.SQLDialect.MYSQL
 import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.MySQLContainerProvider
 
-internal fun initTestDatabase() = initDatabase(
-  mySQLContainer.authenticatedJdbcUrl,
-  MYSQL
-)
+internal val testDatabase by lazy {
+  initDatabase(mySQLContainer.authenticatedJdbcUrl, MYSQL)
+}
 
-private val mySQLContainer = MySQLContainerProvider()
+internal val mySQLContainer = MySQLContainerProvider()
   .newInstance("5.7.22")
   .withDatabaseName("keel")
   .withUsername("keel_service")
   .withPassword("whatever")
+  .withReuse(true)
+  .withNetwork(null)
   .also { it.start() }
 
 @Suppress("UsePropertyAccessSyntax")

@@ -19,14 +19,7 @@ import strikt.assertions.isA
 @ExtendWith(SpringExtension::class)
 @SpringBootTest(
   classes = [KeelApplication::class],
-  webEnvironment = MOCK,
-  properties = [
-    "spinnaker.baseUrl=http://spinnaker",
-    "sql.enabled=true",
-    "sql.connection-pools.default.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
-    "sql.migration.jdbc-url=jdbc:tc:mysql:5.7.22://somehostname:someport/databasename",
-    "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver"
-  ]
+  webEnvironment = MOCK
 )
 internal class SpringStartupTests
 @Autowired constructor(
@@ -34,7 +27,6 @@ internal class SpringStartupTests
   val resourceRepository: ResourceRepository,
   val deliveryConfigRepository: DeliveryConfigRepository
 ) {
-
   @Test
   fun `uses SqlArtifactRepository`() {
     expectThat(artifactRepository).isA<SqlArtifactRepository>()
