@@ -139,7 +139,7 @@ class ApplicationService(
     publisher.publishEvent(MarkAsBadNotification(
       config = config,
       user = user,
-      veto = veto
+      veto = veto.copy(vetoedBy = user)
     ))
   }
 
