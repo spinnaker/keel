@@ -434,7 +434,7 @@ class CombinedRepository(
   ) : Collection<VerificationContext> =
     verificationRepository.nextEnvironmentsForVerification(minTimeSinceLastCheck, limit)
 
-  override fun getStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>> =
+  override fun getVerificationStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>> =
     verificationRepository.getStatesBatch(contexts)
 
   // END VerificationRepository methods
