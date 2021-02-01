@@ -60,7 +60,7 @@ interface KeelReadOnlyRepository {
 
   fun artifactVersions(artifact: DeliveryArtifact, limit: Int = DEFAULT_MAX_ARTIFACT_VERSIONS): List<PublishedArtifact>
 
-  fun getStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>>
+  fun getVerificationStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>>
 
   fun latestVersionApprovedIn(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, targetEnvironment: String): String?
 
