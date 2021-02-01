@@ -180,7 +180,7 @@ class ComparableLinksTests : JUnit5Minutests {
       } returns null
 
       every {
-        repository.getStatesBatch(any())
+        repository.getVerificationStatesBatch(any())
       } returns emptyList()
     }
 
