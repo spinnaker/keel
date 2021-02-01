@@ -56,6 +56,7 @@ import strikt.assertions.isTrue
 import java.util.UUID
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
+import org.springframework.core.env.Environment as SpringEnv
 
 @Suppress("UNCHECKED_CAST")
 internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
@@ -63,6 +64,7 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
   private val cloudDriverService = mockk<CloudDriverService>()
   private val cloudDriverCache = mockk<CloudDriverCache>()
   private val orcaService = mockk<OrcaService>()
+  private val springEnv: SpringEnv = mockk(relaxUnitFun = true)
 
   val repository = mockk<KeelRepository>() {
     // we're just using this to get notifications
@@ -72,7 +74,8 @@ internal class ClassicLoadBalancerHandlerTests : JUnit5Minutests {
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     repository,
-    publisher
+    publisher,
+    springEnv
   )
   private val mapper = ObjectMapper().registerKotlinModule()
   private val yamlMapper = configuredYamlMapper()

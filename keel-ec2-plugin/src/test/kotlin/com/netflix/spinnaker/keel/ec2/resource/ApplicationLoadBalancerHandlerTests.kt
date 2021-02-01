@@ -50,6 +50,8 @@ import strikt.assertions.isTrue
 import java.util.UUID
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
+import org.springframework.core.env.Environment as SpringEnv
+
 
 @Suppress("UNCHECKED_CAST")
 internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
@@ -57,6 +59,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
   private val cloudDriverCache = mockk<CloudDriverCache>()
   private val orcaService = mockk<OrcaService>()
   private val publisher: EventPublisher = mockk(relaxUnitFun = true)
+  val springEnv: SpringEnv = mockk(relaxUnitFun = true)
   private val repository = mockk<KeelRepository> {
     // we're just using this to get notifications
     every { environmentFor(any()) } returns Environment("test")
@@ -65,7 +68,8 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
   private val taskLauncher = OrcaTaskLauncher(
     orcaService,
     repository,
-    publisher
+    publisher,
+    springEnv
   )
   private val yamlMapper = configuredYamlMapper()
 

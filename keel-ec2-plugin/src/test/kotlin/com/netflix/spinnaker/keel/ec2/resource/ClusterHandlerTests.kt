@@ -89,11 +89,15 @@ internal class ClusterHandlerTests : JUnit5Minutests {
   val clock = Clock.systemUTC()!!
   val publisher: EventPublisher = mockk(relaxUnitFun = true)
   val repository = mockk<KeelRepository>()
+  private val springEnv: org.springframework.core.env.Environment = mockk(relaxUnitFun = true)
+
   val taskLauncher = OrcaTaskLauncher(
     orcaService,
     repository,
-    publisher
+    publisher,
+    springEnv
   )
+
   val clusterExportHelper = mockk<ClusterExportHelper>(relaxed = true)
   val blockDeviceConfig = BlockDeviceConfig(VolumeDefaultConfiguration())
 

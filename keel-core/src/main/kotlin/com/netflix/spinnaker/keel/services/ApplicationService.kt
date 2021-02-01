@@ -111,7 +111,7 @@ class ApplicationService(
   fun pin(user: String, application: String, pin: EnvironmentArtifactPin) {
     val config = repository.getDeliveryConfigForApplication(application)
     repository.pinEnvironment(config, pin.copy(pinnedBy = user))
-    publisher.publishEvent(PinnedNotification(config, pin))
+    publisher.publishEvent(PinnedNotification(config, pin.copy(pinnedBy = user)))
   }
 
   fun deletePin(user: String, application: String, targetEnvironment: String, reference: String? = null) {
