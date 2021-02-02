@@ -18,7 +18,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
-import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
+import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -407,7 +407,7 @@ class CombinedRepository(
     environmentName: String,
     artifactReference: String,
     version: String,
-    verifications: List<ArtifactVersionEnvironmentVerificationSummary>
+    verifications: List<VerificationSummary>
   ) = artifactRepository.getArtifactSummaryInEnvironment(
     deliveryConfig, environmentName, artifactReference, version, verifications
   )

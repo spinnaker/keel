@@ -14,7 +14,7 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
-import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
+import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -1212,7 +1212,7 @@ class SqlArtifactRepository(
     environmentName: String,
     artifactReference: String,
     version: String,
-    verifications: List<ArtifactVersionEnvironmentVerificationSummary>
+    verifications: List<VerificationSummary>
   ): ArtifactSummaryInEnvironment? {
     return sqlRetry.withRetry(READ) {
 

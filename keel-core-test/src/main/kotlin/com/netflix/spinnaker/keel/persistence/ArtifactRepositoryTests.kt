@@ -24,7 +24,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
-import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
+import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
@@ -167,7 +167,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     val version6 = "master-h12.4ea8a9d"
     val versionOnly = "0.0.1~dev.8-h8.41595c4"
 
-    val verifications : List<ArtifactVersionEnvironmentVerificationSummary> = emptyList()
+    val verifications : List<VerificationSummary> = emptyList()
 
     val pin1 = EnvironmentArtifactPin(
       targetEnvironment = stagingEnvironment.name, // staging

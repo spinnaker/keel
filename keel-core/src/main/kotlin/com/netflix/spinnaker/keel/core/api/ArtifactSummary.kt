@@ -52,10 +52,10 @@ data class ArtifactSummaryInEnvironment(
   val statefulConstraints: List<StatefulConstraintSummary> = emptyList(),
   val statelessConstraints: List<StatelessConstraintSummary> = emptyList(),
   val compareLink: String? = null,
-  val verifications : List<ArtifactVersionEnvironmentVerificationSummary> = emptyList()
+  val verifications : List<VerificationSummary> = emptyList()
 )
 
-data class ArtifactVersionEnvironmentVerificationSummary(
+data class VerificationSummary(
   val id: String,
   val type: String,
   val status: String,

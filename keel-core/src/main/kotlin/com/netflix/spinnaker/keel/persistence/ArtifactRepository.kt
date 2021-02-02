@@ -8,7 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DEFAULT_MAX_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
-import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
+import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -249,7 +249,7 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
     environmentName: String,
     artifactReference: String,
     version: String,
-    verifications: List<ArtifactVersionEnvironmentVerificationSummary>
+    verifications: List<VerificationSummary>
   ): ArtifactSummaryInEnvironment?
 
   /**

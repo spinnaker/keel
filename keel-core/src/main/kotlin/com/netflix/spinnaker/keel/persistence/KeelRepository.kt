@@ -14,7 +14,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
-import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
+import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
@@ -198,7 +198,7 @@ interface KeelRepository : KeelReadOnlyRepository {
     environmentName: String,
     artifactReference: String,
     version: String,
-    verifications: List<ArtifactVersionEnvironmentVerificationSummary> = emptyList()
+    verifications: List<VerificationSummary> = emptyList()
   ): ArtifactSummaryInEnvironment?
 
   /**
