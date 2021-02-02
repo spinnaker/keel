@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
+import com.netflix.spinnaker.keel.core.api.ArtifactVersionEnvironmentVerificationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
@@ -165,6 +166,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     val version5 = "keeldemo-1.0.0-h12.4ea8a9d" // release
     val version6 = "master-h12.4ea8a9d"
     val versionOnly = "0.0.1~dev.8-h8.41595c4"
+
+    val verifications : List<ArtifactVersionEnvironmentVerificationSummary> = emptyList()
 
     val pin1 = EnvironmentArtifactPin(
       targetEnvironment = stagingEnvironment.name, // staging
@@ -481,7 +484,13 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         }
 
         test("we update the status of the old version when we mark the new one deploying") {
-          val v1summary = subject.getArtifactSummaryInEnvironment(manifest, testEnvironment.name, versionedSnapshotDebian.reference, version1)
+          val v1summary = subject.getArtifactSummaryInEnvironment(
+              manifest,
+              testEnvironment.name,
+              versionedSnapshotDebian.reference,
+              version1,
+              verifications
+          )
           expectThat(v1summary)
             .isNotNull()
             .get { state }
@@ -707,10 +716,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
         test("get env artifact version shows that artifact is not pinned") {
           val envArtifactSummary = subject.getArtifactSummaryInEnvironment(
-            deliveryConfig = manifest,
-            environmentName = pin1.targetEnvironment,
-            artifactReference = versionedReleaseDebian.reference,
-            version = version4
+              deliveryConfig = manifest,
+              environmentName = pin1.targetEnvironment,
+              artifactReference = versionedReleaseDebian.reference,
+              version = version4,
+              verifications = verifications
           )
           expectThat(envArtifactSummary)
             .isNotNull()
@@ -755,10 +765,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
           test("get env artifact version shows that artifact is pinned") {
             val envArtifactSummary = subject.getArtifactSummaryInEnvironment(
-              deliveryConfig = manifest,
-              environmentName = pin1.targetEnvironment,
-              artifactReference = versionedReleaseDebian.reference,
-              version = version4
+                deliveryConfig = manifest,
+                environmentName = pin1.targetEnvironment,
+                artifactReference = versionedReleaseDebian.reference,
+                version = version4,
+                verifications = verifications
             )
             expect {
               that(envArtifactSummary).isNotNull()
@@ -839,10 +850,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
       test("get env artifact version shows that artifact is vetoed") {
         val envArtifactSummary = subject.getArtifactSummaryInEnvironment(
-          deliveryConfig = manifest,
-          environmentName = stagingEnvironment.name,
-          artifactReference = versionedReleaseDebian.reference,
-          version = version5
+            deliveryConfig = manifest,
+            environmentName = stagingEnvironment.name,
+            artifactReference = versionedReleaseDebian.reference,
+            version = version5,
+            verifications = verifications
         )
         expect {
           that(envArtifactSummary).isNotNull()
@@ -854,10 +866,11 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         subject.deleteVeto(manifest, versionedReleaseDebian, version5, stagingEnvironment.name)
 
         val envArtifactSummary = subject.getArtifactSummaryInEnvironment(
-          deliveryConfig = manifest,
-          environmentName = stagingEnvironment.name,
-          artifactReference = versionedReleaseDebian.reference,
-          version = version5
+            deliveryConfig = manifest,
+            environmentName = stagingEnvironment.name,
+            artifactReference = versionedReleaseDebian.reference,
+            version = version5,
+            verifications = verifications
         )
 
         expectThat(subject.latestVersionApprovedIn(manifest, versionedReleaseDebian, stagingEnvironment.name))
