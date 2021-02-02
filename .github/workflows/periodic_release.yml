@@ -2,8 +2,10 @@ name: Weekly Release
 
 on:
   schedule:
-    # Every Tuesday at 6 PM UTC (10 AM PST)
-    - cron: "0 18 * * 2"
+    # Every Tuesday at 10 PM UTC (2 PM PST)
+    - cron: "0 22 * * 2"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: {}
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Xmx2g -Xms2g
@@ -24,17 +26,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Write current version
-        run: |
-          export CURRENT_TAG=`curl --silent "https://api.github.com/repos/spinnaker/keel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
-          echo "version: $CURRENT_TAG" > version.yml
-
       - name: Prepare changelog
         id: changelog
         uses: TriPSs/conventional-changelog-action@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          version-file: "./version.yml"
           output-file: "false"
           skip-version-file: "true"
           skip-commit: "true"
