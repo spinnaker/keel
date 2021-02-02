@@ -239,10 +239,6 @@ class ApplicationServiceTests : JUnit5Minutests {
       every {
         repository.getPinnedVersion(any(), any(), any())
       } returns null
-
-      every {
-        repository.getVerificationStatesBatch(any())
-      } returns emptyList()
     }
 
     context("artifact summaries by application") {
@@ -281,7 +277,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             } returns false
 
             every {
-              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any(), any())
+              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any())
             } returns null
 
           }
@@ -342,13 +338,7 @@ class ApplicationServiceTests : JUnit5Minutests {
 
             // for statuses other than PENDING, we go look for the artifact summary in environment
             every {
-              repository.getArtifactSummaryInEnvironment(
-                  singleArtifactDeliveryConfig,
-                  any(),
-                  any(),
-                  any(),
-                  any()
-              )
+              repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any())
             } answers {
               when (val environment = arg<String>(1)) {
                 "test" -> when (val version = arg<String>(3)) {
@@ -596,13 +586,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             before {
               // for statuses other than PENDING, we go look for the artifact summary in environment
               every {
-                repository.getArtifactSummaryInEnvironment(
-                    singleArtifactDeliveryConfig,
-                    any(),
-                    any(),
-                    any(),
-                    any()
-                )
+                repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any())
               } answers {
                 val environment = arg<String>(1)
                 when (val version = arg<String>(3)) {
@@ -630,13 +614,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             before {
               // for statuses other than PENDING, we go look for the artifact summary in environment
               every {
-                repository.getArtifactSummaryInEnvironment(
-                    singleArtifactDeliveryConfig,
-                    any(),
-                    any(),
-                    any(),
-                    any()
-                )
+                repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any())
               } answers {
                 val environment = arg<String>(1)
                 when (val version = arg<String>(3)) {
@@ -664,13 +642,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             before {
               // for statuses other than PENDING, we go look for the artifact summary in environment
               every {
-                repository.getArtifactSummaryInEnvironment(
-                    singleArtifactDeliveryConfig,
-                    any(),
-                    any(),
-                    any(),
-                    any()
-                )
+                repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any())
               } answers {
                 val environment = arg<String>(1)
                 when (val version = arg<String>(3)) {
@@ -722,7 +694,7 @@ class ApplicationServiceTests : JUnit5Minutests {
             } returns false
 
             every {
-              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any(), any())
+              repository.getArtifactSummaryInEnvironment(any(), any(), any(), any())
             } returns null
           }
 
@@ -816,7 +788,7 @@ class ApplicationServiceTests : JUnit5Minutests {
 
             // for statuses other than PENDING, we go look for the artifact summary in environment
             every {
-              repository.getArtifactSummaryInEnvironment(dualArtifactDeliveryConfig, any(), any(), any(), any())
+              repository.getArtifactSummaryInEnvironment(dualArtifactDeliveryConfig, any(), any(), any())
             } answers {
               when (val environment = arg<String>(1)) {
                 "pr" -> when (val version = arg<String>(3)) {

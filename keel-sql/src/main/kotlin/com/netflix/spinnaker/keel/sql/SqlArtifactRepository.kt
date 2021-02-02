@@ -14,7 +14,6 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.ActionMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
-import com.netflix.spinnaker.keel.core.api.VerificationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactVersionStatus
 import com.netflix.spinnaker.keel.core.api.ArtifactVersions
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
@@ -57,6 +56,7 @@ import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.time.Instant.EPOCH
 import javax.xml.bind.DatatypeConverter
 
@@ -1210,8 +1210,7 @@ class SqlArtifactRepository(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
     artifactReference: String,
-    version: String,
-    verifications: List<VerificationSummary>
+    version: String
   ): ArtifactSummaryInEnvironment? {
     return sqlRetry.withRetry(READ) {
 
@@ -1263,8 +1262,7 @@ class SqlArtifactRepository(
             replacedAt = replacedAt,
             replacedBy = replacedBy,
             pinned = pinned,
-            vetoed = vetoed,
-            verifications = verifications
+            vetoed = vetoed
           )
         }
     }

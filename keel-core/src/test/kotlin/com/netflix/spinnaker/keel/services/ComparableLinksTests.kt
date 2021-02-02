@@ -178,10 +178,6 @@ class ComparableLinksTests : JUnit5Minutests {
       every {
         repository.getPinnedVersion(any(), any(), any())
       } returns null
-
-      every {
-        repository.getVerificationStatesBatch(any())
-      } returns emptyList()
     }
 
     context("each environment has a current version, and previous versions") {
@@ -209,7 +205,7 @@ class ComparableLinksTests : JUnit5Minutests {
 
         // for statuses other than PENDING, we go look for the artifact summary in environment
         every {
-          repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any(), any())
+          repository.getArtifactSummaryInEnvironment(singleArtifactDeliveryConfig, any(), any(), any())
         } answers {
           when (val environment = arg<String>(1)) {
             "test" -> when (val version = arg<String>(3)) {
