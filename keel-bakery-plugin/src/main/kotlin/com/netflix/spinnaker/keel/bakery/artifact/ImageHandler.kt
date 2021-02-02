@@ -48,7 +48,7 @@ class ImageHandler(
         val latestArtifactVersion = try {
           artifact.findLatestArtifactVersion()
         } catch (e: NoKnownArtifactVersions) {
-          log.debug("Cannot resolve AMI for artifact $artifact: $e")
+          log.debug(e.message)
           return
         }
         val latestBaseAmiVersion = artifact.findLatestBaseAmiVersion()
