@@ -29,6 +29,9 @@ import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
+import org.springframework.transaction.annotation.Propagation.NESTED
+import org.springframework.transaction.annotation.Propagation.SUPPORTS
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -222,11 +225,10 @@ open class SqlResourceRepository(
 
   private fun doAppendHistory(event: PersistentEvent, ref: String) {
     log.debug("Appending event: $event")
-    jooq.transaction { config ->
-      val txn = DSL.using(config)
 
-      if (event.ignoreRepeatedInHistory) {
-        val previousEvent = txn
+    if (event.ignoreRepeatedInHistory) {
+      val previousEvent = sqlRetry.withRetry(READ) {
+        jooq
           .select(EVENT.JSON)
           .from(EVENT)
           // look for resource events that match the resource...
@@ -242,18 +244,20 @@ open class SqlResourceRepository(
           .orderBy(EVENT.TIMESTAMP.desc())
           .limit(1)
           .fetchOne(EVENT.JSON)
-
-        if (event.javaClass == previousEvent?.javaClass) return@transaction
       }
 
-      txn
-        .insertInto(EVENT)
-        .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
-        .set(EVENT.SCOPE, event.scope)
-        .set(EVENT.REF, ref)
-        .set(EVENT.TIMESTAMP, event.timestamp)
-        .set(EVENT.JSON, event)
-        .execute()
+      if (event.javaClass == previousEvent?.javaClass) return
+
+      sqlRetry.withRetry(WRITE) {
+        jooq
+          .insertInto(EVENT)
+          .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
+          .set(EVENT.SCOPE, event.scope)
+          .set(EVENT.REF, ref)
+          .set(EVENT.TIMESTAMP, event.timestamp)
+          .set(EVENT.JSON, event)
+          .execute()
+      }
     }
   }
 
