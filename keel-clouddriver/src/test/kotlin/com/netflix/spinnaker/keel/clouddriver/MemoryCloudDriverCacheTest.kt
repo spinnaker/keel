@@ -10,7 +10,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Subnet
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_NOT_FOUND
 import com.netflix.spinnaker.keel.retrofit.RETROFIT_SERVICE_UNAVAILABLE
 import io.mockk.mockk
-import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -248,13 +248,15 @@ internal class MemoryCloudDriverCacheTest {
     verify(exactly = 1) { cloudDriver.getCertificates() }
   }
 
-  @Disabled("fails intermittently when executed by GitHub Actions")
-  @Test
+  @RepeatedTest(1000)
   fun `all certs are cached at once when requested by name`() {
     every { cloudDriver.getCertificates() } returns certificates
 
     listOf("cert-1", "cert-2")
-      .forEach(subject::certificateByName)
+      .forEach {
+        subject.certificateByName(it)
+        Thread.sleep(1)
+      }
 
     verify(exactly = 1) { cloudDriver.getCertificates() }
   }
@@ -285,14 +287,15 @@ internal class MemoryCloudDriverCacheTest {
     verify(exactly = 1) { cloudDriver.getCertificates() }
   }
 
-
-  @Disabled("fails intermittently when executed by GitHub Actions")
-  @Test
+  @RepeatedTest(1000)
   fun `all certs are cached at once when requested by ARN`() {
     every { cloudDriver.getCertificates() } returns certificates
 
     listOf("arn:cert-1", "arn:cert-2")
-      .forEach(subject::certificateByArn)
+      .forEach {
+        subject.certificateByArn(it)
+        Thread.sleep(1)
+      }
 
     verify(exactly = 1) { cloudDriver.getCertificates() }
   }
