@@ -27,11 +27,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
-import org.springframework.transaction.annotation.Propagation.NESTED
-import org.springframework.transaction.annotation.Propagation.SUPPORTS
-import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -247,17 +243,17 @@ open class SqlResourceRepository(
       }
 
       if (event.javaClass == previousEvent?.javaClass) return
+    }
 
-      sqlRetry.withRetry(WRITE) {
-        jooq
-          .insertInto(EVENT)
-          .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
-          .set(EVENT.SCOPE, event.scope)
-          .set(EVENT.REF, ref)
-          .set(EVENT.TIMESTAMP, event.timestamp)
-          .set(EVENT.JSON, event)
-          .execute()
-      }
+    sqlRetry.withRetry(WRITE) {
+      jooq
+        .insertInto(EVENT)
+        .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
+        .set(EVENT.SCOPE, event.scope)
+        .set(EVENT.REF, ref)
+        .set(EVENT.TIMESTAMP, event.timestamp)
+        .set(EVENT.JSON, event)
+        .execute()
     }
   }
 
