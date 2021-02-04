@@ -6,7 +6,7 @@ import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.MySQLContainerProvider
 
 internal val testDatabase by lazy {
-  initDatabase(mySQLContainer.authenticatedJdbcUrl, MYSQL)
+  initDatabase(mySQLContainer.authenticatedJdbcUrl, MYSQL, "keel")
 }
 
 internal val mySQLContainer = MySQLContainerProvider()
@@ -15,7 +15,6 @@ internal val mySQLContainer = MySQLContainerProvider()
   .withUsername("keel_service")
   .withPassword("whatever")
   .withReuse(true)
-  .withNetwork(null)
   .also { it.start() }
 
 @Suppress("UsePropertyAccessSyntax")

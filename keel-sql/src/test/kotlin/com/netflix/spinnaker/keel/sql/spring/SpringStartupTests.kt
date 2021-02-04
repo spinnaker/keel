@@ -8,18 +8,19 @@ import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlResourceRepository
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK
-import org.springframework.test.context.junit.jupiter.SpringExtension
+import org.springframework.test.context.ContextConfiguration
+import org.springframework.test.context.ContextHierarchy
 import strikt.api.expectThat
 import strikt.assertions.isA
 
-@ExtendWith(SpringExtension::class)
 @SpringBootTest(
-  classes = [KeelApplication::class],
   webEnvironment = MOCK
+)
+@ContextHierarchy(
+  ContextConfiguration(classes = [KeelApplication::class])
 )
 internal class SpringStartupTests
 @Autowired constructor(
