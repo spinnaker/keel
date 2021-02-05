@@ -37,6 +37,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.env.Environment as SpringEnvironment
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
@@ -120,7 +121,7 @@ class ComparableLinksTests : JUnit5Minutests {
 
     val publisher: ApplicationEventPublisher = mockk(relaxed = true)
 
-    val springEnv: org.springframework.core.env.Environment = mockk() {
+    val springEnv: SpringEnvironment = mockk() {
       every {
         getProperty("keel.verifications.summary.enabled", Boolean::class.java, any())
       } returns true
