@@ -259,7 +259,7 @@ class ApplicationService(
 
           environmentSummary.getArtifactPromotionStatus(artifact, artifactVersion.version)
             ?.let { status ->
-              if ( artifact.isUsedIn(environment)) { // only add a summary if the artifact is used in the environment
+              if (artifact.isUsedIn(environment)) { // only add a summary if the artifact is used in the environment
                 buildArtifactSummaryInEnvironment(
                   deliveryConfig,
                   environment.name,
@@ -295,7 +295,7 @@ class ApplicationService(
       deliveryConfig: DeliveryConfig,
       artifactVersions: List<PublishedArtifact>
   ) =
-    if(verificationsEnabled) {
+    if (verificationsEnabled) {
       repository.getVerificationStates(deliveryConfig, artifactVersions)
     } else {
       emptyMap()
