@@ -55,6 +55,7 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigException
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.env.Environment as SpringEnvironment
 import org.springframework.stereotype.Component
 import java.time.Instant
 
@@ -70,7 +71,7 @@ class ApplicationService(
   private val scmInfo: ScmInfo,
   private val lifecycleEventRepository: LifecycleEventRepository,
   private val publisher: ApplicationEventPublisher,
-  private val springEnv: org.springframework.core.env.Environment
+  private val springEnv: SpringEnvironment
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
