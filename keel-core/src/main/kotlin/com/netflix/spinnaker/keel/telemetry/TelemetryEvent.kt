@@ -121,25 +121,28 @@ data class VerificationCompleted(
   val application: String,
   val deliveryConfigName: String,
   val environmentName: String,
-  val artifactName: String,
+  val artifactReference: String,
   val artifactType: ArtifactType,
   val artifactVersion: String,
   val verificationType: String,
-  val status: ConstraintStatus
+  val status: ConstraintStatus,
+  val metadata: Map<String,Any?>
 ) : TelemetryEvent() {
   constructor(
     context: VerificationContext,
     verification: Verification,
-    status: ConstraintStatus
+    status: ConstraintStatus,
+    metadata: Map<String, Any?>
   ) : this(
     context.deliveryConfig.application,
     context.deliveryConfig.name,
     context.environmentName,
-    context.artifact.name,
+    context.artifact.reference,
     context.artifact.type,
     context.version,
     verification.type,
-    status
+    status,
+    metadata
   )
 }
 
