@@ -252,7 +252,8 @@ class ApplicationService(
 
         envSummaries.forEach { environmentSummary ->
           val environment = deliveryConfig.environments.find { it.name == environmentSummary.name }!!
-          val verifications = verificationStateMap[VerificationContext(deliveryConfig, environment, artifactVersion)]
+          val verificationContext = VerificationContext(deliveryConfig, environment, artifactVersion)
+          val verifications = verificationStateMap[verificationContext]
               ?.map { (verification, state) -> VerificationSummary(verification, state) }
               ?: emptyList()
 
