@@ -245,14 +245,14 @@ class ApplicationService(
       // For each context, there may be multiple verifications (e.g., test-container, canary)
       //
       // This map associates a context with this collection of verifications and their states
-      val vStateMap = getVerificationStates(deliveryConfig, artifactVersions)
+      val verificationStateMap = getVerificationStates(deliveryConfig, artifactVersions)
 
       val artifactVersionSummaries = artifactVersions.map { artifactVersion ->
         val artifactSummariesInEnvironments = mutableSetOf<ArtifactSummaryInEnvironment>()
 
         envSummaries.forEach { environmentSummary ->
           val environment = deliveryConfig.environments.find { it.name == environmentSummary.name }!!
-          val verifications = vStateMap[VerificationContext(deliveryConfig, environment, artifactVersion)]
+          val verifications = verificationStateMap[VerificationContext(deliveryConfig, environment, artifactVersion)]
               ?.map { (verification, state) -> VerificationSummary(verification, state) }
               ?: emptyList()
 
