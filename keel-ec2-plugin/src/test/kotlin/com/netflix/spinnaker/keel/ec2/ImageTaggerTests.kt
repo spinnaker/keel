@@ -58,6 +58,7 @@ class ImageTaggerTests : JUnit5Minutests {
       artifactType = DEBIAN,
       artifactVersion = "waffle-buttermilk-2.0",
       verificationType = "taste-test",
+      verificationId = "my/docker:tag",
       status = PASS,
       metadata = mapOf(
         "taste" to "excellent",
@@ -122,7 +123,7 @@ class ImageTaggerTests : JUnit5Minutests {
             that(size).isEqualTo(1)
             that(first()["type"]).isEqualTo("upsertImageTags")
             that(first()["tags"]).isA<Map<String,Any?>>().isEqualTo(
-              mapOf("latest tested" to true, "environment" to "breakfast")
+              mapOf("latest tested" to true, "breakfast" to "environment:passed", "my/docker:tag" to "passed")
             )
           }
         }

@@ -125,6 +125,7 @@ data class VerificationCompleted(
   val artifactType: ArtifactType,
   val artifactVersion: String,
   val verificationType: String,
+  val verificationId: String,
   val status: ConstraintStatus,
   val metadata: Map<String,Any?>
 ) : TelemetryEvent() {
@@ -141,6 +142,7 @@ data class VerificationCompleted(
     context.artifact.type,
     context.version,
     verification.type,
+    verification.id,
     status,
     metadata
   )

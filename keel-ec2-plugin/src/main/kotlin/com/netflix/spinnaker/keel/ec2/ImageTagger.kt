@@ -44,17 +44,17 @@ class ImageTagger(
       return
     }
 
-    val imagesString: Any = event.metadata["images"] ?: emptyList<CurrentImages>()
+    val imagesRaw: Any = event.metadata["images"] ?: emptyList<CurrentImages>()
     val images: List<CurrentImages> = try {
-      mapper.convertValue(imagesString)
+      mapper.convertValue(imagesRaw)
     } catch (e: IllegalArgumentException) {
-      log.error("Malformed metadata in 'images' key: $imagesString")
+      log.error("Malformed metadata in 'images' key: $imagesRaw")
       emptyList()
     }
 
     val jobs = images
       .filter { it.kind.group == "ec2" } // spinnaker only supports tagging amis
-      .map { it.toJob(event.environmentName) }
+      .map { it.toJob(event.environmentName, event.verificationId) }
 
     jobs.forEach { job ->
       val names = job["imageNames"].toString()
@@ -77,14 +77,15 @@ class ImageTagger(
     }
   }
 
-  fun CurrentImages.toJob(env: String): Map<String, Any?> =
+  fun CurrentImages.toJob(env: String, verificationId: String): Map<String, Any?> =
     mapOf(
       "type" to "upsertImageTags",
       "imageNames" to images.map { it.imageName },
       "regions" to images.map { it.region }.toSet(),
       "tags" to mapOf(
         "latest tested" to true,
-        "environment" to env
+        env to "environment:passed",
+        verificationId to "passed"
       )
     )
 }
