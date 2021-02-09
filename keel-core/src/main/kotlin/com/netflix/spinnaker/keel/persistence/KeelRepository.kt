@@ -68,13 +68,15 @@ interface KeelRepository : KeelReadOnlyRepository {
       val diff = DefaultResourceDiff(resource.spec, existingResource.spec)
       if (diff.hasChanges() || resource.kind.version != existingResource.kind.version) {
         log.debug("Updating ${resource.id}")
-        storeResource(resource)
-        appendResourceHistory(ResourceUpdated(resource, diff.toDeltaJson(), clock))
+        storeResource(resource).also { updatedResource ->
+          appendResourceHistory(ResourceUpdated(updatedResource, diff.toDeltaJson(), clock))
+        }
       }
     } else {
       log.debug("Creating $resource")
-      storeResource(resource)
-      appendResourceHistory(ResourceCreated(resource, clock))
+      storeResource(resource).also { updatedResource ->
+        appendResourceHistory(ResourceCreated(updatedResource, clock))
+      }
     }
   }
 
@@ -123,7 +125,7 @@ interface KeelRepository : KeelReadOnlyRepository {
   // START ResourceRepository methods
   fun allResources(callback: (ResourceHeader) -> Unit)
 
-  fun storeResource(resource: Resource<*>)
+  fun storeResource(resource: Resource<*>): Resource<*>
 
   fun deleteResource(id: String)
 

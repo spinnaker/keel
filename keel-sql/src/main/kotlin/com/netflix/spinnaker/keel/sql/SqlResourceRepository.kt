@@ -27,6 +27,10 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.coalesce
+import org.jooq.impl.DSL.max
+import org.jooq.impl.DSL.select
+import org.jooq.impl.DSL.value
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Duration
@@ -121,35 +125,36 @@ open class SqlResourceRepository(
   }
 
   // todo: this is not retryable due to overall repository structure: https://github.com/spinnaker/keel/issues/740
-  override fun store(resource: Resource<*>) {
-    val uid = jooq.select(RESOURCE.UID)
+  override fun store(resource: Resource<*>): Resource<*> {
+    val uid = randomUID().toString()
+    val version = jooq
+      .select(
+        coalesce(
+          max(RESOURCE.VERSION).plus(1),
+          value(1)
+        )
+      )
       .from(RESOURCE)
       .where(RESOURCE.ID.eq(resource.id))
-      .fetchOne(RESOURCE.UID)
-      ?: randomUID().toString()
+      .fetchOneInto(Int::class.java)
 
-    val updatePairs = mapOf(
-      RESOURCE.KIND to resource.kind,
-      RESOURCE.ID to resource.id,
-      RESOURCE.SPEC to objectMapper.writeValueAsString(resource.spec),
-      RESOURCE.APPLICATION to resource.application
-    )
-    val insertPairs = updatePairs + (RESOURCE.UID to uid)
-    jooq.insertInto(
-      RESOURCE,
-      *insertPairs.keys.toTypedArray()
-    )
-      .values(*insertPairs.values.toTypedArray())
-      .onDuplicateKeyUpdate()
-      .set(updatePairs)
+    jooq.insertInto(RESOURCE)
+      .set(RESOURCE.UID, uid)
+      .set(RESOURCE.KIND, resource.kind.toString())
+      .set(RESOURCE.ID, resource.id)
+      .set(RESOURCE.VERSION, version)
+      .set(RESOURCE.SPEC, objectMapper.writeValueAsString(resource.spec))
+      .set(RESOURCE.APPLICATION, resource.application)
       .execute()
+
     jooq.insertInto(RESOURCE_LAST_CHECKED)
       .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
       .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
-      .onDuplicateKeyUpdate()
-      .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
-      .set(RESOURCE_LAST_CHECKED.IGNORE, false)
       .execute()
+
+    return resource.copy(
+      metadata = resource.metadata + mapOf("uid" to uid, "version" to version)
+    )
   }
 
   override fun applicationEventHistory(application: String, limit: Int): List<ApplicationEvent> {
@@ -211,7 +216,7 @@ open class SqlResourceRepository(
   // todo: add sql retries once we've rethought repository structure: https://github.com/spinnaker/keel/issues/740
   override fun appendHistory(event: ResourceEvent) {
     // for historical reasons, we use the resource UID (not the ID) as an identifier in resource events
-    val ref = getResourceUid(event.ref)
+    val ref = getResourceUid(event.ref, event.version)
     doAppendHistory(event, ref)
   }
 
@@ -332,16 +337,17 @@ open class SqlResourceRepository(
     }
   }
 
-  fun getResourceUid(id: String) =
+  fun getResourceUid(id: String, version: Int) =
     sqlRetry.withRetry(READ) {
       jooq
         .select(RESOURCE.UID)
         .from(RESOURCE)
         .where(RESOURCE.ID.eq(id))
+        .and(RESOURCE.VERSION.eq(version))
         .fetchOne(RESOURCE.UID)
         ?: throw IllegalStateException("Resource with id $id not found. Retrying.")
     }
 
   private val Resource<*>.uid: String
-    get() = getResourceUid(this.id)
+    get() = getResourceUid(id, version)
 }
