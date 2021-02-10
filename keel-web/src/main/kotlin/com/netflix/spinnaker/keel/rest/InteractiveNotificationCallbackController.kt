@@ -6,11 +6,13 @@ import com.netflix.spinnaker.keel.echo.model.EchoNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity
+import com.netflix.spinnaker.keel.slack.callbacks.SlackCallbackHandler
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import com.netflix.spinnaker.kork.exceptions.SystemException
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import org.springframework.http.RequestEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -21,8 +23,10 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = ["/notifications/callback"])
 class InteractiveNotificationCallbackController(
   private val repository: KeelRepository,
-  private val authorizationSupport: AuthorizationSupport
-) {
+  private val authorizationSupport: AuthorizationSupport,
+  private val slackCallbackService: SlackCallbackHandler
+  ) {
+
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   @PostMapping(
@@ -58,5 +62,23 @@ class InteractiveNotificationCallbackController(
           judgedBy = user
         )
       )
+  }
+
+  /**
+   * New endpoint for the new slack integration. This will be called from gate directly instead of echo.
+   */
+  @PostMapping(
+    path = ["/v2"],
+    consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE],
+    produces = [MediaType.APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  fun handleInteractionCallbackV2(request: RequestEntity<String>) {
+    slackCallbackService.handleCallback(request.body)
+
+//    //TODO: check what to do here
+//    authorizationSupport.checkApplicationPermission(
+//      Action.WRITE, TargetEntity.DELIVERY_CONFIG, currentState.deliveryConfigName
+//    )
+
   }
 }
