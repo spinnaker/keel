@@ -31,7 +31,7 @@ import com.netflix.spinnaker.keel.exceptions.DuplicateManagedResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
 import org.slf4j.Logger
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Propagation.REQUIRED
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
@@ -45,10 +45,10 @@ interface KeelRepository : KeelReadOnlyRepository {
   val publisher: ApplicationEventPublisher
   val log: Logger
 
-  @Transactional(propagation = Propagation.REQUIRED)
+  @Transactional(propagation = REQUIRED)
   fun upsertDeliveryConfig(submittedDeliveryConfig: SubmittedDeliveryConfig): DeliveryConfig
 
-  @Transactional(propagation = Propagation.REQUIRED)
+  @Transactional(propagation = REQUIRED)
   fun upsertDeliveryConfig(deliveryConfig: DeliveryConfig): DeliveryConfig
 
   fun <T : ResourceSpec> upsertResource(resource: Resource<T>, deliveryConfigName: String) {

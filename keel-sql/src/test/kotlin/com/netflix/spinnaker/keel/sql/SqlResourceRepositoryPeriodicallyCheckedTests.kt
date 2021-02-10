@@ -73,16 +73,6 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
     }
   }
 
-  class UnreadableResourceFixture(
-    val factory: (Clock) -> SqlResourceRepository
-  ) {
-    val clock = MutableClock()
-    val subject: SqlResourceRepository = factory(clock)
-
-    fun nextResults(): Collection<Resource<*>> =
-      subject.itemsDueForCheck(Duration.ofMinutes(30), 2)
-  }
-
   fun unreadableResourceTests() = rootContext<Fixture<Resource<ResourceSpec>, SqlResourceRepository>> {
     fixture {
       Fixture(

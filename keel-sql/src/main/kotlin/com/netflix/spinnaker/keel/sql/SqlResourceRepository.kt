@@ -16,6 +16,7 @@ import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
@@ -126,23 +127,28 @@ open class SqlResourceRepository(
 
   // todo: this is not retryable due to overall repository structure: https://github.com/spinnaker/keel/issues/740
   override fun store(resource: Resource<*>): Resource<*> {
-    val uid = randomUID().toString()
-    val version = jooq
-      .select(
+    val version = jooq.select(
         coalesce(
-          max(RESOURCE.VERSION).plus(1),
-          value(1)
+          max(RESOURCE.VERSION),
+          value(0)
         )
       )
       .from(RESOURCE)
       .where(RESOURCE.ID.eq(resource.id))
       .fetchOneInto(Int::class.java)
 
+    val oldUid = if (version > 0 ) {
+      getResourceUid(resource.id, version)
+    } else {
+      null
+    }
+    val uid = randomUID().toString()
+
     jooq.insertInto(RESOURCE)
       .set(RESOURCE.UID, uid)
       .set(RESOURCE.KIND, resource.kind.toString())
       .set(RESOURCE.ID, resource.id)
-      .set(RESOURCE.VERSION, version)
+      .set(RESOURCE.VERSION, version + 1)
       .set(RESOURCE.SPEC, objectMapper.writeValueAsString(resource.spec))
       .set(RESOURCE.APPLICATION, resource.application)
       .execute()
@@ -152,8 +158,17 @@ open class SqlResourceRepository(
       .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
       .execute()
 
+    // This is somewhat temporary because eventually we'll define a new environment version
+    if (oldUid != null) {
+      jooq
+        .update(ENVIRONMENT_RESOURCE)
+        .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, uid)
+        .where(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(oldUid))
+        .execute()
+    }
+
     return resource.copy(
-      metadata = resource.metadata + mapOf("uid" to uid, "version" to version)
+      metadata = resource.metadata + mapOf("uid" to uid, "version" to version + 1)
     )
   }
 
@@ -264,35 +279,41 @@ open class SqlResourceRepository(
 
   override fun delete(id: String) {
     // TODO: these should be run inside a transaction
-    val uid = sqlRetry.withRetry(READ) {
+    val uids = sqlRetry.withRetry(READ) {
       jooq.select(RESOURCE.UID)
         .from(RESOURCE)
         .where(RESOURCE.ID.eq(id))
-        .fetchOne(RESOURCE.UID)
-        ?.let(ULID::parseULID)
-        ?: throw NoSuchResourceId(id)
+        .fetch(RESOURCE.UID)
+        .map(ULID::parseULID)
     }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(RESOURCE)
-        .where(RESOURCE.UID.eq(uid.toString()))
-        .execute()
+
+    if (uids.isEmpty()) {
+      throw NoSuchResourceId(id)
     }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(EVENT)
-        .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
-        .and(EVENT.REF.eq(uid.toString()))
-        .execute()
-    }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(DIFF_FINGERPRINT)
-        .where(DIFF_FINGERPRINT.ENTITY_ID.eq(id))
-        .execute()
-    }
-    sqlRetry.withRetry(WRITE) {
-      jooq.deleteFrom(PAUSED)
-        .where(PAUSED.SCOPE.eq(PauseScope.RESOURCE))
-        .and(PAUSED.NAME.eq(id))
-        .execute()
+
+    uids.forEach { uid ->
+      sqlRetry.withRetry(WRITE) {
+        jooq.deleteFrom(RESOURCE)
+          .where(RESOURCE.UID.eq(uid.toString()))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        jooq.deleteFrom(EVENT)
+          .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
+          .and(EVENT.REF.eq(uid.toString()))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        jooq.deleteFrom(DIFF_FINGERPRINT)
+          .where(DIFF_FINGERPRINT.ENTITY_ID.eq(id))
+          .execute()
+      }
+      sqlRetry.withRetry(WRITE) {
+        jooq.deleteFrom(PAUSED)
+          .where(PAUSED.SCOPE.eq(PauseScope.RESOURCE))
+          .and(PAUSED.NAME.eq(id))
+          .execute()
+      }
     }
   }
 

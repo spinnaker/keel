@@ -17,6 +17,7 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
 import com.netflix.spinnaker.keel.events.ApplicationActuationResumed
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
@@ -181,6 +182,20 @@ abstract class ResourceRepositoryTests<T : ResourceRepository> : JUnit5Minutests
         test("the resource version is incremented") {
           expectThat(subject.get<DummyResourceSpec>(resource.id))
             .get(Resource<*>::version) isEqualTo 2
+        }
+
+        context("when deleted") {
+          before {
+            subject.delete(resource.id)
+          }
+
+          test("all versions of the resource are deleted") {
+            expectCatching {
+              subject.get(resource.id)
+            }
+              .isFailure()
+              .isA<NoSuchResourceException>()
+          }
         }
       }
 
