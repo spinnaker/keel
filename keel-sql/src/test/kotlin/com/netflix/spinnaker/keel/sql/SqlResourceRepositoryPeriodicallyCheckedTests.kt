@@ -18,8 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isSuccess
 import java.time.Clock
@@ -119,6 +122,29 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
         expectCatching { nextResults() }.isSuccess().hasSize(2)
         expectCatching { nextResults() }.isSuccess().hasSize(1)
         expectCatching { nextResults() }.isSuccess().hasSize(0)
+      }
+    }
+  }
+
+  fun versionedResourceTests() = rootContext<Fixture<Resource<ResourceSpec>, SqlResourceRepository>> {
+    fixture {
+      Fixture(factory, createAndStore, updateOne)
+    }
+
+    context("multiple versions of a resource exist") {
+      before {
+        createAndStore(1)
+        updateOne()
+      }
+
+      test("the older resource version is never checked") {
+        expectThat(nextResults())
+          .hasSize(1)
+          .first()
+          .get(Resource<*>::version) isEqualTo 2
+
+        expectThat(nextResults())
+          .isEmpty()
       }
     }
   }
