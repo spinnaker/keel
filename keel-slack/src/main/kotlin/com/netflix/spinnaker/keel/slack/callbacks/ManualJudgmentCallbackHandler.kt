@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.SlackService
+import com.netflix.spinnaker.keel.slack.callbacks.SlackCallbackHandler.SlackCallbackResponse
 import com.netflix.spinnaker.kork.exceptions.SystemException
 import com.slack.api.model.block.LayoutBlock
 import com.slack.api.model.kotlin_extension.block.withBlocks
@@ -13,9 +14,9 @@ import java.time.Clock
 import java.time.Instant
 
 /**
- * This handler will handel slack callbacks coming from Manual Judgment notifications.
+ * This handler will handle slack callbacks coming from Manual Judgment notifications.
  * First, it will update the constraint status based on the user response (either approve/reject)
- * Second, it will construct an updated notification with the action preformed and the user how did it.
+ * Second, it will construct an updated notification with the action preformed and the user who did it.
  */
 @Component
 class ManualJudgmentCallbackHandler(
@@ -26,8 +27,8 @@ class ManualJudgmentCallbackHandler(
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
-  //Updating the constraint status based on the user response (either approve/reject)
-  fun handleMJResponse(slackCallbackResponse: SlackCallbackHandler.SlackCallbackResponse) {
+  // Updating the constraint status based on the user response (either approve/reject)
+  fun updateManualJudgementNotification(slackCallbackResponse: SlackCallbackResponse) {
     val constraintUid = slackCallbackResponse.constraintId
     val currentState = repository.getConstraintStateById(parseUID(constraintUid))
       ?: throw SystemException("constraint@callbackId=$constraintUid", "constraint not found")
@@ -49,7 +50,7 @@ class ManualJudgmentCallbackHandler(
         )
       )
 
-    //convert status to actual action --> like OVERRIDE_PASS to "approve"
+    // convert status to actual action --> like OVERRIDE_PASS to "approve"
     val actionPerformed = actionsMap[actionStatus]
     if (actionPerformed == null) {
       log.warn("can't map slack action status to an actual action and therefore can't send an updated notification.")
@@ -59,7 +60,7 @@ class ManualJudgmentCallbackHandler(
     respondToCallback(slackCallbackResponse, actionPerformed)
   }
 
-  fun respondToCallback(slackCallbackResponse: SlackCallbackHandler.SlackCallbackResponse, actionPerformed: String) {
+  fun respondToCallback(slackCallbackResponse: SlackCallbackResponse, actionPerformed: String) {
     log.debug("Responding to Slack callback via ${slackCallbackResponse.response_url}")
 
     val fallbackText = "@${slackCallbackResponse.user.name} hit " +
@@ -122,7 +123,7 @@ class ManualJudgmentCallbackHandler(
     }
   }
 
-  val SlackCallbackHandler.SlackCallbackResponse.constraintId
+  val SlackCallbackResponse.constraintId
     get() = actions.first().action_id.split(":").first()
 
   val actionsMap: Map<String, String> =

@@ -36,7 +36,7 @@ class SlackCallbackHandler(
     //we can add more callback handlers here based on notification type if needed
     when (payload.notificationType) {
       MANUAL_JUDGMENT.name -> {
-        manualJudgmentCallbackHandler.handleMJResponse(payload)
+        manualJudgmentCallbackHandler.updateManualJudgementNotification(payload)
       }
       else -> {
         log.warn("no suitable callback handler was found for type ${payload.notificationType}")

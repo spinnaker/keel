@@ -266,7 +266,6 @@ class NotificationEventListener(
         }
         val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, currentState.environmentName , deliveryArtifact, PromotionStatus.CURRENT)
 
-
         sendSlackMessage(
           config,
           SlackManualJudgmentNotification(

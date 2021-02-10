@@ -82,7 +82,7 @@ class ManualJudgmentCallbackHandlerTests : JUnit5Minutests {
       }
 
       test("update status correctly") {
-        subject.handleMJResponse(slackCallbackResponse)
+        subject.updateManualJudgementNotification(slackCallbackResponse)
         verify (exactly = 1){
           repository.storeConstraintState(
            pendingManualJudgement.copy(

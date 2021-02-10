@@ -75,7 +75,7 @@ class SlackService(
 
     if (!response.isOk) {
       log.warn("slack couldn't get username by email. error is: ${response.error}")
-      email
+      return email
     }
 
     if (response.user != null && response.user.name != null) {
@@ -92,7 +92,7 @@ class SlackService(
 
     if (!response.isOk) {
       log.warn("slack couldn't get email by user id. error is: ${response.error}")
-      userId
+      return userId
     }
 
     log.debug("slack getEmailByUserId returned ${response.isOk}")
@@ -103,8 +103,8 @@ class SlackService(
     return userId
   }
 
-  //Update a notification based on the response Url, using blocks (the actual notification).
-  //If something failed, the fallback text will be displayed
+  // Update a notification based on the response Url, using blocks (the actual notification).
+  // If something failed, the fallback text will be displayed
   fun respondToCallback(responseUrl: String, blocks: List<LayoutBlock>, fallbackText: String) {
     val response = slack.send(responseUrl, payload { p: PayloadBuilder ->
       p
