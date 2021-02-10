@@ -2,8 +2,11 @@ package com.netflix.spinnaker.keel.slack.callbacks
 
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
+import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.SlackService
+import com.netflix.spinnaker.kork.exceptions.SystemException
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
@@ -11,7 +14,11 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import strikt.api.expectThat
+import strikt.api.expectThrows
+import strikt.assertions.isEqualTo
 import java.time.Instant
 import java.time.ZoneId
 
@@ -26,6 +33,8 @@ class ManualJudgmentCallbackHandlerTests : JUnit5Minutests {
       ZoneId.of("UTC")
     )
 
+    val constraintUid = "01EQW0XKNR5H2NMPJXP020EQXE"
+
     val slackCallbackResponse =
       SlackCallbackHandler.SlackCallbackResponse(
         type = "",
@@ -36,7 +45,7 @@ class ManualJudgmentCallbackHandlerTests : JUnit5Minutests {
         ),
         actions = listOf(SlackCallbackHandler.SlackAction(
           type = "button",
-          action_id = "01EQW0XKNR5H2NMPJXP020EQXE:OVERRIDE_PASS:MANUAL_JUDGMENT",
+          action_id = "$constraintUid:OVERRIDE_PASS:MANUAL_JUDGMENT",
           value = "OVERRIDE_PASS",
           action_ts = "now"
         )),
@@ -64,7 +73,7 @@ class ManualJudgmentCallbackHandlerTests : JUnit5Minutests {
     context("handling manual judgment response") {
       before {
         every {
-          repository.getConstraintStateById(any())
+          repository.getConstraintStateById(parseUID(constraintUid))
         } returns pendingManualJudgement
 
         every {
@@ -81,17 +90,31 @@ class ManualJudgmentCallbackHandlerTests : JUnit5Minutests {
 
       }
 
-      test("update status correctly") {
+      test("update status correctly with approval") {
+        val slot = slot<ConstraintState>()
         subject.updateManualJudgementNotification(slackCallbackResponse)
         verify (exactly = 1){
-          repository.storeConstraintState(
-           pendingManualJudgement.copy(
-             status = ConstraintStatus.OVERRIDE_PASS,
-             judgedBy = "keel@keel"
-           )
-          )
+          repository.storeConstraintState(capture(slot))
         }
+        expectThat(slot.captured.status).isEqualTo(ConstraintStatus.OVERRIDE_PASS)
+        expectThat(slot.captured.judgedBy).isEqualTo("keel@keel")
+      }
 
+      test("update status correctly with rejection") {
+        val slot = slot<ConstraintState>()
+        subject.updateManualJudgementNotification(slackCallbackResponse.copy(
+          actions = listOf(SlackCallbackHandler.SlackAction(
+            type = "button",
+            action_id = "01EQW0XKNR5H2NMPJXP020EQXE:OVERRIDE_FAIL:MANUAL_JUDGMENT",
+            value = "OVERRIDE_FAIL",
+            action_ts = "now"
+          )),
+        ))
+        verify (exactly = 1){
+          repository.storeConstraintState(capture(slot))
+        }
+        expectThat(slot.captured.status).isEqualTo(ConstraintStatus.OVERRIDE_FAIL)
+        expectThat(slot.captured.judgedBy).isEqualTo("keel@keel")
       }
     }
   }
