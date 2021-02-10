@@ -221,7 +221,7 @@ class SqlArtifactRepository(
         .where(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
         .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
         .fetchSortedArtifactVersions(artifact, limit)
-        .map { it.copy(reference=artifact.reference) }
+        .map { it.copy(reference = artifact.reference) }
     }
   }
 
