@@ -564,7 +564,7 @@ class ApplicationService(
     versions: List<PublishedArtifact>
   ): Map<VerificationContext, Map<Verification, VerificationState>> =
     deliveryConfig.contexts(versions).let { contexts: List<VerificationContext> ->
-      contexts.zip(getVerificationStatesBatch(contexts)) // List<Pair<VerificationContext, Map<String, VerificationState>>
+      contexts.zip(getVerificationStatesBatch(contexts))
         .associate { (ctx, vIdToState) -> ctx to vIdToState.toVerificationMap(deliveryConfig, ctx) }
     }
 
@@ -576,8 +576,8 @@ class ApplicationService(
   fun Map<String, VerificationState>.toVerificationMap(deliveryConfig: DeliveryConfig, ctx: VerificationContext) : Map<Verification, VerificationState> =
     entries
       .mapNotNull { (vId: String, state: VerificationState) ->
-        ctx.verification(vId) // Verification?
-          ?.let { verification -> verification to state } // Pair<Verification, VerificationState>?
+        ctx.verification(vId)
+          ?.let { verification -> verification to state }
           .also { if (it == null) { onInvalidVerificationId(vId, deliveryConfig, ctx) } }
       }
       .toMap()
