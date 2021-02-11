@@ -48,7 +48,6 @@ import java.time.Instant
 import java.time.ZoneId
 
 class ComparableLinksTests : JUnit5Minutests {
-
   class Fixture {
     val clock: MutableClock = MutableClock(
       Instant.parse("2020-03-25T00:00:00.00Z"),
