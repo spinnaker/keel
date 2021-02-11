@@ -111,7 +111,7 @@ class SqlDeliveryConfigRepository(
     sqlRetry.withRetry(WRITE) {
       jooq.deleteFrom(ENVIRONMENT_RESOURCE)
         .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(envUid(deliveryConfigName, environmentName)))
-        .and(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(resourceId.uid))
+        .and(ENVIRONMENT_RESOURCE.RESOURCE_UID.`in`(resourceId.uids))
         .execute()
     }
   }
@@ -307,13 +307,15 @@ class SqlDeliveryConfigRepository(
             )
             .onDuplicateKeyIgnore()
             .execute()
-          // delete any other environment's link to this same resource (in case we are moving it
-          // from one environment to another)
+          // delete any other environment's link to any version of this same resource (in case we
+          // are moving it from one environment to another)
           jooq.deleteFrom(ENVIRONMENT_RESOURCE)
             .where(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.notEqual(environmentUID))
             .and(
-              ENVIRONMENT_RESOURCE.RESOURCE_UID.equal(
-                select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(resource.id))
+              ENVIRONMENT_RESOURCE.RESOURCE_UID.`in`(
+                select(RESOURCE.UID)
+                  .from(RESOURCE)
+                  .where(RESOURCE.ID.eq(resource.id))
               )
             )
             .execute()
@@ -1075,7 +1077,7 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  private val String.uid: Select<Record1<String>>
+  private val String.uids: Select<Record1<String>>
     get() = select(RESOURCE.UID)
       .from(RESOURCE)
       .where(RESOURCE.ID.eq(this))
