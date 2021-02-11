@@ -578,7 +578,7 @@ class ApplicationService(
       .mapNotNull { (vId: String, state: VerificationState) ->
         ctx.verification(vId) // Verification?
           ?.let { verification -> verification to state } // Pair<Verification, VerificationState>?
-          .also { if (it == null) { onInvalidVerificationId(vId, deliveryConfig, ctx) }}
+          .also { if (it == null) { onInvalidVerificationId(vId, deliveryConfig, ctx) } }
       }
       .toMap()
 
