@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration
 @ConfigurationProperties(prefix = "slack")
 class SlackConfiguration {
   var token: String? = null
-    //var signature: String? = null
-
 }
 
 @Configuration
@@ -38,7 +36,7 @@ class SlackBotConfiguration {
 
 /**
  * This is a workaround to disable signature verification,
- * because we are using gate as proxy in front of our server that already checks the Slack signatures.
+ * because we are using Netflix's Wall-e (Zuul) as a proxy in front of Spinnaker and it already checks the Slack signatures.
  * See https://github.com/slackapi/java-slack-sdk/issues/689
  */
 class UnprotectedApp(appConfig: AppConfig) : App(appConfig) {
