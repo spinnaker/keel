@@ -37,7 +37,7 @@ class SlackService(
   fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>,
                             application: String, type: NotificationType) {
     if (isSlackEnabled) {
-      log.debug("sending slack notification $type for application $application and channel $channel")
+      log.debug("Sending slack notification $type for application $application in channel $channel")
 
       val response = slack.methods(configToken).chatPostMessage { req ->
         req

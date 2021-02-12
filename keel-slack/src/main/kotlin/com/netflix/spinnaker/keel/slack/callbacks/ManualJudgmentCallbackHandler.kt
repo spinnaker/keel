@@ -54,8 +54,7 @@ class ManualJudgmentCallbackHandler(
       )
   }
 
-
-  fun updateMJNotification(response: BlockActionPayload): List<LayoutBlock> {
+  fun updateManualJudgementNotification(response: BlockActionPayload): List<LayoutBlock> {
     try {
       val originalCommitText = response.message.blocks[1].getText
       val originalGitInfoText = response.message.blocks[2].getText

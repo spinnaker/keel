@@ -14,17 +14,17 @@ import javax.servlet.annotation.WebServlet
  */
 class SlackAppController(
   slackApp: App,
-  private val mj: ManualJudgmentCallbackHandler
+  private val mjHandler: ManualJudgmentCallbackHandler
 ) : SlackAppServlet(slackApp){
   init {
-    //the pattern here should match the action id in the actual button, which is: constraintId:action:Manual_judgment
-    val pattern = "^([a-zA-Z0-9_\\-.]+):([a-zA-Z0-9_\\-.]+):([a-zA-Z0-9_\\-.]+)".toPattern()
+    //the pattern here should match the action id string in the actual button, for example: constraintId:action:Manual_judgment
+    val pattern = "^(\\w+):(\\w+):(\\w+)".toPattern()
     slackApp.blockAction(pattern) { req, ctx ->
       if (req.payload.responseUrl != null) {
-        mj.updateConstraintState(req.payload)
+        mjHandler.updateConstraintState(req.payload)
         val response = ActionResponse.builder()
-          .blocks(mj.updateMJNotification(req.payload))
-          .text(mj.fallbackText(req.payload))
+          .blocks(mjHandler.updateManualJudgementNotification(req.payload))
+          .text(mjHandler.fallbackText(req.payload))
           .replaceOriginal(true)
           .build()
         ctx.respond(response)

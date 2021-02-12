@@ -257,11 +257,13 @@ class NotificationEventListener(
 
         val deliveryArtifact = config.artifacts.find {
           it.reference == currentState.artifactReference
+        } .also {
+          if (it == null) log.debug("Artifact with reference ${currentState.artifactReference}  not found in delivery config")
         } ?: return
 
         val artifactCandidate = repository.getArtifactVersion(deliveryArtifact, currentState.artifactVersion, null)
         if (artifactCandidate == null) {
-          log.debug("artifact version is null for application ${config.application}. Can't send failed deployment notification.")
+          log.debug("$deliveryArtifact version ${currentState.artifactVersion} not found. Can't send manual judgement notification.")
           return
         }
         val currentArtifact = repository.getArtifactVersionByPromotionStatus(config, currentState.environmentName , deliveryArtifact, PromotionStatus.CURRENT)
