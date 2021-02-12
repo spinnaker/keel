@@ -65,9 +65,7 @@ class ManualJudgmentNotificationHandler(
                 deny("Stop, I've changed my mind!")
                 title("Are you sure?")
                 markdownText("Are you sure you want to promote version ${artifactCandidate.version}?")
-
               }
-
             }
             button {
               text("Reject", emoji = true)
@@ -75,7 +73,7 @@ class ManualJudgmentNotificationHandler(
               value(ConstraintStatus.OVERRIDE_FAIL.name)
               actionId("${stateUid.toString()}:${ConstraintStatus.OVERRIDE_FAIL.name}:${type.name}")
               confirm {
-                markdownText("Are you sure you want to deny version ${artifactCandidate.version}? promotion")
+                markdownText("Are you sure you want to reject version ${artifactCandidate.version}?")
                 confirm("Do it!")
                 deny("Stop, I've changed my mind!")
                 title("Are you sure?")
@@ -85,12 +83,11 @@ class ManualJudgmentNotificationHandler(
               button {
                 text("See changes", emoji = true)
                 url(compareLink)
-                actionId("123")
+                actionId("button-action")
               }
             }
           }
         }
-
       }
       slackService.sendSlackNotification(channel, blocks, application = application, type = type)
     }

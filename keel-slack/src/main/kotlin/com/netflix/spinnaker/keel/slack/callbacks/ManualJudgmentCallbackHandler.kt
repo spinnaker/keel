@@ -4,9 +4,12 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.SlackService
-import com.netflix.spinnaker.keel.slack.callbacks.SlackCallbackHandler.SlackCallbackResponse
 import com.netflix.spinnaker.kork.exceptions.SystemException
+import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload
 import com.slack.api.model.block.LayoutBlock
+import com.slack.api.model.block.SectionBlock
+import com.slack.api.model.block.composition.MarkdownTextObject
+import com.slack.api.model.block.element.ButtonElement
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -28,7 +31,7 @@ class ManualJudgmentCallbackHandler(
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   // Updating the constraint status based on the user response (either approve/reject)
-  fun updateManualJudgementNotification(slackCallbackResponse: SlackCallbackResponse) {
+  fun updateConstraintState(slackCallbackResponse: BlockActionPayload) {
     val constraintUid = slackCallbackResponse.constraintId
     val currentState = repository.getConstraintStateById(parseUID(constraintUid))
       ?: throw SystemException("constraint@callbackId=$constraintUid", "constraint not found")
@@ -49,44 +52,14 @@ class ManualJudgmentCallbackHandler(
           judgedBy = user
         )
       )
-
-    // convert status to actual action --> like OVERRIDE_PASS to "approve"
-    val actionPerformed = actionsMap[actionStatus]
-    if (actionPerformed == null) {
-      log.warn("can't map slack action status to an actual action and therefore can't send an updated notification.")
-      return
-    }
-
-    respondToCallback(slackCallbackResponse, actionPerformed)
   }
 
-  fun respondToCallback(slackCallbackResponse: SlackCallbackResponse, actionPerformed: String) {
-    log.debug("Responding to Slack callback via ${slackCallbackResponse.response_url}")
 
-    val fallbackText = "@${slackCallbackResponse.user.name} hit " +
-      "$actionPerformed on <!date^${clock.instant().epochSecond}^{date_num} {time_secs}|fallback-text-include-PST>"
-
-    //construct an update notification
-    val updatedNotification = updateMJNotification(
-      slackCallbackResponse.message["blocks"] as List<Any>,
-      fallbackText,
-      actionPerformed)
-
-    //send notification using the response url slack provides with the original message
-    slackService.respondToCallback(
-      slackCallbackResponse.response_url,
-      updatedNotification,
-      fallbackText)
-  }
-
-  fun updateMJNotification(originalBlocks: List<Any>, fallbackText: String, action: String): List<LayoutBlock> {
+  fun updateMJNotification(response: BlockActionPayload): List<LayoutBlock> {
     try {
-      //This is pretty ugly, but currently slack SDK doesn't have a nice way to parse those fields natively
-      val originalCommitText = ((originalBlocks[1] as Map<*, *>)["text"] as Map<*, *>)["text"] as String
-
-      val originalGitInfo = originalBlocks[2] as Map<*, *>
-      val originalGitInfoText = (originalGitInfo["text"] as Map<*, *>)["text"]
-      val originalUrl = (originalGitInfo["accessory"] as Map<*, *>)["url"] as String
+      val originalCommitText = response.message.blocks[1].getText
+      val originalGitInfoText = response.message.blocks[2].getText
+      val originalUrl = response.message.blocks[2].getUrl
 
       return withBlocks {
         header {
@@ -112,7 +85,7 @@ class ManualJudgmentCallbackHandler(
 
         context {
           elements {
-            markdownText(fallbackText)
+            markdownText(fallbackText(response))
           }
         }
       }
@@ -123,8 +96,18 @@ class ManualJudgmentCallbackHandler(
     }
   }
 
-  val SlackCallbackResponse.constraintId
-    get() = actions.first().action_id.split(":").first()
+  fun fallbackText(payload: BlockActionPayload) =
+     "@${payload.user.name} hit " +
+      "${actionsMap[payload.actions.first().value]} on <!date^${clock.instant().epochSecond}^{date_num} {time_secs}|fallback-text-include-PST>"
+
+  val BlockActionPayload.constraintId
+    get() = actions.first().actionId.split(":").first()
+
+  val LayoutBlock.getText: String
+    get() = ((this as SectionBlock).text as MarkdownTextObject).text
+
+  val LayoutBlock.getUrl: String
+    get() = ((this as SectionBlock).accessory as ButtonElement).url
 
   val actionsMap: Map<String, String> =
     mapOf(
