@@ -49,6 +49,7 @@ import org.jooq.Select
 import org.jooq.SelectConditionStep
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
+import org.jooq.impl.DSL.max
 import org.jooq.impl.DSL.select
 import org.jooq.util.mysql.MySQLDSL.values
 import org.slf4j.LoggerFactory
@@ -207,10 +208,15 @@ class SqlDeliveryConfigRepository(
       .select(RESOURCE.UID)
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
+      .and(RESOURCE.VERSION.eq(
+        select(max(RESOURCE.VERSION))
+          .from(RESOURCE.`as`("r2"))
+          .where(RESOURCE.ID.eq(field("r2.id")))
+      ))
 
   private fun getResourceIDs(application: String): SelectConditionStep<Record1<String>>? =
     jooq
-      .select(RESOURCE.ID)
+      .selectDistinct(RESOURCE.ID)
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
 
@@ -303,7 +309,10 @@ class SqlDeliveryConfigRepository(
             .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUID)
             .set(
               ENVIRONMENT_RESOURCE.RESOURCE_UID,
-              select(RESOURCE.UID).from(RESOURCE).where(RESOURCE.ID.eq(resource.id))
+              select(RESOURCE.UID)
+                .from(RESOURCE)
+                .where(RESOURCE.ID.eq(resource.id))
+                .and(RESOURCE.VERSION.eq(resource.version))
             )
             .onDuplicateKeyIgnore()
             .execute()
