@@ -321,8 +321,8 @@ class NotificationEventListener(
         if (it == null) log.debug("Artifact with reference ${notification.artifactReference}  not found in delivery config")
       } ?: return
 
-      val artifact = repository.getArtifactVersion(deliveryArtifact, notification.artifactVersion, null)
-      if (artifact == null) {
+      val artifactVersion = repository.getArtifactVersion(deliveryArtifact, notification.artifactVersion, null)
+      if (artifactVersion == null) {
         log.debug("artifact version is null for application ${config.application}. Can't send verification completed notification.")
         return
       }
@@ -339,7 +339,7 @@ class NotificationEventListener(
         SlackVerificationCompletedNotification(
           time = clock.instant(),
           application = config.application,
-          artifact = artifact.copy(reference = deliveryArtifact.reference),
+          artifact = artifactVersion.copy(reference = deliveryArtifact.reference),
           targetEnvironment = environmentName,
           deliveryArtifact = deliveryArtifact,
           status = status

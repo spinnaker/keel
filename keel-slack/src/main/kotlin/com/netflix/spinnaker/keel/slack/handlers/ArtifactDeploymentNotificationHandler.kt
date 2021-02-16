@@ -21,7 +21,7 @@ class ArtifactDeploymentNotificationHandler(
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackArtifactDeploymentNotification> {
 
-  override val type = listOf(ARTIFACT_DEPLOYMENT_SUCCEDEED, ARTIFACT_DEPLOYMENT_FAILED)
+  override val types = listOf(ARTIFACT_DEPLOYMENT_SUCCEDEED, ARTIFACT_DEPLOYMENT_FAILED)
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun sendMessage(notification: SlackArtifactDeploymentNotification, channel: String) {
@@ -70,7 +70,7 @@ class ArtifactDeploymentNotificationHandler(
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks, application = application, type = type, fallbackText = headerText)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = types, fallbackText = headerText)
     }
   }
 }

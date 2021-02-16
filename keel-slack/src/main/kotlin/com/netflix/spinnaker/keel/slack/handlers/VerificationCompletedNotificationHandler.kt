@@ -17,7 +17,7 @@ class VerificationCompletedNotificationHandler(
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackVerificationCompletedNotification> {
 
-  override val type = listOf(NotificationType.TEST_FAILED, NotificationType.TEST_PASSED)
+  override val types = listOf(NotificationType.TEST_FAILED, NotificationType.TEST_PASSED)
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override fun sendMessage(notification: SlackVerificationCompletedNotification, channel: String) {
@@ -64,7 +64,7 @@ class VerificationCompletedNotificationHandler(
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks, application = application, type = type, fallbackText = headerText)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = types, fallbackText = headerText)
     }
   }
 }

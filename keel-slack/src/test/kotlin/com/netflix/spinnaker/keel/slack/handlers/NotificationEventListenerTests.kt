@@ -124,37 +124,37 @@ class NotificationEventListenerTests : JUnit5Minutests {
     val gitDataGenerator: GitDataGenerator = mockk()
     val pinnedNotificationHandler: PinnedNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.ARTIFACT_PINNED)
     }
 
     val unpinnedNotificationHandler: UnpinnedNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.ARTIFACT_UNPINNED)
     }
 
     val pausedNotificationHandler: PausedNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.APPLICATION_PAUSED)
     }
 
     val lifecycleEventNotificationHandler: LifecycleEventNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.LIFECYCLE_EVENT)
     }
 
     val artifactDeployedNotificationHandler: ArtifactDeploymentNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.ARTIFACT_DEPLOYMENT_SUCCEDEED, Type.ARTIFACT_DEPLOYMENT_FAILED)
     }
 
     val verificationCompletedNotificationHandler: VerificationCompletedNotificationHandler = mockk(relaxUnitFun = true) {
       every {
-        type
+        types
       } returns listOf(Type.TEST_FAILED, Type.TEST_PASSED)
     }
 

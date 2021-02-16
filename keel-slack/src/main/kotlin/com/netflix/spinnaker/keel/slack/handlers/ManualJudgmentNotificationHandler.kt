@@ -20,7 +20,7 @@ class ManualJudgmentNotificationHandler(
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackManualJudgmentNotification> {
 
-  override val type = listOf(NotificationType.MANUAL_JUDGMENT_AWAIT)
+  override val types = listOf(NotificationType.MANUAL_JUDGMENT_AWAIT)
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
   override fun sendMessage(notification: SlackManualJudgmentNotification, channel: String) {
     log.debug("Sending manual judgment notification for application ${notification.application}")
@@ -90,7 +90,7 @@ class ManualJudgmentNotificationHandler(
           }
         }
       }
-      slackService.sendSlackNotification(channel, blocks, application = application, type = type, fallbackText = headerText)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = types, fallbackText = headerText)
     }
   }
 }

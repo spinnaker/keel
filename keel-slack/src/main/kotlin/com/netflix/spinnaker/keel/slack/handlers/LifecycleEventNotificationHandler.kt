@@ -20,7 +20,7 @@ class LifecycleEventNotificationHandler(
   private val gitDataGenerator: GitDataGenerator
 ) : SlackNotificationHandler<SlackLifecycleNotification> {
 
-  override val type = listOf(NotificationType.LIFECYCLE_EVENT)
+  override val types = listOf(NotificationType.LIFECYCLE_EVENT)
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -62,7 +62,7 @@ class LifecycleEventNotificationHandler(
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks, application = application, type = type, fallbackText = headerText)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = types, fallbackText = headerText)
     }
   }
 

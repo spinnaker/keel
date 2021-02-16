@@ -17,7 +17,7 @@ class ResumedNotificationHandler(
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
 ) : SlackNotificationHandler<SlackResumedNotification> {
 
-  override val type = listOf(NotificationType.APPLICATION_RESUMED)
+  override val types = listOf(NotificationType.APPLICATION_RESUMED)
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
 
@@ -52,7 +52,7 @@ class ResumedNotificationHandler(
         }
 
       }
-      slackService.sendSlackNotification(channel, blocks, application = application, type = type, fallbackText = headerText)
+      slackService.sendSlackNotification(channel, blocks, application = application, type = types, fallbackText = headerText)
     }
   }
 
