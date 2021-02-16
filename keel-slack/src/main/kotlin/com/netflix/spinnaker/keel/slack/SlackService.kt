@@ -31,6 +31,10 @@ class SlackService(
   private val isSlackEnabled: Boolean
     get() = springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
 
+  /**
+   * Sends slack notification to [channel], which the specified [blocks].
+   * In case of an error with creating the blocks, or for notification preview, the fallback text will be sent.
+   */
   fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>,
                             application: String, type: List<NotificationType>,
                             fallbackText: String) {
@@ -66,6 +70,9 @@ class SlackService(
     }
   }
 
+  /**
+   * Get slack username by the user's [email]. Return the original email if username is not found.
+   */
   fun getUsernameByEmail(email: String): String {
     log.debug("lookup user id for email $email")
     val response = slack.methods(configToken).usersLookupByEmail { req ->
@@ -83,6 +90,9 @@ class SlackService(
     return email
   }
 
+  /**
+   * Get user's email address by slack [userId]. Return the original userId if email is not found.
+   */
   fun getEmailByUserId(userId: String): String {
     log.debug("lookup user email for username $userId")
     val response = slack.methods(configToken).usersInfo { req ->

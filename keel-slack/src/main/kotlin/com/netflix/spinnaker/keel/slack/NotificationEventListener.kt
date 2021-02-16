@@ -383,6 +383,7 @@ class NotificationEventListener(
       APPLICATION_RESUMED, MANUAL_JUDGMENT_AWAIT, ARTIFACT_DEPLOYMENT_FAILED, TEST_FAILED)
     val normalNotifications = quietNotifications + listOf(ARTIFACT_DEPLOYMENT_SUCCEDEED, DELIVEY_CONFIG_UPDATED, TEST_PASSED)
     val verboseNotifications = normalNotifications + listOf(MANUAL_JUDGMENT_REJECTED, MANUAL_JUDGMENT_APPROVED)
+
     return when (frequency) {
       verbose -> verboseNotifications
       normal -> normalNotifications
