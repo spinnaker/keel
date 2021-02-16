@@ -8,8 +8,8 @@ import com.netflix.spinnaker.keel.slack.SlackNotificationEvent
  * See: [PinnedNotificationHandler] for example
  */
 
-interface SlackNotificationHandler <T: SlackNotificationEvent> {
-  val type: NotificationType
+interface SlackNotificationHandler<T : SlackNotificationEvent> {
+  val type: List<NotificationType>
 
   fun sendMessage(notification: T, channel: String)
 
@@ -18,4 +18,4 @@ interface SlackNotificationHandler <T: SlackNotificationEvent> {
 fun <T : SlackNotificationEvent> Collection<SlackNotificationHandler<*>>.supporting(
   type: NotificationType
 ): SlackNotificationHandler<T>? =
-  this.find { it.type == type } as? SlackNotificationHandler<T>
+  this.find { it.type.contains(type) } as? SlackNotificationHandler<T>

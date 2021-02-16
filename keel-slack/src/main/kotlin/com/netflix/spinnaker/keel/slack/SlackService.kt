@@ -7,16 +7,13 @@ import com.netflix.spinnaker.config.SlackConfiguration
 import com.netflix.spinnaker.keel.notifications.NotificationType
 import com.slack.api.Slack
 import com.slack.api.model.block.LayoutBlock
-import com.slack.api.webhook.Payload.PayloadBuilder
-import com.slack.api.webhook.WebhookPayloads.payload
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 
 /**
- * This notifier is responsible for actually sending the Slack notification,
- * based on the [channel] and the [blocks] it gets from the different handlers.
+ * This notifier is responsible for actually sending or fetching data from Slack directly.
  */
 @Component
 @EnableConfigurationProperties(SlackConfiguration::class)
@@ -35,7 +32,8 @@ class SlackService(
     get() = springEnv.getProperty("keel.notifications.slack", Boolean::class.java, true)
 
   fun sendSlackNotification(channel: String, blocks: List<LayoutBlock>,
-                            application: String, type: NotificationType) {
+                            application: String, type: List<NotificationType>,
+                            fallbackText: String) {
     if (isSlackEnabled) {
       log.debug("Sending slack notification $type for application $application in channel $channel")
 
@@ -43,13 +41,14 @@ class SlackService(
         req
           .channel(channel)
           .blocks(blocks)
+          .text(fallbackText)
       }
 
       if (response.isOk) {
         spectator.counter(
           SLACK_MESSAGE_SENT,
           listOf(
-            BasicTag("notificationType", type.name),
+            BasicTag("notificationType", type.first().name),
             BasicTag("application", application)
           )
         ).safeIncrement()
@@ -101,18 +100,6 @@ class SlackService(
       return response.user.profile.email
     }
     return userId
-  }
-
-  // Update a notification based on the response Url, using blocks (the actual notification).
-  // If something failed, the fallback text will be displayed
-  fun respondToCallback(responseUrl: String, blocks: List<LayoutBlock>, fallbackText: String) {
-    val response = slack.send(responseUrl, payload { p: PayloadBuilder ->
-      p
-        .text(fallbackText)
-        .blocks(blocks)
-    })
-
-    log.debug("slack respondToCallback returned ${response.code}")
   }
 
 
