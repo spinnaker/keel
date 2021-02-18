@@ -46,7 +46,6 @@ import com.netflix.spinnaker.keel.sql.deliveryconfigs.resourcesForEnvironment
 import org.jooq.DSLContext
 import org.jooq.Record1
 import org.jooq.Select
-import org.jooq.SelectConditionStep
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.max
@@ -203,24 +202,27 @@ class SqlDeliveryConfigRepository(
         .fetchOne(DELIVERY_CONFIG.UID)
     } ?: throw NoDeliveryConfigForApplication(application)
 
-  private fun getResourceUIDs(application: String): SelectConditionStep<Record1<String>>? =
+  private fun getResourceUIDs(application: String): Select<Record1<String>> =
     jooq
       .select(RESOURCE.UID)
       .from(RESOURCE)
-      .where(RESOURCE.APPLICATION.eq(application))
-      .and(RESOURCE.VERSION.eq(
-        select(max(RESOURCE.VERSION))
-          .from(RESOURCE.`as`("r2"))
-          .where(RESOURCE.ID.eq(field("r2.id")))
-      ))
+      .innerJoin(
+        select(RESOURCE.ID, max(RESOURCE.VERSION).`as`("MAX_VERSION"))
+          .from(RESOURCE)
+          .where(RESOURCE.APPLICATION.eq(application))
+          .groupBy(RESOURCE.ID)
+          .asTable("GROUPED_RESOURCE")
+      )
+      .on(RESOURCE.ID.eq(field("GROUPED_RESOURCE.ID")))
+      .and(RESOURCE.VERSION.eq(field("GROUPED_RESOURCE.MAX_VERSION")))
 
-  private fun getResourceIDs(application: String): SelectConditionStep<Record1<String>>? =
+  private fun getResourceIDs(application: String): Select<Record1<String>> =
     jooq
       .selectDistinct(RESOURCE.ID)
       .from(RESOURCE)
       .where(RESOURCE.APPLICATION.eq(application))
 
-  private fun getArtifactUIDs(deliveryConfigUid: String): SelectConditionStep<Record1<String>>? =
+  private fun getArtifactUIDs(deliveryConfigUid: String): Select<Record1<String>> =
     jooq
       .select(DELIVERY_CONFIG_ARTIFACT.ARTIFACT_UID)
       .from(DELIVERY_CONFIG_ARTIFACT)
@@ -311,8 +313,15 @@ class SqlDeliveryConfigRepository(
               ENVIRONMENT_RESOURCE.RESOURCE_UID,
               select(RESOURCE.UID)
                 .from(RESOURCE)
-                .where(RESOURCE.ID.eq(resource.id))
-                .and(RESOURCE.VERSION.eq(select(max(RESOURCE.VERSION)).from(RESOURCE).where(RESOURCE.ID.eq(resource.id))))
+                .innerJoin(
+                  select(RESOURCE.ID, max(RESOURCE.VERSION).`as`("MAX_VERSION"))
+                    .from(RESOURCE)
+                    .where(RESOURCE.ID.eq(resource.id))
+                    .groupBy(RESOURCE.ID)
+                    .asTable("GROUPED_RESOURCE")
+                )
+                .on(RESOURCE.ID.eq(field("GROUPED_RESOURCE.ID")))
+                .and(RESOURCE.VERSION.eq(field("GROUPED_RESOURCE.MAX_VERSION")))
             )
             .onDuplicateKeyIgnore()
             .execute()
