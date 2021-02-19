@@ -114,4 +114,7 @@ class GitDataGenerator(
     }
   }
 
+  fun generateArtifactUrl(application: String, reference: String, version: String) =
+    "$spinnakerBaseUrl/#/applications/${application}/environments/${reference}/${version}"
+
 }

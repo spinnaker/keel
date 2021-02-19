@@ -273,9 +273,16 @@ class NotificationEventListener(
 
         val deliveryArtifact = configAndArtifact.first.artifacts.find {
           it.reference == currentState.artifactReference
-        }?: return
+        } ?: return
 
         val currentArtifact = repository.getArtifactVersionByPromotionStatus(configAndArtifact.first, currentState.environmentName, deliveryArtifact, PromotionStatus.CURRENT)
+
+        // fetch the pinned artifact, if exists
+        val pinnedArtifact =
+          repository.getPinnedVersion(configAndArtifact.first, currentState.environmentName, deliveryArtifact.reference)?.let {
+            repository.getArtifactVersion(deliveryArtifact, it, null)
+              ?.copy(reference = deliveryArtifact.reference)
+          }
 
         sendSlackMessage(
           configAndArtifact.first,
@@ -286,6 +293,7 @@ class NotificationEventListener(
             targetEnvironment = currentState.environmentName,
             currentArtifact = currentArtifact,
             deliveryArtifact = deliveryArtifact,
+            pinnedArtifact = pinnedArtifact,
             stateUid = currentState.uid
           ),
           MANUAL_JUDGMENT_AWAIT,
