@@ -17,7 +17,6 @@ data class ContainerJobConfig(
    *   acme/widget:latest
    */
   val image: String,
-
   val application: String,
   val location: TitusServerGroup.Location,
   val resources: TitusServerGroup.Resources = TitusServerGroup.Resources(
