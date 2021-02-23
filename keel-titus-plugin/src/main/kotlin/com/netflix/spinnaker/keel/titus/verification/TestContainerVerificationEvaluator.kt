@@ -64,26 +64,20 @@ class TestContainerVerificationEvaluator(
 
     return runBlocking {
       withContext(IO) {
-        val containerJobConfig = ContainerJobConfig(
-          application = verification.application ?: context.deliveryConfig.application,
-          location = verification.location,
-          credentials = verification.location.account,
-          image = verification.image,
-
-          // These are deprecated and will eventually go away, since users now pass the info in the image field
-          repository = verification.repository,
-          tag = verification.tag
-        )
-
         taskLauncher.submitJob(
           type = VERIFICATION,
           subject = "container integration test for ${context.deliveryConfig.application}.${context.environmentName}",
-          description = "Verifying ${context.version} in environment ${context.environmentName} with test container ${containerJobConfig.imageId}",
+          description = "Verifying ${context.version} in environment ${context.environmentName} with test container ${verification.imageId}",
           user = context.deliveryConfig.serviceAccount,
           application = context.deliveryConfig.application,
           notifications = emptySet(),
           stages = listOf(
-            containerJobConfig.createRunJobStage()
+            ContainerJobConfig(
+              application = verification.application ?: context.deliveryConfig.application,
+              location = verification.location,
+              credentials = verification.location.account,
+              image = verification.imageId,
+            ).createRunJobStage()
           )
         )
       }

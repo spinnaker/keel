@@ -16,19 +16,7 @@ data class ContainerJobConfig(
    *   acme/widget
    *   acme/widget:latest
    */
-  val image: String? = null,
-
-  /**
-   * Repository name associated with the container, e.g.: "acme/widget"
-   *
-   * Deprecated: will be removed once all deployments switch to [image]
-   */
-  val repository: String? = null,
-
-  /**
-   * Deprecated. will be removed once all deployments switch to [image]
-   */
-  val tag: String? = null,
+  val image: String,
 
   val application: String,
   val location: TitusServerGroup.Location,
@@ -53,10 +41,6 @@ data class ContainerJobConfig(
   val waitForCompletion: Boolean = true
 ) {
   init {
-    require((image == null) xor (repository == null)) {
-      "One, and only one, of image or repository must be supplied"
-    }
-
     require(retries >= 0) {
       "Retries must be positive or zero"
     }
@@ -65,19 +49,6 @@ data class ContainerJobConfig(
   val cloudProvider: String = "titus"
   val cloudProviderType: String = "aws"
 
-  /**
-   * Determine imageId depending on the newer field (image) or the deprecated fields (repository, tag)
-   */
-  val imageId : String
-  get() =
-    when {
-      image != null &&  image.contains(":") -> image
-      image != null && !image.contains(":") -> "${image}:latest"
-
-      repository != null && tag != null -> "${repository}:${tag}"
-      repository != null && tag == null -> "${repository}:latest"
-      else -> error("no container image specified")
-    }
 }
 
 /**
@@ -117,7 +88,7 @@ fun ContainerJobConfig.createRunJobStage() =
       "iamProfile" to iamInstanceProfile,
       "region" to location.region,
       "capacityGroup" to capacityGroup,
-      "imageId" to imageId,
+      "imageId" to image,
       "entryPoint" to entrypoint
     ),
 
