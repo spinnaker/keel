@@ -84,7 +84,7 @@ internal class VerificationControllerTests
       comment = "I swear this is fine"
     )
     val user = "fzlem@netflix.com"
-    val request = post("/${deliveryConfig.application}/environment/test/verifications")
+    val request = post("/application/${deliveryConfig.application}/environment/${environment.name}/verifications")
       .header("X-SPINNAKER-USER", user)
       .contentType(APPLICATION_JSON)
       .accept(APPLICATION_JSON)
@@ -115,7 +115,7 @@ internal class VerificationControllerTests
       comment = "I swear this is fine"
     )
     val user = "fzlem@netflix.com"
-    val request = post("/${deliveryConfig.application}/environment/test/verifications")
+    val request = post("/application/${deliveryConfig.application}/environment/${environment.name}/verifications")
       .header("X-SPINNAKER-USER", user)
       .contentType(APPLICATION_JSON)
       .accept(APPLICATION_JSON)
@@ -138,7 +138,7 @@ internal class VerificationControllerTests
       artifactVersion = "1.0.0"
     )
     val user = "fzlem@netflix.com"
-    val request = post("/${deliveryConfig.application}/environment/test/verifications/retry")
+    val request = post("/application/${deliveryConfig.application}/environment/${environment.name}/verifications/retry")
       .header("X-SPINNAKER-USER", user)
       .contentType(APPLICATION_JSON)
       .accept(APPLICATION_JSON)
@@ -171,7 +171,7 @@ internal class VerificationControllerTests
       artifactVersion = "1.0.0"
     )
     val user = "fzlem@netflix.com"
-    val request = post("/${deliveryConfig.application}/environment/test/verifications/retry")
+    val request = post("/application/${deliveryConfig.application}/environment/${environment.name}/verifications/retry")
       .header("X-SPINNAKER-USER", user)
       .contentType(APPLICATION_JSON)
       .accept(APPLICATION_JSON)

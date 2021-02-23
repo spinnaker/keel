@@ -26,7 +26,7 @@ class VerificationController(
   private val deliveryConfigRepository: DeliveryConfigRepository
 ) {
   @PostMapping(
-    path = ["/{application}/environment/{environment}/verifications"],
+    path = ["/application/{application}/environment/{environment}/verifications"],
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
@@ -72,7 +72,7 @@ class VerificationController(
     RuntimeException("Only override statuses may be set via this endpoint.")
 
   @PostMapping(
-    path = ["/{application}/environment/{environment}/verifications/retry"],
+    path = ["/application/{application}/environment/{environment}/verifications/retry"],
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
