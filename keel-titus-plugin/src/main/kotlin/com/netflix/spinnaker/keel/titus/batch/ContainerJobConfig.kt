@@ -47,7 +47,6 @@ data class ContainerJobConfig(
 
   val cloudProvider: String = "titus"
   val cloudProviderType: String = "aws"
-
 }
 
 /**
