@@ -306,7 +306,7 @@ class ApplicationService(
       // This map associates a context with this collection of verifications and their states
       val verificationStateMap = try {
         getVerificationStates(deliveryConfig, artifactVersions)
-      }catch(e: Exception) {
+      } catch(e: Exception) {
         log.error("error getting verification states for application ${deliveryConfig.application}", e)
         emptyMap()
       }
