@@ -30,11 +30,19 @@ class EnvironmentService(
     }
 
     val resourceSummaries = applicationService.getResourceSummaries(deliveryConfig)
+
     return deliveryConfig.environments.map { environment ->
+      val currentArtifacts = try {
+        repository.getCurrentArtifactVersions(deliveryConfig, environment.name).toSet()
+      } catch (e: Exception) {
+        log.error("Failed to get current artifacts for $application: ", e)
+        emptySet()
+      }
+
       EnvironmentView(
         environment,
         resourceSummaries.filter { environment.resourceIds.contains(it.id) },
-        repository.getCurrentArtifactVersions(deliveryConfig, environment.name).toSet()
+        currentArtifacts
       )
     }
   }
