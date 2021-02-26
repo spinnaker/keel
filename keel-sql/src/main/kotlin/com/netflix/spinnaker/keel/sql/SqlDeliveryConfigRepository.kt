@@ -165,7 +165,7 @@ class SqlDeliveryConfigRepository(
         // delete events
         txn.deleteFrom(EVENT)
           .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
-          .and(EVENT.REF.`in`(resourceUids))
+          .and(EVENT.REF.`in`(resourceIds))
           .execute()
         txn.deleteFrom(EVENT)
           .where(EVENT.SCOPE.eq(EventScope.APPLICATION))

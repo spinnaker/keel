@@ -216,7 +216,7 @@ open class SqlResourceRepository(
         // look for resource events that match the resource...
         .where(
           EVENT.SCOPE.eq(EventScope.RESOURCE)
-            .and(EVENT.REF.`in`(uidsForId(id)))
+            .and(EVENT.REF.eq(id))
         )
         // ...or application events that match the application as they apply to all resources
         .or(
@@ -233,16 +233,14 @@ open class SqlResourceRepository(
 
   // todo: add sql retries once we've rethought repository structure: https://github.com/spinnaker/keel/issues/740
   override fun appendHistory(event: ResourceEvent) {
-    // for historical reasons, we use the resource UID (not the ID) as an identifier in resource events
-    val ref = getResourceUid(event.ref, event.version)
-    doAppendHistory(event, ref)
+    doAppendHistory(event)
   }
 
   override fun appendHistory(event: ApplicationEvent) {
-    doAppendHistory(event, event.application)
+    doAppendHistory(event)
   }
 
-  private fun doAppendHistory(event: PersistentEvent, ref: String) {
+  private fun doAppendHistory(event: PersistentEvent) {
     log.debug("Appending event: $event")
 
     if (event.ignoreRepeatedInHistory) {
@@ -253,7 +251,7 @@ open class SqlResourceRepository(
           // look for resource events that match the resource...
           .where(
             EVENT.SCOPE.eq(EventScope.RESOURCE)
-              .and(EVENT.REF.eq(ref))
+              .and(EVENT.REF.eq(event.ref))
           )
           // ...or application events that match the application as they apply to all resources
           .or(
@@ -273,8 +271,6 @@ open class SqlResourceRepository(
         .insertInto(EVENT)
         .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
         .set(EVENT.SCOPE, event.scope)
-        .set(EVENT.REF, ref)
-        .set(EVENT.TIMESTAMP, event.timestamp)
         .set(EVENT.JSON, event)
         .execute()
     }
@@ -282,41 +278,32 @@ open class SqlResourceRepository(
 
   override fun delete(id: String) {
     // TODO: these should be run inside a transaction
-    val uids = sqlRetry.withRetry(READ) {
-      jooq.select(RESOURCE.UID)
-        .from(RESOURCE)
+    sqlRetry.withRetry(WRITE) {
+      jooq.deleteFrom(RESOURCE)
         .where(RESOURCE.ID.eq(id))
-        .fetch(RESOURCE.UID)
-        .map(ULID::parseULID)
+        .execute()
+        .also { count ->
+          if (count == 0) {
+            throw NoSuchResourceId(id)
+          }
+        }
     }
-
-    if (uids.isEmpty()) {
-      throw NoSuchResourceId(id)
+    sqlRetry.withRetry(WRITE) {
+      jooq.deleteFrom(EVENT)
+        .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
+        .and(EVENT.REF.eq(id))
+        .execute()
     }
-
-    uids.forEach { uid ->
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(RESOURCE)
-          .where(RESOURCE.UID.eq(uid.toString()))
-          .execute()
-      }
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(EVENT)
-          .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
-          .and(EVENT.REF.eq(uid.toString()))
-          .execute()
-      }
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(DIFF_FINGERPRINT)
-          .where(DIFF_FINGERPRINT.ENTITY_ID.eq(id))
-          .execute()
-      }
-      sqlRetry.withRetry(WRITE) {
-        jooq.deleteFrom(PAUSED)
-          .where(PAUSED.SCOPE.eq(PauseScope.RESOURCE))
-          .and(PAUSED.NAME.eq(id))
-          .execute()
-      }
+    sqlRetry.withRetry(WRITE) {
+      jooq.deleteFrom(DIFF_FINGERPRINT)
+        .where(DIFF_FINGERPRINT.ENTITY_ID.eq(id))
+        .execute()
+    }
+    sqlRetry.withRetry(WRITE) {
+      jooq.deleteFrom(PAUSED)
+        .where(PAUSED.SCOPE.eq(PauseScope.RESOURCE))
+        .and(PAUSED.NAME.eq(id))
+        .execute()
     }
   }
 
@@ -397,12 +384,6 @@ open class SqlResourceRepository(
         .fetchOne(RESOURCE.UID)
         ?: throw IllegalStateException("Resource with id $id not found. Retrying.")
     }
-
-  private fun uidsForId(id: String): Select<Record1<String>> =
-    select(RESOURCE.UID)
-      .from(RESOURCE)
-      .where(RESOURCE.ID.eq(id))
-      .orderBy(RESOURCE.UID.desc())
 
   private fun applicationForId(id: String): Select<Record1<String>> =
     select(RESOURCE.APPLICATION)
