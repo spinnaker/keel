@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DIFF_FINGERPRINT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
@@ -22,6 +23,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_WITH_METADATA
+import com.netflix.spinnaker.keel.persistence.metamodel.tables.Environment.ENVIRONMENT
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -354,6 +356,27 @@ open class SqlResourceRepository(
             throw e
           }
         }
+    }
+  }
+
+  override fun triggerResourceRecheck(environmentName: String, application: String) {
+    val resourceUids = sqlRetry.withRetry(READ) {
+      jooq.select(ENVIRONMENT_RESOURCE.RESOURCE_UID)
+        .from(ENVIRONMENT_RESOURCE)
+        .innerJoin(ENVIRONMENT)
+        .on(ENVIRONMENT.UID.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID))
+        .innerJoin(DELIVERY_CONFIG)
+        .on(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
+        .where(ENVIRONMENT.NAME.eq(environmentName))
+        .and(DELIVERY_CONFIG.APPLICATION.eq(application))
+        .fetch()
+    }
+
+    sqlRetry.withRetry(WRITE) {
+      jooq.update(RESOURCE_LAST_CHECKED)
+        .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
+        .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(resourceUids))
+        .execute()
     }
   }
 
