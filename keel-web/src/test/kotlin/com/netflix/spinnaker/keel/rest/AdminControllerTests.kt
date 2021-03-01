@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Instant
 
 @SpringBootTest(webEnvironment = MOCK)
 @AutoConfigureMockMvc
@@ -44,13 +45,15 @@ internal class AdminControllerTests
             application = application1,
             serviceAccount = "keel@spinnaker",
             apiVersion = "delivery.config.spinnaker.netflix.com/v1",
+            createdAt = Instant.parse("2021-02-28T21:45:00Z"),
+            resourceCount = 5,
             isPaused = false
           )
         )
       }
 
       before {
-        every { adminService.getManagedApplications() } returns this
+        every { adminService.getManagedApplications() }.returns(this)
       }
 
       test("can get basic summary of unpaused application") {
@@ -67,6 +70,8 @@ internal class AdminControllerTests
                 "application": "fnord",
                 "serviceAccount": "keel@spinnaker",
                 "apiVersion": "delivery.config.spinnaker.netflix.com/v1",
+                "createdAt": "2021-02-28T21:45:00Z",
+                "resourceCount": 5,
                 "isPaused":false
               }]
               """.trimIndent()
@@ -83,6 +88,7 @@ internal class AdminControllerTests
             application = application1,
             serviceAccount = "keel@spinnaker",
             apiVersion = "delivery.config.spinnaker.netflix.com/v1",
+            createdAt = Instant.now(),
             isPaused = false
           ),
           ApplicationSummary(
@@ -90,13 +96,14 @@ internal class AdminControllerTests
             application = application2,
             serviceAccount = "keel@spinnaker",
             apiVersion = "delivery.config.spinnaker.netflix.com/v1",
+            createdAt = Instant.now(),
             isPaused = false
           )
         )
       }
 
       before {
-        every { adminService.getManagedApplications() } returns this
+        every { adminService.getManagedApplications() }.returns(this)
       }
 
       test("can get basic summary of 2 applications") {
@@ -133,7 +140,7 @@ internal class AdminControllerTests
       fixture { emptyList() }
 
       before {
-        every { adminService.getManagedApplications() } returns this
+        every { adminService.getManagedApplications() }.returns(this)
       }
 
       test("return an empty list") {
