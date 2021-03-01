@@ -182,6 +182,43 @@ internal class VerificationRunnerTests {
     verify(exactly = 0) { publisher.publishEvent(any()) }
   }
 
+  @Test
+  fun `no-ops if a verification for a previous artifact version was already running and has yet to complete`() {
+    val verification = DummyVerification("1")
+    val context1 = VerificationContext(
+      deliveryConfig = DeliveryConfig(
+        application = "fnord",
+        name = "fnord-manifest",
+        serviceAccount = "jamm@illuminati.org",
+        artifacts = setOf(
+          DockerArtifact(name = "fnord", reference = "fnord-docker")
+        ),
+        environments = setOf(
+          Environment(
+            name = "test",
+            verifyWith = listOf(verification)
+          )
+        )
+      ),
+      environmentName = "test",
+      artifactReference = "fnord-docker",
+      version = "fnord-0.190.0-h378.eacb135"
+    )
+    val context2 = context1.copy(
+      version = "fnord-0.191.0-h379.d4d9ec0"
+    )
+
+    every { repository.getState(context1, verification) } returns PENDING.toState()
+    every { repository.getState(context2, verification) } returns null
+
+    every { evaluator.evaluate(context1, verification, emptyMap()) } returns PENDING
+
+    subject.runVerificationsFor(context2)
+
+    verify(exactly = 0) { evaluator.start(context2, any()) }
+    verify(exactly = 0) { publisher.publishEvent(any()) }
+  }
+
   @ParameterizedTest(
     name = "continues to the next if any verification was already running and has now completed with {0}"
   )
