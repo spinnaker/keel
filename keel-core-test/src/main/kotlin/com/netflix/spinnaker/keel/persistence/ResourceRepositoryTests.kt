@@ -428,10 +428,6 @@ fun <T : List<E>, E> Assertion.Builder<T>.third(): Assertion.Builder<E> =
 fun <T : List<E>, E> Assertion.Builder<T>.fourth(): Assertion.Builder<E> =
   get("fourth element %s") { this[3] }
 
-@Suppress("UNCHECKED_CAST")
-inline fun <reified T> Assertion.Builder<List<*>>.areAll() : Assertion.Builder<List<T>> =
-  all { isA<T>() } as Assertion.Builder<List<T>>
-
 fun randomString(length: Int = 8) =
   randomUUID()
     .toString()
