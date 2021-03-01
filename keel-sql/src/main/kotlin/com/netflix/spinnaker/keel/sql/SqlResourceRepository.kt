@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.jooq.impl.DSL.coalesce
 import org.jooq.impl.DSL.max
 import org.jooq.impl.DSL.value
@@ -360,23 +361,28 @@ open class SqlResourceRepository(
   }
 
   override fun triggerResourceRecheck(environmentName: String, application: String) {
-    val resourceUids = sqlRetry.withRetry(READ) {
-      jooq.select(ENVIRONMENT_RESOURCE.RESOURCE_UID)
-        .from(ENVIRONMENT_RESOURCE)
-        .innerJoin(ENVIRONMENT)
-        .on(ENVIRONMENT.UID.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID))
-        .innerJoin(DELIVERY_CONFIG)
-        .on(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
-        .where(ENVIRONMENT.NAME.eq(environmentName))
-        .and(DELIVERY_CONFIG.APPLICATION.eq(application))
-        .fetch()
-    }
-
+    log.debug("Triggering recheck for environment $environmentName in application $application")
     sqlRetry.withRetry(WRITE) {
-      jooq.update(RESOURCE_LAST_CHECKED)
-        .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
-        .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(resourceUids))
-        .execute()
+      jooq.transaction { config ->
+        val txn = DSL.using(config)
+        val resourceUids =
+          txn.select(ENVIRONMENT_RESOURCE.RESOURCE_UID)
+            .from(ENVIRONMENT_RESOURCE)
+            .innerJoin(ENVIRONMENT)
+            .on(ENVIRONMENT.UID.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID))
+            .innerJoin(DELIVERY_CONFIG)
+            .on(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
+            .where(ENVIRONMENT.NAME.eq(environmentName))
+            .and(DELIVERY_CONFIG.APPLICATION.eq(application))
+            .fetch()
+
+          log.debug("Triggering recheck for resources $resourceUids in environment $environmentName in application $application")
+
+          txn.update(RESOURCE_LAST_CHECKED)
+            .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
+            .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(resourceUids))
+            .execute()
+      }
     }
   }
 

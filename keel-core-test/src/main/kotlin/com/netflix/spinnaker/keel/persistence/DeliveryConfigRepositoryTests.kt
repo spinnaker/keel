@@ -292,7 +292,7 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         expect {
           that(firstCheck.size).isEqualTo(4)
           that(secondCheck.size).isEqualTo(0)
-          that(afterRecheck.size).isEqualTo(2)
+          that(afterRecheck.size).isEqualTo(2) //only one environment had a recheck triggered
           that(afterRecheck.first().application).isEqualTo(deliveryConfig.application)
           that(afterRecheck.map { it.id }.toList()).containsExactlyInAnyOrder(testResources)
         }
