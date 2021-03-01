@@ -99,7 +99,7 @@ class SqlDeliveryConfigRepository(
             name = name,
             application = application,
             serviceAccount = serviceAccount,
-            metadata = metadata ?: emptyMap()
+            metadata = (metadata ?: emptyMap()) + mapOf("createdAt" to ULID.parseULID(uid).timestampAsInstant())
           ).let {
             attachDependents(it)
           }

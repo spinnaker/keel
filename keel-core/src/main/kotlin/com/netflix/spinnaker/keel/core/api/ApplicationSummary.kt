@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import java.time.Instant
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder(value = ["deliveryConfigName", "application", "serviceAccount", "apiVersion", "createdAt", "isPaused"])
+@JsonPropertyOrder(value = ["deliveryConfigName", "application", "serviceAccount", "apiVersion", "isPaused"])
 data class ApplicationSummary(
   val deliveryConfigName: String,
   val application: String,

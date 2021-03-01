@@ -18,6 +18,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.kind
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.events.ApplicationActuationPaused
@@ -47,6 +48,7 @@ import strikt.assertions.isSuccess
 import strikt.assertions.map
 import strikt.assertions.none
 import java.time.Duration
+import java.time.Instant
 
 abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : ResourceRepository, A : ArtifactRepository, P : PausedRepository> :
   JUnit5Minutests {
@@ -109,11 +111,11 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
       repository.getByApplication(deliveryConfig.application)
     }
 
-    fun store() {
+    fun store(deliveryConfig: DeliveryConfig = this.deliveryConfig) {
       repository.store(deliveryConfig)
     }
 
-    fun storeResources() {
+    fun storeResources(deliveryConfig: DeliveryConfig = this.deliveryConfig) {
       deliveryConfig.environments.flatMap { it.resources }.forEach {
         resourceRepository.store(it)
       }
@@ -487,10 +489,9 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
         test("can retrieve the manifest for the resources") {
           val resource = deliveryConfig.resources.random()
-
-          getDeliveryConfig(resource)
-            .isSuccess()
-            .isEqualTo(deliveryConfig)
+          val persistedDeliveryConfig = repository.deliveryConfigFor(resource.id)
+          expectThat(persistedDeliveryConfig)
+            .isEqualTo(deliveryConfig.copy(metadata = persistedDeliveryConfig.metadata))
         }
       }
 
@@ -700,6 +701,66 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
           expectThat(repository.environmentNotifications(deliveryConfig.name, "staging"))
             .isEmpty()
         }
+      }
+    }
+
+    context("multiple delivery configs exist") {
+      before {
+        (1..5).forEach { index ->
+          val resources = setOf(
+            resource(
+              application = "${deliveryConfig.application}$index",
+              kind = parseKind("ec2/cluster@v1")
+            ),
+            resource(
+              application = "${deliveryConfig.application}$index",
+              kind = parseKind("ec2/security-group@v1")
+            )
+          )
+          val deliveryConfig = deliveryConfig.copy(
+            application = "${deliveryConfig.application}$index",
+            name = "${deliveryConfig.name}$index",
+            artifacts = setOf(
+              artifact, artifactFromBranch
+            ),
+            environments = setOf(
+              Environment(
+                name = "test",
+                resources = resources
+              ),
+              Environment(
+                name = "staging",
+                resources = resources
+              )
+            )
+          )
+          store(deliveryConfig)
+          storeResources(deliveryConfig)
+        }
+      }
+
+      test("application summaries can be retrieved successfully") {
+        val persistedDeliveryConfigs = (1..5).map { index ->
+          repository.get("${deliveryConfig.name}$index")
+        }
+
+        expectThat(repository.getApplicationSummaries())
+          .hasSize(5)
+          .containsExactlyInAnyOrder(
+            (0..4).map { index ->
+              with (persistedDeliveryConfigs[index]) {
+                ApplicationSummary(
+                  deliveryConfigName = name,
+                  application = application,
+                  serviceAccount = serviceAccount,
+                  apiVersion = apiVersion,
+                  createdAt = metadata["createdAt"] as Instant,
+                  resourceCount = 4, // 2 from test, 2 from staging
+                  isPaused = false
+                )
+              }
+            }
+          )
       }
     }
   }
