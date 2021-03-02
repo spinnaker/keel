@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.plugins.CurrentImages
 import com.netflix.spinnaker.keel.api.plugins.ImageInRegion
 import com.netflix.spinnaker.keel.api.plugins.VerificationEvaluator
+import com.netflix.spinnaker.keel.api.verification.PendingVerification
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
@@ -106,6 +107,7 @@ internal class VerificationRunnerTests {
     )
     val metadata = mapOf("taskId" to ULID().nextULID(), "images" to images)
 
+    every { repository.pendingInEnvironment(any(), any())} returns emptyList()
     every { repository.getState(any(), any()) } returns null
     every { evaluator.start(any(), any()) } returns metadata
 
@@ -138,6 +140,7 @@ internal class VerificationRunnerTests {
       version = "fnord-0.190.0-h378.eacb135"
     )
 
+    every { repository.pendingInEnvironment(any(), any())} returns emptyList()
     every { repository.getState(any(), any()) } returns VerificationState(NOT_EVALUATED, now(), null, mapOf("tasks" to listOf(ULID().nextULID())))
     every { evaluator.start(any(), any()) } answers { mapOf("tasks" to listOf(ULID().nextULID())) }
 
@@ -170,6 +173,7 @@ internal class VerificationRunnerTests {
       version = "fnord-0.190.0-h378.eacb135"
     )
 
+    every { repository.pendingInEnvironment(any(), any())} returns emptyList()
     every { repository.getState(any(), DummyVerification("1")) } returns PENDING.toState()
     every { repository.getState(any(), DummyVerification("2")) } returns null
 
@@ -208,6 +212,9 @@ internal class VerificationRunnerTests {
       version = "fnord-0.191.0-h379.d4d9ec0"
     )
 
+    every { repository.pendingInEnvironment(any(), any())} returns listOf(
+      PendingVerification(context1, verification, VerificationState(PENDING, now(), null))
+    )
     every { repository.getState(context1, verification) } returns PENDING.toState()
     every { repository.getState(context2, verification) } returns null
 
@@ -247,6 +254,7 @@ internal class VerificationRunnerTests {
       version = "fnord-0.190.0-h378.eacb135"
     )
 
+    every { repository.pendingInEnvironment(any(), any())} returns emptyList()
     every { repository.getState(any(), DummyVerification("1")) } returns PENDING.toState()
     every { repository.getState(any(), DummyVerification("2")) } returns null
 
@@ -292,12 +300,9 @@ internal class VerificationRunnerTests {
       version = "fnord-0.190.0-h378.eacb135"
     )
 
-    every {
-      repository.getState(any(), DummyVerification("1"))
-    } returns PASS.toState()
-    every {
-      repository.getState(any(), DummyVerification("2"))
-    } returns status.toState()
+    every { repository.pendingInEnvironment(any(), any())} returns emptyList()
+    every { repository.getState(any(), DummyVerification("1")) } returns PASS.toState()
+    every { repository.getState(any(), DummyVerification("2")) } returns status.toState()
 
     subject.runVerificationsFor(context)
 
