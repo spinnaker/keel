@@ -39,13 +39,13 @@ databaseChangeLog:
           set json = json_set(
             json,
             '$.timestamp',
-            concat(substring(json_unquote(json->'$.timestamp'), 1, 19), '.000Z')
+            concat(substring(json->>'$.timestamp', 1, 19), '.000Z')
           )
           where length(json -> '$.timestamp') = 22;
     - sql:
         sql: |
           alter table event
-          add column timestamp datetime(3) generated always as (str_to_date(json_unquote(json->'$.timestamp'), '%Y-%m-%dT%T.%fZ'))
+          add column timestamp datetime(3) generated always as (str_to_date(json->>'$.timestamp', '%Y-%m-%dT%T.%fZ'))
           after application;
     - createIndex:
         tableName: event
