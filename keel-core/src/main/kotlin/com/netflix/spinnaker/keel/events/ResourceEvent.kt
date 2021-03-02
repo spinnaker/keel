@@ -85,7 +85,9 @@ data class ResourceCreated(
   override val id: String,
   override val version: Int,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Created",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
@@ -109,7 +111,9 @@ data class ResourceUpdated(
   override val version: Int,
   override val application: String,
   val delta: Map<String, Any?>,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Config updated",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, delta: Map<String, Any?>, clock: Clock = Companion.clock) : this(
     resource.kind,
@@ -126,7 +130,9 @@ data class ResourceDeleted(
   override val id: String,
   override val version: Int,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Deleted",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.kind,
@@ -154,7 +160,9 @@ data class ResourceMissing(
   override val id: String,
   override val version: Int,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Missing",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Missing
@@ -179,7 +187,9 @@ data class ResourceDeltaDetected(
   override val version: Int,
   override val application: String,
   val delta: Map<String, Any?>,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Difference detected",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Diff
@@ -205,7 +215,9 @@ data class ResourceActuationLaunched(
   override val application: String,
   val plugin: String,
   val tasks: List<Task>,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Updating resource state",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, plugin: String, tasks: List<Task>, clock: Clock = Companion.clock) :
     this(
@@ -228,7 +240,9 @@ data class ResourceActuationPaused(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val triggeredBy: String?
+  override val triggeredBy: String?,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Update paused",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -263,7 +277,9 @@ data class ResourceActuationVetoed(
   val reason: String?,
   val veto: String? = null,
   val suggestedStatus: ResourceStatus? = null,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.WARNING,
+  override val displayName: String = "Update terminated",
 ) : ResourceEvent(message = reason) {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -289,7 +305,9 @@ data class ResourceActuationResumed(
   override val version: Int,
   override val application: String,
   override val triggeredBy: String?,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Update continued",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -316,7 +334,9 @@ data class ResourceTaskFailed(
   override val application: String,
   val reason: String?,
   val tasks: List<Task> = emptyList(),
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.ERROR,
+  override val displayName: String = "Update failed",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, reason: String?, tasks: List<Task>, clock: Clock = Companion.clock) : this(
@@ -339,7 +359,9 @@ data class ResourceTaskSucceeded(
   override val version: Int,
   override val application: String,
   val tasks: List<Task> = emptyList(),
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.SUCCESS,
+  override val displayName: String = "Update succeeded",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, tasks: List<Task>, clock: Clock = Companion.clock) : this(
@@ -361,7 +383,9 @@ data class ResourceDeltaResolved(
   override val id: String,
   override val version: Int,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.SUCCESS,
+  override val displayName: String = "Difference resolved",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Ok
@@ -380,7 +404,9 @@ data class ResourceValid(
   override val id: String,
   override val version: Int,
   override val application: String,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.SUCCESS,
+  override val displayName: String = "Valid",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Ok
@@ -404,7 +430,9 @@ data class ResourceCheckUnresolvable(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val message: String?
+  override val message: String?,
+  override val level: EventLevel = EventLevel.WARNING,
+  override val displayName: String = "Failed to resolved state diff",
 ) : ResourceCheckResult(message = message) {
   @JsonIgnore
   override val state = Unresolvable
@@ -456,7 +484,9 @@ data class ResourceCheckError(
   override val application: String,
   override val timestamp: Instant,
   val exceptionType: Class<out SpinnakerException>,
-  val exceptionMessage: String?
+  val exceptionMessage: String?,
+  override val displayName: String = "State check error",
+  override val level: EventLevel = EventLevel.ERROR,
 ) : ResourceCheckResult(message = exceptionMessage) {
   @JsonIgnore
   override val state = Error
@@ -481,7 +511,9 @@ data class ResourceDiffNotActionable(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val message: String?
+  override val message: String?,
+  override val level: EventLevel = EventLevel.WARNING,
+  override val displayName: String = "Unable to resolve state diff",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true

@@ -32,7 +32,9 @@ abstract class ApplicationEvent(
 data class ApplicationActuationPaused(
   override val application: String,
   override val timestamp: Instant,
-  override val triggeredBy: String?
+  override val triggeredBy: String?,
+  override val level: EventLevel = EventLevel.WARNING,
+  override val displayName: String = "Application management paused",
 ) : ApplicationEvent(), ResourceHistoryEvent {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -50,7 +52,9 @@ data class ApplicationActuationPaused(
 data class ApplicationActuationResumed(
   override val application: String,
   override val triggeredBy: String?,
-  override val timestamp: Instant
+  override val timestamp: Instant,
+  override val level: EventLevel = EventLevel.INFO,
+  override val displayName: String = "Application management resumed",
 ) : ApplicationEvent(), ResourceHistoryEvent {
   @JsonIgnore override val ignoreRepeatedInHistory = true
 
