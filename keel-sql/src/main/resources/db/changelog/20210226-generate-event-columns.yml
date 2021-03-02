@@ -14,17 +14,11 @@ databaseChangeLog:
         indexName: event_scope_application_timestamp_idx
     - dropColumn:
         tableName: event
-        columnName: ref
-    - dropColumn:
-        tableName: event
         columnName: application
-    - dropColumn:
-        tableName: event
-        columnName: timestamp
     - sql:
         sql: |
           alter table event
-          add column ref varchar(255) generated always as (json ->> '$.ref')
+          add column ref_gen varchar(255) generated always as (json ->> '$.ref')
           not null
           after scope;
     - sql:
@@ -32,7 +26,7 @@ databaseChangeLog:
           alter table event
           add column application varchar(255) generated always as (json ->> '$.application')
           not null
-          after ref;
+          after ref_gen;
     - sql:
         sql: |
           update event
@@ -45,7 +39,7 @@ databaseChangeLog:
     - sql:
         sql: |
           alter table event
-          add column timestamp datetime(3) generated always as (str_to_date(json->>'$.timestamp', '%Y-%m-%dT%T.%fZ'))
+          add column timestamp_gen datetime(3) generated always as (str_to_date(json->>'$.timestamp', '%Y-%m-%dT%T.%fZ'))
           after application;
     - createIndex:
         tableName: event
@@ -54,7 +48,7 @@ databaseChangeLog:
         - column:
             name: uid
         - column:
-            name: timestamp
+            name: timestamp_gen
             descending: true
     - createIndex:
         tableName: event
@@ -63,9 +57,9 @@ databaseChangeLog:
         - column:
             name: scope
         - column:
-            name: ref
+            name: ref_gen
         - column:
-            name: timestamp
+            name: timestamp_gen
             descending: true
     - createIndex:
         tableName: event
@@ -76,5 +70,5 @@ databaseChangeLog:
         - column:
             name: application
         - column:
-            name: timestamp
+            name: timestamp_gen
             descending: true

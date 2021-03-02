@@ -184,8 +184,8 @@ open class SqlResourceRepository(
         .select(EVENT.JSON)
         .from(EVENT)
         .where(EVENT.SCOPE.eq(EventScope.APPLICATION))
-        .and(EVENT.REF.eq(application))
-        .orderBy(EVENT.TIMESTAMP.desc())
+        .and(EVENT.REF_GEN.eq(application))
+        .orderBy(EVENT.TIMESTAMP_GEN.desc())
         .limit(limit)
         .fetch(EVENT.JSON)
         .filterIsInstance<ApplicationEvent>()
@@ -198,9 +198,9 @@ open class SqlResourceRepository(
         .select(EVENT.JSON)
         .from(EVENT)
         .where(EVENT.SCOPE.eq(EventScope.APPLICATION))
-        .and(EVENT.REF.eq(application))
-        .and(EVENT.TIMESTAMP.greaterOrEqual(after))
-        .orderBy(EVENT.TIMESTAMP.desc())
+        .and(EVENT.REF_GEN.eq(application))
+        .and(EVENT.TIMESTAMP_GEN.greaterOrEqual(after))
+        .orderBy(EVENT.TIMESTAMP_GEN.desc())
         .fetch(EVENT.JSON)
         .filterIsInstance<ApplicationEvent>()
     }
@@ -216,14 +216,14 @@ open class SqlResourceRepository(
         // look for resource events that match the resource...
         .where(
           EVENT.SCOPE.eq(EventScope.RESOURCE)
-            .and(EVENT.REF.eq(id))
+            .and(EVENT.REF_GEN.eq(id))
         )
         // ...or application events that match the application as they apply to all resources
         .or(
           EVENT.SCOPE.eq(EventScope.APPLICATION)
             .and(EVENT.APPLICATION.eq(applicationForId(id)))
         )
-        .orderBy(EVENT.TIMESTAMP.desc())
+        .orderBy(EVENT.TIMESTAMP_GEN.desc())
         .limit(limit)
         .fetch(EVENT.JSON)
         // filter out application events that don't affect resource history
@@ -233,14 +233,16 @@ open class SqlResourceRepository(
 
   // todo: add sql retries once we've rethought repository structure: https://github.com/spinnaker/keel/issues/740
   override fun appendHistory(event: ResourceEvent) {
-    doAppendHistory(event)
+    // for historical reasons, we use the resource UID (not the ID) as an identifier in resource events
+    val ref = getResourceUid(event.ref, event.version)
+    doAppendHistory(event, ref)
   }
 
   override fun appendHistory(event: ApplicationEvent) {
-    doAppendHistory(event)
+    doAppendHistory(event, event.application)
   }
 
-  private fun doAppendHistory(event: PersistentEvent) {
+  private fun doAppendHistory(event: PersistentEvent, ref: String) {
     log.debug("Appending event: $event")
 
     if (event.ignoreRepeatedInHistory) {
@@ -251,14 +253,14 @@ open class SqlResourceRepository(
           // look for resource events that match the resource...
           .where(
             EVENT.SCOPE.eq(EventScope.RESOURCE)
-              .and(EVENT.REF.eq(event.ref))
+              .and(EVENT.REF_GEN.eq(event.ref))
           )
           // ...or application events that match the application as they apply to all resources
           .or(
             EVENT.SCOPE.eq(EventScope.APPLICATION)
               .and(EVENT.APPLICATION.eq(event.application))
           )
-          .orderBy(EVENT.TIMESTAMP.desc())
+          .orderBy(EVENT.TIMESTAMP_GEN.desc())
           .limit(1)
           .fetchOne(EVENT.JSON)
       }
@@ -271,6 +273,8 @@ open class SqlResourceRepository(
         .insertInto(EVENT)
         .set(EVENT.UID, ULID().nextULID(event.timestamp.toEpochMilli()))
         .set(EVENT.SCOPE, event.scope)
+        .set(EVENT.REF, ref)
+        .set(EVENT.TIMESTAMP, event.timestamp)
         .set(EVENT.JSON, event)
         .execute()
     }
@@ -291,7 +295,7 @@ open class SqlResourceRepository(
     sqlRetry.withRetry(WRITE) {
       jooq.deleteFrom(EVENT)
         .where(EVENT.SCOPE.eq(EventScope.RESOURCE))
-        .and(EVENT.REF.eq(id))
+        .and(EVENT.REF_GEN.eq(id))
         .execute()
     }
     sqlRetry.withRetry(WRITE) {
