@@ -36,6 +36,7 @@ import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.contains
 import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
@@ -111,11 +112,11 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
       repository.getByApplication(deliveryConfig.application)
     }
 
-    fun store(deliveryConfig: DeliveryConfig = this.deliveryConfig) {
+    fun store() {
       repository.store(deliveryConfig)
     }
 
-    fun storeResources(deliveryConfig: DeliveryConfig = this.deliveryConfig) {
+    fun storeResources() {
       deliveryConfig.environments.flatMap { it.resources }.forEach {
         resourceRepository.store(it)
       }
@@ -276,7 +277,6 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
           )
         )
       }
-
 
       test("resources in an environment can be rechecked") {
         // note: this test needs to be here even though it's testing a resource repository function
@@ -490,8 +490,12 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
         test("can retrieve the manifest for the resources") {
           val resource = deliveryConfig.resources.random()
           val persistedDeliveryConfig = repository.deliveryConfigFor(resource.id)
+            .let {
+              // disregard `createdAt` which is added when reading from the database
+              it.copy(metadata = it.metadata.filterKeys { k -> k != "createdAt" })
+            }
           expectThat(persistedDeliveryConfig)
-            .isEqualTo(deliveryConfig.copy(metadata = persistedDeliveryConfig.metadata))
+            .isEqualTo(deliveryConfig)
         }
       }
 
@@ -704,25 +708,14 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
       }
     }
 
-    context("multiple delivery configs exist") {
-      before {
-        (1..5).forEach { index ->
-          val resources = setOf(
-            resource(
-              application = "${deliveryConfig.application}$index",
-              kind = parseKind("ec2/cluster@v1")
-            ),
-            resource(
-              application = "${deliveryConfig.application}$index",
-              kind = parseKind("ec2/security-group@v1")
-            )
-          )
-          val deliveryConfig = deliveryConfig.copy(
-            application = "${deliveryConfig.application}$index",
-            name = "${deliveryConfig.name}$index",
-            artifacts = setOf(
-              artifact, artifactFromBranch
-            ),
+    context("delivery config with resources exists") {
+      deriveFixture {
+        val resources = setOf(
+          resource(kind = parseKind("ec2/cluster@v1")),
+          resource(kind = parseKind("ec2/security-group@v1"))
+        )
+        copy(
+          deliveryConfig = deliveryConfig.copy(
             environments = setOf(
               Environment(
                 name = "test",
@@ -734,33 +727,31 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
               )
             )
           )
-          store(deliveryConfig)
-          storeResources(deliveryConfig)
-        }
+        )
       }
 
-      test("application summaries can be retrieved successfully") {
-        val persistedDeliveryConfigs = (1..5).map { index ->
-          repository.get("${deliveryConfig.name}$index")
+      before {
+        store()
+        storeResources()
+      }
+
+      test("application summary can be retrieved successfully") {
+        val appSummary = with(repository.get(deliveryConfig.name)) {
+          ApplicationSummary(
+            deliveryConfigName = name,
+            application = application,
+            serviceAccount = serviceAccount,
+            apiVersion = apiVersion,
+            createdAt = metadata["createdAt"] as Instant,
+            resourceCount = 4, // 2 from test, 2 from staging
+            isPaused = false
+          )
         }
 
         expectThat(repository.getApplicationSummaries())
-          .hasSize(5)
-          .containsExactlyInAnyOrder(
-            (0..4).map { index ->
-              with (persistedDeliveryConfigs[index]) {
-                ApplicationSummary(
-                  deliveryConfigName = name,
-                  application = application,
-                  serviceAccount = serviceAccount,
-                  apiVersion = apiVersion,
-                  createdAt = metadata["createdAt"] as Instant,
-                  resourceCount = 4, // 2 from test, 2 from staging
-                  isPaused = false
-                )
-              }
-            }
-          )
+          .hasSize(1)
+          .first()
+          .isEqualTo(appSummary)
       }
     }
   }
