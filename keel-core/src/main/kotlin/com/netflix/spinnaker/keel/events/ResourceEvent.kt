@@ -89,7 +89,7 @@ data class ResourceCreated(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val displayName: String = "Created",
+  override val displayName: String = "Resource definition created",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
@@ -114,7 +114,7 @@ data class ResourceUpdated(
   override val application: String,
   val delta: Map<String, Any?>,
   override val timestamp: Instant,
-  override val displayName: String = "Config updated",
+  override val displayName: String = "Resource definition updated",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, delta: Map<String, Any?>, clock: Clock = Companion.clock) : this(
     resource.kind,
@@ -132,7 +132,7 @@ data class ResourceDeleted(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val displayName: String = "Deleted",
+  override val displayName: String = "Resource definition deleted",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this(
     resource.kind,
@@ -161,7 +161,7 @@ data class ResourceMissing(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val displayName: String = "Missing",
+  override val displayName: String = "Resource not found",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Missing
@@ -187,7 +187,7 @@ data class ResourceDeltaDetected(
   override val application: String,
   val delta: Map<String, Any?>,
   override val timestamp: Instant,
-  override val displayName: String = "Difference detected",
+  override val displayName: String = "Resource does not match current definition",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Diff
@@ -215,7 +215,7 @@ data class ResourceActuationLaunched(
   val tasks: List<Task>,
   override val timestamp: Instant,
 
-  override val displayName: String = "Update started",
+  override val displayName: String = "Updating resource to match current definition",
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, plugin: String, tasks: List<Task>, clock: Clock = Companion.clock) :
     this(
@@ -239,7 +239,7 @@ data class ResourceActuationPaused(
   override val application: String,
   override val timestamp: Instant,
   override val triggeredBy: String?,
-  override val displayName: String = "Update paused",
+  override val displayName: String = "Resource management paused",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -276,7 +276,7 @@ data class ResourceActuationVetoed(
   val suggestedStatus: ResourceStatus? = null,
   override val timestamp: Instant,
   override val level: EventLevel = WARNING,
-  override val displayName: String = "Update terminated",
+  override val displayName: String = "Unable to update resource to match current definition${if (reason != null) " - $reason" else ""}",
 ) : ResourceEvent(message = reason) {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -303,7 +303,7 @@ data class ResourceActuationResumed(
   override val application: String,
   override val triggeredBy: String?,
   override val timestamp: Instant,
-  override val displayName: String = "Update continued",
+  override val displayName: String = "Resource management resumed",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
@@ -332,7 +332,7 @@ data class ResourceTaskFailed(
   val tasks: List<Task> = emptyList(),
   override val timestamp: Instant,
   override val level: EventLevel = ERROR,
-  override val displayName: String = "Update failed",
+  override val displayName: String = "Failed to update resource to match definition${if (reason != null) " - $reason" else ""}",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, reason: String?, tasks: List<Task>, clock: Clock = Companion.clock) : this(
@@ -357,7 +357,7 @@ data class ResourceTaskSucceeded(
   val tasks: List<Task> = emptyList(),
   override val timestamp: Instant,
   override val level: EventLevel = SUCCESS,
-  override val displayName: String = "Update succeeded",
+  override val displayName: String = "Resource update task succeeded",
 ) : ResourceEvent() {
 
   constructor(resource: Resource<*>, tasks: List<Task>, clock: Clock = Companion.clock) : this(
@@ -381,7 +381,7 @@ data class ResourceDeltaResolved(
   override val application: String,
   override val timestamp: Instant,
   override val level: EventLevel = SUCCESS,
-  override val displayName: String = "Difference resolved",
+  override val displayName: String = "Resource was matched to its definition successfully",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Ok
@@ -402,7 +402,7 @@ data class ResourceValid(
   override val application: String,
   override val timestamp: Instant,
   override val level: EventLevel = SUCCESS,
-  override val displayName: String = "Valid",
+  override val displayName: String = "Resource matches its definition",
 ) : ResourceCheckResult() {
   @JsonIgnore
   override val state = Ok
@@ -428,7 +428,7 @@ data class ResourceCheckUnresolvable(
   override val timestamp: Instant,
   override val message: String?,
   override val level: EventLevel = WARNING,
-  override val displayName: String = "Failed to resolve state difference",
+  override val displayName: String = "Unable to compare resource to its definition${if (message != null) " - $message" else ""}",
 ) : ResourceCheckResult(message = message) {
   @JsonIgnore
   override val state = Unresolvable
@@ -481,7 +481,7 @@ data class ResourceCheckError(
   override val timestamp: Instant,
   val exceptionType: Class<out SpinnakerException>,
   val exceptionMessage: String?,
-  override val displayName: String = "State check error",
+  override val displayName: String = "Failed to check resource status",
   override val level: EventLevel = ERROR,
 ) : ResourceCheckResult(message = exceptionMessage) {
   @JsonIgnore
@@ -509,7 +509,7 @@ data class ResourceDiffNotActionable(
   override val timestamp: Instant,
   override val message: String?,
   override val level: EventLevel = WARNING,
-  override val displayName: String = "Unable to resolve state difference",
+  override val displayName: String = "Unable to update resource to match current definition${if (message != null) " - $message" else ""}",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
