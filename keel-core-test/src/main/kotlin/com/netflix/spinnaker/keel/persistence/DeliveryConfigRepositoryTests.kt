@@ -489,13 +489,10 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
 
         test("can retrieve the manifest for the resources") {
           val resource = deliveryConfig.resources.random()
-          val persistedDeliveryConfig = repository.deliveryConfigFor(resource.id)
-            .let {
-              // disregard `createdAt` which is added when reading from the database
-              it.copy(metadata = it.metadata.filterKeys { k -> k != "createdAt" })
-            }
-          expectThat(persistedDeliveryConfig)
-            .isEqualTo(deliveryConfig)
+          getDeliveryConfig(resource)
+            .isSuccess()
+            .get { name }
+            .isEqualTo(deliveryConfig.name)
         }
       }
 
