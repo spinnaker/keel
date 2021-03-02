@@ -36,6 +36,9 @@ class VerificationRunner(
       .map {
         Triple(it.context.version, it.verification.id, it.context.latestStatus(it.verification))
       }
+      .filterNot { (_, _, status) ->
+        status?.complete ?: false
+      }
       .let {
         if (it.isNotEmpty()) {
           it.forEach { (version, id, status)->

@@ -273,6 +273,64 @@ internal class VerificationRunnerTests {
   }
 
   @ParameterizedTest(
+    name = "continues to the next if any verification for a previous artifact version was already running and has now completed with {0}"
+  )
+  @EnumSource(
+    value = ConstraintStatus::class,
+    names = ["PASS", "FAIL"]
+  )
+  fun `continues to the next if any verification for a previous artifact version was already running and has now completed`(status: ConstraintStatus) {
+    val verification = DummyVerification("1")
+    val context1 = VerificationContext(
+      deliveryConfig = DeliveryConfig(
+        application = "fnord",
+        name = "fnord-manifest",
+        serviceAccount = "jamm@illuminati.org",
+        artifacts = setOf(
+          DockerArtifact(name = "fnord", reference = "fnord-docker")
+        ),
+        environments = setOf(
+          Environment(
+            name = "test",
+            verifyWith = listOf(verification)
+          )
+        )
+      ),
+      environmentName = "test",
+      artifactReference = "fnord-docker",
+      version = "fnord-0.190.0-h378.eacb135"
+    )
+    val context2 = context1.copy(
+      version = "fnord-0.191.0-h379.d4d9ec0"
+    )
+
+    // a verification for a prior version was running…
+    every { repository.pendingInEnvironment(any(), any())} returns listOf(
+      PendingVerification(context1, verification, VerificationState(PENDING, now(), null))
+    )
+    every { repository.getState(context1, verification) } returns PENDING.toState()
+
+    // … but has now completed
+    every { evaluator.evaluate(context1, verification, any()) } returns status
+
+    // nothing was running for the new version yet
+    every { repository.getState(context2, any()) } returns null
+
+    every { evaluator.start(any(), any()) } returns emptyMap()
+
+    subject.runVerificationsFor(context2)
+
+    // marks the verification for the prior version complete
+    verify { repository.updateState(context1, verification, status) }
+    verify { publisher.publishEvent(ofType<VerificationCompleted>()) }
+
+    // launches the verification for the new version
+    verify { evaluator.start(context2, verification) }
+    verify { repository.updateState(context2, verification, PENDING, mapOf("images" to images)) }
+    verify { publisher.publishEvent(ofType<VerificationStarted>()) }
+  }
+
+  @ParameterizedTest(
     name = "no-ops if all verifications are already complete and the final one is {0}"
   )
   @EnumSource(
