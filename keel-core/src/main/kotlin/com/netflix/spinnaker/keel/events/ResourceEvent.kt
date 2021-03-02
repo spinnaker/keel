@@ -432,7 +432,7 @@ data class ResourceCheckUnresolvable(
   override val timestamp: Instant,
   override val message: String?,
   override val level: EventLevel = EventLevel.WARNING,
-  override val displayName: String = "Failed to resolved state diff",
+  override val displayName: String = "Failed to resolve state diff",
 ) : ResourceCheckResult(message = message) {
   @JsonIgnore
   override val state = Unresolvable
