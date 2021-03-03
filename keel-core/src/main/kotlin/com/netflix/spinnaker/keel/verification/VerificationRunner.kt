@@ -91,8 +91,11 @@ class VerificationRunner(
     }
   }
 
+  /**
+   * `true` if any of the statuses is [PENDING], `false` if none are or the collection is empty.
+   */
   private val Collection<Pair<*, ConstraintStatus?>>.anyStillRunning: Boolean
-    get() = !none { (_, status) -> status == PENDING }
+    get() = any { (_, status) -> status == PENDING }
 
   private val Collection<Pair<Verification, ConstraintStatus?>>.firstOutstanding: Verification?
     get() = firstOrNull { (_, status) -> status in listOf(null, NOT_EVALUATED) }?.first
