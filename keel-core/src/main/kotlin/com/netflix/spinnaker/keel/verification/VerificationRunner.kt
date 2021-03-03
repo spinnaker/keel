@@ -32,17 +32,20 @@ class VerificationRunner(
 
     verificationRepository
       .pendingInEnvironment(context.deliveryConfig, context.environmentName)
-      .filter { it.context.version != context.version }
-      .map {
-        Triple(it.context.version, it.verification.id, it.context.latestStatus(it.verification))
-      }
-      .filterNot { (_, _, status) ->
+      // only consider other versions, we'll handle verifications for the version in context later
+      .filterNot { it.context.version == context.version }
+      // get the latest status by re-evaluating each one (which will update in the database)
+      .associateWith { it.context.latestStatus(it.verification) }
+      // filter out things that have now completed (since we last checked)
+      .filterNot { (_,  status) ->
         status?.complete ?: false
       }
-      .let {
-        if (it.isNotEmpty()) {
-          it.forEach { (version, id, status)->
-            log.debug("Previous verification {} for {} is still {}", id, version, status)
+      .let { pendingVerifications ->
+        // if we still have any pending verifications then something is still running for a previous
+        // version of the artifact -- we should wait
+        if (pendingVerifications.isNotEmpty()) {
+          pendingVerifications.forEach { (pendingVerification, status)->
+            log.debug("Previous verification {} for {} is still {}", pendingVerification.verification.id, pendingVerification.context.version, status)
           }
           return
         }
