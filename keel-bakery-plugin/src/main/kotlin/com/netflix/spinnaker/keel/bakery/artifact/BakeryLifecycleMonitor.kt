@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.config.LifecycleConfig
 import com.netflix.spinnaker.keel.artifacts.BakedImage
-import com.netflix.spinnaker.keel.bakery.BaseImageCache
+import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus
@@ -48,7 +48,7 @@ class BakeryLifecycleMonitor(
   private val orcaService: OrcaService,
   @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
   private val bakedImageRepository: BakedImageRepository,
-  private val baseImageCache: BaseImageCache,
+  private val imageService: ImageService,
   private val objectMapper: ObjectMapper,
   private val clock: Clock
 ): LifecycleMonitor(monitorRepository, publisher, lifecycleConfig) {
@@ -92,7 +92,7 @@ class BakeryLifecycleMonitor(
    * If there's a problem parsing we log an error and move on, because we will see
    * the image in clouddriver eventually.
    */
-  fun storeBakedImage(execution: ExecutionDetailResponse) {
+  suspend fun storeBakedImage(execution: ExecutionDetailResponse) {
     // we know we launch a bake task with a stage called "bake".
     val bakeStageRaw = execution.execution.stages?.find { it["type"] == "bake" }
     if (bakeStageRaw == null) {
@@ -115,7 +115,7 @@ class BakeryLifecycleMonitor(
         vmType = details.first().vmType,
         cloudProvider = details.first().cloudProviderType,
         appVersion = details.first().`package`.substringBefore("_all.deb").replaceFirst("_", "-"),
-        baseAmiVersion = baseImageCache.getVersionByImageId(details.first().baseAmiId, details.first().region),
+        baseAmiVersion = imageService.findBaseAmiVersion(details.first().baseAmiId, details.first().region),
         timestamp = execution.endTime ?: clock.instant(),
         amiIdsByRegion = details.associate { regionDetail -> regionDetail.region to regionDetail.imageId }
       )
