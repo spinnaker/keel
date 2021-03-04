@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.parseMoniker
+import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.clearMDC
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.yaml.APPLICATION_YAML_VALUE
 import kotlinx.coroutines.runBlocking
@@ -74,7 +75,7 @@ class ExportController(
     val handler = handlers.supporting(kind)
     val exportable = generateExportable(cloudProvider, type, account, user, name)
 
-    return runBlocking {
+    return runBlocking(clearMDC) {
       withTracingContext(exportable) {
         log.info("Exporting resource ${exportable.toResourceId()}")
         SubmittedResource(
@@ -99,7 +100,7 @@ class ExportController(
     val handler = handlers.supporting(kind)
     val exportable = generateExportable(cloudProvider, "cluster", account, user, name)
 
-    return runBlocking {
+    return runBlocking(clearMDC) {
       withTracingContext(exportable) {
         log.info("Exporting artifact from cluster ${exportable.toResourceId()}")
         handler.exportArtifact(exportable)
