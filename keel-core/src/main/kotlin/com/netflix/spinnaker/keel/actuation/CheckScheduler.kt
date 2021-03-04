@@ -2,7 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
-import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.clearMDC
+import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.blankMDC
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.AgentInvocationComplete
@@ -20,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import org.slf4j.LoggerFactory
@@ -77,7 +76,7 @@ class CheckScheduler(
   fun checkResources() {
     if (enabled.get()) {
       val startTime = clock.instant()
-      val job = launch(clearMDC) {
+      val job = launch(blankMDC) {
         supervisorScope {
           runCatching {
             repository
@@ -116,7 +115,7 @@ class CheckScheduler(
     if (enabled.get()) {
       publisher.publishEvent(ScheduledEnvironmentCheckStarting)
 
-      val job = launch(clearMDC) {
+      val job = launch(blankMDC) {
         supervisorScope {
           repository
             .deliveryConfigsDueForCheck(checkMinAge, resourceCheckBatchSize)
@@ -151,7 +150,7 @@ class CheckScheduler(
     if (enabled.get()) {
       val startTime = clock.instant()
       publisher.publishEvent(ScheduledArtifactCheckStarting)
-      val job = launch(clearMDC) {
+      val job = launch(blankMDC) {
         supervisorScope {
           repository.artifactsDueForCheck(checkMinAge, resourceCheckBatchSize)
             .forEach { artifact ->
@@ -181,7 +180,7 @@ class CheckScheduler(
       val startTime = clock.instant()
       publisher.publishEvent(ScheduledEnvironmentVerificationStarting)
 
-      val job = launch(clearMDC) {
+      val job = launch(blankMDC) {
         supervisorScope {
           repository
             .nextEnvironmentsForVerification(environmentVerificationMinAge, environmentVerificationBatchSize)
@@ -215,7 +214,7 @@ class CheckScheduler(
         val agentName: String = it.javaClass.simpleName
         val lockAcquired = agentLockRepository.tryAcquireLock(agentName, it.lockTimeoutSeconds)
         if (lockAcquired) {
-          runBlocking(clearMDC) {
+          runBlocking(blankMDC) {
             it.invokeAgent()
           }
           publisher.publishEvent(AgentInvocationComplete(Duration.between(startTime, clock.instant()), agentName))
