@@ -137,7 +137,7 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
     }
       .isSuccess()
       .map(PendingVerification::context)
-      .containsExactlyInAnyOrder(context2, context3)
+      .containsExactlyInAnyOrder(context2)
   }
 
   @Test

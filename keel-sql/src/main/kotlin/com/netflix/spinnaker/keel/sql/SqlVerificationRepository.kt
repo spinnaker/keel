@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PENDING
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.verification.PendingVerification
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
@@ -309,7 +310,7 @@ class SqlVerificationRepository(
       .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
       .join(DELIVERY_ARTIFACT)
       .on(DELIVERY_ARTIFACT.UID.eq(VERIFICATION_STATE.ARTIFACT_UID))
-      .and(VERIFICATION_STATE.ENDED_AT.isNull)
+      .where(VERIFICATION_STATE.STATUS.eq(PENDING))
       .fetch { (artifactReference, artifactVersion, verificationId, status, startedAt, endedAt, metadata) ->
         VerificationContext(
           deliveryConfig,
