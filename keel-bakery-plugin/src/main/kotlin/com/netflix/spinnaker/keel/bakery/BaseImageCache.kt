@@ -12,5 +12,12 @@ interface BaseImageCache {
    */
   fun getBaseAmiVersion(os: String, label: BaseLabel): String
 
+  /**
+   * @param the image of the base id
+   * @return the base AMI version (i.e. the "appversion" of the base AMI) of the requested base
+   * @throws UnknownBaseImageId if there is no base image know with that id
+   */
+  fun getVersionByImageId(imageId: String, region: String): String
+
   val allVersions: Map<String, Map<String, String>>
 }

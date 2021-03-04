@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-baked-images
+      author: emjburns
+      changes:
+        - createTable:
+            tableName: baked_images
+            columns:
+              - column:
+                  name: package_version
+                  type: varchar(150)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cloud_provider
+                  type: varchar(50)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: base_os
+                  type: varchar(50)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: base_label
+                  type: varchar(50)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: time_detected
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: image
+                  type: json
+                  constraints:
+                    nullable: true
+        - modifySql:
+            dbms: mysql
+            append:
+              value: " engine innodb"

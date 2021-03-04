@@ -20,6 +20,10 @@ class DefaultBaseImageCache(
   override fun getBaseAmiVersion(os: String, label: BaseLabel) =
     baseImages[os]?.get(label.name.toLowerCase()) ?: throw UnknownBaseImage(os, label)
 
+  override fun getVersionByImageId(imageId: String, region: String): String {
+    TODO("not implemented")
+  }
+
   override val allVersions: Map<String, Map<String, String>>
     get() = baseImages
 }
