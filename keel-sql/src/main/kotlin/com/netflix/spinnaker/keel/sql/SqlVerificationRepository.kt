@@ -1,9 +1,11 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
+import com.netflix.spinnaker.keel.api.verification.PendingVerification
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
@@ -20,20 +22,15 @@ import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.deliveryConfigByName
-import org.jooq.DSLContext
-import org.jooq.Field
-import org.jooq.Record1
-import org.jooq.Record4
-import org.jooq.Select
-import org.jooq.SelectOrderByStep
-import org.jooq.impl.DSL.function
-import org.jooq.Table
+import org.jooq.*
 import org.jooq.impl.DSL.field
+import org.jooq.impl.DSL.function
 import org.jooq.impl.DSL.inline
 import org.jooq.impl.DSL.isnull
 import org.jooq.impl.DSL.name
 import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.value
+import org.springframework.core.env.Environment
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant.EPOCH
@@ -45,7 +42,8 @@ class SqlVerificationRepository(
   objectMapper: ObjectMapper,
   sqlRetry: SqlRetry,
   artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList(),
-  specMigrators: List<SpecMigrator<*, *>> = emptyList()
+  specMigrators: List<SpecMigrator<*, *>> = emptyList(),
+  private val environment: Environment
 ) : SqlStorageContext(
   jooq,
   clock,
@@ -55,6 +53,9 @@ class SqlVerificationRepository(
   artifactSuppliers,
   specMigrators
 ), VerificationRepository {
+
+  private val useLockingRead : Boolean
+    get() = environment.getProperty("keel.verifications.db.lock.reads.enabled", Boolean::class.java, true)
 
   override fun nextEnvironmentsForVerification(
     minTimeSinceLastCheck: Duration,
@@ -102,6 +103,7 @@ class SqlVerificationRepository(
           // order by last time checked with things never checked coming first
           .orderBy(isnull(ENVIRONMENT_LAST_VERIFIED.AT, EPOCH))
           .limit(limit)
+          .lockInShareMode()
           .fetch()
           .onEach { (_, _, environmentUid, _, artifactUid, _, artifactVersion) ->
             insertInto(ENVIRONMENT_LAST_VERIFIED)
@@ -284,6 +286,48 @@ class SqlVerificationRepository(
     }
   }
 
+  override fun pendingInEnvironment(
+    deliveryConfig: DeliveryConfig,
+    environmentName: String
+  ): Collection<PendingVerification> {
+    return jooq
+      .select(
+        DELIVERY_ARTIFACT.REFERENCE,
+        VERIFICATION_STATE.ARTIFACT_VERSION,
+        VERIFICATION_STATE.VERIFICATION_ID,
+        VERIFICATION_STATE.STATUS,
+        VERIFICATION_STATE.STARTED_AT,
+        VERIFICATION_STATE.ENDED_AT,
+        VERIFICATION_STATE.METADATA,
+      )
+      .from(VERIFICATION_STATE)
+      .join(ENVIRONMENT)
+      .on(ENVIRONMENT.UID.eq(VERIFICATION_STATE.ENVIRONMENT_UID))
+      .and(ENVIRONMENT.NAME.eq(environmentName))
+      .join(DELIVERY_CONFIG)
+      .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+      .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+      .join(DELIVERY_ARTIFACT)
+      .on(DELIVERY_ARTIFACT.UID.eq(VERIFICATION_STATE.ARTIFACT_UID))
+      .and(VERIFICATION_STATE.ENDED_AT.isNull)
+      .fetch { (artifactReference, artifactVersion, verificationId, status, startedAt, endedAt, metadata) ->
+        VerificationContext(
+          deliveryConfig,
+          environmentName,
+          artifactReference,
+          artifactVersion
+        ).let { context ->
+          PendingVerification(
+            context = context,
+            verification = checkNotNull(context.verification(verificationId)) {
+              "No verification with id $verificationId found"
+            },
+            state = VerificationState(status, startedAt, endedAt, metadata)
+          )
+        }
+      }
+  }
+
   /**
    * JOOQ-ified access to MySQL's `json_merge` function.
    *
@@ -389,4 +433,16 @@ class SqlVerificationRepository(
           ?.asTable(alias, ind, environmentName, artifactReference, artifactVersion)
   }
 
+  /**
+   * Set a share mode lock on a select query to prevent phantom reads in a transaction.
+   *
+   * In MySQL 5.7, this is `LOCK IN SHARE MODE`
+   * See https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html
+   */
+  private fun <R : Record?> SelectForUpdateStep<R>.lockInShareMode(): SelectOptionStep<R> =
+    if(useLockingRead) {
+      this.forShare()
+    } else {
+      this
+    }
 }
