@@ -7,6 +7,11 @@ databaseChangeLog:
             tableName: baked_images
             columns:
               - column:
+                  name: time_detected
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
                   name: image
                   type: json
                   constraints:
@@ -22,32 +27,27 @@ databaseChangeLog:
         - sql:
             sql: |
               alter table baked_images
-              add column package_version varchar(150) generated always as (image ->> '$.packageVersion')
+              add column package_version varchar(150) generated always as (image ->> '$.appVersion')
               not null
               first;
         - sql:
             sql: |
               alter table baked_images
-              add column cloud_provider varchar(150) generated always as (image ->> '$.cloudProvider')
+              add column cloud_provider varchar(50) generated always as (image ->> '$.cloudProvider')
               not null
               after package_version;
         - sql:
             sql: |
               alter table baked_images
-              add column base_label varchar(150) generated always as (image ->> '$.baseLabel')
+              add column base_label varchar(50) generated always as (image ->> '$.baseLabel')
               not null
               after cloud_provider;
         - sql:
             sql: |
               alter table baked_images
-              add column base_os varchar(150) generated always as (image ->> '$.baseOs')
+              add column base_os varchar(50) generated always as (image ->> '$.baseOs')
               not null
               after base_label;
-        - sql:
-            sql: |
-              alter table baked_images
-              add column time_detected datetime(3) generated always as (str_to_date(image->>'$.timestamp', '%Y-%m-%dT%T.%fZ'))
-              after base_os;
   - changeSet:
       id: create-baked-image-indicies
       author: emjburns

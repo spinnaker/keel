@@ -26,6 +26,7 @@ class SqlBakedImageRepository(
       jooq
         .insertInto(BAKED_IMAGES)
         .set(BAKED_IMAGES.IMAGE, objectMapper.writeValueAsString(image))
+        .set(BAKED_IMAGES.TIME_DETECTED, clock.instant())
         .onDuplicateKeyIgnore()
         .execute()
     }
