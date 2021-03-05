@@ -25,18 +25,13 @@ class SqlBakedImageRepository(
     sqlRetry.withRetry(WRITE) {
       jooq
         .insertInto(BAKED_IMAGES)
-        .set(BAKED_IMAGES.PACKAGE_VERSION, image.appVersion)
-        .set(BAKED_IMAGES.CLOUD_PROVIDER, image.cloudProvider)
-        .set(BAKED_IMAGES.BASE_OS, image.baseOs)
-        .set(BAKED_IMAGES.BASE_LABEL, image.baseLabel.name)
-        .set(BAKED_IMAGES.TIME_DETECTED, clock.instant())
         .set(BAKED_IMAGES.IMAGE, objectMapper.writeValueAsString(image))
         .onDuplicateKeyIgnore()
         .execute()
     }
   }
 
-  override fun getLatestByArtfiactVerstion(version: String, artifact: DebianArtifact): BakedImage? {
+  override fun getByArtifactVersion(version: String, artifact: DebianArtifact): BakedImage? {
      return sqlRetry.withRetry(READ) {
       jooq
         .select(BAKED_IMAGES.IMAGE)

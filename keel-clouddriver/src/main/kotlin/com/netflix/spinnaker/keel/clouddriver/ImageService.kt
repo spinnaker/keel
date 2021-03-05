@@ -170,7 +170,7 @@ class ImageService(
   }
 
   /**
-   * Extracts the base ami version from the tages of a named image
+   * Extracts the base ami version from the tags of a named image
    */
   private fun findBaseAmiVersion(image: NamedImage): String? =
     image

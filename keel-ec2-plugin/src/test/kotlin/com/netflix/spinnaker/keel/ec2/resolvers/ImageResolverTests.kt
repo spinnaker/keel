@@ -68,7 +68,7 @@ internal class ImageResolverTests : JUnit5Minutests {
       every { log } returns LoggerFactory.getLogger(ImageService::class.java)
     }
     val bakedImageRepository: BakedImageRepository = mockk(relaxUnitFun = true) {
-      every { getLatestByArtfiactVerstion(any(), any()) } returns null
+      every { getByArtifactVersion(any(), any()) } returns null
     }
     private val subject = ImageResolver(
       dynamicConfigService,
@@ -244,7 +244,7 @@ internal class ImageResolverTests : JUnit5Minutests {
           context("an image is found in our list of images") {
             before {
               every {
-                bakedImageRepository.getLatestByArtfiactVerstion("${artifact.name}-$version2", artifact)
+                bakedImageRepository.getByArtifactVersion("${artifact.name}-$version2", artifact)
               } returns bakedImage
             }
 
@@ -293,7 +293,7 @@ internal class ImageResolverTests : JUnit5Minutests {
           context("all regions are found in our list of images") {
             before {
               every {
-                bakedImageRepository.getLatestByArtfiactVerstion("${artifact.name}-$version2", artifact)
+                bakedImageRepository.getByArtifactVersion("${artifact.name}-$version2", artifact)
               } returns bakedImage.copy(amiIdsByRegion = bakedImage.amiIdsByRegion + mapOf("cn-north-1" to "ami-2"))
             }
 

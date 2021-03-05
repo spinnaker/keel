@@ -96,37 +96,37 @@ class BakeryLifecycleMonitor(
     // we know we launch a bake task with a stage called "bake".
     val bakeStageRaw = execution.execution.stages?.find { it["type"] == "bake" }
     if (bakeStageRaw == null) {
-      log.error("Trying to find baked ami information, but can't find a bake stage in execution ${execution.id}")
+      log.error("Trying to find baked ami information, but can't find a bake stage for app ${execution.application} in execution ${execution.id}")
       return
     }
     try {
       val bakeStage = objectMapper.convertValue<BakeStage>(bakeStageRaw)
       val details = bakeStage.outputs.deploymentDetails
       if (details.isEmpty()) {
-        log.error("No bake details in the bake stage in execution ${execution.id}")
+        log.error("No bake details in the bake stage for app ${execution.application} in execution ${execution.id}")
+        return
       }
 
       // use the first region present because the only difference should be in ami id and region name
       // even the base ami app version will be the same across regions
+      val detail = details.first()
       val bakedImage = BakedImage(
-        name = details.first().imageName,
-        baseLabel = details.first().baseLabel,
-        baseOs = details.first().baseOs,
-        vmType = details.first().vmType,
-        cloudProvider = details.first().cloudProviderType,
-        appVersion = details.first().`package`.substringBefore("_all.deb").replaceFirst("_", "-"),
-        baseAmiVersion = imageService.findBaseAmiVersion(details.first().baseAmiId, details.first().region),
+        name = detail.imageName,
+        baseLabel = detail.baseLabel,
+        baseOs = detail.baseOs,
+        vmType = detail.vmType,
+        cloudProvider = detail.cloudProviderType,
+        appVersion = detail.`package`.substringBefore("_all.deb").replaceFirst("_", "-"),
+        baseAmiVersion = imageService.findBaseAmiVersion(detail.baseAmiId, detail.region),
         timestamp = execution.endTime ?: clock.instant(),
         amiIdsByRegion = details.associate { regionDetail -> regionDetail.region to regionDetail.imageId }
       )
       bakedImageRepository.store(bakedImage)
     } catch (e: JsonMappingException) {
-      log.error("Error converting bake stage to kotlin object in execution ${execution.id}", e)
-      return
+      log.error("Error converting bake stage to kotlin object for app ${execution.application} in execution ${execution.id}", e)
     } catch (e: Exception) {
       // if there's an error that's fine, we will move on.
-      log.error("Error finding baked image information in execution ${execution.id}", e)
-      return
+      log.error("Error finding baked image information for app ${execution.application} in execution ${execution.id}", e)
     }
   }
 

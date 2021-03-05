@@ -100,19 +100,18 @@ class ImageResolver(
       )
     }
 
-    val bakedVmImages = mutableMapOf<String, VirtualMachineImage>()
     // we might have pre-knowledge of baked images here, so let's load that.
-    bakedImageRepository
-      .getLatestByArtfiactVerstion(artifactVersion, artifact)
+    val bakedVmImages: Map<String, VirtualMachineImage> = bakedImageRepository
+      .getByArtifactVersion(artifactVersion, artifact)
       ?.let { bakedImage ->
-        bakedImage.amiIdsByRegion.forEach{ (region, amiId) ->
-          bakedVmImages[region] = VirtualMachineImage(
+        bakedImage.amiIdsByRegion.mapValues { (region, amiId) ->
+          VirtualMachineImage(
             id = amiId,
             appVersion = bakedImage.appVersion,
             baseImageVersion = bakedImage.baseAmiVersion
           )
-        }
-      }
+        }.toMap()
+      } ?: emptyMap()
 
     return VersionedNamedImage(
       bakedVmImages = bakedVmImages,

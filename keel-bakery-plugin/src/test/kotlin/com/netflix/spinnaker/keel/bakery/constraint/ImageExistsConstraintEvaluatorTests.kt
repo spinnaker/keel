@@ -66,7 +66,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
       every { log } returns LoggerFactory.getLogger(ImageService::class.java)
     }
     val bakedImageRepository: BakedImageRepository = mockk(relaxUnitFun = true) {
-      every { getLatestByArtfiactVerstion(any(), any()) } returns null
+      every { getByArtifactVersion(any(), any()) } returns null
     }
     val evaluator = ImageExistsConstraintEvaluator(
       imageService,
@@ -129,7 +129,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
       context("we know of an image for this artifact version, we know of all regions") {
         before {
-          every { bakedImageRepository.getLatestByArtfiactVerstion(appVersion, artifact as DebianArtifact) } returns
+          every { bakedImageRepository.getByArtifactVersion(appVersion, artifact as DebianArtifact) } returns
             BakedImage(
               name = appVersion,
               baseLabel = RELEASE,
@@ -157,7 +157,7 @@ internal class ImageExistsConstraintEvaluatorTests : JUnit5Minutests {
 
       context("we know of an image for this artifact version, we know of only one region") {
         before {
-          every { bakedImageRepository.getLatestByArtfiactVerstion(appVersion, artifact as DebianArtifact) } returns
+          every { bakedImageRepository.getByArtifactVersion(appVersion, artifact as DebianArtifact) } returns
             BakedImage(
               name = appVersion,
               baseLabel = RELEASE,

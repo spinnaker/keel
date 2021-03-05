@@ -13,4 +13,7 @@ data class BakedImage(
   val baseAmiVersion: String,
   val amiIdsByRegion: Map<String, String>,
   val timestamp: Instant
-)
+) {
+  fun presentInAllRegions(regions: Set<String>) =
+    amiIdsByRegion.keys.containsAll(regions)
+}

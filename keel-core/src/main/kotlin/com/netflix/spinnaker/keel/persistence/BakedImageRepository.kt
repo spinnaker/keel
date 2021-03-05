@@ -17,5 +17,5 @@ interface BakedImageRepository {
    * Retrieves the information we have about baked images for an artifact versions,
    * or null.
    */
-  fun getLatestByArtfiactVerstion(version: String, artifact: DebianArtifact): BakedImage?
+  fun getByArtifactVersion(version: String, artifact: DebianArtifact): BakedImage?
 }

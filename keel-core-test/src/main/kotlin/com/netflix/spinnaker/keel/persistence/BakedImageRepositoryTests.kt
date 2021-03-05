@@ -65,7 +65,7 @@ abstract class BakedImageRepositoryTests<T : BakedImageRepository> : JUnit5Minut
 
       test("can retrieve stored image"){
         subject.store(bakedImage)
-        val image = subject.getLatestByArtfiactVerstion(version, artifact)
+        val image = subject.getByArtifactVersion(version, artifact)
         expect {
           that(image).isNotNull()
           that(image?.amiIdsByRegion).isEqualTo(amisByRegion)
@@ -75,12 +75,12 @@ abstract class BakedImageRepositoryTests<T : BakedImageRepository> : JUnit5Minut
 
     context("no baked image exists") {
       test("getting latest by version does not throw an exception") {
-        expectCatching { subject.getLatestByArtfiactVerstion(version, artifact) }
+        expectCatching { subject.getByArtifactVersion(version, artifact) }
           .isSuccess()
       }
 
       test("getting latest by version returns null") {
-        expectThat(subject.getLatestByArtfiactVerstion(version, artifact)).isNull()
+        expectThat(subject.getByArtifactVersion(version, artifact)).isNull()
       }
     }
   }

@@ -58,19 +58,19 @@ class ImageExistsConstraintEvaluator(
       )
     }
 
-    val bakedImage = bakedImageRepository.getLatestByArtfiactVerstion(version, artifact)
+    val bakedImage = bakedImageRepository.getByArtifactVersion(version, artifact)
 
     if (clouddriverImages.keys.containsAll(vmOptions.regions)) {
       log.info("Found AMIs for all desired regions in clouddriver cache for {}", version)
     } else {
       log.warn("Missing regions {} clouddriver cache for {}", (vmOptions.regions - clouddriverImages.keys).sorted().joinToString(), version)
       eventPublisher.publishEvent(MissingRegionsDetected(version))
-    }
 
-    if (!clouddriverImages.keys.containsAll(vmOptions.regions) && bakedImage != null) {
-      log.debug("Found AMIs for regions {} in baked image list for {}", bakedImage.amiIdsByRegion.keys, version)
-      // if we can see them from the bake, we know they exist, so we can approve the version.
-      return bakedImage.amiIdsByRegion.keys.containsAll(vmOptions.regions)
+      if (bakedImage != null) {
+        log.debug("Found AMIs for regions {} in baked image list for {}", bakedImage.amiIdsByRegion.keys, version)
+        // if we can see them from the bake, we know they exist, so we can approve the version.
+        return bakedImage.presentInAllRegions(vmOptions.regions)
+      }
     }
 
     return clouddriverImages.keys.containsAll(vmOptions.regions)
