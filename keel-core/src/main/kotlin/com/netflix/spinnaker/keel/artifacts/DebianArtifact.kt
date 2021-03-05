@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.artifacts
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
@@ -17,7 +18,7 @@ data class DebianArtifact(
   override val reference: String = name,
   override val statuses: Set<ArtifactStatus> = emptySet(),
   val vmOptions: VirtualMachineOptions,
-  val branch: String? = null,
+  @JsonIgnore val branch: String? = null,
   override val from: ArtifactOriginFilter? =
     branch?.let { ArtifactOriginFilter(BranchFilter(name = branch)) }
 ) : DeliveryArtifact() {

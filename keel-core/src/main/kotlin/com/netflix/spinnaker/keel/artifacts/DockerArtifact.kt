@@ -19,7 +19,7 @@ data class DockerArtifact(
   override val reference: String = name,
   val tagVersionStrategy: TagVersionStrategy? = null,
   val captureGroupRegex: String? = null,
-  val branch: String? = null,
+  @JsonIgnore val branch: String? = null,
   override val from: ArtifactOriginFilter? =
     branch?.let { ArtifactOriginFilter(BranchFilter(name = branch)) }
 ) : DeliveryArtifact() {
