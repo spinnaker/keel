@@ -3,6 +3,8 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.FAIL
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -41,6 +43,7 @@ import strikt.assertions.map
 import strikt.assertions.one
 import strikt.assertions.withFirst
 import java.time.Duration
+import java.time.Instant
 
 abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationRepository> {
 
@@ -67,17 +70,20 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       DockerArtifact(
         name = "fnord",
         deliveryConfigName = "fnord-manifest",
-        reference = "fnord-docker-stable"
+        reference = "fnord-docker-stable",
+        branch = "main"
       ),
       DockerArtifact(
         name = "fnord",
         deliveryConfigName = "fnord-manifest",
-        reference = "fnord-docker-unstable"
+        reference = "fnord-docker-unstable",
+        branch = "main"
       ),
       DockerArtifact(
         name = "fnord",
         deliveryConfigName = "fnord-manifest",
-        reference = "test" // an artifact that has a reference name the same as an environment name
+        reference = "test", // an artifact that has a reference name the same as an environment name
+        branch = "main"
       )
     ),
     environments = setOf(
@@ -329,12 +335,14 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       val artifact1 = DockerArtifact(
         name = "artifact1",
         deliveryConfigName = context.deliveryConfig.name,
-        reference = "ref-1"
+        reference = "ref-1",
+        branch = "main"
       )
       val artifact2 = DockerArtifact(
         name = "artifact2",
         deliveryConfigName = context.deliveryConfig.name,
-        reference = "ref-2"
+        reference = "ref-2",
+        branch = "main"
       )
       val deliveryConfig = context.deliveryConfig.copy(
         artifacts = setOf(artifact1, artifact2)
@@ -376,12 +384,14 @@ abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationReposito
       val artifact1 = DockerArtifact(
         name = "artifact1",
         deliveryConfigName = context.deliveryConfig.name,
-        reference = "ref-1"
+        reference = "ref-1",
+        branch = "main"
       )
       val artifact2 = DockerArtifact(
         name = "artifact2",
         deliveryConfigName = context.deliveryConfig.name,
-        reference = "ref-2"
+        reference = "ref-2",
+        branch = "main"
       )
       val deliveryConfig = context.deliveryConfig.copy(
         artifacts = setOf(artifact1, artifact2)
