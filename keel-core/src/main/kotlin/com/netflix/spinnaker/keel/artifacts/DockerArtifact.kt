@@ -1,13 +1,12 @@
 package com.netflix.spinnaker.keel.artifacts
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
-import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
 import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
-import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.SEMVER_TAG
 import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 import com.netflix.spinnaker.kork.web.exceptions.ValidationException
 
@@ -21,8 +20,8 @@ data class DockerArtifact(
   val tagVersionStrategy: TagVersionStrategy? = null,
   val captureGroupRegex: String? = null,
   val branch: String? = null,
-  override val from: ArtifactOriginFilterSpec? =
-    branch?.let { ArtifactOriginFilterSpec(BranchFilterSpec(name = branch)) }
+  override val from: ArtifactOriginFilter? =
+    branch?.let { ArtifactOriginFilter(BranchFilter(name = branch)) }
 ) : DeliveryArtifact() {
   init {
     require(name.count { it == '/' } <= 1) {

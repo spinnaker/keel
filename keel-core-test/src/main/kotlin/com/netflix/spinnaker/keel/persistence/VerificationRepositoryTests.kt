@@ -3,8 +3,6 @@ package com.netflix.spinnaker.keel.persistence
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Verification
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
-import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.FAIL
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
@@ -43,7 +41,6 @@ import strikt.assertions.map
 import strikt.assertions.one
 import strikt.assertions.withFirst
 import java.time.Duration
-import java.time.Instant
 
 abstract class VerificationRepositoryTests<IMPLEMENTATION : VerificationRepository> {
 

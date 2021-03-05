@@ -6,8 +6,8 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
-import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy.BRANCH_JOB_COMMIT_BY_JOB
 import com.netflix.spinnaker.keel.api.ec2.Capacity
@@ -39,7 +39,6 @@ import com.netflix.spinnaker.keel.titus.TitusClusterHandler
 import com.netflix.spinnaker.keel.titus.resolve
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
-import groovy.xml.Entity.copy
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.confirmVerified
@@ -301,7 +300,7 @@ internal class TitusClusterExportTests : JUnit5Minutests {
             }
             expectThat(artifact)
               .isA<DockerArtifact>()
-              .get { from }.isEqualTo(ArtifactOriginFilterSpec(branch = BranchFilterSpec(name = "main")))
+              .get { from }.isEqualTo(ArtifactOriginFilter(branch = BranchFilter(name = "main")))
           }
         }
       }

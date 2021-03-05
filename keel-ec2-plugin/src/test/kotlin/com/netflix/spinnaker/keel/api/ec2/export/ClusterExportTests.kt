@@ -7,9 +7,9 @@ import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.StaggeredRegion
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.RELEASE
-import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
@@ -280,7 +280,7 @@ internal class ClusterExportTests : JUnit5Minutests {
                 )
               }
               .and {
-                get { from }.isEqualTo(ArtifactOriginFilterSpec(branch = BranchFilterSpec(name = "main")))
+                get { from }.isEqualTo(ArtifactOriginFilter(branch = BranchFilter(name = "main")))
                 get { statuses }.isEmpty()
               }
           }
