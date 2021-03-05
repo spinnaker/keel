@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
+import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
@@ -14,9 +15,11 @@ data class DebianArtifact(
   override val name: String,
   override val deliveryConfigName: String? = null,
   override val reference: String = name,
-  val vmOptions: VirtualMachineOptions,
   override val statuses: Set<ArtifactStatus> = emptySet(),
-  override val from: ArtifactOriginFilterSpec? = null
+  val vmOptions: VirtualMachineOptions,
+  val branch: String? = null,
+  override val from: ArtifactOriginFilterSpec? =
+    branch?.let { ArtifactOriginFilterSpec(BranchFilterSpec(name = branch)) }
 ) : DeliveryArtifact() {
   override val type = DEBIAN
 

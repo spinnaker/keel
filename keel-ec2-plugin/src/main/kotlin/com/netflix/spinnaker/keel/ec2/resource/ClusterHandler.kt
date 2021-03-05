@@ -11,9 +11,7 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
-import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.UNKNOWN
-import com.netflix.spinnaker.keel.api.artifacts.BranchFilterSpec
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
@@ -508,9 +506,7 @@ class ClusterHandler(
       return DebianArtifact(
         name = artifactName,
         vmOptions = VirtualMachineOptions(regions = serverGroups.keys, baseOs = guessBaseOsFrom(base.image)),
-        from = ArtifactOriginFilterSpec(
-          branch = BranchFilterSpec(name = artifact.branch)
-        )
+        branch = artifact.branch
       )
     } else {
       // fall back to exporting the artifact in the old format if we can't retrieve metadata
