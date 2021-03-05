@@ -27,7 +27,7 @@ data class DockerArtifact(
     require(name.count { it == '/' } <= 1) {
       "Docker image name has more than one slash, which is not Docker convention. Please convert to `organization/image-name` format."
     }
-    require(from == null || tagVersionStrategy == null) {
+    require((from != null) xor (tagVersionStrategy != null)) {
       "Either `from` or `tagVersionStrategy` must be specified in the delivery config for Docker artifacts. Please check the documentation."
     }
   }
