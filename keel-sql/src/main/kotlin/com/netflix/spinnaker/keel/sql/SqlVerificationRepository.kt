@@ -310,7 +310,7 @@ class SqlVerificationRepository(
       .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
       .join(DELIVERY_ARTIFACT)
       .on(DELIVERY_ARTIFACT.UID.eq(VERIFICATION_STATE.ARTIFACT_UID))
-      .where(VERIFICATION_STATE.STATUS.eq(PENDING))
+      .whereVerificationIsRunning()
       .fetch { (artifactReference, artifactVersion, verificationId, status, startedAt, endedAt, metadata) ->
         VerificationContext(
           deliveryConfig,
@@ -328,6 +328,9 @@ class SqlVerificationRepository(
         }
       }
   }
+
+  private fun <R : Record> SelectWhereStep<R>.whereVerificationIsRunning(): SelectConditionStep<R> =
+    where(VERIFICATION_STATE.STATUS.eq(PENDING))
 
   /**
    * JOOQ-ified access to MySQL's `json_merge` function.
