@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.FAIL
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.OVERRIDE_FAIL
@@ -19,14 +20,16 @@ import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.time.Clock
 
 @Component
 class DependsOnConstraintEvaluator(
   private val artifactRepository: ArtifactRepository,
   private val verificationRepository: VerificationRepository,
-  override val eventPublisher: EventPublisher
+  override val eventPublisher: EventPublisher,
+  private val clock: Clock
 ) : ConstraintEvaluator<DependsOnConstraint> {
-
+  val CONSTRAINT_NAME = "depends-on"
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   override val supportedType = SupportedConstraintType<DependsOnConstraint>("depends-on")
@@ -56,6 +59,29 @@ class DependsOnConstraintEvaluator(
       artifact,
       version,
       requiredEnvironment
+    )
+  }
+
+  override fun generateConstraintState(
+    artifact: DeliveryArtifact,
+    version: String,
+    deliveryConfig: DeliveryConfig,
+    targetEnvironment: Environment
+  ): ConstraintState {
+    val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, supportedType.type)
+
+    return ConstraintState(
+      deliveryConfigName = deliveryConfig.name,
+      environmentName = targetEnvironment.name,
+      artifactVersion = version,
+      artifactReference = artifact.reference,
+      type = CONSTRAINT_NAME,
+      status = PASS,
+      attributes = DependsOnConstraintAttributes(
+        dependsOnEnvironment = constraint.environment,
+      ),
+      judgedAt = clock.instant(),
+      judgedBy = "Spinnaker"
     )
   }
 

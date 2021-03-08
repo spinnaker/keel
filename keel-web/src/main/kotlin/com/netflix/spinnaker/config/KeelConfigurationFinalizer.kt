@@ -19,6 +19,8 @@ import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.extensionsOf
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
+import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintAttributes
+import com.netflix.spinnaker.keel.constraints.DependsOnConstraintAttributes
 import com.netflix.spinnaker.keel.ec2.jackson.registerEc2Subtypes
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -96,6 +98,9 @@ class KeelConfigurationFinalizer(
         log.info("Registering Constraint Attributes sub-type {}: {}", attributeType.name, attributeType.type.simpleName)
         extensionRegistry.register(attributeType.type, attributeType.name)
       }
+
+    extensionRegistry.register(DependsOnConstraintAttributes::class.java, "depends-on")
+    extensionRegistry.register(AllowedTimesConstraintAttributes::class.java, "allowed-times")
   }
 
   @PostConstruct

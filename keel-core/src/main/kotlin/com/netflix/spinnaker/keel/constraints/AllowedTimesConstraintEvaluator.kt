@@ -3,6 +3,8 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.constraints.ConstraintState
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.SupportedConstraintType
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator.Companion.getConstraintForEnvironment
@@ -252,6 +254,32 @@ class AllowedTimesConstraintEvaluator(
     }
 
     return false
+  }
+
+  override fun generateConstraintState(
+    artifact: DeliveryArtifact,
+    version: String,
+    deliveryConfig: DeliveryConfig,
+    targetEnvironment: Environment
+  ): ConstraintState {
+    val constraint = getConstraintForEnvironment(deliveryConfig, targetEnvironment.name, supportedType.type)
+
+    val tz: String = constraint.tz ?: dynamicConfigService.getConfig(String::class.java, "default.time-zone", "America/Los_Angeles")
+
+    return ConstraintState(
+      deliveryConfigName = deliveryConfig.name,
+      environmentName = targetEnvironment.name,
+      artifactVersion = version,
+      artifactReference = artifact.reference,
+      type = CONSTRAINT_NAME,
+      status = PASS,
+      attributes = AllowedTimesConstraintAttributes(
+        toNumericTimeWindows(constraint),
+        tz
+      ),
+      judgedAt = clock.instant(),
+      judgedBy = "Spinnaker"
+    )
   }
 
   private fun parseDays(dayConfig: String?, deliveryConfig: DeliveryConfig, envName: String): Set<String> {

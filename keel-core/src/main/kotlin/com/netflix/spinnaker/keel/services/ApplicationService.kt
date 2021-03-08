@@ -345,7 +345,7 @@ class ApplicationService(
                 )
                   ?.also {
                     artifactSummariesInEnvironments.add(
-                      it.addStatefulConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
+                      it.addPersistedConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
                         .addStatelessConstraintSummaries(deliveryConfig, environment, artifactVersion.version, artifact)
                     )
                   }
@@ -507,10 +507,14 @@ class ApplicationService(
 
   /**
    * Adds details about any stateful constraints in the given environment to the [ArtifactSummaryInEnvironment].
-   * For each constraint type, if it's not yet been evaluated, creates a synthetic constraint summary object
+   * Also adds details about stateless constraints for versions that have already been approved, because that
+   * data is persisted in the repository so that the state is frozen at approval time.
+   *
+   * For each stateful constraint type, if it's not yet been evaluated, creates a synthetic constraint summary object
    * with a [ConstraintStatus.NOT_EVALUATED] status.
+   *
    */
-  private fun ArtifactSummaryInEnvironment.addStatefulConstraintSummaries(
+  private fun ArtifactSummaryInEnvironment.addPersistedConstraintSummaries(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String
@@ -532,7 +536,8 @@ class ApplicationService(
   }
 
   /**
-   * Adds details about any stateless constraints in the given environment to the [ArtifactSummaryInEnvironment].
+   * Adds details about any stateless constraints that haven't already been populated
+   * in the given environment to the [ArtifactSummaryInEnvironment].
    */
   private fun ArtifactSummaryInEnvironment.addStatelessConstraintSummaries(
     deliveryConfig: DeliveryConfig,
@@ -540,8 +545,10 @@ class ApplicationService(
     version: String,
     artifact: DeliveryArtifact
   ): ArtifactSummaryInEnvironment {
+    val currentSummaries = this.statefulConstraints
     val statelessConstraints: List<StatelessConstraintSummary> = environment.constraints.filter { constraint ->
-      constraint !is StatefulConstraint
+      // some/all stateless constraints might have summary info, so filter those out.
+      constraint !is StatefulConstraint && currentSummaries.none { it.type == constraint.type }
     }.mapNotNull { constraint ->
       statelessEvaluators.find { evaluator ->
         evaluator.supportedType.name == constraint.type

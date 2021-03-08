@@ -1,10 +1,12 @@
 package com.netflix.spinnaker.keel.actuation
 
+import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.anyStateful
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
+import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
@@ -181,6 +183,23 @@ class EnvironmentConstraintRunner(
     }
   }
 
+  fun generateStatelessConstraintState(
+    artifact: DeliveryArtifact,
+    deliveryConfig: DeliveryConfig,
+    version: String,
+    environment: Environment
+  ): List<ConstraintState> =
+    environment.constraints.mapNotNull { constraint ->
+      constraint
+        .findStatelessEvaluator()
+        ?.generateConstraintState(
+          artifact = artifact,
+          deliveryConfig = deliveryConfig,
+          version = version,
+          targetEnvironment = environment
+        )
+    }
+
   fun checkStatelessConstraints(
     artifact: DeliveryArtifact,
     deliveryConfig: DeliveryConfig,
@@ -234,4 +253,7 @@ class EnvironmentConstraintRunner(
 
   private fun Environment.hasSupportedConstraint(constraintEvaluator: ConstraintEvaluator<*>) =
     constraints.any { it.javaClass.isAssignableFrom(constraintEvaluator.supportedType.type) }
+
+  private fun Constraint.findStatelessEvaluator(): ConstraintEvaluator<*>? =
+    statelessEvaluators.firstOrNull { javaClass.isAssignableFrom(it.supportedType.type) }
 }
