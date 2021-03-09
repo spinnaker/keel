@@ -15,6 +15,7 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
@@ -23,6 +24,9 @@ import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.artifacts.generateCompareLink
+import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintAttributes
+import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintEvaluator.Companion.toNumericTimeWindows
+import com.netflix.spinnaker.keel.constraints.DependsOnConstraintAttributes
 import com.netflix.spinnaker.keel.core.api.AllowedTimesConstraintMetadata
 import com.netflix.spinnaker.keel.core.api.ArtifactSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -103,7 +107,13 @@ class ApplicationService(
 
   fun deleteConfigByApp(application: String) = repository.deleteDeliveryConfigByApplication(application)
 
-  fun getConstraintStatesFor(application: String) = repository.constraintStateFor(application)
+  fun getConstraintStatesFor(application: String): List<ConstraintState> =
+    repository
+      .constraintStateFor(application)
+      .filterNot {
+        // remove frozen "stateless" constraints from this list
+        listOf("allowed-times", "depends-on").contains(it.type)
+      }
 
   fun getConstraintStatesFor(application: String, environment: String, limit: Int): List<ConstraintState> {
     val config = repository.getDeliveryConfigForApplication(application)
@@ -344,9 +354,11 @@ class ApplicationService(
                   status
                 )
                   ?.also {
+                    //todo eb: use only the last one
                     artifactSummariesInEnvironments.add(
-                      it.addPersistedConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
+                      it.addStatefulConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
                         .addStatelessConstraintSummaries(deliveryConfig, environment, artifactVersion.version, artifact)
+                        .addConstraintSummaries(deliveryConfig, environment, artifactVersion.version, artifact)
                     )
                   }
                 spectator.timer(
@@ -507,19 +519,18 @@ class ApplicationService(
 
   /**
    * Adds details about any stateful constraints in the given environment to the [ArtifactSummaryInEnvironment].
-   * Also adds details about stateless constraints for versions that have already been approved, because that
-   * data is persisted in the repository so that the state is frozen at approval time.
    *
    * For each stateful constraint type, if it's not yet been evaluated, creates a synthetic constraint summary object
    * with a [ConstraintStatus.NOT_EVALUATED] status.
-   *
    */
-  private fun ArtifactSummaryInEnvironment.addPersistedConstraintSummaries(
+  // todo eb: remove in favor of using [ArtifactSummaryInEnvironment.addConstraintSummaries]
+  private fun ArtifactSummaryInEnvironment.addStatefulConstraintSummaries(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String
   ): ArtifactSummaryInEnvironment {
     val constraintStates = repository.constraintStateFor(deliveryConfig.name, environment.name, version)
+      .filterNot { listOf("allowed-times", "depends-on").contains(it.type) }
     val notEvaluatedConstraints = environment.constraints.filter { constraint ->
       constraint is StatefulConstraint && constraintStates.none { it.type == constraint.type }
     }.map { constraint ->
@@ -536,19 +547,17 @@ class ApplicationService(
   }
 
   /**
-   * Adds details about any stateless constraints that haven't already been populated
-   * in the given environment to the [ArtifactSummaryInEnvironment].
+   * Adds details about any stateless constraints in the given environment to the [ArtifactSummaryInEnvironment].
    */
+  // todo eb: remove in favor of using [ArtifactSummaryInEnvironment.addConstraintSummaries]
   private fun ArtifactSummaryInEnvironment.addStatelessConstraintSummaries(
     deliveryConfig: DeliveryConfig,
     environment: Environment,
     version: String,
     artifact: DeliveryArtifact
   ): ArtifactSummaryInEnvironment {
-    val currentSummaries = this.statefulConstraints
     val statelessConstraints: List<StatelessConstraintSummary> = environment.constraints.filter { constraint ->
-      // some/all stateless constraints might have summary info, so filter those out.
-      constraint !is StatefulConstraint && currentSummaries.none { it.type == constraint.type }
+      constraint !is StatefulConstraint
     }.mapNotNull { constraint ->
       statelessEvaluators.find { evaluator ->
         evaluator.supportedType.name == constraint.type
@@ -567,6 +576,61 @@ class ApplicationService(
 
     return this.copy(
       statelessConstraints = statelessConstraints
+    )
+  }
+
+  /**
+   * Adds details about any stateful constraints in the given environment to the [ArtifactSummaryInEnvironment].
+   * Also, adds details about any stateless constraints that have their status saved into the database
+   * (this happens when we approve an artifact version).
+   *
+   * For each stateful constraint type, if it's not yet been evaluated, creates a synthetic constraint summary object
+   * with a [ConstraintStatus.NOT_EVALUATED] status.
+   *
+   * Also, adds details about any stateless constraints that haven't already been populated
+   * in the given environment to the [ArtifactSummaryInEnvironment].
+   */
+  private fun ArtifactSummaryInEnvironment.addConstraintSummaries(
+    deliveryConfig: DeliveryConfig,
+     environment: Environment,
+     version: String,
+     artifact: DeliveryArtifact
+  ): ArtifactSummaryInEnvironment {
+    val persistedStates = repository.constraintStateFor(deliveryConfig.name, environment.name, version)
+    val notEvaluatedPersistedConstraints = environment.constraints.filter { constraint ->
+      constraint is StatefulConstraint && persistedStates.none { it.type == constraint.type }
+    }.map { constraint ->
+      StatefulConstraintSummary(
+        type = constraint.type,
+        status = NOT_EVALUATED
+      )
+    }
+
+    val statelessConstraintsStates: List<StatefulConstraintSummary> = environment.constraints.filter { constraint ->
+      // some/all stateless constraints might already have summary info, so filter those out.
+      constraint !is StatefulConstraint && persistedStates.none { it.type == constraint.type }
+    }.mapNotNull { constraint ->
+      statelessEvaluators.find { evaluator ->
+        evaluator.supportedType.name == constraint.type
+      }?.let { evaluator ->
+        val passes = evaluator.canPromote(artifact, version = version, deliveryConfig = deliveryConfig, targetEnvironment = environment)
+        StatefulConstraintSummary(
+          type = constraint.type,
+          status = if (passes) PASS else ConstraintStatus.PENDING,
+          attributes = when (constraint) {
+            is DependsOnConstraint -> DependsOnConstraintAttributes(constraint.environment, passes)
+            is TimeWindowConstraint -> AllowedTimesConstraintAttributes(toNumericTimeWindows(constraint), constraint.tz, passes)
+            else -> null
+          }
+        )
+      }
+    }
+
+    return this.copy(
+      constraints = persistedStates
+        .map { it.toConstraintSummary() } +
+        notEvaluatedPersistedConstraints +
+        statelessConstraintsStates
     )
   }
 
