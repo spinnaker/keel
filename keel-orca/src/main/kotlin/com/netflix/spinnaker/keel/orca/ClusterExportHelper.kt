@@ -80,7 +80,13 @@ class ClusterExportHelper(
             else -> null
           }
         } catch (e: HttpException) {
-          if (e.isNotFound) null else throw e
+          if (e.isNotFound) {
+            log.warn("$executionType execution $executionId not found for server group $serverGroupName. " +
+              "Defaulting to red/black deployment strategy.")
+            null
+          } else {
+            throw e
+          }
         }
       }.await()
 
