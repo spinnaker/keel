@@ -29,7 +29,7 @@ class UnpinnedNotificationHandler(
       val env = Strings.toRootUpperCase(targetEnvironment)
       val username = slackService.getUsernameByEmail(user)
       val headerText = "$env was unpinned"
-      val imageUrl = "https://raw.githubusercontent.com/gcomstock/managed.delivery/master/src/icons/unpinned.png"
+      val imageUrl = "https://raw.githubusercontent.com/spinnaker/spinnaker.github.io/master/assets/images/md_icons/unpinned.png"
 
       val blocks = withBlocks {
         header {
