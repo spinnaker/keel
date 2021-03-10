@@ -28,7 +28,7 @@ class PinnedNotificationHandler(
       val username = pin.pinnedBy?.let { slackService.getUsernameByEmail(it) }
       val buildNumberText = when (pinnedArtifact.buildNumber) {
         null -> ""
-        else -> "to #${pinnedArtifact.buildNumber}"
+        else -> " to #${pinnedArtifact.buildNumber}"
       }
       val headerText = "$env is pinned${buildNumberText}"
       val imageUrl = "https://raw.githubusercontent.com/spinnaker/spinnaker.github.io/master/assets/images/md_icons/pinned.png"

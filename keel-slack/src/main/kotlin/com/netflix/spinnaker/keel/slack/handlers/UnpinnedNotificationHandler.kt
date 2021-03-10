@@ -34,7 +34,7 @@ class UnpinnedNotificationHandler(
 
       val buildNumberText = when (pinnedArtifact?.buildNumber) {
         null -> ""
-        else -> "from #${pinnedArtifact.buildNumber}"
+        else -> " from #${pinnedArtifact.buildNumber}"
       }
       val headerText = "$env was unpinned${buildNumberText}"
       val imageUrl = "https://raw.githubusercontent.com/spinnaker/spinnaker.github.io/master/assets/images/md_icons/unpinned.png"

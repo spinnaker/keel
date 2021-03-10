@@ -137,9 +137,9 @@ class GitDataGenerator(
         if (buildMetadata != null && gitMetadata != null && gitMetadata!!.commitInfo != null) {
           markdownText("*App:* $application\n" +
             "*Environment:* $env\n\n " +
-            ":arrow_down: *PREVIOUSLY PINNED* :arrow_down:\\n" +
+            ":arrow_down: *PREVIOUSLY PINNED* :arrow_down:\n" +
             "*Version:* <$artifactUrl|#${buildMetadata!!.number}> " +
-            "by @${gitMetadata!!.author}\n " +
+            "by @${gitMetadata!!.author}\n\n" +
             "${gitMetadata!!.commitInfo?.message}")
 
           accessory {
