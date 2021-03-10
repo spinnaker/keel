@@ -41,7 +41,7 @@ class VerificationRunner(
       }
 
       statuses.firstOutstanding?.let { verification ->
-        enforcer.requestVerificationLease(this, verification).withLease {
+        enforcer.withVerificationLease(this) {
           start(verification, imageFinder.getImages(context.deliveryConfig, context.environmentName))
         }
       } ?: log.debug("Verification complete for environment {} of application {}", environment.name, deliveryConfig.application)
