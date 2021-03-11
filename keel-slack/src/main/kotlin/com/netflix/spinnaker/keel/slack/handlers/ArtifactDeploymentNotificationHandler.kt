@@ -60,10 +60,13 @@ class ArtifactDeploymentNotificationHandler(
             details,
             env)
         }
-        gitDataGenerator.conditionallyAddFullCommitMsgButton(this, artifact)
+        val gitMetadata = artifact.gitMetadata
+        if (gitMetadata != null) {
+          gitDataGenerator.conditionallyAddFullCommitMsgButton(this, gitMetadata)
 
-        section {
-          gitDataGenerator.generateScmInfo(this, application, artifact)
+          section {
+            gitDataGenerator.generateScmInfo(this, application, gitMetadata, artifact)
+          }
         }
 
       }

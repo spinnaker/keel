@@ -2,8 +2,10 @@ package com.netflix.spinnaker.keel.rest
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
+import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfigWithGitMetadata
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.EnvironmentDiff
+import com.netflix.spinnaker.keel.events.DeliveryConfigChangedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
 import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICATION
@@ -20,6 +22,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.parameters.RequestBody as SwaggerRequestBody
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.security.access.prepost.PreAuthorize
@@ -42,7 +45,8 @@ class DeliveryConfigController(
   private val importer: DeliveryConfigImporter,
   private val authorizationSupport: AuthorizationSupport,
   @Autowired(required = false) private val deliveryConfigProcessors: List<DeliveryConfigProcessor> = emptyList(),
-  private val generator: Generator
+  private val generator: Generator,
+  private val publisher: ApplicationEventPublisher
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -68,7 +72,39 @@ class DeliveryConfigController(
       .let { processedDeliveryConfig ->
         validator.validate(processedDeliveryConfig)
         log.debug("Upserting delivery config '${processedDeliveryConfig.name}' for app '${processedDeliveryConfig.application}'")
-        repository.upsertDeliveryConfig(processedDeliveryConfig)
+        val config = repository.upsertDeliveryConfig(processedDeliveryConfig)
+        publisher.publishEvent(DeliveryConfigChangedNotification(config))
+        return config
+      }
+
+  @Operation(
+    description = "Registers or updates a delivery config manifest with context about the commit that produced this update."
+  )
+  @PostMapping(
+    path = ["/withGitContext"],
+    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #body.config.application)
+    and @authorizationSupport.hasServiceAccountAccess(#body.config.serviceAccount)"""
+  )
+  fun upsertWithGitContext(
+    @RequestBody
+    @SwaggerRequestBody(
+      description = "The delivery config and associated git metadata. If its `name` matches an existing delivery config " +
+        "the operation is an update, otherwise a new delivery config is created."
+    )
+    body: SubmittedDeliveryConfigWithGitMetadata,
+  ): DeliveryConfig =
+    deliveryConfigProcessors.applyAll(body.config)
+      .let { processedDeliveryConfig ->
+        validator.validate(processedDeliveryConfig)
+        //todo eb: send failed validation notification
+        log.debug("Upserting delivery config '${processedDeliveryConfig.name}' for app '${processedDeliveryConfig.application}'")
+        val config = repository.upsertDeliveryConfig(processedDeliveryConfig)
+        publisher.publishEvent(DeliveryConfigChangedNotification(config, body.gitMetadata))
+        return config
       }
 
   @GetMapping(

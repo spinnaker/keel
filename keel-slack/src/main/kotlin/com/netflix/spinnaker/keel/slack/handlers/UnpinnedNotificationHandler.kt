@@ -68,13 +68,13 @@ class UnpinnedNotificationHandler(
               env)
           }
         }
-        if (pinnedArtifact != null) {
-          gitDataGenerator.conditionallyAddFullCommitMsgButton(this, pinnedArtifact)
-        }
-
-        section {
-          if (latestArtifact != null) {
-            gitDataGenerator.generateScmInfo(this, application, latestArtifact)
+        val gitMetadata = pinnedArtifact?.gitMetadata
+        if (gitMetadata != null) {
+          gitDataGenerator.conditionallyAddFullCommitMsgButton(this, gitMetadata)
+          section {
+            if (latestArtifact != null) {
+              gitDataGenerator.generateScmInfo(this, application, gitMetadata, latestArtifact)
+            }
           }
         }
       }
