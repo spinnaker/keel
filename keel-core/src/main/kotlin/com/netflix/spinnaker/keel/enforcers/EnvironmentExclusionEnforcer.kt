@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.enforcers
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.persistence.KeelReadOnlyRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
+import com.netflix.spinnaker.keel.persistence.ActiveLeaseExists
 import com.netflix.spinnaker.keel.persistence.EnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.persistence.Lease
 
@@ -10,8 +11,8 @@ import com.netflix.spinnaker.keel.persistence.Lease
  * Exception thrown when it's not safe to take action against the environment because
  * something is is acting on it
  */
-class EnvironmentCurrentlyBeingActedOn(msg: String) : Exception(msg) {
-
+class EnvironmentCurrentlyBeingActedOn(message: String, cause: Throwable? = null) : Exception(message, cause) {
+  constructor(ex: ActiveLeaseExists) : this("active lease held against the environment", ex)
 }
 
 class EnvironmentExclusionEnforcer(
@@ -79,6 +80,8 @@ class EnvironmentExclusionEnforcer(
   private fun <T> Lease.withLease(action: () -> T): T =
     try {
       action.invoke()
+    } catch (ex: ActiveLeaseExists) {
+      throw EnvironmentCurrentlyBeingActedOn(ex)
     } finally {
       environmentLeaseRepository.release(this)
     }
@@ -91,6 +94,8 @@ class EnvironmentExclusionEnforcer(
   private suspend fun <T> Lease.withLeaseSuspend(action: suspend () -> T) : T =
     try {
       action.invoke()
+    } catch (ex: ActiveLeaseExists) {
+      throw EnvironmentCurrentlyBeingActedOn(ex)
     } finally {
       environmentLeaseRepository.release(this)
     }
