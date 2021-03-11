@@ -189,14 +189,16 @@ class CheckScheduler(
               try {
                 withTimeout(checkTimeout.toMillis()) {
                   launch {
-                    verificationRunner.runVerificationsFor(it)
+                    try {
+                      verificationRunner.runVerificationsFor(it)
+                    } catch (e: EnvironmentCurrentlyBeingActedOn) {
+                      log.warn("Couldn't verify ${it.version} in ${it.deliveryConfig.application}/${it.environmentName} because environment is in use", e)
+                    }
                   }
                 }
               } catch (e: TimeoutCancellationException) {
                 log.error("Timed out verifying ${it.version} in ${it.deliveryConfig.application}/${it.environmentName}", e)
                 publisher.publishEvent(VerificationTimedOut(it))
-              } catch (e: EnvironmentCurrentlyBeingActedOn) {
-                log.warn("Couldn't verify ${it.version} in ${it.deliveryConfig.application}/${it.environmentName} because environment is in use", e)
               }
             }
         }
