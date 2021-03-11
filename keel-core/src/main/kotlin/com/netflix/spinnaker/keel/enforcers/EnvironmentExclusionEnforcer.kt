@@ -75,8 +75,6 @@ class EnvironmentExclusionEnforcer(
   private fun <T> Lease.withLease(action: () -> T): T =
     try {
       action.invoke()
-    } catch (ex: Exception) {
-      throw ex
     } finally {
       environmentLeaseRepository.release(this)
     }
@@ -89,8 +87,6 @@ class EnvironmentExclusionEnforcer(
   private suspend fun <T> Lease.withLeaseSuspend(action: suspend () -> T) : T =
     try {
       action.invoke()
-    } catch (ex: Exception) {
-      throw ex
     } finally {
       environmentLeaseRepository.release(this)
     }
