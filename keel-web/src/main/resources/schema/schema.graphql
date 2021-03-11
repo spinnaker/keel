@@ -1,0 +1,73 @@
+type Query {
+  application(appName: String!): Application
+}
+
+type Application {
+  name: String!
+  account: String!
+  environments: [Environment!]!
+#  versions: [Environments] # TODO: add this pivot later
+}
+
+type Environment {
+  name: String!
+  currentState: EnvironmentState
+  history: [EnvironmentState!]!
+  isActive: Boolean!
+}
+
+type EnvironmentState {
+  version: String!
+  resources: [Resource!]
+  constraints: [Constraint!]
+}
+
+type Artifact {
+  version: String!
+  name: String!
+  type: String! # Convert to a set of Strings
+  reference: String!
+}
+
+type Resource {
+  artifact: Artifact
+  id: String!
+  kind: String! # Convert to a set of Strings
+#  status: String! # Convert to a set of Strings
+#  isPaused: Boolean!
+#  displayName: String
+  location: Location
+#  moniker: Moniker
+}
+
+type Location {
+    account: String!
+    regions: [String!]!
+}
+
+enum TaskStatus {
+  NOT_EVALUATED
+  PENDING
+  PASS
+  FAIL
+  OVERRIDE_PASS
+  OVERRIDE_FAIL
+}
+
+type Constraint {
+  type: String!
+  status: TaskStatus!
+  startedAt: String
+  judgedAt: String
+  judgedBy: String
+  comment: String
+}
+
+type Verification {
+  id: String
+  type: String
+  status: TaskStatus!
+  startedAt: String
+  completedAt: String
+  link: String
+}

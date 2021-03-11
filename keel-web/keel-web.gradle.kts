@@ -6,6 +6,14 @@ plugins {
 
 apply(plugin = "io.spinnaker.package")
 
+apply(plugin = "com.netflix.dgs.codegen")
+
+apply(plugin = "com.netflix.dgs.codegen")
+tasks.withType<com.netflix.graphql.dgs.codegen.gradle.GenerateJavaTask> {
+  schemaPaths = mutableListOf("${projectDir}/src/main/resources/schema") // List of directories containing schema files
+  packageName = "com.netflix.spinnaker.keel.graphql" // The package name to use to generate sources
+}
+
 dependencies {
   api(project(":keel-core"))
   api(project(":keel-clouddriver"))
@@ -22,6 +30,7 @@ dependencies {
   implementation(project(":keel-titus-plugin"))
   implementation(project(":keel-schema-generator"))
 
+  implementation("com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter:latest.release")
   implementation("com.netflix.spinnaker.kork:kork-web")
   implementation("com.netflix.spinnaker.kork:kork-artifacts")
   implementation("org.springframework.boot:spring-boot-starter-actuator")

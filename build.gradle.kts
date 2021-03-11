@@ -17,6 +17,7 @@ buildscript {
 }
 
 plugins {
+  id("com.netflix.dgs.codegen") version "4.3.4" apply false
   kotlin("jvm") version "1.4.31" apply false
   id("org.jetbrains.kotlin.plugin.allopen") version "1.4.31" apply false
   id("com.adarshr.test-logger") version "2.1.0" apply false
