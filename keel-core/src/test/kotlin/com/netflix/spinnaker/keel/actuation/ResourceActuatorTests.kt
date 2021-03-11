@@ -17,6 +17,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.randomUID
+import com.netflix.spinnaker.keel.enforcers.EnvironmentExclusionEnforcer
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceActuationPaused
 import com.netflix.spinnaker.keel.events.ResourceActuationVetoed
@@ -36,6 +37,7 @@ import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.TrivialEnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.plugin.CannotResolveCurrentState
 import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionVetoed
@@ -90,6 +92,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     val veto = mockk<Veto>()
     val vetoEnforcer = VetoEnforcer(listOf(veto))
     val clock = Clock.systemUTC()
+    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(TrivialEnvironmentLeaseRepository())
     val subject = ResourceActuator(
       resourceRepository,
       artifactRepository,
@@ -100,7 +103,8 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       vetoEnforcer,
       publisher,
       clock,
-      springEnv
+      springEnv,
+      environmentExclusionEnforcer
     )
   }
 

@@ -10,12 +10,14 @@ import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
+import com.netflix.spinnaker.keel.enforcers.EnvironmentExclusionEnforcer
 import com.netflix.spinnaker.keel.events.ResourceValid
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
 import com.netflix.spinnaker.keel.persistence.DiffFingerprintRepository
 import com.netflix.spinnaker.keel.persistence.ResourceRepository
+import com.netflix.spinnaker.keel.persistence.TrivialEnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.persistence.UnhappyVetoRepository
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.resource
@@ -70,6 +72,8 @@ class IntermittentFailureTests : JUnit5Minutests {
     val clock = MutableClock()
     val vetoRepository = mockk<UnhappyVetoRepository>(relaxUnitFun = true)
 
+    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(TrivialEnvironmentLeaseRepository())
+
     val dynamicConfigService: DynamicConfigService = mockk(relaxUnitFun = true) {
       every {
         // mimicking how a cluster is set up
@@ -99,7 +103,8 @@ class IntermittentFailureTests : JUnit5Minutests {
       vetoEnforcer,
       publisher,
       Clock.systemUTC(),
-      springEnv
+      springEnv,
+      environmentExclusionEnforcer
     )
     val desired = DummyResourceSpec(data = "fnord")
     val current = DummyResourceSpec()

@@ -18,10 +18,8 @@ class EnvironmentCurrentlyBeingActedOn(message: String, cause: Throwable? = null
 
 @Component
 class EnvironmentExclusionEnforcer(
-  private val environmentLeaseRepository: EnvironmentLeaseRepository,
-  private val keelRepository: KeelReadOnlyRepository
+  private val environmentLeaseRepository: EnvironmentLeaseRepository
 ) {
-
   /**
    * To get a verification lease against an environment, need:
    *
@@ -61,17 +59,17 @@ class EnvironmentExclusionEnforcer(
    */
   private fun ensureNoActiveDeployments(environment: Environment) {
     /**
-     * Use keelRepository to check if deployment is happening in this environment
+     * To be implemented in a future PR.
      */
-    TODO("Not yet implemented")
   }
 
-  private fun ensureNoActiveVerifications(environment: Environment): Boolean {
+  /**
+   * @throws EnvironmentCurrentlyBeingActedOn if there's an active verification
+   */
+  private fun ensureNoActiveVerifications(environment: Environment) {
     /**
-     * Use keelRepository to check if verification is running in this environment
+     * To be implemented in a future PR
      */
-
-    TODO("Not yet implemented")
   }
 
   /**
