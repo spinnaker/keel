@@ -261,7 +261,7 @@ class AllowedTimesConstraintEvaluator(
     return false
   }
 
-  override fun generateConstraintState(
+  override fun generateConstraintStateSnapshot(
     artifact: DeliveryArtifact,
     version: String,
     deliveryConfig: DeliveryConfig,

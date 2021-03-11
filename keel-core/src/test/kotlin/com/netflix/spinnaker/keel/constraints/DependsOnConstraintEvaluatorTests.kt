@@ -109,7 +109,7 @@ internal class DependsOnConstraintEvaluatorTests : JUnit5Minutests {
 
     context("generating constraint state") {
       test("can get state") {
-        val state = subject.generateConstraintState(artifact = artifact, version = "1.1", deliveryConfig = manifest, targetEnvironment = constrainedEnvironment)
+        val state = subject.generateConstraintStateSnapshot(artifact = artifact, version = "1.1", deliveryConfig = manifest, targetEnvironment = constrainedEnvironment)
         expectThat(state)
           .and { get { type }.isEqualTo("depends-on") }
           .and { get { status }.isEqualTo(ConstraintStatus.PASS) }

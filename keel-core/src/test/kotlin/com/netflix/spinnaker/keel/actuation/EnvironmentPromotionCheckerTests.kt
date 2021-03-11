@@ -41,7 +41,7 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
     val constraint = TimeWindowConstraint(windows = listOf(TimeWindow(days = "Monday-Sunday", hours = "0-23")))
 
     val environmentConstraintRunner: EnvironmentConstraintRunner = mockk(relaxed = true) {
-      every { generateStatelessConstraintState(any(), any(), any(), any(), PASS) } returns
+      every { getStatelessConstraintSnapshots(any(), any(), any(), any(), PASS) } returns
         listOf(ConstraintState(
           deliveryConfigName = "config",
           environmentName = "env",

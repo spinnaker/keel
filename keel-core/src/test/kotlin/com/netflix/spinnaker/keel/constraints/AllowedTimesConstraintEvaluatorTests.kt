@@ -3,7 +3,6 @@ package com.netflix.spinnaker.keel.constraints
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
-import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.core.api.TimeWindow
@@ -390,7 +389,7 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
         )
       }
       test("can generate status") {
-        val state = subject.generateConstraintState(artifact = artifact, deliveryConfig = manifest, targetEnvironment = environment, version = "me-123")
+        val state = subject.generateConstraintStateSnapshot(artifact = artifact, deliveryConfig = manifest, targetEnvironment = environment, version = "me-123")
         expectThat(state)
           .and { get { type }.isEqualTo("allowed-times") }
           .and { get { status }.isEqualTo(PASS) }

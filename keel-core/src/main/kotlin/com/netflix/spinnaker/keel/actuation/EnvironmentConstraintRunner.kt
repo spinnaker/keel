@@ -8,7 +8,6 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
-import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.StatelessConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
@@ -185,7 +184,7 @@ class EnvironmentConstraintRunner(
     }
   }
 
-  fun generateStatelessConstraintState(
+  fun getStatelessConstraintSnapshots(
     artifact: DeliveryArtifact,
     deliveryConfig: DeliveryConfig,
     version: String,
@@ -195,7 +194,7 @@ class EnvironmentConstraintRunner(
     environment.constraints.mapNotNull { constraint ->
       constraint
         .findStatelessEvaluator()
-        ?.generateConstraintState(
+        ?.generateConstraintStateSnapshot(
           artifact = artifact,
           deliveryConfig = deliveryConfig,
           version = version,

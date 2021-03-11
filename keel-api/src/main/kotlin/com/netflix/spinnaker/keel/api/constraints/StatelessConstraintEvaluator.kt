@@ -32,7 +32,7 @@ abstract class StatelessConstraintEvaluator<T: Constraint, A : ConstraintStateAt
    * If a summary of the constraint will not be shown to the user (like with an implicit constraint)
    * this function does not need to be implemented.
    */
-  open fun generateConstraintState(
+  open fun generateConstraintStateSnapshot(
     artifact: DeliveryArtifact,
     version: String,
     deliveryConfig: DeliveryConfig,

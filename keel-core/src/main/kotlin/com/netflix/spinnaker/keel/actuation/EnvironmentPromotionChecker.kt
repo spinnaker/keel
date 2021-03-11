@@ -169,14 +169,14 @@ class EnvironmentPromotionChecker(
     version: String,
     environment: Environment
   ) {
-    constraintRunner.generateStatelessConstraintState(
+    constraintRunner.getStatelessConstraintSnapshots(
       artifact = artifact,
       deliveryConfig = deliveryConfig,
       version = version,
       environment = environment,
       currentStatus = PASS // We just checked that all these pass since a version was approved
     ).forEach { constraintState ->
-      log.debug("Storing final constraint state for {} constraint for {} version {} for {} environment {} in {}",
+      log.debug("Storing final constraint state snapshot for {} constraint for {} version {} for {} environment {} in {}",
         constraintState.type,
         artifact,
         version,
