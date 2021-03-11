@@ -69,6 +69,8 @@ class EnvironmentExclusionEnforcer(
 
   /**
    * take an action and then release the lease.
+   *
+   * Also releases the lease if an exception is thrown
    */
   private fun <T> Lease.withLease(action: () -> T): T =
     try {
@@ -81,6 +83,8 @@ class EnvironmentExclusionEnforcer(
 
   /**
    * take an action and then release the lease, suspend flavor
+   *
+   * Also releases the lease if an exception is thrown
    */
   private suspend fun <T> Lease.withLeaseSuspend(action: suspend () -> T) : T =
     try {
