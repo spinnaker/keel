@@ -17,7 +17,7 @@ class ActiveServerGroupImageDeserializer :
       imageId = root.get("imageId").textValue(),
       appVersion = tags.getTag("appversion")?.substringBefore("/"),
       baseImageName = root.get("description").textValue()?.let {
-        Regex("""ancestor_name=(.+?),""").find(it)?.groupValues?.get(1)
+        Regex("""ancestor_name=([\w-]+)""").find(it)?.groupValues?.get(1)
       },
       name = root.get("name").textValue(),
       imageLocation = root.get("imageLocation").textValue(),

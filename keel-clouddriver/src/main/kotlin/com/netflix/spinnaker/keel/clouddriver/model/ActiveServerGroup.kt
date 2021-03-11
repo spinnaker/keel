@@ -186,7 +186,7 @@ data class ActiveServerGroupImage(
   ) : this(
     imageId = imageId,
     appVersion = tags.getTag("appversion")?.substringBefore("/"),
-    baseImageName = description?.let{ Regex("""ancestor_name=(.+?),""").find(it)?.groupValues?.get(1) },
+    baseImageName = description?.let{ Regex("""ancestor_name=([\w-]+)""").find(it)?.groupValues?.get(1) },
     name = name,
     imageLocation = imageLocation,
     description = description
