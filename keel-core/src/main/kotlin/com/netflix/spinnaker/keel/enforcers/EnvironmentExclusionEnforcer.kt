@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.persistence.ActiveLeaseExists
 import com.netflix.spinnaker.keel.persistence.EnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.persistence.Lease
+import org.springframework.stereotype.Component
 
 /**
  * Exception thrown when it's not safe to take action against the environment because
@@ -15,6 +16,7 @@ class EnvironmentCurrentlyBeingActedOn(message: String, cause: Throwable? = null
   constructor(ex: ActiveLeaseExists) : this("active lease held against the environment", ex)
 }
 
+@Component
 class EnvironmentExclusionEnforcer(
   private val environmentLeaseRepository: EnvironmentLeaseRepository,
   private val keelRepository: KeelReadOnlyRepository

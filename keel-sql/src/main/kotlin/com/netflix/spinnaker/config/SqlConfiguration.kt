@@ -12,6 +12,7 @@ import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlBakedImageRepository
 import com.netflix.spinnaker.keel.sql.SqlDeliveryConfigRepository
 import com.netflix.spinnaker.keel.sql.SqlDiffFingerprintRepository
+import com.netflix.spinnaker.keel.sql.SqlEnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.sql.SqlLifecycleEventRepository
 import com.netflix.spinnaker.keel.sql.SqlLifecycleMonitorRepository
 import com.netflix.spinnaker.keel.sql.SqlNotificationRepository
@@ -199,4 +200,8 @@ class SqlConfiguration {
     properties: SqlProperties,
     objectMapper: ObjectMapper
   ) = SqlBakedImageRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
+
+  @Bean
+  fun environmentLeaseRepository(
+  ) = SqlEnvironmentLeaseRepository()
 }
