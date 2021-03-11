@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.ActiveServerGroupImage
+import com.netflix.spinnaker.keel.clouddriver.model.extractBaseImageName
 import org.springframework.boot.jackson.JsonComponent
 
 @JsonComponent
@@ -16,9 +17,7 @@ class ActiveServerGroupImageDeserializer :
     return ActiveServerGroupImage(
       imageId = root.get("imageId").textValue(),
       appVersion = tags.getTag("appversion")?.substringBefore("/"),
-      baseImageName = root.get("description").textValue()?.let {
-        Regex("""ancestor_name=([\w-]+)""").find(it)?.groupValues?.get(1)
-      },
+      baseImageName = extractBaseImageName(root.get("description").textValue()),
       name = root.get("name").textValue(),
       imageLocation = root.get("imageLocation").textValue(),
       description = root.get("description").textValue()

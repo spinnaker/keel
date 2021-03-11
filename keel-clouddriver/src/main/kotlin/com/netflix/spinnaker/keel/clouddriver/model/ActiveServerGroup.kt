@@ -186,7 +186,7 @@ data class ActiveServerGroupImage(
   ) : this(
     imageId = imageId,
     appVersion = tags.getTag("appversion")?.substringBefore("/"),
-    baseImageName = description?.let{ Regex("""ancestor_name=([\w-]+)""").find(it)?.groupValues?.get(1) },
+    baseImageName = extractBaseImageName(description),
     name = name,
     imageLocation = imageLocation,
     description = description
@@ -200,6 +200,22 @@ private fun List<Map<String, Any?>>.getTag(key: String) =
 
 class RequiredTagMissing(tagName: String, imageId: String) :
   SystemException("Required tag \"$tagName\" was not found on AMI $imageId")
+
+/**
+ * @return the base image name extracted from the `image/description` field on CloudDriver's
+ * representation of a server group. If [description] is `null` or does not contain the base image
+ * name, this function returns `null`.
+ *
+ * On a [NamedImage] this is available as a tag, but not on a server group.
+ */
+fun extractBaseImageName(description: String?): String? =
+  description?.let {
+    """ancestor_name=([\w-]+)"""
+      .toRegex()
+      .find(it)
+      ?.destructured
+      ?.let { (baseAmiName) -> baseAmiName }
+  }
 
 data class LaunchConfig(
   val ramdiskId: String?,
