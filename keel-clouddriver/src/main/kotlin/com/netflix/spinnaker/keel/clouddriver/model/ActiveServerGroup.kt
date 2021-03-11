@@ -171,7 +171,7 @@ fun ActiveServerGroup.subnet(cloudDriverCache: CloudDriverCache): String =
 data class ActiveServerGroupImage(
   val imageId: String,
   val appVersion: String?,
-  val baseImageVersion: String?,
+  val baseImageName: String?,
   val name: String,
   val imageLocation: String,
   val description: String?
@@ -186,7 +186,7 @@ data class ActiveServerGroupImage(
   ) : this(
     imageId = imageId,
     appVersion = tags.getTag("appversion")?.substringBefore("/"),
-    baseImageVersion = tags.getTag("base_ami_version"),
+    baseImageName = description?.let{ Regex("""ancestor_name=(.+?),""").find(it)?.groupValues?.get(1) },
     name = name,
     imageLocation = imageLocation,
     description = description

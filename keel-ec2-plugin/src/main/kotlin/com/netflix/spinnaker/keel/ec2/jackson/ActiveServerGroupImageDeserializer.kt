@@ -8,14 +8,17 @@ import com.netflix.spinnaker.keel.api.ec2.ServerGroup.ActiveServerGroupImage
 import org.springframework.boot.jackson.JsonComponent
 
 @JsonComponent
-class ActiveServerGroupImageDeserializer : StdNodeBasedDeserializer<ActiveServerGroupImage>(ActiveServerGroupImage::class.java) {
+class ActiveServerGroupImageDeserializer :
+  StdNodeBasedDeserializer<ActiveServerGroupImage>(ActiveServerGroupImage::class.java) {
   override fun convert(root: JsonNode, ctxt: DeserializationContext): ActiveServerGroupImage {
     val tags = root.get("tags") as ArrayNode
 
     return ActiveServerGroupImage(
       imageId = root.get("imageId").textValue(),
       appVersion = tags.getTag("appversion")?.substringBefore("/"),
-      baseImageVersion = tags.getTag("base_ami_version"),
+      baseImageName = root.get("description").textValue()?.let {
+        Regex("""ancestor_name=(.+?),""").find(it)?.groupValues?.get(1)
+      },
       name = root.get("name").textValue(),
       imageLocation = root.get("imageLocation").textValue(),
       description = root.get("description").textValue()
