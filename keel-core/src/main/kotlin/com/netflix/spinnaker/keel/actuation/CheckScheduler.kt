@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.activation.ApplicationDown
 import com.netflix.spinnaker.keel.activation.ApplicationUp
+import com.netflix.spinnaker.keel.enforcers.EnvironmentCurrentlyBeingActedOn
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.blankMDC
 import com.netflix.spinnaker.keel.persistence.AgentLockRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -194,6 +195,8 @@ class CheckScheduler(
               } catch (e: TimeoutCancellationException) {
                 log.error("Timed out verifying ${it.version} in ${it.deliveryConfig.application}/${it.environmentName}", e)
                 publisher.publishEvent(VerificationTimedOut(it))
+              } catch (e: EnvironmentCurrentlyBeingActedOn) {
+                log.warn("Couldn't verify ${it.version} in ${it.deliveryConfig.application}/${it.environmentName} because environment is in use", e)
               }
             }
         }
