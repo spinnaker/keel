@@ -17,6 +17,7 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.NOT_EVALUATED
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
+import com.netflix.spinnaker.keel.api.constraints.StatelessConstraintEvaluator
 import com.netflix.spinnaker.keel.api.constraints.UpdatedConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
@@ -101,6 +102,10 @@ class ApplicationService(
   private val statelessEvaluators: List<ConstraintEvaluator<*>> =
     constraintEvaluators.filter { !it.isImplicit() && it !is StatefulConstraintEvaluator<*, *> }
 
+  private val snapshottedStatelessConstraintAttrs: List<String> = constraintEvaluators
+    .filterIsInstance<StatelessConstraintEvaluator<*,*>>()
+    .map { it.attributeType.name }
+
   fun hasManagedResources(application: String) = repository.hasManagedResources(application)
 
   fun getDeliveryConfig(application: String) = repository.getDeliveryConfigForApplication(application)
@@ -111,8 +116,8 @@ class ApplicationService(
     repository
       .constraintStateFor(application)
       .filterNot {
-        // remove frozen "stateless" constraints from this list
-        listOf("allowed-times", "depends-on").contains(it.type)
+        // remove snapshotted "stateless" constraints from this list
+        snapshottedStatelessConstraintAttrs.contains(it.type)
       }
 
   fun getConstraintStatesFor(application: String, environment: String, limit: Int): List<ConstraintState> {
@@ -354,7 +359,7 @@ class ApplicationService(
                   status
                 )
                   ?.also {
-                    //todo eb: use only the last one
+                    //todo eb: use only the new constraint summaries, remove both stateless and stateful
                     artifactSummariesInEnvironments.add(
                       it.addStatefulConstraintSummaries(deliveryConfig, environment, artifactVersion.version)
                         .addStatelessConstraintSummaries(deliveryConfig, environment, artifactVersion.version, artifact)
@@ -530,7 +535,7 @@ class ApplicationService(
     version: String
   ): ArtifactSummaryInEnvironment {
     val constraintStates = repository.constraintStateFor(deliveryConfig.name, environment.name, version)
-      .filterNot { listOf("allowed-times", "depends-on").contains(it.type) }
+      .filterNot { snapshottedStatelessConstraintAttrs.contains(it.type) }
     val notEvaluatedConstraints = environment.constraints.filter { constraint ->
       constraint is StatefulConstraint && constraintStates.none { it.type == constraint.type }
     }.map { constraint ->

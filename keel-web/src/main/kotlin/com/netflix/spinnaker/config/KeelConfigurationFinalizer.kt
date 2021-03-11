@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
+import com.netflix.spinnaker.keel.api.constraints.StatelessConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.Resolver
@@ -19,8 +20,6 @@ import com.netflix.spinnaker.keel.api.support.ExtensionRegistry
 import com.netflix.spinnaker.keel.api.support.extensionsOf
 import com.netflix.spinnaker.keel.api.support.register
 import com.netflix.spinnaker.keel.bakery.BaseImageCache
-import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintAttributes
-import com.netflix.spinnaker.keel.constraints.DependsOnConstraintAttributes
 import com.netflix.spinnaker.keel.ec2.jackson.registerEc2Subtypes
 import com.netflix.spinnaker.keel.ec2.jackson.registerKeelEc2ApiModule
 import com.netflix.spinnaker.keel.resources.SpecMigrator
@@ -99,8 +98,13 @@ class KeelConfigurationFinalizer(
         extensionRegistry.register(attributeType.type, attributeType.name)
       }
 
-    extensionRegistry.register(DependsOnConstraintAttributes::class.java, "depends-on")
-    extensionRegistry.register(AllowedTimesConstraintAttributes::class.java, "allowed-times")
+    constraintEvaluators
+      .filterIsInstance<StatelessConstraintEvaluator<*, *>>()
+      .map { it.attributeType }
+      .forEach { attributeType ->
+        log.info("Registering Constraint Attributes sub-type {}: {}", attributeType.name, attributeType.type.simpleName)
+        extensionRegistry.register(attributeType.type, attributeType.name)
+      }
   }
 
   @PostConstruct

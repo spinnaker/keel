@@ -1,10 +1,10 @@
 package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spinnaker.keel.actuation.EnvironmentConstraintRunner.EnvironmentContext
-import com.netflix.spinnaker.keel.api.ArtifactReferenceProvider
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -152,7 +152,7 @@ class EnvironmentPromotionChecker(
       )
 
       // persist the status of stateless constraints because their current value is all we care about
-      freezeStatelessConstraintStatus(deliveryConfig, artifact, version, targetEnvironment)
+      snapshotStatelessConstraintStatus(deliveryConfig, artifact, version, targetEnvironment)
 
       // recheck all resources in an environment, so action can be taken right away
       repository.triggerResourceRecheck(targetEnvironment.name, deliveryConfig.application)
@@ -163,7 +163,7 @@ class EnvironmentPromotionChecker(
    * Save the passing status of all stateless constraints when a version is approved so that
    * their status stays the same forever. We don't want them to be evaluated anymore.
    */
-  private fun freezeStatelessConstraintStatus(
+  private fun snapshotStatelessConstraintStatus(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
@@ -173,12 +173,12 @@ class EnvironmentPromotionChecker(
       artifact = artifact,
       deliveryConfig = deliveryConfig,
       version = version,
-      environment = environment
+      environment = environment,
+      currentStatus = PASS // We just checked that all these pass since a version was approved
     ).forEach { constraintState ->
-      log.debug("Storing final constraint state for {} constraint for artifact {} {} version {} for {} environment {} in {}",
+      log.debug("Storing final constraint state for {} constraint for {} version {} for {} environment {} in {}",
         constraintState.type,
-        artifact.name,
-        artifact.type,
+        artifact,
         version,
         deliveryConfig.name,
         environment.name,

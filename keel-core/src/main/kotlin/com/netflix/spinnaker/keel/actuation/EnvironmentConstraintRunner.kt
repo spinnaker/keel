@@ -8,7 +8,9 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.PASS
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
+import com.netflix.spinnaker.keel.api.constraints.StatelessConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import org.slf4j.LoggerFactory
@@ -187,7 +189,8 @@ class EnvironmentConstraintRunner(
     artifact: DeliveryArtifact,
     deliveryConfig: DeliveryConfig,
     version: String,
-    environment: Environment
+    environment: Environment,
+    currentStatus: ConstraintStatus?
   ): List<ConstraintState> =
     environment.constraints.mapNotNull { constraint ->
       constraint
@@ -196,7 +199,8 @@ class EnvironmentConstraintRunner(
           artifact = artifact,
           deliveryConfig = deliveryConfig,
           version = version,
-          targetEnvironment = environment
+          targetEnvironment = environment,
+          currentStatus = currentStatus
         )
     }
 
@@ -254,6 +258,6 @@ class EnvironmentConstraintRunner(
   private fun Environment.hasSupportedConstraint(constraintEvaluator: ConstraintEvaluator<*>) =
     constraints.any { it.javaClass.isAssignableFrom(constraintEvaluator.supportedType.type) }
 
-  private fun Constraint.findStatelessEvaluator(): ConstraintEvaluator<*>? =
-    statelessEvaluators.firstOrNull { javaClass.isAssignableFrom(it.supportedType.type) }
+  private fun Constraint.findStatelessEvaluator(): StatelessConstraintEvaluator<*,*>? =
+    statelessEvaluators.filterIsInstance<StatelessConstraintEvaluator<*, *>>().firstOrNull { javaClass.isAssignableFrom(it.supportedType.type) }
 }

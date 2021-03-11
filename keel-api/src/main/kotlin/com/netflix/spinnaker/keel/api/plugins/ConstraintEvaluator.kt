@@ -75,19 +75,4 @@ interface ConstraintEvaluator<T : Constraint> : SpinnakerExtensionPoint {
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment
   ): Boolean
-
-  /**
-   * @return a constraint state object that captures the current state of the constraint.
-   * This will be used for stateless constraints to construct and save a summary of the state
-   * when they are passing.
-   *
-   * If a summary of the constraint will not be shown to the user (like with an implicit constraint)
-   * this function does not need to be implemented.
-   */
-  fun generateConstraintState(
-    artifact: DeliveryArtifact,
-    version: String,
-    deliveryConfig: DeliveryConfig,
-    targetEnvironment: Environment
-  ): ConstraintState? = null
 }
