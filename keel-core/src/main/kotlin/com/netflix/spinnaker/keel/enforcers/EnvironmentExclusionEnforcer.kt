@@ -6,7 +6,11 @@ import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.persistence.EnvironmentLeaseRepository
 import com.netflix.spinnaker.keel.persistence.Lease
 
-class StuffIsHappeningInTheEnvironment(msg: String) : Exception(msg) {
+/**
+ * Exception thrown when it's not safe to take action against the environment because
+ * something is is acting on it
+ */
+class EnvironmentCurrentlyBeingActedOn(msg: String) : Exception(msg) {
 
 }
 
@@ -50,7 +54,7 @@ class EnvironmentExclusionEnforcer(
 
 
   /**
-   * @throws StuffIsHappeningInTheEnvironment if there's an active deployment
+   * @throws EnvironmentCurrentlyBeingActedOn if there's an active deployment
    */
   private fun ensureNoActiveDeployments(environment: Environment) {
     /**
