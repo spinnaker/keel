@@ -22,7 +22,8 @@ import org.springframework.stereotype.Component
 @Component
 class GitDataGenerator(
   private val scmInfo: ScmInfo,
-  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String
+  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
+  @Value("\${spinnaker.apiBaseUrl}") private val spinnakerApiBaseUrl: String
 ) {
 
   companion object {
@@ -35,6 +36,9 @@ class GitDataGenerator(
       val baseScmUrl = gitMetadata.commitInfo?.link?.let { getScmBaseLink(scmInfo, it) }
       return "$baseScmUrl/projects/${gitMetadata.project}/repos/${gitMetadata.repo?.name}"
   }
+
+  fun generateConfigUrl(application: String): String =
+    "$spinnakerApiBaseUrl/managed/application/$application/config"
 
   /**
    * Adds a "Show full commit" button if the commit message is > [GIT_COMMIT_MESSAGE_LENGTH].

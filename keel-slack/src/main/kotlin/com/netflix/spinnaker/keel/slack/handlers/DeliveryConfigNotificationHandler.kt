@@ -43,7 +43,8 @@ class DeliveryConfigNotificationHandler(
         } else {
           section {
             markdownText("*App:* $application\n\n" +
-              "No commit info available."
+              "No commit info available.\n" +
+              "View the current <${gitDataGenerator.generateConfigUrl(application)}|config as json>."
             )
             accessory {
               image(imageUrl = imageUrl, altText = altText)
