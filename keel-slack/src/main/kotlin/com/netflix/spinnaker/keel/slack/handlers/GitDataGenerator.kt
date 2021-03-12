@@ -1,29 +1,25 @@
 package com.netflix.spinnaker.keel.slack.handlers
 
+import com.netflix.spinnaker.config.BaseUrlConfig
 import com.netflix.spinnaker.keel.api.ScmInfo
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.artifacts.getScmBaseLink
-import com.slack.api.model.block.Blocks
-import com.slack.api.model.block.Blocks.actions
-import com.slack.api.model.block.Blocks.section
-import com.slack.api.model.block.LayoutBlock
-import com.slack.api.model.block.SectionBlock
 import com.slack.api.model.kotlin_extension.block.SectionBlockBuilder
 import com.slack.api.model.kotlin_extension.block.dsl.LayoutBlockDsl
 import org.apache.logging.log4j.util.Strings
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component
 
 /**
  * Constructing a git related data block, which will be a part of a slack notification
  */
 @Component
+@EnableConfigurationProperties(BaseUrlConfig::class)
 class GitDataGenerator(
   private val scmInfo: ScmInfo,
-  @Value("\${spinnaker.baseUrl}") private val spinnakerBaseUrl: String,
-  @Value("\${spinnaker.apiBaseUrl}") private val spinnakerApiBaseUrl: String
+  val config: BaseUrlConfig
 ) {
 
   companion object {
@@ -38,7 +34,7 @@ class GitDataGenerator(
   }
 
   fun generateConfigUrl(application: String): String =
-    "$spinnakerApiBaseUrl/managed/application/$application/config"
+    "${config.baseApiUrl}/managed/application/$application/config"
 
   /**
    * Adds a "Show full commit" button if the commit message is > [GIT_COMMIT_MESSAGE_LENGTH].
@@ -222,5 +218,5 @@ class GitDataGenerator(
   }
 
   fun generateArtifactUrl(application: String, reference: String, version: String) =
-    "$spinnakerBaseUrl/#/applications/${application}/environments/${reference}/${version}"
+    "${config.baseUrl}/#/applications/${application}/environments/${reference}/${version}"
 }
