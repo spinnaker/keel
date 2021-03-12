@@ -1,8 +1,10 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
-import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfigWithGitMetadata
 import com.netflix.spinnaker.keel.diff.AdHocDiffer
 import com.netflix.spinnaker.keel.diff.EnvironmentDiff
 import com.netflix.spinnaker.keel.events.DeliveryConfigChangedNotification
@@ -46,7 +48,8 @@ class DeliveryConfigController(
   private val authorizationSupport: AuthorizationSupport,
   @Autowired(required = false) private val deliveryConfigProcessors: List<DeliveryConfigProcessor> = emptyList(),
   private val generator: Generator,
-  private val publisher: ApplicationEventPublisher
+  private val publisher: ApplicationEventPublisher,
+  private val mapper: ObjectMapper
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
@@ -64,48 +67,37 @@ class DeliveryConfigController(
   fun upsert(
     @RequestBody
     @SwaggerRequestBody(
-      description = "The delivery config. If its `name` matches an existing delivery config the operation is an update, otherwise a new delivery config is created."
+      description = "The delivery config. If its `name` matches an existing delivery config the operation is " +
+        "an update, otherwise a new delivery config is created."
     )
     deliveryConfig: SubmittedDeliveryConfig
-  ): DeliveryConfig =
-    deliveryConfigProcessors.applyAll(deliveryConfig)
-      .let { processedDeliveryConfig ->
-        validator.validate(processedDeliveryConfig)
-        log.debug("Upserting delivery config '${processedDeliveryConfig.name}' for app '${processedDeliveryConfig.application}'")
-        val config = repository.upsertDeliveryConfig(processedDeliveryConfig)
-        publisher.publishEvent(DeliveryConfigChangedNotification(config))
-        return config
+  ): DeliveryConfig {
+    val metadata: MutableMap<String,Any?> = deliveryConfig.metadata?.toMutableMap() ?: mutableMapOf()
+    val gitMetadata: GitMetadata? = try {
+      val candidateMetadata = metadata.getOrDefault("gitMetadata", null)
+      if (candidateMetadata != null) {
+        mapper.convertValue<GitMetadata>(candidateMetadata)
+      } else {
+        null
       }
+    } catch (e: IllegalArgumentException) {
+      log.debug("Error converting git metadata ${metadata.getOrDefault("gitMetadata", null)}: {}", e)
+      // not properly formed, so ignore the metadata and move on
+      null
+    }
 
-  @Operation(
-    description = "Registers or updates a delivery config manifest with context about the commit that produced this update."
-  )
-  @PostMapping(
-    path = ["/withGitContext"],
-    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
-    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
-  )
-  @PreAuthorize(
-    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #body.config.application)
-    and @authorizationSupport.hasServiceAccountAccess(#body.config.serviceAccount)"""
-  )
-  fun upsertWithGitContext(
-    @RequestBody
-    @SwaggerRequestBody(
-      description = "The delivery config and associated git metadata. If its `name` matches an existing delivery config " +
-        "the operation is an update, otherwise a new delivery config is created."
-    )
-    body: SubmittedDeliveryConfigWithGitMetadata,
-  ): DeliveryConfig =
-    deliveryConfigProcessors.applyAll(body.config)
+    // we don't save this key to the database, since we're programmatically adding it in orca.
+    metadata.remove("gitMetadata")
+
+    deliveryConfigProcessors.applyAll(deliveryConfig.copy(metadata = metadata))
       .let { processedDeliveryConfig ->
         validator.validate(processedDeliveryConfig)
-        //todo eb: send failed validation notification
         log.debug("Upserting delivery config '${processedDeliveryConfig.name}' for app '${processedDeliveryConfig.application}'")
         val config = repository.upsertDeliveryConfig(processedDeliveryConfig)
-        publisher.publishEvent(DeliveryConfigChangedNotification(config, body.gitMetadata))
+        publisher.publishEvent(DeliveryConfigChangedNotification(config, gitMetadata))
         return config
       }
+  }
 
   @GetMapping(
     path = ["/{name}"],
