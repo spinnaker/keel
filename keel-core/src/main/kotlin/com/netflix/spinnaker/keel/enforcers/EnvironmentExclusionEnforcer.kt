@@ -10,6 +10,27 @@ import org.springframework.stereotype.Component
  */
 class EnvironmentCurrentlyBeingActedOn(message: String) : Exception(message) { }
 
+/**
+ * This class enforces two safety properties of the verification behavior:
+ *
+ * P1: Two verifications should never execute concurrently against the same environment.
+ *
+ *   For example, if the acme/tests:stable test container is currently running in the staging environment,
+ *   keel should not launch any other verifications in the staging environment.
+ *
+ * P2:  Verifications against an environment should never happen concurrently with a deployment in an environment.
+ *
+ *   For example, if the fnord-v123.deb artifact is being deployed to an EC2 cluster in the staging environment,
+ *   keel should not launch verifications while this is happening.
+ *
+ *
+ * The enforcer works by granting the client a lease if the guard conditions are met.
+ * A lease is a lock that has an expiration time. Leases expire to protect against the situation
+ * where an instance takes a lease and then terminates unexpectedly before releasing it.
+ *
+ * If a client is unable to get a lease, the enforcer will throw a EnvironmentCurrentlyBeingActedOn exception.
+ *
+ */
 @Component
 class EnvironmentExclusionEnforcer {
   /**
