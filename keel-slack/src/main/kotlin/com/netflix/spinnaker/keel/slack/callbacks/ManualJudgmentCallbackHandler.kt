@@ -66,21 +66,7 @@ class ManualJudgmentCallbackHandler(
       val originalCommitText = response.message.blocks[1].getText
       val action = actionsMap[response.actions.first().value]
 
-      // since we sometimes add a "show more" button, the position of this information changes.
-      //  I cannot figure out (yet) how to scrape the original section and just re-add it to the notification
-      val originalGitInfoText = if (response.message.blocks.size == 3) {
-        response.message.blocks[2].getText
-      } else {
-        response.message.blocks[3].getText
-      }
-
-      val originalUrl = if (response.message.blocks.size == 3) {
-        response.message.blocks[2].getUrl
-      } else {
-        response.message.blocks[3].getUrl
-      }
-
-      return withBlocks {
+      val newBlocks = withBlocks {
         header {
           when (action) {
             "approve" -> text("Manual judgement approved", emoji = true)
@@ -96,16 +82,6 @@ class ManualJudgmentCallbackHandler(
             }
           }
         }
-        section {
-          markdownText(originalGitInfoText)
-          accessory {
-            button {
-              text("More...")
-              actionId("button-action")
-              url(originalUrl)
-            }
-          }
-        }
 
         context {
           elements {
@@ -114,6 +90,11 @@ class ManualJudgmentCallbackHandler(
         }
       }
 
+      val originalBlocks = response.message.blocks
+      //remove the first two blocks because we're replacing them
+      originalBlocks.removeFirstOrNull()
+      originalBlocks.removeFirstOrNull()
+      return newBlocks + originalBlocks
     } catch (ex: Exception) {
       log.debug("exception occurred while creating updated MJ notification. Will use a fallback text instead: {}", ex)
       return emptyList()
