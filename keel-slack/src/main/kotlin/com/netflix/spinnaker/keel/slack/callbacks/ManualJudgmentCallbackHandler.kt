@@ -2,7 +2,6 @@ package com.netflix.spinnaker.keel.slack.callbacks
 
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.core.api.parseUID
-import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.slack.SlackService
 import com.netflix.spinnaker.kork.exceptions.SystemException
@@ -12,7 +11,6 @@ import com.slack.api.model.block.SectionBlock
 import com.slack.api.model.block.composition.MarkdownTextObject
 import com.slack.api.model.block.element.ButtonElement
 import com.slack.api.model.kotlin_extension.block.withBlocks
-import org.apache.logging.log4j.util.Strings
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Clock
@@ -66,9 +64,21 @@ class ManualJudgmentCallbackHandler(
   fun updateManualJudgementNotification(response: BlockActionPayload): List<LayoutBlock> {
     try {
       val originalCommitText = response.message.blocks[1].getText
-      val originalGitInfoText = response.message.blocks[2].getText
-      val originalUrl = response.message.blocks[2].getUrl
       val action = actionsMap[response.actions.first().value]
+
+      // since we sometimes add a "show more" button, the position of this information changes.
+      //  I cannot figure out (yet) how to scrape the original section and just re-add it to the notification
+      val originalGitInfoText = if (response.message.blocks.size == 3) {
+        response.message.blocks[2].getText
+      } else {
+        response.message.blocks[3].getText
+      }
+
+      val originalUrl = if (response.message.blocks.size == 3) {
+        response.message.blocks[2].getUrl
+      } else {
+        response.message.blocks[3].getUrl
+      }
 
       return withBlocks {
         header {
@@ -105,7 +115,7 @@ class ManualJudgmentCallbackHandler(
       }
 
     } catch (ex: Exception) {
-      log.debug("exception occurred while creating updated MJ notification. Will use a fallback text instead")
+      log.debug("exception occurred while creating updated MJ notification. Will use a fallback text instead: {}", ex)
       return emptyList()
     }
   }
