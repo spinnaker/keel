@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component
 
 /**
  * Exception thrown when it's not safe to take action against the environment because
- * something is is acting on it
+ * something is already acting on it.
  */
 class EnvironmentCurrentlyBeingActedOn(message: String) : Exception(message) { }
 
