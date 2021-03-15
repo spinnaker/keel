@@ -43,6 +43,5 @@ internal class EnvironmentExclusionEnforcerTest {
     coVerify(exactly=1) {
       action.invoke()
     }
-
   }
 }
