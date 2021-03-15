@@ -34,7 +34,14 @@ class DeliveryConfigNotificationHandler(
         val gitMetadata = notification.gitMetadata
         if (gitMetadata != null) {
           section {
-            gitDataGenerator.generateCommitInfoNoArtifact(this, application, imageUrl, altText, notification.gitMetadata)
+            gitDataGenerator.generateCommitInfoNoArtifact(
+              this,
+              application,
+              imageUrl,
+              altText,
+              gitMetadata,
+              gitMetadata.author?.let{ slackService.getUsernameByEmail(it) }
+            )
           }
           gitDataGenerator.conditionallyAddFullCommitMsgButton(this, gitMetadata)
           section {
@@ -44,7 +51,7 @@ class DeliveryConfigNotificationHandler(
           section {
             markdownText("*App:* $application\n\n" +
               "No commit info available.\n" +
-              "View the current <${gitDataGenerator.generateConfigUrl(application)}|config as json>."
+              "View the current <${gitDataGenerator.generateConfigUrl(application)}|config as JSON>."
             )
             accessory {
               image(imageUrl = imageUrl, altText = altText)

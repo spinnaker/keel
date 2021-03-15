@@ -72,7 +72,7 @@ class DeliveryConfigController(
     )
     deliveryConfig: SubmittedDeliveryConfig
   ): DeliveryConfig {
-    val metadata: MutableMap<String,Any?> = deliveryConfig.metadata?.toMutableMap() ?: mutableMapOf()
+    val metadata: Map<String,Any?> = deliveryConfig.metadata ?: mapOf()
     val gitMetadata: GitMetadata? = try {
       val candidateMetadata = metadata.getOrDefault("gitMetadata", null)
       if (candidateMetadata != null) {
@@ -85,9 +85,6 @@ class DeliveryConfigController(
       // not properly formed, so ignore the metadata and move on
       null
     }
-
-    // we don't save this key to the database, since we're programmatically adding it in orca.
-    metadata.remove("gitMetadata")
 
     deliveryConfigProcessors.applyAll(deliveryConfig.copy(metadata = metadata))
       .let { processedDeliveryConfig ->

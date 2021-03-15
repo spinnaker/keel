@@ -169,11 +169,12 @@ class GitDataGenerator(
                                    application: String,
                                    imageUrl: String,
                                    altText: String,
-                                   gitMetadata: GitMetadata): SectionBlockBuilder {
+                                   gitMetadata: GitMetadata,
+                                   username: String?): SectionBlockBuilder {
 
     with(sectionBlockBuilder) {
       markdownText("*App:* $application\n" +
-        "Commit by @${gitMetadata.author}\n " +
+        "Commit by $username\n " +
         formatCommitMessage(gitMetadata))
 
       accessory {
