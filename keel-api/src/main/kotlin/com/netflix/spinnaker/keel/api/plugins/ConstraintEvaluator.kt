@@ -50,6 +50,10 @@ interface ConstraintEvaluator<T : Constraint> : SpinnakerExtensionPoint {
     }
   }
 
+  @JvmDefault
+  val name: String
+    get() = extensionClass.simpleName
+
   /**
    * TODO: Docs
    */
