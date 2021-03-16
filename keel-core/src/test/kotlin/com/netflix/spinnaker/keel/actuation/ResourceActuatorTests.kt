@@ -98,7 +98,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     val verificationRepository = mockk<VerificationRepository>() {
       every { countVerifications(any(), any(), any()) } returns 0
     }
-    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, NoopRegistry(), clock)
+    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, artifactRepository, NoopRegistry(), clock)
     val subject = ResourceActuator(
       resourceRepository,
       artifactRepository,

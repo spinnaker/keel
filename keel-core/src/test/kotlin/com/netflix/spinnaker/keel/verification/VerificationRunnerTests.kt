@@ -17,6 +17,7 @@ import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.api.verification.VerificationState
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.enforcers.EnvironmentExclusionEnforcer
+import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.keel.telemetry.VerificationCompleted
 import com.netflix.spinnaker.keel.telemetry.VerificationStarted
 import de.huxhorn.sulky.ulid.ULID
@@ -64,8 +65,11 @@ internal class VerificationRunnerTests {
     every { countVerifications(any(), any(), any()) }  returns 0
   }
 
+  private val artifactRepository = mockk<ArtifactRepository>() {
+    every { isDeployingTo(any(), any()) } returns false
+  }
 
-  private val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, NoopRegistry(), Clock.systemUTC())
+  private val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, artifactRepository, NoopRegistry(), Clock.systemUTC())
 
   private val subject = VerificationRunner(
     repository,
