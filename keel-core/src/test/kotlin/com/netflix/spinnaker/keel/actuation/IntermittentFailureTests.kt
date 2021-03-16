@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.plugins.ActionDecision
 import com.netflix.spinnaker.keel.api.plugins.ResourceHandler
 import com.netflix.spinnaker.keel.api.plugins.SupportedKind
+import com.netflix.spinnaker.keel.api.verification.VerificationRepository
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.enforcers.EnvironmentExclusionEnforcer
@@ -61,6 +62,8 @@ class IntermittentFailureTests : JUnit5Minutests {
       every { getProperty("keel.events.diff-not-actionable.enabled", Boolean::class.java, any()) } returns true
       every { getProperty("keel.enforcement.environment-exclusion.enabled", Boolean::class.java, any()) } returns true
     }
+
+
     val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true) {
       every { name } returns "plugin1"
       every { supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyResourceSpec::class.java)
@@ -73,7 +76,11 @@ class IntermittentFailureTests : JUnit5Minutests {
     val clock = MutableClock()
     val vetoRepository = mockk<UnhappyVetoRepository>(relaxUnitFun = true)
 
-    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, NoopRegistry())
+    val verificationRepository = mockk<VerificationRepository>() {
+      every { countVerifications(any(), any(), any()) }  returns 0
+    }
+
+    val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, NoopRegistry(), clock)
 
     val dynamicConfigService: DynamicConfigService = mockk(relaxUnitFun = true) {
       every {
