@@ -62,8 +62,6 @@ class IntermittentFailureTests : JUnit5Minutests {
       every { getProperty("keel.events.diff-not-actionable.enabled", Boolean::class.java, any()) } returns true
       every { getProperty("keel.enforcement.environment-exclusion.enabled", Boolean::class.java, any()) } returns true
     }
-
-
     val plugin1 = mockk<ResourceHandler<DummyResourceSpec, DummyResourceSpec>>(relaxUnitFun = true) {
       every { name } returns "plugin1"
       every { supportedKind } returns SupportedKind(parseKind("plugin1/foo@v1"), DummyResourceSpec::class.java)
