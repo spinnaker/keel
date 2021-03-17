@@ -87,7 +87,7 @@ class ImageService(
     val appVersion: AppVersion,
     val account: String,
     val region: String,
-    val baseOs: String?
+    val baseOs: String
   )
 
   private val namedImageCache = cacheFactory
@@ -107,7 +107,7 @@ class ImageService(
         .filter { image ->
           // using the xxxxbase pattern means we won't get matches for base OS values that are
           // substrings of others -- e.g. bionic and bionic-classic
-          baseOs == null || image.baseImageName.startsWith("${baseOs}base")
+          image.baseImageName.startsWith("${baseOs}base")
         }
         // filter to images with matching app version
         .filter { image ->
@@ -137,7 +137,7 @@ class ImageService(
     appVersion: AppVersion,
     account: String,
     region: String,
-    baseOs: String? = null
+    baseOs: String
   ): NamedImage? {
     val key = NamedImageCacheKey(appVersion, account, region, baseOs)
     return namedImageCache.get(key).await()
@@ -200,8 +200,7 @@ suspend fun ImageService.getLatestNamedImages(
   appVersion: AppVersion,
   account: String,
   regions: Collection<String>,
-  // TODO: make this non-nullable
-  baseOs: String? = null
+  baseOs: String
 ): Map<String, NamedImage> = coroutineScope {
   regions.associateWith { region ->
     async {

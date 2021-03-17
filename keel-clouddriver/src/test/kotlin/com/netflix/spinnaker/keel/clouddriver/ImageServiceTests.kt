@@ -373,7 +373,8 @@ class ImageServiceTests : JUnit5Minutests {
           subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
-            regions = regions
+            regions = regions,
+            baseOs = "xenial"
           )
         }
         expectThat(images)
@@ -388,7 +389,7 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("the newest image is selected when searching in a single region") {
         val image = runBlocking {
-          subject.getLatestNamedImage(appVersion, "test", regions.first())
+          subject.getLatestNamedImage(appVersion, "test", regions.first(), "xenial")
         }
 
         expectThat(image)
@@ -399,10 +400,10 @@ class ImageServiceTests : JUnit5Minutests {
 
       test("any other regions supported by the same image are subsequently served from cache") {
         val r1Image = runBlocking {
-          subject.getLatestNamedImage(appVersion, "test", regions.first())
+          subject.getLatestNamedImage(appVersion, "test", regions.first(), "xenial")
         }
         val r2Image = runBlocking {
-          subject.getLatestNamedImage(appVersion, "test", regions.last())
+          subject.getLatestNamedImage(appVersion, "test", regions.last(), "xenial")
         }
 
         expectThat(r1Image).isEqualTo(r2Image)
@@ -427,7 +428,8 @@ class ImageServiceTests : JUnit5Minutests {
           subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
-            regions = regions
+            regions = regions,
+            baseOs = "trusty"
           )
         }
 
@@ -457,7 +459,8 @@ class ImageServiceTests : JUnit5Minutests {
           subject.getLatestNamedImages(
             appVersion = appVersion,
             account = "test",
-            regions = regions
+            regions = regions,
+            baseOs = "trusty"
           )
         }
 
@@ -479,31 +482,13 @@ class ImageServiceTests : JUnit5Minutests {
         } returns listOf(image1, imageWithNewerBaseImageName, imageWithDifferentBaseOs)
       }
 
-      test("newest image is returned if base os is not specified") {
+      test("newest image with desired base os is returned") {
         val images = runBlocking {
           subject.getLatestNamedImages(
             appVersion = appVersion,
-            account = "test",
-            regions = regions
-          )
-        }
-
-        expectThat(images)
-          .hasSize(2)
-          .get(Map<*, NamedImage>::values)
-          .map { it.baseImageName }
-          .all {
-            isEqualTo(imageWithDifferentBaseOs.baseImageName)
-          }
-      }
-
-      test("newest image with desired base os is returned if base os is specified") {
-        val images = runBlocking {
-          subject.getLatestNamedImages(
-            appVersion = appVersion,
-            baseOs = "xenial",
             account = "test",
             regions = regions,
+            baseOs = "xenial"
           )
         }
 
