@@ -24,5 +24,5 @@ databaseChangeLog:
             uniqueColumns: environment_uid, type, artifact_version
         - addUniqueConstraint:
             tableName: environment_artifact_constraint
-            constraintName: constraint_pk
+            constraintName: constraint_unique
             columnNames: environment_uid, type, artifact_version, artifact_reference
