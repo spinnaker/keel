@@ -1,12 +1,17 @@
 package com.netflix.spinnaker.keel.rest
 
+import com.netflix.spinnaker.config.SlackConfiguration
+import com.netflix.spinnaker.keel.slack.callbacks.CommitModalCallbackHandler
 import com.netflix.spinnaker.keel.slack.callbacks.ManualJudgmentCallbackHandler
 import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload
 import com.slack.api.app_backend.interactive_components.response.ActionResponse
 import com.slack.api.bolt.App
 import com.slack.api.bolt.servlet.SlackAppServlet
+import com.slack.api.model.view.View
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.servlet.annotation.WebServlet
+
 
 @Component
 @WebServlet("/slack/notifications/callbacks")
@@ -16,7 +21,9 @@ import javax.servlet.annotation.WebServlet
  */
 class SlackAppController(
   slackApp: App,
-  private val mjHandler: ManualJudgmentCallbackHandler
+  private val mjHandler: ManualJudgmentCallbackHandler,
+  private val commitModalCallbackHandler: CommitModalCallbackHandler,
+  val slackConfiguration: SlackConfiguration
 ) : SlackAppServlet(slackApp) {
   init {
     // The pattern here should match the action id field in the actual button.
@@ -34,11 +41,24 @@ class SlackAppController(
             .build()
           ctx.respond(response)
         }
+      } else if (req.payload.notificationType == "FULL_COMMIT_MODAL") {
+        val modal: View = commitModalCallbackHandler.buildView(req.payload)
+        val response = ctx.client().viewsOpen { r ->
+          r
+            .token(slackConfiguration.token)
+            .triggerId(req.payload.triggerId)
+            .view(modal)
+        }
+        if (!response.isOk) {
+          log.error("Failed to send slack callback: {}", response)
+        }
       }
       //acknowledge the button anyway, so we won't exceptions from slack when clicking on it
       ctx.ack()
     }
   }
+
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
 
   //action id is consistent of 3 parts, where the last part is the type
   val BlockActionPayload.notificationType
