@@ -172,9 +172,3 @@ data class InvalidVerificationIdSeen(
   val deliveryConfigName: String,
   val environmentName: String,
 )
-
-data class VerificationBlockedActuation(
-  val application: String,
-  val kind: ResourceKind,
-  val id: String
-)

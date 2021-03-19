@@ -523,3 +523,23 @@ data class ResourceDiffNotActionable(
     message
   )
 }
+
+data class VerificationBlockedActuation(
+  override val kind: ResourceKind,
+  override val id: String,
+  override val version: Int,
+  override val application: String,
+  override val timestamp: Instant,
+  override val displayName: String = "Waiting for verifications to complete before updating can start"
+) : ResourceEvent() {
+  @JsonIgnore
+  override val ignoreRepeatedInHistory = true
+
+  constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this (
+    resource.kind,
+    resource.id,
+    resource.version,
+    resource.application,
+    clock.instant()
+  )
+}

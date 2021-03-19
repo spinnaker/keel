@@ -28,6 +28,7 @@ import com.netflix.spinnaker.keel.events.ResourceMissing
 import com.netflix.spinnaker.keel.events.ResourceTaskFailed
 import com.netflix.spinnaker.keel.events.ResourceTaskSucceeded
 import com.netflix.spinnaker.keel.events.ResourceValid
+import com.netflix.spinnaker.keel.events.VerificationBlockedActuation
 import com.netflix.spinnaker.keel.logging.TracingSupport.Companion.withTracingContext
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.ArtifactRepository
@@ -39,7 +40,6 @@ import com.netflix.spinnaker.keel.plugin.CannotResolveDesiredState
 import com.netflix.spinnaker.keel.plugin.ResourceResolutionException
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionVetoed
 import com.netflix.spinnaker.keel.telemetry.ResourceCheckSkipped
-import com.netflix.spinnaker.keel.telemetry.VerificationBlockedActuation
 import com.netflix.spinnaker.keel.veto.VetoEnforcer
 import com.netflix.spinnaker.keel.veto.VetoResponse
 import com.netflix.spinnaker.kork.exceptions.SpinnakerException
@@ -79,7 +79,6 @@ class ResourceActuator(
   private val vetoEnforcer: VetoEnforcer,
   private val publisher: ApplicationEventPublisher,
   private val clock: Clock,
-  private val springEnv: SpringEnvironment,
   private val environmentExclusionEnforcer: EnvironmentExclusionEnforcer
 ) {
   companion object {
@@ -203,7 +202,7 @@ class ResourceActuator(
         publisher.publishEvent(ResourceCheckUnresolvable(resource, e, clock))
       } catch (e: ActiveVerifications) {
         log.warn("Resource {} can't be actuated because a verification is running", id, e)
-        publisher.publishEvent(VerificationBlockedActuation(resource.application, resource.kind, id))
+        publisher.publishEvent(VerificationBlockedActuation(resource, clock))
       } catch (e: Exception) {
         log.error("Resource check for $id failed", e)
         publisher.publishEvent(ResourceCheckError(resource, e.toSpinnakerException(), clock))
