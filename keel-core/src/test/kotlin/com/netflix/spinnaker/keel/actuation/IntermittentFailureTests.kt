@@ -75,7 +75,7 @@ class IntermittentFailureTests : JUnit5Minutests {
     val vetoRepository = mockk<UnhappyVetoRepository>(relaxUnitFun = true)
 
     val verificationRepository = mockk<VerificationRepository>() {
-      every { countVerifications(any(), any(), any()) }  returns 0
+      every { getContextsWithStatus(any(), any(), any()) }  returns emptyList()
     }
 
     val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, NoopRegistry(), clock)
@@ -109,12 +109,10 @@ class IntermittentFailureTests : JUnit5Minutests {
       vetoEnforcer,
       publisher,
       Clock.systemUTC(),
-      springEnv,
       environmentExclusionEnforcer
     )
     val desired = DummyResourceSpec(data = "fnord")
     val current = DummyResourceSpec()
-    val diff = DefaultResourceDiff(desired, current)
   }
 
   fun tests() = rootContext<Fixture> {

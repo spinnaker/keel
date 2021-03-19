@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.actuation.ScheduledEnvironmentCheckStarting
 import com.netflix.spinnaker.keel.actuation.ScheduledEnvironmentVerificationStarting
 import com.netflix.spinnaker.keel.events.ResourceActuationLaunched
 import com.netflix.spinnaker.keel.events.ResourceCheckResult
+import com.netflix.spinnaker.keel.events.VerificationBlockedActuation
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component

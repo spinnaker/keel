@@ -202,7 +202,7 @@ class ResourceActuator(
         publisher.publishEvent(ResourceCheckUnresolvable(resource, e, clock))
       } catch (e: ActiveVerifications) {
         log.warn("Resource {} can't be actuated because a verification is running", id, e)
-        publisher.publishEvent(VerificationBlockedActuation(resource, clock))
+        publisher.publishEvent(VerificationBlockedActuation(resource, e, clock))
       } catch (e: Exception) {
         log.error("Resource check for $id failed", e)
         publisher.publishEvent(ResourceCheckError(resource, e.toSpinnakerException(), clock))

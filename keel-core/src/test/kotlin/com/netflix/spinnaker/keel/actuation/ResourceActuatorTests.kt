@@ -96,7 +96,7 @@ internal class ResourceActuatorTests : JUnit5Minutests {
     val vetoEnforcer = VetoEnforcer(listOf(veto))
     val clock = Clock.systemUTC()
     val verificationRepository = mockk<VerificationRepository>() {
-      every { countVerifications(any(), any(), any()) } returns 0
+      every { getContextsWithStatus(any(), any(), any()) } returns emptyList()
     }
     val environmentExclusionEnforcer = EnvironmentExclusionEnforcer(springEnv, verificationRepository, NoopRegistry(), clock)
     val subject = ResourceActuator(
@@ -109,7 +109,6 @@ internal class ResourceActuatorTests : JUnit5Minutests {
       vetoEnforcer,
       publisher,
       clock,
-      springEnv,
       environmentExclusionEnforcer
     )
   }

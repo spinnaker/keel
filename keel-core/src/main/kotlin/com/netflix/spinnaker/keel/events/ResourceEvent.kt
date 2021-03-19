@@ -27,6 +27,7 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.core.ResourceCurrentlyUnresolvable
+import com.netflix.spinnaker.keel.enforcers.ActiveVerifications
 import com.netflix.spinnaker.keel.events.ResourceState.Diff
 import com.netflix.spinnaker.keel.events.ResourceState.Error
 import com.netflix.spinnaker.keel.events.ResourceState.Missing
@@ -530,16 +531,22 @@ data class VerificationBlockedActuation(
   override val version: Int,
   override val application: String,
   override val timestamp: Instant,
-  override val displayName: String = "Waiting for verifications to complete before updating can start"
+  override val message: String?,
+  override val displayName: String = "Waiting for verification to complete before updating can start",
 ) : ResourceEvent() {
   @JsonIgnore
   override val ignoreRepeatedInHistory = true
 
-  constructor(resource: Resource<*>, clock: Clock = Companion.clock) : this (
+  constructor(resource: Resource<*>, e: ActiveVerifications, clock: Clock = Companion.clock) : this (
     resource.kind,
     resource.id,
     resource.version,
     resource.application,
-    clock.instant()
+    clock.instant(),
+    message = if(e.active.count() == 1) {
+      "there is an verification against version ${e.active.first()}"
+    } else {
+      "there are active verifications against versions ${e.active.map { it.version }}"
+    }
   )
 }
