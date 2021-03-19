@@ -26,6 +26,6 @@ dependencies {
   api("io.spinnaker.kork:kork-web")
   implementation("io.spinnaker.kork:kork-security")
   implementation("com.squareup.okhttp3:logging-interceptor")
-  implementation("com.netflix.spinnaker.fiat:fiat-api:${property("fiatVersion")}")
-  implementation("com.netflix.spinnaker.fiat:fiat-core:${property("fiatVersion")}")
+  implementation("io.spinnaker.fiat:fiat-api:${property("fiatVersion")}")
+  implementation("io.spinnaker.fiat:fiat-core:${property("fiatVersion")}")
 }
