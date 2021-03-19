@@ -254,3 +254,6 @@ databaseChangeLog:
   - include:
       file: changelog/20210316-update-env-artifact-constr.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210322-environment-version-table.yml
+      relativeToChangelogFile: true
