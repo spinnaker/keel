@@ -183,6 +183,26 @@ class SqlVerificationRepository(
       .and(VERIFICATION_STATE.STATUS.eq(status))
       .fetchOneInto(Int::class.java)
 
+  fun contextsWithStatus(deliveryConfig: DeliveryConfig, environment: Environment, status: ConstraintStatus): List<VerificationContext> =
+    jooq.select(
+      DELIVERY_ARTIFACT.REFERENCE,
+      VERIFICATION_STATE.ARTIFACT_VERSION
+    )
+      .from(VERIFICATION_STATE)
+      .join(DELIVERY_ARTIFACT)
+      .on(DELIVERY_ARTIFACT.UID.eq(VERIFICATION_STATE.ARTIFACT_UID))
+      .where(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+      .and(ENVIRONMENT.NAME.eq(environment.name))
+      .and(VERIFICATION_STATE.STATUS.eq(status))
+      .fetch()
+      .map { (artifactReference, version) ->
+        VerificationContext(
+          deliveryConfig = deliveryConfig,
+          environmentName = environment.name,
+          artifactReference = artifactReference, version = version)
+      }
+      .toList()
+
   /**
    * Query the repository for the states of multiple contexts.
    *
