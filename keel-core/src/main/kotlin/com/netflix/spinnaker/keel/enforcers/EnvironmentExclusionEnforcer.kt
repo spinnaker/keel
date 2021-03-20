@@ -22,8 +22,8 @@ import java.time.Instant
  */
 open class EnvironmentCurrentlyBeingActedOn(message: String) : Exception(message) { }
 
-class ActiveVerifications(num: Int, deliveryConfig: DeliveryConfig, environment: Environment) :
-  EnvironmentCurrentlyBeingActedOn("$num verifications active in ${deliveryConfig.name} ${environment.name}")
+class ActiveVerifications(val active: Collection<VerificationContext>, deliveryConfig: DeliveryConfig, environment: Environment) :
+  EnvironmentCurrentlyBeingActedOn("active verifications in ${deliveryConfig.name} ${environment.name} against versions ${active.map {it.version}}")
 
 class ActiveDeployments(deliveryConfig: DeliveryConfig, environment: Environment ) :
   EnvironmentCurrentlyBeingActedOn("currently deploying into ${deliveryConfig.name} ${environment.name}")
@@ -130,9 +130,9 @@ class EnvironmentExclusionEnforcer(
    * @throws ActiveVerifications if there's an active verification
    */
   private fun ensureNoActiveVerifications(deliveryConfig: DeliveryConfig, environment: Environment)  {
-    val numActive = verificationRepository.countVerifications(deliveryConfig, environment, PENDING)
-    if(numActive > 0) {
-      throw ActiveVerifications(numActive, deliveryConfig, environment)
+    val activeVerifications = verificationRepository.getContextsWithStatus(deliveryConfig, environment, PENDING)
+    if(activeVerifications.isNotEmpty()) {
+      throw ActiveVerifications(activeVerifications, deliveryConfig, environment)
     }
   }
 
