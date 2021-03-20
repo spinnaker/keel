@@ -7,12 +7,14 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
@@ -462,6 +464,14 @@ class CombinedRepository(
     limit: Int
   ) : Collection<VerificationContext> =
     verificationRepository.nextEnvironmentsForVerification(minTimeSinceLastCheck, limit)
+
+  override fun updateState(
+    context: VerificationContext,
+    verification: Verification,
+    status: ConstraintStatus,
+    metadata: Map<String, Any?>
+  ) = verificationRepository.updateState(context, verification, status, metadata)
+
 
   override fun getVerificationStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>> =
     verificationRepository.getStatesBatch(contexts)

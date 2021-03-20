@@ -64,6 +64,43 @@ class AdminController(
     adminService.forceConstraintReevaluation(application, environment, type)
   }
 
+  /**
+   * Force the state of [version] to "SKIPPED"
+   */
+  @PostMapping(
+    path = ["/application/{application}/environment/{environment}/reference/{reference}/version/{version}/skip"]
+  )
+  fun forceSkipArtifactVersion(
+    @PathVariable("application") application: String,
+    @PathVariable("environment") environment: String,
+    @PathVariable("reference") reference: String,
+    @PathVariable("version") version: String,
+
+  ) {
+    adminService.forceSkipArtifactVersion(
+      application = application,
+      environment = environment,
+      artifactReference = reference,
+      version = version)
+  }
+
+  /**
+   * Force the state of verification with id {verification} in [environment] to OVERRIDE_FAIL
+   */
+  @PostMapping(
+    path = ["/application/{application}/environment/{environment}/reference/{reference}/version/{version}/verification/{verification}/skip"]
+  )
+  fun forceFailVerifications(
+    @PathVariable("application") application: String,
+    @PathVariable("environment") environment: String,
+    @PathVariable("reference") reference: String,
+    @PathVariable("version") version: String,
+    @PathVariable("verification") verification: String
+  ) {
+    adminService.forceFailVerifications(application, environment, reference, version, verification)
+  }
+
+
   // This endpoint will update artifact version records with missing metadata, if available, by type [deb/docker/npm].
   // Please note: this is an admin endpoint and is not intented to be used more than once per environment for now.
   @PostMapping(
