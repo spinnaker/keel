@@ -29,6 +29,7 @@ jacoco {
 }
 
 allprojects {
+  apply(plugin = "io.spinnaker.project")
   repositories {
     jcenter() {
       metadataSources {
@@ -44,19 +45,18 @@ allprojects {
 }
 
 subprojects {
-  apply(plugin = "io.spinnaker.project")
   apply(plugin = "com.github.ben-manes.versions")
 
-  group = "com.netflix.spinnaker.keel"
+  group = "io.spinnaker.keel"
 
   if (name != "keel-bom") {
     apply(plugin = "kotlin")
     apply(plugin = "jacoco")
 
     dependencies {
-      "annotationProcessor"(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
+      "annotationProcessor"(platform("io.spinnaker.kork:kork-bom:${property("korkVersion")}"))
       "annotationProcessor"("org.springframework.boot:spring-boot-configuration-processor")
-      "implementation"(platform("com.netflix.spinnaker.kork:kork-bom:${property("korkVersion")}"))
+      "implementation"(platform("io.spinnaker.kork:kork-bom:${property("korkVersion")}"))
 
       "implementation"("org.slf4j:slf4j-api")
 
