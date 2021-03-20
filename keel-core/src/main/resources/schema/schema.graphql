@@ -3,6 +3,7 @@ type Query {
 }
 
 type Application {
+  uid: String!
   name: String!
   account: String!
   environments: [Environment!]!
@@ -10,10 +11,12 @@ type Application {
 }
 
 type Environment {
+  uid: String!
   name: String!
-  currentState: EnvironmentState
-  history: [EnvironmentState!]!
-  isActive: Boolean!
+  version: String # TODO: make
+  resources: [Resource!]
+  constraints: [Constraint!]
+#  history: [EnvironmentState!]
 }
 
 type EnvironmentState {
@@ -31,18 +34,24 @@ type Artifact {
 
 type Resource {
   artifact: Artifact
-  id: String!
+  uid: String!
+  ref: String!
   kind: String! # Convert to a set of Strings
-#  status: String! # Convert to a set of Strings
+  status: String # Convert to a set of Strings
 #  isPaused: Boolean!
 #  displayName: String
   location: Location
-#  moniker: Moniker
+  moniker: Moniker
+}
+
+type Moniker {
+  app: String!
+  stack: String
+  detail: String
 }
 
 type Location {
-    account: String!
-    regions: [String!]!
+    regions: [String!]
 }
 
 enum TaskStatus {

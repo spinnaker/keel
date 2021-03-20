@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.events.PersistentEvent.Companion.clock
+import com.netflix.spinnaker.keel.persistence.ResourceRepository
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
+import com.netflix.spinnaker.keel.services.ResourceStatusService
+import com.netflix.spinnaker.keel.sql.SqlApplicationRepository
 import com.netflix.spinnaker.keel.sql.SqlAgentLockRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
 import com.netflix.spinnaker.keel.sql.SqlBakedImageRepository
@@ -87,6 +90,27 @@ class SqlConfiguration {
       objectMapper,
       SqlRetry(sqlRetryProperties),
       artifactSuppliers
+    )
+
+  @Bean
+  fun applicationRepository(
+    jooq: DSLContext,
+    clock: Clock,
+    resourceSpecIdentifier: ResourceSpecIdentifier,
+    objectMapper: ObjectMapper,
+    specMigrators: List<SpecMigrator<*, *>>,
+    resourceRepository: ResourceRepository,
+    resourceStatusService: ResourceStatusService,
+  ) =
+    SqlApplicationRepository(
+      clock = clock,
+      jooq = jooq,
+      sqlRetry = SqlRetry(sqlRetryProperties),
+      objectMapper = objectMapper,
+      specMigrators = specMigrators,
+      resourceSpecIdentifier = resourceSpecIdentifier,
+      resourceRepository = resourceRepository,
+      resourceStatusService = resourceStatusService
     )
 
   @Bean

@@ -6,14 +6,6 @@ plugins {
 
 apply(plugin = "io.spinnaker.package")
 
-apply(plugin = "com.netflix.dgs.codegen")
-
-apply(plugin = "com.netflix.dgs.codegen")
-tasks.withType<com.netflix.graphql.dgs.codegen.gradle.GenerateJavaTask> {
-  schemaPaths = mutableListOf("${projectDir}/src/main/resources/schema") // List of directories containing schema files
-  packageName = "com.netflix.spinnaker.keel.graphql" // The package name to use to generate sources
-}
-
 dependencies {
   api(project(":keel-core"))
   api(project(":keel-clouddriver"))
