@@ -117,7 +117,6 @@ class EnvironmentExclusionEnforcer(
    * @throws ActiveDeployments  if there's an active deployment
    */
   private fun ensureNoActiveDeployments(deliveryConfig: DeliveryConfig, environment: Environment) {
-    artifactRepository.isDeployingTo(deliveryConfig, environment.name)
     if(artifactRepository.isDeployingTo(deliveryConfig, environment.name)) {
       throw ActiveDeployments(deliveryConfig, environment)
     }
