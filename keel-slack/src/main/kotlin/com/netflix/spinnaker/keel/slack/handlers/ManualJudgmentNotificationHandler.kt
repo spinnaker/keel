@@ -54,7 +54,7 @@ class ManualJudgmentNotificationHandler(
         }
 
         // Add a warning section in case there's a pinned artifact
-        if (pinnedArtifact != null){
+        if (pinnedArtifact != null) {
           section {
             markdownText(":warning: Another version is pinned here. You will need to unpin it first to promote this version.")
             accessory {

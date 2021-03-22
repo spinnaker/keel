@@ -98,6 +98,37 @@ class SlackService(
   }
 
   /**
+   * Get slack username by the user's [email], apending the default domain if it is
+   * not null and not present in [emailUsername].
+   * Return the original email if username is not found.
+   */
+  fun getUsernameByEmailPrefix(emailUsername: String): String {
+    val defaultDomain = slackConfig.defaultEmailDomain
+    var email = emailUsername
+    if (defaultDomain != null) {
+      // sometimes we get responses from other systems that don't contain the full email
+      // so we add the default domain to the username to construct our best guess at their email
+      if (!emailUsername.contains(defaultDomain)) {
+          email+= "@${defaultDomain}"
+        }
+    }
+    log.debug("lookup user id for username $emailUsername - email guess $email")
+    val response = slack.methods(configToken).usersLookupByEmail { req ->
+      req.email(emailUsername)
+    }
+
+    if (!response.isOk) {
+      log.warn("slack couldn't get username by email for $emailUsername - email guess $email. error is: ${response.error}")
+      return emailUsername
+    }
+
+    if (response.user != null && response.user.name != null) {
+      return "@${response.user.name}"
+    }
+    return emailUsername
+  }
+
+  /**
    * Get user's email address by slack [userId]. Return the original userId if email is not found.
    */
   fun getEmailByUserId(userId: String): String {
