@@ -74,7 +74,7 @@ class ArtifactController(
          artifactMetadataService.getArtifactMetadata(buildNumber, commitId)
        }
     } catch (ex: Exception) {
-      if(buldNumber == "LOCAL") {
+      if(buildNumber == "LOCAL") {
         // this is expected as metadata service doesn't provide info for local builds
         log.info("tried to get artifact metadata for LOCAL build, commit $commitId", ex)
       } else {
