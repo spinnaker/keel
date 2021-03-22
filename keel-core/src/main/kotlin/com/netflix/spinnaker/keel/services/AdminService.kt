@@ -116,6 +116,21 @@ class AdminService(
     }
   }
 
+  /**
+   * Mark artifact [version] as SKIPPED in [environment]
+   *
+   * Preconditions:
+   *   - there is a delivery config in the repository that corresponds to [application]
+   *   - config has an environment named [environment]
+   *   - config has an artifact with reference [artifactReference]
+   *   - there is a version of artifact with reference [artifactReference], in environment [environment], with a status of CURRENT
+   *
+   * Postconditions:
+   *   - the artifact version [version] record is updated with:
+   *      * promotion_status set to skipped
+   *      * replaced_by set to the version that is CURRENT
+   *      * replaced_at set to now
+   */
   fun forceSkipArtifactVersion(application: String, environment: String, artifactReference: String, version: String) {
     val deliveryConfig = repository.getDeliveryConfigForApplication(application)
     val artifact = deliveryConfig.matchingArtifactByReference(artifactReference)
