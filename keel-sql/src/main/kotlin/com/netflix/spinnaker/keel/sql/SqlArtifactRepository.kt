@@ -910,7 +910,7 @@ class SqlArtifactRepository(
     artifact: DeliveryArtifact,
     version: String,
     targetEnvironment: String,
-    supersededByVersion: String
+    supersededByVersion: String?
   ) {
     val environment = deliveryConfig.environmentNamed(targetEnvironment)
     val environmentUid = deliveryConfig.getUidFor(environment)
