@@ -10,7 +10,8 @@ data class DeliveryConfig(
   val artifacts: Set<DeliveryArtifact> = emptySet(),
   val environments: Set<Environment> = emptySet(),
   val apiVersion: String = "delivery.config.spinnaker.netflix.com/v1",
-  val metadata: Map<String, Any?> = emptyMap()
+  val metadata: Map<String, Any?> = emptyMap(),
+  val uid: String? = null
 ) {
   val resources: Set<Resource<*>>
     get() = environments.flatMapTo(mutableSetOf()) { it.resources }

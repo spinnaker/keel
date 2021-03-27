@@ -96,6 +96,7 @@ class SqlDeliveryConfigRepository(
         .where(DELIVERY_CONFIG.APPLICATION.eq(application))
         .fetchOne { (uid, name, application, serviceAccount, metadata) ->
           DeliveryConfig(
+            uid = uid,
             name = name,
             application = application,
             serviceAccount = serviceAccount,

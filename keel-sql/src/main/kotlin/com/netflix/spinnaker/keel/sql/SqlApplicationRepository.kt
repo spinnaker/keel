@@ -30,72 +30,29 @@ class SqlApplicationRepository(
   private val resourceStatusService: ResourceStatusService
 ) : ApplicationRepository {
 
-  private val resourceFactory = ResourceFactory(objectMapper, resourceSpecIdentifier, specMigrators)
-
-
-  override fun getApplication(appName: String): Application {
-    return sqlRetry.withRetry(RetryCategory.READ) {
-      jooq.select(
-        DELIVERY_CONFIG.UID,
-        DELIVERY_CONFIG.APPLICATION,
-        DELIVERY_CONFIG.SERVICE_ACCOUNT
-      ).from(DELIVERY_CONFIG).where(DELIVERY_CONFIG.APPLICATION.eq(appName)).fetchOne()
-    }
-      .let { (uid, name, account) ->
-        Application(
-          uid = uid,
-          name = name,
-          account = account,
-          environments = emptyList()
-        )
-      }
-    // TODO: handle not found
-  }
-
   override fun getEnvironments(deliveryConfigId: String): List<Environment> {
     return sqlRetry.withRetry(RetryCategory.READ) {
       jooq.select(
         ENVIRONMENT.UID,
         ENVIRONMENT.NAME,
       ).from(ENVIRONMENT).where(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfigId)).fetch()
-        .map { (uid, name) -> Environment(uid = uid, name = name) }
-    }
-  }
-
-  override fun getResources(environmentId: String): List<Resource> {
-    return sqlRetry.withRetry(RetryCategory.READ) {
-      jooq.select(
-        RESOURCE_WITH_METADATA.UID,
-        RESOURCE_WITH_METADATA.ID,
-        RESOURCE_WITH_METADATA.KIND,
-        RESOURCE_WITH_METADATA.METADATA,
-        RESOURCE_WITH_METADATA.SPEC
-      )
-        .from(RESOURCE_WITH_METADATA, Tables.ENVIRONMENT_RESOURCE)
-        .where(RESOURCE_WITH_METADATA.UID.eq(Tables.ENVIRONMENT_RESOURCE.RESOURCE_UID))
-        .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(environmentId))
-        .fetch()
-        .map { (uid, ref, kind, metadata, spec) ->
-          val result = resourceFactory.invoke(kind, metadata, spec)
-          val moniker = if (result.spec is Monikered) {
-            (result.spec as Monikered).moniker.let {
-              Moniker(app = it.app, stack = it.stack, detail = it.detail)
-            }
-          } else {
-            null
-          }
-          val location = if (result.spec is Locatable<*>) {
-            Location(regions = (result.spec as Locatable<*>).locations.regions.map { it.name })
-          } else {
-            null
-          }
-          Resource(uid = uid, ref = ref, kind = result.kind.toString(), moniker = moniker, location = location)
+        .map { (uid, name) ->
+          Environment(
+            name = name,
+            resources = emptyList(),
+            constraints = emptyList(),
+            artifacts = emptyList()
+          )
         }
     }
   }
 
   override fun getResourceStatus(resourceId: String): ResourceStatus {
     return resourceStatusService.getStatus(resourceId)
+  }
+
+  override fun getConstraints(environmentId: String): List<Constraint> {
+    return emptyList()
   }
 
 }

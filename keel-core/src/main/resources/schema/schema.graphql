@@ -7,16 +7,16 @@ type Application {
   name: String!
   account: String!
   environments: [Environment!]!
-#  versions: [Environments] # TODO: add this pivot later
 }
 
 type Environment {
-  uid: String!
   name: String!
-  version: String # TODO: make
-  resources: [Resource!]
-  constraints: [Constraint!]
-#  history: [EnvironmentState!]
+  resources: [Resource!]!
+  constraints: [Constraint!]!
+  artifacts: [Artifact!]!
+  # TODO: add this once Rob's versioning lands
+  #  version: String
+  #  history: [EnvironmentState!]
 }
 
 type EnvironmentState {
@@ -26,18 +26,24 @@ type EnvironmentState {
 }
 
 type Artifact {
-  version: String!
   name: String!
   type: String! # Convert to a set of Strings
   reference: String!
+  versions: [ArtifactVersion!]
+  resource: Resource
+}
+
+type ArtifactVersion {
+  createAt: String
+
 }
 
 type Resource {
-  artifact: Artifact
-  uid: String!
-  ref: String!
+  id: String!
   kind: String! # Convert to a set of Strings
   status: String # Convert to a set of Strings
+  artifact: Artifact
+
 #  isPaused: Boolean!
 #  displayName: String
   location: Location
@@ -65,7 +71,7 @@ enum TaskStatus {
 
 type Constraint {
   type: String!
-  status: TaskStatus!
+  status: TaskStatus
   startedAt: String
   judgedAt: String
   judgedBy: String
@@ -73,9 +79,9 @@ type Constraint {
 }
 
 type Verification {
-  id: String
-  type: String
-  status: TaskStatus!
+  id: String!
+  type: String!
+  status: TaskStatus
   startedAt: String
   completedAt: String
   link: String
