@@ -272,3 +272,6 @@ databaseChangeLog:
   - include:
       file: changelog/20210404-resource-version-table.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210409-resource-version-foreign-keys.yml
+      relativeToChangelogFile: true
