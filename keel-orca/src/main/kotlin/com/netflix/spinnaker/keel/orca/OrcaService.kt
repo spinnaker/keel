@@ -16,8 +16,16 @@
 package com.netflix.spinnaker.keel.orca
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
+import com.netflix.spinnaker.keel.serialization.mapper
 import java.time.Instant
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -80,6 +88,7 @@ data class KeyValuePair(
   val value: Any
 )
 
+@JsonDeserialize(using = ExecutionDetailResponseDeserializer::class)
 data class ExecutionDetailResponse(
   val id: String,
   val name: String,
@@ -126,3 +135,24 @@ data class OrcaContext(
   @JsonAlias("kato.tasks")
   val clouddriverException: List<Map<String, Any>>?
 )
+
+/**
+ * Custom deserializer for [ExecutionDetailResponse] which ensures parsing of timestamps to [Instant] is
+ * done correctly since Orca's response serializes these as longs representing epoch type with milliseconds,
+ * whereas our object mappers are configured to interpret them as seconds.
+ */
+class ExecutionDetailResponseDeserializer : StdNodeBasedDeserializer<ExecutionDetailResponse>(ExecutionDetailResponse::class.java) {
+  override fun convert(root: JsonNode, ctxt: DeserializationContext) =
+    ExecutionDetailResponse(
+      id = root.path("id").textValue(),
+      name = root.path("name").textValue(),
+      application = root.path("application").textValue(),
+      buildTime = Instant.ofEpochMilli(root.path("buildTime").longValue()),
+      startTime = root.path("startTime")?.longValue()?.let { Instant.ofEpochMilli(it) },
+      endTime = root.path("endTime")?.longValue()?.let { Instant.ofEpochMilli(it) },
+      status = ctxt.mapper.convertValue(root.path("status")),
+      execution = ctxt.mapper.convertValue(root.path("execution")),
+      stages =  root.path("stages")?.let { ctxt.mapper.convertValue<List<OrcaExecutionStage>>(it) },
+      variables = root.path("variables")?.let { ctxt.mapper.convertValue<List<KeyValuePair>>(it) }
+    )
+}
