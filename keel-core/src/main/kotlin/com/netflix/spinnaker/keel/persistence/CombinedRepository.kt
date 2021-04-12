@@ -6,12 +6,14 @@ import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
+import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
 import com.netflix.spinnaker.keel.api.verification.VerificationContext
 import com.netflix.spinnaker.keel.api.verification.VerificationRepository
@@ -24,6 +26,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
@@ -108,7 +111,7 @@ class CombinedRepository(
     if (configWithSameName != null) {
       removeDependents(configWithSameName, deliveryConfig)
     }
-    return deliveryConfig
+    return getDeliveryConfig(deliveryConfig.name)
   }
 
   /**
@@ -129,8 +132,6 @@ class CombinedRepository(
    * delivery config and are not present in the [new] delivery config
    */
   override fun removeDependents(old: DeliveryConfig, new: DeliveryConfig) {
-    val newResources = new.resources.map { it.id }
-
     old.artifacts.forEach { artifact ->
       val stillPresent = new.artifacts.any {
         it.name == artifact.name &&
@@ -143,19 +144,19 @@ class CombinedRepository(
       }
     }
 
+    val newResources = new.resources.map { it.id }
+
     old.environments
       .forEach { environment ->
-        environment.resources.forEach { resource ->
-          if (resource.id !in newResources) {
-            log.debug("Updating config ${new.name}: removing resource ${resource.id} in environment ${environment.name}")
-            deliveryConfigRepository.deleteResourceFromEnv(
-              deliveryConfigName = old.name, environmentName = environment.name, resourceId = resource.id
-            )
-            deleteResource(resource.id)
-          }
-        }
         if (environment.name !in new.environments.map { it.name }) {
           log.debug("Updating config ${new.name}: removing environment ${environment.name}")
+          environment.resources.map(Resource<*>::id).forEach {
+            // only delete the resource if it's not somewhere else in the delivery config -- e.g.
+            // it's been moved from one environment to another or the environment has been renamed
+            if (it !in newResources) {
+              resourceRepository.delete(it)
+            }
+          }
           deliveryConfigRepository.deleteEnvironment(new.name, environment.name)
         }
       }
@@ -192,8 +193,8 @@ class CombinedRepository(
   override fun getConstraintState(deliveryConfigName: String, environmentName: String, artifactVersion: String, type: String, artifactReference: String?): ConstraintState? =
     deliveryConfigRepository.getConstraintState(deliveryConfigName, environmentName, artifactVersion, type, artifactReference)
 
-  override fun constraintStateFor(deliveryConfigName: String, environmentName: String, artifactVersion: String): List<ConstraintState> =
-    deliveryConfigRepository.constraintStateFor(deliveryConfigName, environmentName, artifactVersion)
+  override fun constraintStateFor(deliveryConfigName: String, environmentName: String, artifactVersion: String, artifactReference: String): List<ConstraintState> =
+    deliveryConfigRepository.constraintStateFor(deliveryConfigName, environmentName, artifactVersion, artifactReference)
 
   override fun getPendingArtifactVersions(deliveryConfigName: String, environmentName: String, artifact: DeliveryArtifact): List<PublishedArtifact> =
     deliveryConfigRepository.getPendingArtifactVersions(deliveryConfigName, environmentName, artifact)
@@ -347,11 +348,24 @@ class CombinedRepository(
   override fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun getCurrentArtifactVersions(
+  override fun getArtifactVersionsByStatus(
     deliveryConfig: DeliveryConfig,
+    environmentName: String,
+    statuses: List<PromotionStatus>
+  ): List<PublishedArtifact> =
+    artifactRepository.getArtifactVersionsByStatus(deliveryConfig, environmentName, statuses)
+
+  override fun getPendingVersionsInEnvironment(
+    deliveryConfig: DeliveryConfig,
+    artifactReference: String,
     environmentName: String
   ): List<PublishedArtifact> =
-    artifactRepository.getCurrentArtifactVersions(deliveryConfig, environmentName)
+    artifactRepository.getPendingVersionsInEnvironment(deliveryConfig, artifactReference, environmentName)
+
+  override fun getAllVersionsForEnvironment(
+    artifact: DeliveryArtifact, config: DeliveryConfig, environmentName: String
+  ): List<PublishedArtifactInEnvironment> =
+    artifactRepository.getAllVersionsForEnvironment(artifact, config, environmentName)
 
   override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> =
     artifactRepository.getEnvironmentSummaries(deliveryConfig)
@@ -382,7 +396,7 @@ class CombinedRepository(
   override fun deleteVeto(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.deleteVeto(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun markAsSkipped(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String, supersededByVersion: String) {
+  override fun markAsSkipped(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String, supersededByVersion: String?) {
     artifactRepository.markAsSkipped(deliveryConfig, artifact, version, targetEnvironment, supersededByVersion)
   }
 
@@ -433,6 +447,14 @@ class CombinedRepository(
     limit: Int
   ) : Collection<VerificationContext> =
     verificationRepository.nextEnvironmentsForVerification(minTimeSinceLastCheck, limit)
+
+  override fun updateState(
+    context: VerificationContext,
+    verification: Verification,
+    status: ConstraintStatus,
+    metadata: Map<String, Any?>
+  ) = verificationRepository.updateState(context, verification, status, metadata)
+
 
   override fun getVerificationStatesBatch(contexts: List<VerificationContext>) : List<Map<String, VerificationState>> =
     verificationRepository.getStatesBatch(contexts)

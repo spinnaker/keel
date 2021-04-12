@@ -2,9 +2,13 @@ package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.PipelineConstraint
+import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.TimeWindow
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.pause.ActuationPauser
@@ -38,11 +42,15 @@ class AdminServiceTests : JUnit5Minutests {
       )
     )
 
+    val artifact = mockk<DeliveryArtifact>() {
+      every { reference } returns "myartifact"
+    }
+
     val deliveryConfig = DeliveryConfig(
       name = "manifest",
       application = application,
       serviceAccount = "keel@spinnaker",
-      artifacts = setOf(),
+      artifacts = setOf(artifact),
       environments = setOf(environment)
     )
 
@@ -80,6 +88,19 @@ class AdminServiceTests : JUnit5Minutests {
         verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "pipeline") }
         verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "allowed-times") }
       }
+    }
+
+    test("forcing an artifact version to be skipped") {
+      val current = mockk<PublishedArtifact>() {
+        every { reference } returns artifact.reference
+        every { version } returns "v16"
+      }
+
+      every { repository.getArtifactVersionsByStatus(deliveryConfig, environment.name, listOf(CURRENT)) } returns listOf(current)
+
+      subject.forceSkipArtifactVersion(application, environment.name, artifact.reference, "v15")
+
+      verify(exactly=1) { repository.markAsSkipped(deliveryConfig, artifact, "v15", environment.name, "v16")}
     }
   }
 }

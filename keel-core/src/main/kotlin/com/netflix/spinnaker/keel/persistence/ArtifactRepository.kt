@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.services.StatusInfoForArtifactInEnvironment
 import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Duration
@@ -196,19 +197,37 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
   /**
    * Marks a version of an artifact as skipped for an environment, with information on what version superseded it.
+   *
+   * We allow [supersededByVersion] to be null to enable an operator to mark a version as skipped even when no other
+   * versions have been deployed yet (e.g., the first version got stuck).
    */
   fun markAsSkipped(
     deliveryConfig: DeliveryConfig,
     artifact: DeliveryArtifact,
     version: String,
     targetEnvironment: String,
-    supersededByVersion: String
+    supersededByVersion: String?
   )
 
   /**
-   * Gets all published artifacts that are current in an environment.
+   * Gets all published artifacts that have the specified statuses in an environment.
    */
-  fun getCurrentArtifactVersions(deliveryConfig: DeliveryConfig, environmentName: String): List<PublishedArtifact>
+  fun getArtifactVersionsByStatus(deliveryConfig: DeliveryConfig, environmentName: String, statuses: List<PromotionStatus>): List<PublishedArtifact>
+
+  /**
+   * Bulk loads all data we have about an artifact in an environment.
+   * Includes pending versions.
+   */
+  fun getAllVersionsForEnvironment(
+    artifact: DeliveryArtifact,
+    config: DeliveryConfig,
+    environmentName: String
+  ): List<PublishedArtifactInEnvironment>
+
+  /**
+   * Returns artifact versions that are pending for an artifact in an environment
+   */
+  fun getPendingVersionsInEnvironment(deliveryConfig: DeliveryConfig, artifactReference: String, environmentName: String): List<PublishedArtifact>
 
   /**
    * Fetches the status of artifact versions in the environments of [deliveryConfig].
