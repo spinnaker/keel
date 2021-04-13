@@ -328,6 +328,23 @@ class SqlDeliveryConfigRepository(
         }
         if (currentVersion == 0 || currentVersionResources != newVersionResources) {
           val newVersion = currentVersion + 1
+          if (newVersion > 1) {
+            log.debug(
+              "Creating a new version {} of environment {}/{} current resources: {}, new resources: {}",
+              newVersion,
+              application,
+              environment.name,
+              currentVersionResources,
+              newVersionResources
+            )
+          } else {
+            log.debug(
+              "Creating initial version of environment {}/{} with resources: {}",
+              application,
+              environment.name,
+              newVersionResources
+            )
+          }
 
           jooq.insertInto(ENVIRONMENT_VERSION)
             .set(ENVIRONMENT_VERSION.ENVIRONMENT_UID, environmentUid)
