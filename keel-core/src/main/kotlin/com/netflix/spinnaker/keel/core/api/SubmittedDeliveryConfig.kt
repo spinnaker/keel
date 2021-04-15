@@ -2,11 +2,11 @@ package com.netflix.spinnaker.keel.core.api
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.Constraint
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
+import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
@@ -27,6 +27,7 @@ data class SubmittedDeliveryConfig(
   val serviceAccount: String?,
   val artifacts: Set<DeliveryArtifact> = emptySet(),
   val environments: Set<SubmittedEnvironment> = emptySet(),
+  val previewEnvironments: Set<PreviewEnvironmentSpec> = emptySet(),
   val metadata: Map<String, Any?>? = emptyMap()
 ) {
   val safeName: String
@@ -58,6 +59,7 @@ data class SubmittedDeliveryConfig(
         notifications = env.notifications
       )
     },
+    previewEnvironments = previewEnvironments,
     metadata = metadata ?: emptyMap()
   )
 }
