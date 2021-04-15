@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.sql.deliveryconfigs
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.plugins.supporting
 import com.netflix.spinnaker.keel.core.api.timestampAsInstant
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
@@ -11,6 +12,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.DELIVERY_CONFIG_ARTIFACT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LATEST_ENVIRONMENT
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PREVIEW_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_WITH_METADATA
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.SqlStorageContext
@@ -45,8 +47,8 @@ internal fun SqlStorageContext.deliveryConfigByName(name: String): DeliveryConfi
       ?: throw NoSuchDeliveryConfigName(name)
   }
 
-internal fun SqlStorageContext.attachDependents(deliveryConfig: DeliveryConfig): DeliveryConfig =
-  sqlRetry.withRetry(READ) {
+internal fun SqlStorageContext.attachDependents(deliveryConfig: DeliveryConfig): DeliveryConfig {
+  val artifacts = sqlRetry.withRetry(READ) {
     jooq
       .select(
         DELIVERY_ARTIFACT.NAME,
@@ -68,40 +70,62 @@ internal fun SqlStorageContext.attachDependents(deliveryConfig: DeliveryConfig):
           configName
         )
       }
-      .toSet()
-      .let { artifacts ->
-        sqlRetry.withRetry(READ) {
-          jooq
-            .select(
-              LATEST_ENVIRONMENT.UID,
-              LATEST_ENVIRONMENT.NAME,
-              LATEST_ENVIRONMENT.VERSION,
-              LATEST_ENVIRONMENT.CONSTRAINTS,
-              LATEST_ENVIRONMENT.NOTIFICATIONS,
-              LATEST_ENVIRONMENT.VERIFICATIONS
-            )
-            .from(LATEST_ENVIRONMENT)
-            .where(LATEST_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
-            .fetch { (environmentUid, name, _, constraintsJson, notificationsJson, verifyWithJson) ->
-              Environment(
-                name = name,
-                resources = resourcesForEnvironment(environmentUid),
-                constraints = objectMapper.readValue(constraintsJson),
-                notifications = notificationsJson?.let { objectMapper.readValue(it) } ?: emptySet(),
-                verifyWith = verifyWithJson?.let {
-                  objectMapper.readValue(it)
-                } ?: emptyList()
-              )
-            }
-            .let { environments ->
-              deliveryConfig.copy(
-                artifacts = artifacts,
-                environments = environments.toSet()
-              )
-            }
-        }
+  }
+
+  val environments = sqlRetry.withRetry(READ) {
+    jooq
+      .select(
+        LATEST_ENVIRONMENT.UID,
+        LATEST_ENVIRONMENT.NAME,
+        LATEST_ENVIRONMENT.VERSION,
+        LATEST_ENVIRONMENT.CONSTRAINTS,
+        LATEST_ENVIRONMENT.NOTIFICATIONS,
+        LATEST_ENVIRONMENT.VERIFICATIONS
+      )
+      .from(LATEST_ENVIRONMENT)
+      .where(LATEST_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+      .fetch { (environmentUid, name, _, constraintsJson, notificationsJson, verifyWithJson) ->
+        Environment(
+          name = name,
+          resources = resourcesForEnvironment(environmentUid),
+          constraints = objectMapper.readValue(constraintsJson),
+          notifications = notificationsJson?.let { objectMapper.readValue(it) } ?: emptySet(),
+          verifyWith = verifyWithJson?.let {
+            objectMapper.readValue(it)
+          } ?: emptyList()
+        )
       }
   }
+
+  val previewEnvironments = sqlRetry.withRetry(READ) {
+    jooq
+      .select(
+        LATEST_ENVIRONMENT.NAME,
+        PREVIEW_ENVIRONMENT.BRANCH_FILTER,
+        PREVIEW_ENVIRONMENT.NOTIFICATIONS,
+        PREVIEW_ENVIRONMENT.VERIFICATIONS
+      )
+      .from(PREVIEW_ENVIRONMENT)
+      .innerJoin(LATEST_ENVIRONMENT)
+      .on(LATEST_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(PREVIEW_ENVIRONMENT.DELIVERY_CONFIG_UID))
+      .and(LATEST_ENVIRONMENT.UID.eq(PREVIEW_ENVIRONMENT.BASE_ENVIRONMENT_UID))
+      .where(PREVIEW_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+      .fetch { (baseEnvName, branchFilterJson, notificationsJson, verifyWithJson) ->
+        PreviewEnvironmentSpec(
+          baseEnvironment = baseEnvName,
+          branch = objectMapper.readValue(branchFilterJson),
+          notifications = notificationsJson?.let { objectMapper.readValue(it) } ?: emptySet(),
+          verifyWith = verifyWithJson?.let { objectMapper.readValue(it) } ?: emptyList()
+        )
+      }
+  }
+
+  return deliveryConfig.copy(
+    artifacts = artifacts.toSet(),
+    environments = environments.toSet(),
+    previewEnvironments = previewEnvironments.toSet()
+  )
+}
 
 internal fun SqlStorageContext.resourcesForEnvironment(uid: String) =
   sqlRetry.withRetry(READ) {

@@ -69,6 +69,12 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
    */
   fun deleteEnvironment(deliveryConfigName: String, environmentName: String)
 
+
+  /**
+   * Deletes a preview environment spec associated with a delivery config.
+   */
+  fun deletePreviewEnvironment(deliveryConfigName: String, baseEnvironmentName: String)
+
   /**
    * Updates state for a stateful [Environment] constraint.
    */

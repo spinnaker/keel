@@ -160,6 +160,14 @@ class CombinedRepository(
           deliveryConfigRepository.deleteEnvironment(new.name, environment.name)
         }
       }
+
+    old.previewEnvironments
+      .forEach { previewEnvSpec ->
+        if (previewEnvSpec.baseEnvironment !in new.previewEnvironments.map { it.baseEnvironment }) {
+          log.debug("Updating config ${new.name}: removing preview environment $previewEnvSpec")
+          deliveryConfigRepository.deletePreviewEnvironment(new.name, previewEnvSpec.baseEnvironment)
+        }
+      }
   }
 
   // START Delivery config methods

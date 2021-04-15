@@ -47,4 +47,11 @@ data class PreviewEnvironmentSpec(
    * Allows the user to specify verifications for preview environments based on this spec.
    */
   val verifyWith: List<Verification> = emptyList()
-)
+) {
+  /**
+   * Synthetic name used to allow more than one [PreviewEnvironmentSpec] for the same base environment
+   * in the [DeliveryConfig].
+   */
+  val name: String
+    get() = "preview/$baseEnvironment/branch=${branch.name ?: branch.startsWith ?: branch.regex}"
+}

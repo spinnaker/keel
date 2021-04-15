@@ -4,7 +4,10 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.NotificationFrequency
+import com.netflix.spinnaker.keel.api.NotificationFrequency.normal
 import com.netflix.spinnaker.keel.api.NotificationType
+import com.netflix.spinnaker.keel.api.NotificationType.slack
+import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.Verification
@@ -14,6 +17,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
+import com.netflix.spinnaker.keel.api.artifacts.branchStartsWith
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.plugins.kind
@@ -675,6 +679,57 @@ abstract class DeliveryConfigRepositoryTests<T : DeliveryConfigRepository, R : R
           expectThat(repository.environmentNotifications(deliveryConfig.name, "staging"))
             .isEmpty()
         }
+      }
+    }
+
+    context("storing a delivery config with preview environments") {
+      deriveFixture {
+        copy(
+          deliveryConfig = deliveryConfig.copy(
+            artifacts = setOf(
+              artifact, artifactFromBranch
+            ),
+            environments = setOf(
+              Environment(
+                name = "test",
+                resources = setOf(
+                  resource(kind = parseKind("ec2/cluster@v1")),
+                  resource(kind = parseKind("ec2/security-group@v1"))
+                )
+              )
+            ),
+            previewEnvironments = setOf(
+              PreviewEnvironmentSpec(
+                branch = branchStartsWith("feature/"),
+                baseEnvironment = "test",
+                notifications = setOf(
+                  NotificationConfig(slack, "#test", normal)
+                ),
+                verifyWith = listOf(
+                  DummyVerification()
+                )
+              )
+            )
+          )
+        )
+      }
+
+      before {
+        store()
+      }
+
+      test("preview environments are attached when retrieved by name") {
+        getByName()
+          .isSuccess()
+          .get { previewEnvironments }
+          .isEqualTo(deliveryConfig.previewEnvironments)
+      }
+
+      test("preview environments are attached when retrieved by application") {
+        getByApplication()
+          .isSuccess()
+          .get { previewEnvironments }
+          .isEqualTo(deliveryConfig.previewEnvironments)
       }
     }
 

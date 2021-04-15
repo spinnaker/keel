@@ -39,6 +39,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_VERSI
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LATEST_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PREVIEW_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_VERSION
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_WITH_METADATA
@@ -135,7 +136,7 @@ class SqlDeliveryConfigRepository(
         .fetchOne(DELIVERY_CONFIG.UID)
     }
 
-    envUidString(deliveryConfigName, environmentName)
+    environmentUidByName(deliveryConfigName, environmentName)
       ?.let { envUid ->
         sqlRetry.withRetry(WRITE) {
           jooq.transaction { config ->
@@ -148,6 +149,25 @@ class SqlDeliveryConfigRepository(
           }
         }
       }
+  }
+
+  override fun deletePreviewEnvironment(deliveryConfigName: String, baseEnvironmentName: String) {
+    val deliveryConfigUid = sqlRetry.withRetry(READ) {
+      jooq.select(DELIVERY_CONFIG.UID)
+        .from(DELIVERY_CONFIG)
+        .where(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
+        .fetchOne(DELIVERY_CONFIG.UID)
+    }
+
+    environmentUidByName(deliveryConfigName, baseEnvironmentName)?.let { baseEnvironmentUid ->
+      sqlRetry.withRetry(WRITE) {
+        jooq
+          .deleteFrom(PREVIEW_ENVIRONMENT)
+          .where(PREVIEW_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
+          .and(PREVIEW_ENVIRONMENT.BASE_ENVIRONMENT_UID.eq(baseEnvironmentUid))
+          .execute()
+      }
+    }
   }
 
   override fun deleteByName(name: String) {
@@ -339,6 +359,23 @@ class SqlDeliveryConfigRepository(
           }
         }
       }
+
+      previewEnvironments.forEach { previewEnvSpec ->
+        environmentUidByName(name, previewEnvSpec.baseEnvironment)?.let { baseEnvironmentUid ->
+          jooq.insertInto(PREVIEW_ENVIRONMENT)
+            .set(PREVIEW_ENVIRONMENT.DELIVERY_CONFIG_UID, deliveryConfigUid)
+            .set(PREVIEW_ENVIRONMENT.BASE_ENVIRONMENT_UID, baseEnvironmentUid)
+            .set(PREVIEW_ENVIRONMENT.BRANCH_FILTER, previewEnvSpec.branch.toJson())
+            .set(PREVIEW_ENVIRONMENT.VERIFICATIONS, previewEnvSpec.verifyWith.toJson())
+            .set(PREVIEW_ENVIRONMENT.NOTIFICATIONS, previewEnvSpec.notifications.toJson())
+            .onDuplicateKeyUpdate()
+            .set(PREVIEW_ENVIRONMENT.BRANCH_FILTER, previewEnvSpec.branch.toJson())
+            .set(PREVIEW_ENVIRONMENT.VERIFICATIONS, previewEnvSpec.verifyWith.toJson())
+            .set(PREVIEW_ENVIRONMENT.NOTIFICATIONS, previewEnvSpec.notifications.toJson())
+            .execute()
+        }
+      }
+
       jooq.insertInto(DELIVERY_CONFIG_LAST_CHECKED)
         .set(DELIVERY_CONFIG_LAST_CHECKED.DELIVERY_CONFIG_UID, deliveryConfigUid)
         .set(DELIVERY_CONFIG_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
@@ -1154,18 +1191,6 @@ class SqlDeliveryConfigRepository(
         DELIVERY_CONFIG.NAME.eq(deliveryConfigName),
         ENVIRONMENT.NAME.eq(environmentName)
       )
-
-  private fun envUidString(deliveryConfigName: String, environmentName: String): String? =
-    sqlRetry.withRetry(READ) {
-      jooq.select(ENVIRONMENT.UID)
-        .from(DELIVERY_CONFIG)
-        .innerJoin(ENVIRONMENT).on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
-        .where(
-          DELIVERY_CONFIG.NAME.eq(deliveryConfigName),
-          ENVIRONMENT.NAME.eq(environmentName)
-        )
-        .fetchOne(ENVIRONMENT.UID)
-    }
 
   private fun applicationByDeliveryConfigName(name: String): String =
     sqlRetry.withRetry(READ) {

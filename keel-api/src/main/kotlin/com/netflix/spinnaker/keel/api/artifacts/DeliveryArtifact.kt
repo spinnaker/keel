@@ -43,6 +43,11 @@ data class BranchFilter(
   }
 }
 
+// Utility functions to create branch filters
+fun branchStartsWith(startsWith: String) = BranchFilter(startsWith = startsWith)
+fun branchName(name: String) = BranchFilter(name = name)
+fun branchRegex(regex: String) = BranchFilter(regex = regex)
+
 /**
  * Filters for the origin of an artifact in source control.
  *
