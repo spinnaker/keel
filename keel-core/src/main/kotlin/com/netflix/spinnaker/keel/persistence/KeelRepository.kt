@@ -188,6 +188,8 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun getPendingVersionsInEnvironment(deliveryConfig: DeliveryConfig, artifactReference: String, environmentName: String): List<PublishedArtifact>
 
+  fun getNumPendingToBePromoted(application: String, artifactReference: String, environmentName: String, version: String): Int
+
   fun getAllVersionsForEnvironment(artifact: DeliveryArtifact, config: DeliveryConfig, environmentName: String): List<PublishedArtifactInEnvironment>
 
   fun pinEnvironment(deliveryConfig: DeliveryConfig, environmentArtifactPin: EnvironmentArtifactPin)

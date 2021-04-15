@@ -230,6 +230,12 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   fun getPendingVersionsInEnvironment(deliveryConfig: DeliveryConfig, artifactReference: String, environmentName: String): List<PublishedArtifact>
 
   /**
+   * Returns the number of pending versions that would be promoted if the given version was promoted.
+   * This is meant to calculate how many pending versions would be promoted if a manual judgement was approved.
+   */
+  fun getNumPendingToBePromoted(deliveryConfig: DeliveryConfig, artifactReference: String, environmentName: String, version: String): Int
+
+  /**
    * Fetches the status of artifact versions in the environments of [deliveryConfig].
    */
   fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary>

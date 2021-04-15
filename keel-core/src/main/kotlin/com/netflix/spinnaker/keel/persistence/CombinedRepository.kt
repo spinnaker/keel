@@ -377,6 +377,19 @@ class CombinedRepository(
   ): List<PublishedArtifact> =
     artifactRepository.getPendingVersionsInEnvironment(deliveryConfig, artifactReference, environmentName)
 
+  override fun getNumPendingToBePromoted(
+    application: String,
+    artifactReference: String,
+    environmentName: String,
+    version: String
+  ): Int =
+    artifactRepository.getNumPendingToBePromoted(
+      getDeliveryConfigForApplication(application),
+      artifactReference,
+      environmentName,
+      version
+    )
+
   override fun getAllVersionsForEnvironment(
     artifact: DeliveryArtifact, config: DeliveryConfig, environmentName: String
   ): List<PublishedArtifactInEnvironment> =

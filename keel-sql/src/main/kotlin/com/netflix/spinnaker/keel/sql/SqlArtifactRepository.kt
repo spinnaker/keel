@@ -44,12 +44,9 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIF
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VERSIONS
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_ARTIFACT_VETO
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.LATEST_ENVIRONMENT
-import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
-import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.services.StatusInfoForArtifactInEnvironment
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
-import com.netflix.spinnaker.keel.sql.deliveryconfigs.deliveryConfigByName
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import org.jooq.DSLContext
@@ -61,7 +58,6 @@ import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.selectOne
 import org.jooq.util.mysql.MySQLDSL
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -1110,6 +1106,32 @@ class SqlArtifactRepository(
           )
         }
     }
+  }
+
+  override fun getNumPendingToBePromoted(
+    deliveryConfig: DeliveryConfig,
+    artifactReference: String,
+    environmentName: String,
+    version: String
+  ): Int {
+    val artifact = deliveryConfig.matchingArtifactByReference(artifactReference) ?: throw ArtifactNotFoundException(artifactReference, deliveryConfig.name)
+    val pendingVersions = getPendingVersions(artifact, deliveryConfig, environmentName)
+      .map { it.publishedArtifact }
+    return removeExtra(pendingVersions, artifact, version).size
+  }
+
+  /**
+   * Removes any pending artifacts that are newer than the specified version, because they would not be promoted.
+   */
+  fun removeExtra(versions: List<PublishedArtifact>, artifact: DeliveryArtifact, mjVersion: String): List<PublishedArtifact> {
+    if (versions.isEmpty()) {
+      return emptyList()
+    }
+
+    val sortedVersions = versions.sortedWith(artifact.sortingStrategy.comparator) // newest will be first
+    val mjArtifact = sortedVersions.find { it.version == mjVersion } ?: return sortedVersions // mj version isn't still pending? or there is a bug?
+    // remove all versions that are newer than the mj version, they won't be promoted
+    return sortedVersions.dropWhile { it != mjArtifact }
   }
 
   override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> {
