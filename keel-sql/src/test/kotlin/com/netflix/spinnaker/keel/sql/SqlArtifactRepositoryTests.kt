@@ -60,18 +60,44 @@ class SqlArtifactRepositoryTests : ArtifactRepositoryTests<SqlArtifactRepository
   }
 
   @Test
-  fun `can remove newer pending versions`() {
+  fun `can remove newer pending versions with current`() {
     val version0 = "fnord-1.0.0-h0.a0a0a0a"
     val version1 = "fnord-1.0.1-h1.b1b1b1b"
     val version2 = "fnord-1.0.2-h2.c2c2c2c"
     val version3 = "fnord-1.0.3-h3.d3d3d3d"
     val version4 = "fnord-1.0.4-h4.e4e4e4e"
-
     val versions = listOf(version0, version1, version2, version3, version4).toArtifactVersions(artifact)
 
-    val pending = factory(mutableClock).removeExtra(versions, artifact, version2)
-    expectThat(pending.size).isEqualTo(3)
-    expectThat(pending.map { it.version }).containsExactlyInAnyOrder(version0, version1, version2)
+    // version 3 is the candidate
+    // version 1 is the current
+    val pending = factory(mutableClock).removeExtra(
+      versions = versions,
+      artifact = artifact,
+      mjVersion = version3,
+      currentVersion = versions.find { it.version == version1 }
+    )
+    expectThat(pending.size).isEqualTo(2)
+    expectThat(pending.map { it.version }).containsExactlyInAnyOrder(version2, version3)
+  }
+
+  @Test
+  fun `can remove newer pending versions without current`() {
+    val version0 = "fnord-1.0.0-h0.a0a0a0a"
+    val version1 = "fnord-1.0.1-h1.b1b1b1b"
+    val version2 = "fnord-1.0.2-h2.c2c2c2c"
+    val version3 = "fnord-1.0.3-h3.d3d3d3d"
+    val version4 = "fnord-1.0.4-h4.e4e4e4e"
+    val versions = listOf(version0, version1, version2, version3, version4).toArtifactVersions(artifact)
+
+    // version 3 is the candidate
+    val pending = factory(mutableClock).removeExtra(
+      versions = versions,
+      artifact = artifact,
+      mjVersion = version3,
+      currentVersion = null
+    )
+    expectThat(pending.size).isEqualTo(4)
+    expectThat(pending.map { it.version }).containsExactlyInAnyOrder(version0, version1, version2, version3)
   }
 
   private fun Collection<String>.toArtifactVersions(artifact: DeliveryArtifact) =

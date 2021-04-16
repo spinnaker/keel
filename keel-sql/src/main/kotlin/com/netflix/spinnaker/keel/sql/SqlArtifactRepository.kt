@@ -1117,21 +1117,39 @@ class SqlArtifactRepository(
     val artifact = deliveryConfig.matchingArtifactByReference(artifactReference) ?: throw ArtifactNotFoundException(artifactReference, deliveryConfig.name)
     val pendingVersions = getPendingVersions(artifact, deliveryConfig, environmentName)
       .map { it.publishedArtifact }
-    return removeExtra(pendingVersions, artifact, version).size
+    val currentVersion = getArtifactVersionsByStatus(
+      deliveryConfig,
+      environmentName,
+      listOf(CURRENT)
+    ).firstOrNull { it.reference == artifactReference }
+    return removeExtra(pendingVersions, artifact, version, currentVersion).size
   }
 
   /**
    * Removes any pending artifacts that are newer than the specified version, because they would not be promoted.
+   * Removes any older than the current version, because they are not relevant.
    */
-  fun removeExtra(versions: List<PublishedArtifact>, artifact: DeliveryArtifact, mjVersion: String): List<PublishedArtifact> {
+  fun removeExtra(versions: List<PublishedArtifact>, artifact: DeliveryArtifact, mjVersion: String, currentVersion: PublishedArtifact?): List<PublishedArtifact> {
     if (versions.isEmpty()) {
       return emptyList()
     }
+    val fullVersions = if (currentVersion != null) {
+      versions + currentVersion
+    } else {
+      versions
+    }
 
-    val sortedVersions = versions.sortedWith(artifact.sortingStrategy.comparator) // newest will be first
+    val sortedVersions = fullVersions.sortedWith(artifact.sortingStrategy.comparator) // newest will be first
     val mjArtifact = sortedVersions.find { it.version == mjVersion } ?: return sortedVersions // mj version isn't still pending? or there is a bug?
     // remove all versions that are newer than the mj version, they won't be promoted
-    return sortedVersions.dropWhile { it != mjArtifact }
+    val newerRemoved = sortedVersions.dropWhile { it != mjArtifact }
+
+    return if (currentVersion != null) {
+      // remove all versions that are older than the current version, and the current version
+      newerRemoved.dropLastWhile { it != currentVersion }.filterNot { it == currentVersion }
+    } else {
+      newerRemoved
+    }
   }
 
   override fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary> {
