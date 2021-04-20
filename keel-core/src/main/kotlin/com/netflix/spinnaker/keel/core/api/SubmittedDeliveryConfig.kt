@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
+import com.netflix.spinnaker.keel.api.postdeploy.PostDeployAction
 import com.netflix.spinnaker.keel.api.schema.Description
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
@@ -56,7 +57,8 @@ data class SubmittedDeliveryConfig(
         },
         constraints = env.constraints,
         verifyWith = env.verifyWith,
-        notifications = env.notifications
+        notifications = env.notifications,
+        postDeploy = env.postDeploy
       )
     },
     previewEnvironments = previewEnvironments,
@@ -71,6 +73,7 @@ data class SubmittedEnvironment(
   val constraints: Set<Constraint> = emptySet(),
   val verifyWith: List<Verification> = emptyList(),
   val notifications: Set<NotificationConfig> = emptySet(),
+  val postDeploy: List<PostDeployAction> = emptyList(),
   @Description("Optional locations that are propagated to any [resources] where they are not specified.")
   val locations: SubnetAwareLocations? = null
 )

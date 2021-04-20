@@ -308,10 +308,12 @@ class SqlDeliveryConfigRepository(
           .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
           .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
           .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
+          .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
           .onDuplicateKeyUpdate()
           .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
           .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
           .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
+          .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
           .execute()
         val currentVersion = jooq
           .select(coalesce(max(ENVIRONMENT_VERSION.VERSION), value(0)))
@@ -434,20 +436,22 @@ class SqlDeliveryConfigRepository(
           LATEST_ENVIRONMENT.VERSION,
           LATEST_ENVIRONMENT.CONSTRAINTS,
           LATEST_ENVIRONMENT.NOTIFICATIONS,
-          LATEST_ENVIRONMENT.VERIFICATIONS
+          LATEST_ENVIRONMENT.VERIFICATIONS,
+          LATEST_ENVIRONMENT.POST_DEPLOY_ACTIONS
         )
         .from(LATEST_ENVIRONMENT, ENVIRONMENT_RESOURCE, RESOURCE)
         .where(RESOURCE.ID.eq(resourceId))
         .and(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(RESOURCE.UID))
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID.eq(LATEST_ENVIRONMENT.UID))
         .and(ENVIRONMENT_RESOURCE.ENVIRONMENT_VERSION.eq(LATEST_ENVIRONMENT.VERSION))
-        .fetchOne { (uid, name, _, constraintsJson, notificationsJson, verifyWithJson) ->
+        .fetchOne { (uid, name, _, constraintsJson, notificationsJson, verifyWithJson, postDeployActionsJson) ->
           Environment(
             name = name,
             resources = resourcesForEnvironment(uid),
             constraints = objectMapper.readValue(constraintsJson),
             notifications = notificationsJson?.let { objectMapper.readValue(it) } ?: emptySet(),
-            verifyWith = verifyWithJson?.let { objectMapper.readValue(it) } ?: emptyList()
+            verifyWith = verifyWithJson?.let { objectMapper.readValue(it) } ?: emptyList(),
+            postDeploy = postDeployActionsJson?.let { objectMapper.readValue(it) } ?: emptyList()
           )
         }
     } ?: throw OrphanedResourceException(resourceId)

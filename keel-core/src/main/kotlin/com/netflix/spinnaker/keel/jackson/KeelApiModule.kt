@@ -37,6 +37,7 @@ import com.netflix.spinnaker.keel.api.artifacts.SortingStrategy
 import com.netflix.spinnaker.keel.api.artifacts.TagVersionStrategy
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStateAttributes
+import com.netflix.spinnaker.keel.api.postdeploy.PostDeployAction
 import com.netflix.spinnaker.keel.jackson.mixins.ClusterDeployStrategyMixin
 import com.netflix.spinnaker.keel.jackson.mixins.CommitMixin
 import com.netflix.spinnaker.keel.jackson.mixins.ConstraintStateMixin
@@ -102,7 +103,8 @@ internal object KeelApiAnnotationIntrospector : NopAnnotationIntrospector() {
     ConstraintStateAttributes::class.java,
     DeliveryArtifact::class.java,
     SortingStrategy::class.java,
-    Verification::class.java
+    Verification::class.java,
+    PostDeployAction::class.java
   )
 
   override fun findTypeResolver(config: MapperConfig<*>, ac: AnnotatedClass, baseType: JavaType): TypeResolverBuilder<*>? =
