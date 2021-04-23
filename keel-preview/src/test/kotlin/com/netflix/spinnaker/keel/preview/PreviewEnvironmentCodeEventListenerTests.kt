@@ -14,6 +14,9 @@ import com.netflix.spinnaker.keel.api.scm.CommitCreatedEvent
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
+import com.netflix.spinnaker.keel.front50.Front50Service
+import com.netflix.spinnaker.keel.front50.model.Application
+import com.netflix.spinnaker.keel.front50.model.DataSources
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
@@ -27,12 +30,12 @@ import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.called
 import io.mockk.clearMocks
-import io.mockk.every
+import io.mockk.coEvery as every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
-import io.mockk.verify
+import io.mockk.coVerify as verify
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
@@ -45,7 +48,18 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
 
     val importer: DeliveryConfigImporter = mockk()
 
-    val subject = PreviewEnvironmentCodeEventListener(repository, importer, objectMapper)
+    val front50Service: Front50Service = mockk()
+
+    val subject = PreviewEnvironmentCodeEventListener(repository, importer, front50Service, objectMapper)
+
+    val appConfig = Application(
+      name = "fnord",
+      email = "keel@keel.io",
+      repoType = "stash",
+      repoProjectKey = "myorg",
+      repoSlug = "myrepo",
+      dataSources = DataSources(enabled = emptyList(), disabled = emptyList())
+    )
 
     val artifactFromMain = DockerArtifact(
       name = "myorg/myartifact",
@@ -100,6 +114,10 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       every {
         repository.allDeliveryConfigs(any())
       } returns setOf(deliveryConfig)
+
+      every {
+        front50Service.applicationByName("fnord")
+      } returns appConfig
 
       every {
         importer.import("stash", "myorg", "myrepo", "spinnaker.yml", any())
@@ -220,6 +238,32 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
           verify {
             importer wasNot called
           }
+        }
+      }
+    }
+
+    context("a commit event matching a preview spec branch filter but from a different app's repo") {
+      before {
+        resetMocks()
+
+        every {
+          front50Service.applicationByName("fnord")
+        } returns appConfig.copy(
+          repoProjectKey = "anotherorg",
+          repoSlug = "another-repo"
+        )
+
+        subject.handleCommitCreated(commitEvent)
+      }
+
+      test("event is ignored") {
+        verify(exactly = 0) {
+          repository.upsertResource<DummyLocatableResourceSpec>(any(), deliveryConfig.name)
+          repository.upsertResource<DummyArtifactReferenceResourceSpec>(any(), deliveryConfig.name)
+          repository.storeEnvironment(deliveryConfig.name, any())
+        }
+        verify {
+          importer wasNot called
         }
       }
     }
