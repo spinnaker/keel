@@ -22,6 +22,8 @@ import com.netflix.spinnaker.keel.events.PersistentEvent.EventScope
 import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
+import com.netflix.spinnaker.keel.persistence.DependentAttachFilter
+import com.netflix.spinnaker.keel.persistence.DependentAttachFilter.ATTACH_NONE
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
 import com.netflix.spinnaker.keel.persistence.OrphanedResourceException
@@ -50,6 +52,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.attachDependents
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.deliveryConfigByName
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.resourcesForEnvironment
+import com.netflix.spinnaker.keel.sql.deliveryconfigs.uid
 import de.huxhorn.sulky.ulid.ULID
 import org.jooq.DSLContext
 import org.jooq.Record1
@@ -129,12 +132,7 @@ class SqlDeliveryConfigRepository(
   }
 
   override fun deleteEnvironment(deliveryConfigName: String, environmentName: String) {
-    val deliveryConfigUid = sqlRetry.withRetry(READ) {
-      jooq.select(DELIVERY_CONFIG.UID)
-        .from(DELIVERY_CONFIG)
-        .where(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
-        .fetchOne(DELIVERY_CONFIG.UID)
-    }
+    val deliveryConfigUid = deliveryConfigUidByName(deliveryConfigName)
 
     environmentUidByName(deliveryConfigName, environmentName)
       ?.let { envUid ->
@@ -152,12 +150,7 @@ class SqlDeliveryConfigRepository(
   }
 
   override fun deletePreviewEnvironment(deliveryConfigName: String, baseEnvironmentName: String) {
-    val deliveryConfigUid = sqlRetry.withRetry(READ) {
-      jooq.select(DELIVERY_CONFIG.UID)
-        .from(DELIVERY_CONFIG)
-        .where(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
-        .fetchOne(DELIVERY_CONFIG.UID)
-    }
+    val deliveryConfigUid = deliveryConfigUidByName(deliveryConfigName)
 
     environmentUidByName(deliveryConfigName, baseEnvironmentName)?.let { baseEnvironmentUid ->
       sqlRetry.withRetry(WRITE) {
@@ -259,12 +252,9 @@ class SqlDeliveryConfigRepository(
   // from where this is called: https://github.com/spinnaker/keel/issues/740
   override fun store(deliveryConfig: DeliveryConfig) {
     with(deliveryConfig) {
-      val deliveryConfigUid = jooq
-        .select(DELIVERY_CONFIG.UID)
-        .from(DELIVERY_CONFIG)
-        .where(DELIVERY_CONFIG.NAME.eq(name))
-        .fetchOne(DELIVERY_CONFIG.UID)
+      val deliveryConfigUid = deliveryConfigUidByName(name)
         ?: randomUID().toString()
+
       jooq.insertInto(DELIVERY_CONFIG)
         .set(DELIVERY_CONFIG.UID, deliveryConfigUid)
         .set(DELIVERY_CONFIG.NAME, name)
@@ -275,6 +265,7 @@ class SqlDeliveryConfigRepository(
         .set(DELIVERY_CONFIG.SERVICE_ACCOUNT, serviceAccount)
         .set(DELIVERY_CONFIG.METADATA, metadata)
         .execute()
+
       artifacts.forEach { artifact ->
         jooq.insertInto(DELIVERY_CONFIG_ARTIFACT)
           .set(DELIVERY_CONFIG_ARTIFACT.DELIVERY_CONFIG_UID, deliveryConfigUid)
@@ -291,75 +282,9 @@ class SqlDeliveryConfigRepository(
           .onDuplicateKeyIgnore()
           .execute()
       }
+
       environments.forEach { environment ->
-        val environmentUid = (
-          jooq
-            .select(ENVIRONMENT.UID)
-            .from(ENVIRONMENT)
-            .where(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfigUid))
-            .and(ENVIRONMENT.NAME.eq(environment.name))
-            .fetchOne(ENVIRONMENT.UID)
-            ?: randomUID().toString()
-          )
-        jooq.insertInto(ENVIRONMENT)
-          .set(ENVIRONMENT.UID, environmentUid)
-          .set(ENVIRONMENT.DELIVERY_CONFIG_UID, deliveryConfigUid)
-          .set(ENVIRONMENT.NAME, environment.name)
-          .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
-          .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
-          .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
-          .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
-          .onDuplicateKeyUpdate()
-          .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
-          .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
-          .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
-          .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
-          .execute()
-        val currentVersion = jooq
-          .select(coalesce(max(ENVIRONMENT_VERSION.VERSION), value(0)))
-          .from(ENVIRONMENT_VERSION)
-          .where(ENVIRONMENT_VERSION.ENVIRONMENT_UID.eq(environmentUid))
-          .fetchOneInto<Int>()
-
-        val newVersion = currentVersion + 1
-
-        val currentVersionResources = resourceUidsAndVersionsFor(environmentUid, currentVersion)
-        val newVersionResources = environment.latestResourceUidsAndVersions()
-
-        val newVersionRequired = if (currentVersion == 0) {
-          log.debug("Creating initial version of environment {}/{}", application, environment.name)
-          true
-        } else if (currentVersionResources != newVersionResources) {
-          log.debug(
-            "Creating a new version {} of environment {}/{} because resources changed from {} to {}",
-            newVersion,
-            application,
-            environment.name,
-            currentVersionResources,
-            newVersionResources
-          )
-          true
-        } else {
-          false
-        }
-
-        if (newVersionRequired) {
-          jooq.insertInto(ENVIRONMENT_VERSION)
-            .set(ENVIRONMENT_VERSION.ENVIRONMENT_UID, environmentUid)
-            .set(ENVIRONMENT_VERSION.VERSION, newVersion)
-            .set(ENVIRONMENT_VERSION.CREATED_AT, clock.instant())
-            .execute()
-
-          newVersionResources.forEach { (resourceUid, resourceVersion) ->
-            jooq.insertInto(ENVIRONMENT_RESOURCE)
-              .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUid)
-              .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_VERSION, newVersion)
-              .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, resourceUid)
-              .set(ENVIRONMENT_RESOURCE.RESOURCE_VERSION, resourceVersion)
-              .onDuplicateKeyIgnore()
-              .execute()
-          }
-        }
+        storeEnvironment(this, environment)
       }
 
       previewEnvironments.forEach { previewEnvSpec ->
@@ -385,6 +310,83 @@ class SqlDeliveryConfigRepository(
         .set(DELIVERY_CONFIG_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
         .execute()
     }
+  }
+
+  private fun storeEnvironment(deliveryConfig: DeliveryConfig, environment: Environment) {
+    val environmentUid = (
+      jooq
+        .select(ENVIRONMENT.UID)
+        .from(ENVIRONMENT)
+        .where(ENVIRONMENT.DELIVERY_CONFIG_UID.eq(deliveryConfig.uid))
+        .and(ENVIRONMENT.NAME.eq(environment.name))
+        .fetchOne(ENVIRONMENT.UID)
+        ?: randomUID().toString()
+      )
+
+    jooq.insertInto(ENVIRONMENT)
+      .set(ENVIRONMENT.UID, environmentUid)
+      .set(ENVIRONMENT.DELIVERY_CONFIG_UID, deliveryConfig.uid)
+      .set(ENVIRONMENT.NAME, environment.name)
+      .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
+      .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
+      .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
+      .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
+      .onDuplicateKeyUpdate()
+      .set(ENVIRONMENT.CONSTRAINTS, environment.constraints.toJson())
+      .set(ENVIRONMENT.NOTIFICATIONS, environment.notifications.toJson())
+      .set(ENVIRONMENT.VERIFICATIONS, environment.verifyWith.toJson())
+      .set(ENVIRONMENT.POST_DEPLOY_ACTIONS, environment.postDeploy.toJson())
+      .execute()
+    val currentVersion = jooq
+      .select(coalesce(max(ENVIRONMENT_VERSION.VERSION), value(0)))
+      .from(ENVIRONMENT_VERSION)
+      .where(ENVIRONMENT_VERSION.ENVIRONMENT_UID.eq(environmentUid))
+      .fetchOneInto<Int>()
+
+    val newVersion = currentVersion + 1
+
+    val currentVersionResources = resourceUidsAndVersionsFor(environmentUid, currentVersion)
+    val newVersionResources = environment.latestResourceUidsAndVersions()
+
+    val newVersionRequired = if (currentVersion == 0) {
+      log.debug("Creating initial version of environment {}/{}", deliveryConfig.application, environment.name)
+      true
+    } else if (currentVersionResources != newVersionResources) {
+      log.debug(
+        "Creating a new version {} of environment {}/{} because resources changed from {} to {}",
+        newVersion,
+        deliveryConfig.application,
+        environment.name,
+        currentVersionResources,
+        newVersionResources
+      )
+      true
+    } else {
+      false
+    }
+
+    if (newVersionRequired) {
+      jooq.insertInto(ENVIRONMENT_VERSION)
+        .set(ENVIRONMENT_VERSION.ENVIRONMENT_UID, environmentUid)
+        .set(ENVIRONMENT_VERSION.VERSION, newVersion)
+        .set(ENVIRONMENT_VERSION.CREATED_AT, clock.instant())
+        .execute()
+    }
+
+    newVersionResources.forEach { (resourceUid, resourceVersion) ->
+      jooq.insertInto(ENVIRONMENT_RESOURCE)
+        .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID, environmentUid)
+        .set(ENVIRONMENT_RESOURCE.ENVIRONMENT_VERSION, newVersion)
+        .set(ENVIRONMENT_RESOURCE.RESOURCE_UID, resourceUid)
+        .set(ENVIRONMENT_RESOURCE.RESOURCE_VERSION, resourceVersion)
+        .onDuplicateKeyIgnore()
+        .execute()
+    }
+  }
+
+  override fun storeEnvironment(deliveryConfigName: String, environment: Environment) {
+    val deliveryConfig = deliveryConfigByName(deliveryConfigName, ATTACH_NONE)
+    storeEnvironment(deliveryConfig, environment)
   }
 
   /**
@@ -426,6 +428,29 @@ class SqlDeliveryConfigRepository(
 
   override fun get(name: String): DeliveryConfig =
     deliveryConfigByName(name)
+
+  override fun all(vararg dependentAttachFilter: DependentAttachFilter): Set<DeliveryConfig> =
+    sqlRetry.withRetry(READ) {
+      jooq.select(
+        DELIVERY_CONFIG.UID,
+        DELIVERY_CONFIG.NAME,
+        DELIVERY_CONFIG.APPLICATION,
+        DELIVERY_CONFIG.SERVICE_ACCOUNT,
+        DELIVERY_CONFIG.METADATA
+      )
+        .from(DELIVERY_CONFIG)
+        .fetch { (uid, name, application, serviceAccount, metadata) ->
+          DeliveryConfig(
+            name = name,
+            application = application,
+            serviceAccount = serviceAccount,
+            metadata = (metadata ?: emptyMap()) + mapOf("createdAt" to ULID.parseULID(uid).timestampAsInstant())
+          )
+        }
+        .map { deliveryConfig ->
+          attachDependents(deliveryConfig, *dependentAttachFilter)
+        }.toSet()
+    }
 
   override fun environmentFor(resourceId: String): Environment =
     sqlRetry.withRetry(READ) {
@@ -1173,6 +1198,13 @@ class SqlDeliveryConfigRepository(
       .from(RESOURCE)
       .where(RESOURCE.ID.eq(this))
 
+  private fun deliveryConfigUidByName(deliveryConfigName: String) = sqlRetry.withRetry(READ) {
+    jooq.select(DELIVERY_CONFIG.UID)
+      .from(DELIVERY_CONFIG)
+      .where(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
+      .fetchOne(DELIVERY_CONFIG.UID)
+  }
+
   private fun environmentUidByName(deliveryConfigName: String, environmentName: String): String? =
     sqlRetry.withRetry(READ) {
       jooq
@@ -1185,7 +1217,6 @@ class SqlDeliveryConfigRepository(
         )
         .fetchOne(ENVIRONMENT.UID)
     }
-      ?: null
 
   private fun envUid(deliveryConfigName: String, environmentName: String): Select<Record1<String>> =
     select(ENVIRONMENT.UID)
