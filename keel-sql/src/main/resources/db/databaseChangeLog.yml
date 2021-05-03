@@ -293,4 +293,3 @@ databaseChangeLog:
   - include:
       file: changelog/20210420-add-post-deploy-actions.yml
       relativeToChangelogFile: true
-
