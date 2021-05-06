@@ -4,10 +4,6 @@ plugins {
   application
 }
 
-repositories {
-  mavenCentral()
-}
-
 sourceSets {
   main {
     dependencies {
