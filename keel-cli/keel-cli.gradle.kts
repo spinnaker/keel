@@ -5,9 +5,7 @@ plugins {
 }
 
 repositories {
-  maven {
-    url = uri("https://kotlin.bintray.com/kotlinx")
-  }
+  mavenCentral()
 }
 
 sourceSets {
