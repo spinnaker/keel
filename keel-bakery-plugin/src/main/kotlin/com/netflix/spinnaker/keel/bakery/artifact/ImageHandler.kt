@@ -18,15 +18,16 @@ import com.netflix.spinnaker.keel.lifecycle.LifecycleEvent
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventScope.PRE_DEPLOYMENT
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventStatus.NOT_STARTED
 import com.netflix.spinnaker.keel.lifecycle.LifecycleEventType.BAKE
-import com.netflix.spinnaker.keel.model.Job
+import com.netflix.spinnaker.keel.api.actuation.Job
+import com.netflix.spinnaker.keel.model.OrcaJob
 import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.keel.persistence.BakedImageRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchArtifactException
+import com.netflix.spinnaker.keel.persistence.PausedRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactCheckSkipped
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.core.env.Environment
 
 class ImageHandler(
   private val repository: KeelRepository,
@@ -37,11 +38,11 @@ class ImageHandler(
   private val publisher: ApplicationEventPublisher,
   private val taskLauncher: TaskLauncher,
   private val defaultCredentials: BakeCredentials,
-  private val springEnv: Environment
+  private val pausedRepository: PausedRepository
 ) : ArtifactHandler {
 
   override suspend fun handle(artifact: DeliveryArtifact) {
-    if (artifact is DebianArtifact) {
+    if (artifact is DebianArtifact && !artifact.isPaused()) {
       val desiredAppVersion = try {
         artifact.findLatestArtifactVersion()
       } catch (e: NoKnownArtifactVersions) {
@@ -96,6 +97,14 @@ class ImageHandler(
     }
   }
 
+  private fun DeliveryArtifact.isPaused(): Boolean =
+    if (deliveryConfigName == null) {
+      false
+    } else {
+      val config = repository.getDeliveryConfig(deliveryConfigName!!)
+      pausedRepository.applicationPaused(config.application)
+    }
+
   private fun DebianArtifact.wasPreviouslyBakedWith(
     desiredAppVersion: String,
     desiredBaseAmiName: String
@@ -109,13 +118,10 @@ class ImageHandler(
   private suspend fun DebianArtifact.findLatestAmi(desiredArtifactVersion: String) =
     imageService.getLatestNamedImages(
       appVersion = AppVersion.parseName(desiredArtifactVersion),
-      account = defaultImageAccount,
+      account = "test",
       regions = vmOptions.regions,
       baseOs = vmOptions.baseOs
     )
-
-  private val defaultImageAccount: String
-    get() = springEnv.getProperty("images.default-account", String::class.java, "test")
 
   private fun DebianArtifact.findLatestBaseAmiName() =
     baseImageCache.getBaseAmiName(vmOptions.baseOs, vmOptions.baseLabel)
@@ -189,7 +195,7 @@ class ImageHandler(
         description = description,
         correlationId = artifact.correlationId(desiredVersion),
         stages = listOf(
-          Job(
+          OrcaJob(
             "bake",
             mapOf(
               "amiSuffix" to "",
@@ -208,7 +214,8 @@ class ImageHandler(
       publisher.publishEvent(BakeLaunched(desiredVersion))
       publisher.publishEvent(LifecycleEvent(
         scope = PRE_DEPLOYMENT,
-        artifactRef = artifact.toLifecycleRef(),
+        deliveryConfigName = checkNotNull(artifact.deliveryConfigName),
+        artifactReference = artifact.reference,
         artifactVersion = desiredVersion,
         type = BAKE,
         id = "bake-$desiredVersion",

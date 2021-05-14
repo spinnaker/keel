@@ -17,5 +17,6 @@ RUN usermod -d /var/lib/mysql/ mysql && \
     mysql -u root --password=sa -e "GRANT PROXY ON ''@'' TO 'root'@'%' WITH GRANT OPTION;" && \
     /etc/init.d/mysql restart && \
     mysql -u root --password=sa -e 'CREATE DATABASE `keel` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
-ADD build-scripts/entrypoint.sh /usr/bin/
-ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+
+CMD /etc/init.d/mysql restart && \
+    ./gradlew --no-daemon -PbuildingInDocker=true keel-web:installDist -x test

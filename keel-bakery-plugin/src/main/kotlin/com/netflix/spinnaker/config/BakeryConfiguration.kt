@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.clouddriver.ImageService
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.persistence.BakedImageRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.persistence.PausedRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -18,7 +19,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.env.Environment
 
 @Configuration
 @ConditionalOnProperty("keel.plugins.bakery.enabled")
@@ -36,7 +36,7 @@ class BakeryConfiguration {
     taskLauncher: TaskLauncher,
     @Value("\${bakery.defaults.serviceAccount:keel@spinnaker.io}") defaultServiceAccount: String,
     @Value("\${bakery.defaults.application:keel}") defaultApplication: String,
-    springEnv: Environment
+    pausedRepository: PausedRepository
   ) = ImageHandler(
     keelRepository,
     baseImageCache,
@@ -46,7 +46,7 @@ class BakeryConfiguration {
     publisher,
     taskLauncher,
     BakeCredentials(defaultServiceAccount, defaultApplication),
-    springEnv
+    pausedRepository
   )
 
   @Bean
