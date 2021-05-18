@@ -7,35 +7,47 @@ import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
 import com.netflix.graphql.dgs.InputArgument
 import com.netflix.graphql.dgs.context.DgsContext
 import com.netflix.graphql.dgs.exceptions.DgsEntityNotFoundException
+import com.netflix.spinnaker.keel.api.AccountAwareLocations
 import com.netflix.spinnaker.keel.api.DeliveryConfig
-import com.netflix.spinnaker.keel.api.Environment
+import com.netflix.spinnaker.keel.api.Locatable
+import com.netflix.spinnaker.keel.api.Monikered
+import com.netflix.spinnaker.keel.api.Resource
+import com.netflix.spinnaker.keel.api.SimpleLocations
+import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.action.ActionType
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
+import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.bakery.BakeryMetadataService
+import com.netflix.spinnaker.keel.bakery.diff.PackageDiff
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
-import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
-import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
+import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.graphql.DgsConstants
-import com.netflix.spinnaker.keel.graphql.types.MdAction
 import com.netflix.spinnaker.keel.graphql.types.MdApplication
 import com.netflix.spinnaker.keel.graphql.types.MdArtifact
 import com.netflix.spinnaker.keel.graphql.types.MdArtifactStatusInEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdArtifactVersionInEnvironment
+import com.netflix.spinnaker.keel.graphql.types.MdCommitInfo
 import com.netflix.spinnaker.keel.graphql.types.MdComparisonLinks
 import com.netflix.spinnaker.keel.graphql.types.MdConstraint
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironmentState
+import com.netflix.spinnaker.keel.graphql.types.MdGitMetadata
 import com.netflix.spinnaker.keel.graphql.types.MdLifecycleStep
-import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
+import com.netflix.spinnaker.keel.graphql.types.MdLocation
+import com.netflix.spinnaker.keel.graphql.types.MdMoniker
 import com.netflix.spinnaker.keel.graphql.types.MdPinnedVersion
+import com.netflix.spinnaker.keel.graphql.types.MdPullRequest
 import com.netflix.spinnaker.keel.graphql.types.MdResource
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationState
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationStatus
+import com.netflix.spinnaker.keel.graphql.types.MdAction
+import com.netflix.spinnaker.keel.graphql.types.MdPackageAndVersion
+import com.netflix.spinnaker.keel.graphql.types.MdPackageAndVersionChange
+import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -81,15 +93,7 @@ class ApplicationFetcher(
     }
     val context: ApplicationContext = DgsContext.getCustomContext(dfe)
     context.deliveryConfig = config
-    val environments: List<MdEnvironment> = config.environments.sortedWith { env1, env2 ->
-      when {
-        env1.dependsOn(env2) -> 1
-        env2.dependsOn(env1) -> -1
-        env1.hasDependencies() && !env2.hasDependencies() -> 1
-        env2.hasDependencies() && !env1.hasDependencies() -> -1
-        else -> 0
-      }
-    }.map { env ->
+    val environments: List<MdEnvironment> = config.environments.map { env ->
       val artifacts = config.artifactsUsedIn(env.name).map { artifact ->
         MdArtifact(
           id = "${env.name}-${artifact.reference}",
@@ -112,8 +116,8 @@ class ApplicationFetcher(
     }
 
     return MdApplication(
-      id = config.application,
-      name = config.application,
+      id = config.name,
+      name = config.name,
       account = config.serviceAccount,
       environments = environments
     )
@@ -344,9 +348,3 @@ class ApplicationFetcher(
 
 //  add function for putting the resources on the artifactVersion
 }
-
-fun Environment.dependsOn(another: Environment) =
-  constraints.any { it is DependsOnConstraint && it.environment == another.name }
-
-fun Environment.hasDependencies() =
-  constraints.any { it is DependsOnConstraint }
