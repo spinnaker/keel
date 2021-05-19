@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-listOf("fiat", "kork").forEach { prj ->
-  val propName = "${prj}Composite"
-  val projectPath = "../$prj"
-  if (settings.extra.has(propName) && java.lang.Boolean.parseBoolean(settings.extra.get(propName).toString())) {
-    includeBuild(projectPath)
+['fiat', 'kork'].each { prj ->
+  String propName = "${prj}Composite"
+  String projectPath = "../$prj"
+  if (settings.ext.has(propName) && Boolean.parseBoolean(settings.ext.get(propName) as String)) {
+    includeBuild projectPath
   }
 }
 
@@ -56,13 +56,13 @@ include(
 
 rootProject.name = "keel"
 
-fun ProjectDescriptor.setBuildFile() {
-  buildFileName = "$name.gradle.kts"
-  children.forEach {
-    it.setBuildFile()
+def setBuildFile(project) {
+  project.buildFileName = "${project.name}.gradle"
+  project.children.each {
+    setBuildFile(it)
   }
 }
 
-rootProject.children.forEach {
-  it.setBuildFile()
+rootProject.children.each {
+  setBuildFile(it)
 }
