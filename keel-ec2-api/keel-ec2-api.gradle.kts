@@ -1,5 +1,6 @@
 plugins {
-  }
+  `java-library`
+}
 
 /*
  * DO NOT ADD ANY NON-TEST DEPENDENCIES HERE!

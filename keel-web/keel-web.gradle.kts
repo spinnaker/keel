@@ -1,17 +1,23 @@
+import com.netflix.graphql.dgs.codegen.gradle.GenerateJavaTask
+
 plugins {
-  id("application")
+  `java-library`
+  id("kotlin-spring")
+  application
 }
 
-apply(plugin: "com.netflix.dgs.codegen")
+apply(plugin = "io.spinnaker.package")
+apply(plugin = "com.netflix.dgs.codegen")
 
-repositories {
-  mavenCentral() // for graphql-java-extended-scalars
-}
+fun dgsGenerateCode(block: GenerateJavaTask.() -> Unit) =
+  tasks.withType<GenerateJavaTask> {
+    block(this)
+  }
 
-generateJava {
-  schemaPaths = ["${projectDir}/src/main/resources/schema"]
+dgsGenerateCode {
+  schemaPaths = mutableListOf("${projectDir}/src/main/resources/schema")
   packageName = "com.netflix.spinnaker.keel.graphql"
-  typeMapping = ["InstantTime": "java.time.Instant", "JSON": "kotlin.Any"]
+  typeMapping = mutableMapOf("InstantTime" to "java.time.Instant", "JSON" to "kotlin.Any")
 }
 
 dependencies {
@@ -36,17 +42,24 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-actuator")
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.security:spring-security-config")
-  implementation("io.spinnaker.fiat:fiat-api:${fiatVersion}")
-  implementation("io.spinnaker.fiat:fiat-core:${fiatVersion}")
+  implementation("io.spinnaker.fiat:fiat-api:${property("fiatVersion")}")
+  implementation("io.spinnaker.fiat:fiat-core:${property("fiatVersion")}")
   implementation("net.logstash.logback:logstash-logback-encoder")
   implementation("io.swagger.core.v3:swagger-annotations:2.1.2")
   implementation("org.apache.maven:maven-artifact:3.6.3")
   implementation("io.spinnaker.kork:kork-plugins")
   implementation("com.slack.api:bolt-servlet:1.6.0")
-  implementation("com.graphql-java:graphql-java-extended-scalars:16.0.1")
+  implementation("com.graphql-java:graphql-java-extended-scalars:16.0.0")
   implementation("com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter:3.9.3")
 
-  runtimeOnly("io.spinnaker.kork:kork-runtime")
+  runtimeOnly("io.spinnaker.kork:kork-runtime") {
+    // these dependencies weren't previously being included, keeping them out for now, if there
+    // is a need for them in the future these excludes are easy enough to delete...
+    exclude(mapOf("group" to "io.spinnaker.kork", "module" to "kork-swagger"))
+    exclude(mapOf("group" to "io.spinnaker.kork", "module" to "kork-stackdriver"))
+    exclude(mapOf("group" to "io.spinnaker.kork", "module" to "kork-secrets-aws"))
+    exclude(mapOf("group" to "io.spinnaker.kork", "module" to "kork-secrets-gcp"))
+  }
   runtimeOnly("io.springfox:springfox-boot-starter:3.0.0")
 
   testImplementation(project(":keel-test"))
@@ -58,7 +71,7 @@ dependencies {
   testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
   testImplementation("io.spinnaker.kork:kork-security")
   testImplementation("com.squareup.okhttp3:mockwebserver")
-  testImplementation("org.testcontainers:mysql:${testContainersVersion}")
+  testImplementation("org.testcontainers:mysql:${property("testContainersVersion")}")
   testImplementation("com.networknt:json-schema-validator:1.0.43")
   testImplementation("io.spinnaker.kork:kork-plugins")
   testImplementation("com.graphql-java:graphql-java-extended-scalars:16.0.0")

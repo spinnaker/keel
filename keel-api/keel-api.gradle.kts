@@ -1,3 +1,7 @@
+plugins {
+  `java-library`
+}
+
 /*
  * DO NOT ADD ANY NON-TEST DEPENDENCIES HERE!
  *
@@ -6,8 +10,8 @@
  * dependencies along for the ride -- ideally nothing at all.
  */
 dependencies {
-  api("io.spinnaker.kork:kork-plugins-api")
-  api("io.spinnaker.kork:kork-exceptions")
+  api("io.spinnaker.kork:kork-plugins-api:${property("korkVersion")}")
+  api("io.spinnaker.kork:kork-exceptions:${property("korkVersion")}")
   api("de.huxhorn.sulky:de.huxhorn.sulky.ulid")
   testImplementation("io.strikt:strikt-core")
   testImplementation("dev.minutest:minutest")

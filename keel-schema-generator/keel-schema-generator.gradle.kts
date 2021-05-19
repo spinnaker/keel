@@ -1,3 +1,8 @@
+plugins {
+  `java-library`
+  kotlin("jvm")
+}
+
 dependencies {
   api(project(":keel-api"))
 

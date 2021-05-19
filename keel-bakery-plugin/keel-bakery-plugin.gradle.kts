@@ -1,3 +1,8 @@
+plugins {
+  `java-library`
+  id("kotlin-spring")
+}
+
 dependencies {
   implementation(project(":keel-api"))
   implementation(project(":keel-core")) // TODO: ideally not

@@ -1,3 +1,8 @@
+plugins {
+  `java-library`
+  id("kotlin-spring")
+}
+
 dependencies {
   api("org.springframework.boot:spring-boot-starter-test")
   api("org.springframework.security:spring-security-test")

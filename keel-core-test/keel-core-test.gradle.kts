@@ -1,5 +1,6 @@
 plugins {
-  }
+  `java-library`
+}
 
 dependencies {
   implementation(project(":keel-api"))

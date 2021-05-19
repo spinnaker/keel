@@ -1,5 +1,5 @@
 plugins {
-  id "java-platform"
+  `java-platform`
 }
 
 javaPlatform {
@@ -7,11 +7,10 @@ javaPlatform {
 }
 
 dependencies {
-  api(platform("io.spinnaker.kork:kork-bom:${korkVersion}"))
+  api(platform("io.spinnaker.kork:kork-bom:${property("korkVersion")}"))
   constraints {
     rootProject
       .subprojects
-      .stream()
       .filter { it != project }
       .forEach { api(project(it.path)) }
   }

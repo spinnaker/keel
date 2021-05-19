@@ -1,3 +1,8 @@
+plugins {
+  `java-library`
+  id("kotlin-spring")
+}
+
 dependencies {
   api(project(":keel-retrofit"))
   api("com.fasterxml.jackson.core:jackson-databind")

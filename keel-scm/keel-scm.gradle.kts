@@ -1,3 +1,8 @@
+plugins {
+  `java-library`
+  id("kotlin-spring")
+}
+
 dependencies {
   implementation(project(":keel-core"))
   implementation(project(":keel-igor"))
