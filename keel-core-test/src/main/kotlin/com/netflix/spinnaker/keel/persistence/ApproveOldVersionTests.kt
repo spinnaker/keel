@@ -184,6 +184,7 @@ abstract class ApproveOldVersionTests<T : KeelRepository> : JUnit5Minutests {
       context("old version is approved") {
         before {
           repository.storeConstraintState(passedManualJudgement1)
+          repository.queueArtifactVersionForApproval(deliveryConfig.name,environment.name, artifact, version1)
         }
 
         test("so it is the latest approved version") {
