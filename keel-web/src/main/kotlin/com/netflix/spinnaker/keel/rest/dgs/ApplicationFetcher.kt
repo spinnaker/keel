@@ -112,8 +112,8 @@ class ApplicationFetcher(
     }
 
     return MdApplication(
-      id = config.name,
-      name = config.name,
+      id = config.application,
+      name = config.application,
       account = config.serviceAccount,
       environments = environments
     )
