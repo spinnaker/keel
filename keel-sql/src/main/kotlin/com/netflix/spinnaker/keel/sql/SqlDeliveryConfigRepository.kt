@@ -10,9 +10,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
-import com.netflix.spinnaker.keel.api.constraints.allPass
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
-import com.netflix.spinnaker.keel.api.statefulCount
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
@@ -872,18 +870,12 @@ class SqlDeliveryConfigRepository(
     }
   }
 
-  override fun constraintStateFor(
-    deliveryConfigName: String,
-    environmentName: String,
-    limit: Int
-  ): List<ConstraintState> {
-    val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
-      ?: return emptyList()
+  override fun constraintStateForEnvironments(deliveryConfigName: String, environmentUIDs: List<String>, limit: Int?): List<ConstraintState> {
     return sqlRetry.withRetry(READ) {
       jooq
         .select(
           inline(deliveryConfigName).`as`("deliveryConfigName"),
-          inline(environmentName).`as`("environmentName"),
+          ENVIRONMENT.NAME.`as`("environmentName"),
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE,
           ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE,
@@ -895,9 +887,23 @@ class SqlDeliveryConfigRepository(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ATTRIBUTES
         )
         .from(ENVIRONMENT_ARTIFACT_CONSTRAINT)
-        .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(environmentUID))
+        .join(ENVIRONMENT)
+        .on(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID))
+        .run {
+          if (environmentUIDs.isNotEmpty()) {
+            and(ENVIRONMENT.UID.`in`(environmentUIDs))
+          } else {
+            join(DELIVERY_CONFIG)
+              .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+              .and(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
+          }
+        }
         .orderBy(ENVIRONMENT_ARTIFACT_CONSTRAINT.CREATED_AT.desc())
-        .limit(limit)
+        .apply {
+          if (limit != null) {
+            limit(limit)
+          }
+        }
         .fetch { (
                    deliveryConfigName,
                    environmentName,
@@ -926,6 +932,16 @@ class SqlDeliveryConfigRepository(
           )
         }
     }
+  }
+
+  override fun constraintStateFor(
+    deliveryConfigName: String,
+    environmentName: String,
+    limit: Int
+  ): List<ConstraintState> {
+    val environmentUID = environmentUidByName(deliveryConfigName, environmentName)
+      ?: return emptyList()
+    return constraintStateForEnvironments(deliveryConfigName, listOf(environmentUID), limit)
   }
 
   override fun constraintStateFor(
