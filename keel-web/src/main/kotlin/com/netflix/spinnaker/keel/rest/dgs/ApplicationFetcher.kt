@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.rest.dgs
 
-
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
@@ -10,16 +9,8 @@ import com.netflix.graphql.dgs.exceptions.DgsEntityNotFoundException
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.action.ActionType
-import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
-import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
-import com.netflix.spinnaker.keel.bakery.BakeryMetadataService
-import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
-import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
-import com.netflix.spinnaker.keel.core.api.EnvironmentSummary
-import com.netflix.spinnaker.keel.core.api.PromotionStatus
-import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.graphql.DgsConstants
 import com.netflix.spinnaker.keel.graphql.types.MdAction
 import com.netflix.spinnaker.keel.graphql.types.MdApplication
@@ -42,9 +33,7 @@ import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
 import com.netflix.spinnaker.keel.services.ResourceStatusService
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import kotlinx.coroutines.runBlocking
 import org.dataloader.DataLoader
-import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -58,19 +47,9 @@ class ApplicationFetcher(
   private val keelRepository: KeelRepository,
   private val resourceStatusService: ResourceStatusService,
   private val actuationPauser: ActuationPauser,
-  private val cloudDriverService: CloudDriverService,
-  private val bakeryMetadataService: BakeryMetadataService?,
   private val artifactVersionLinks: ArtifactVersionLinks,
+  private val applicationFetcherSupport: ApplicationFetcherSupport
 ) {
-
-  companion object {
-    private val log by lazy { LoggerFactory.getLogger(ApplicationFetcher::class.java) }
-
-    private fun getDeliveryConfigFromContext(dfe: DataFetchingEnvironment): DeliveryConfig {
-      val context: ApplicationContext = DgsContext.getCustomContext(dfe)
-      return context.getConfig()
-    }
-  }
 
   @DgsData(parentType = DgsConstants.QUERY.TYPE_NAME, field = DgsConstants.QUERY.Application)
   fun application(dfe: DataFetchingEnvironment, @InputArgument("appName") appName: String): MdApplication {
@@ -144,7 +123,7 @@ class ApplicationFetcher(
   ): CompletableFuture<List<DataFetcherResult<MdArtifactVersionInEnvironment>>>? {
     val dataLoader: DataLoader<ArtifactAndEnvironment, List<MdArtifactVersionInEnvironment>> = dfe.getDataLoader(ArtifactInEnvironmentDataLoader.Descriptor.name)
     val artifact: MdArtifact = dfe.getSource()
-    val config = getDeliveryConfigFromContext(dfe)
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     val applicationContext: ApplicationContext = DgsContext.getCustomContext(dfe)
     if (statuses != null && applicationContext.requestedStatuses == null) {
       applicationContext.requestedStatuses = statuses.toSet()
@@ -169,25 +148,22 @@ class ApplicationFetcher(
 
   @DgsData(parentType = DgsConstants.MDGITMETADATA.TYPE_NAME, field = DgsConstants.MDGITMETADATA.ComparisonLinks)
   fun comparisonLinks(dfe: DataFetchingEnvironment): MdComparisonLinks? {
-    val mdArtifactVersion: MdArtifactVersionInEnvironment = dfe.getLocalContext()
-    val (deliveryArtifact, artifactVersions) = getPublishedArtifactsInEnvironment(dfe, mdArtifactVersion)
-    val thisVersion = artifactVersions.firstOrNull { it.publishedArtifact.version == mdArtifactVersion.version }
-      ?: throw DgsEntityNotFoundException("artifact ${mdArtifactVersion.reference} has no version named ${mdArtifactVersion.version}")
-    val currentVersion = artifactVersions.firstOrNull { it.status == PromotionStatus.CURRENT }
-    val previousVersion = artifactVersions.firstOrNull { it.replacedBy == mdArtifactVersion.version }
+    val diffContext = applicationFetcherSupport.getDiffContext(dfe)
 
-    return MdComparisonLinks(
-      toPreviousVersion = if (previousVersion != thisVersion) {
-        artifactVersionLinks.generateCompareLink(thisVersion.publishedArtifact, previousVersion?.publishedArtifact, deliveryArtifact)
-      } else {
-        null
-      },
-      toCurrentVersion = if (currentVersion != thisVersion) {
-        artifactVersionLinks.generateCompareLink(thisVersion.publishedArtifact, currentVersion?.publishedArtifact, deliveryArtifact)
-      } else {
-        null
-      }
-    )
+    with(diffContext) {
+      return MdComparisonLinks(
+        toPreviousVersion = if (previousVersion != currentVersion) {
+          artifactVersionLinks.generateCompareLink(currentVersion.publishedArtifact, previousVersion?.publishedArtifact, deliveryArtifact)
+        } else {
+          null
+        },
+        toCurrentVersion = if (currentVersion != currentVersion) {
+          artifactVersionLinks.generateCompareLink(currentVersion.publishedArtifact, currentVersion?.publishedArtifact, deliveryArtifact)
+        } else {
+          null
+        }
+      )
+    }
   }
 
   @DgsData(
@@ -195,76 +171,14 @@ class ApplicationFetcher(
     field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.PackageDiff
   )
   fun packageDiff(dfe: DataFetchingEnvironment): MdPackageDiff? {
-    if (bakeryMetadataService == null) {
-      return null
-    }
-
-    val mdArtifactVersion: MdArtifactVersionInEnvironment = dfe.getLocalContext()
-    val (deliveryArtifact, artifactVersions) = getPublishedArtifactsInEnvironment(dfe, mdArtifactVersion)
-
-    if (deliveryArtifact.type != DEBIAN) {
-      return null
-    }
-
-    val thisVersion = artifactVersions.firstOrNull { it.publishedArtifact.version == mdArtifactVersion.version }
-      ?: throw DgsEntityNotFoundException("artifact ${mdArtifactVersion.reference} has no version named ${mdArtifactVersion.version}")
-
-    val previousVersion = artifactVersions.firstOrNull { it.replacedBy == mdArtifactVersion.version }
-
-    val currentImage = runBlocking {
-      cloudDriverService.namedImages(
-        user = DEFAULT_SERVICE_ACCOUNT,
-        imageName = thisVersion.publishedArtifact.normalizedVersion,
-        account = null
-      ).firstOrNull()
-    } ?: throw DgsEntityNotFoundException("Image for version ${thisVersion.publishedArtifact.version} not found")
-
-    val previewsImage = if (previousVersion != null) {
-      runBlocking {
-        cloudDriverService.namedImages(
-          user = DEFAULT_SERVICE_ACCOUNT,
-          imageName = previousVersion.publishedArtifact.normalizedVersion,
-          account = null
-        ).firstOrNull()
-      } ?: throw DgsEntityNotFoundException("Image for version ${previousVersion.publishedArtifact.version} not found")
-    } else {
-      null
-    }
-
-    val region = artifactResources(dfe)
-      ?.firstOrNull()?.location?.regions?.firstOrNull()
-      ?: return null
-        .also { log.warn("Unable to determine region for $deliveryArtifact in environment ${mdArtifactVersion.environment}") }
-
-    val diff = runBlocking {
-      bakeryMetadataService.getPackageDiff(
-        oldImage = previewsImage?.normalizedImageName,
-        newImage = currentImage.normalizedImageName,
-        region = region // TODO: figure out a way to get a region
-      )
-    }.toDgs()
-
-    return diff
-  }
-
-  private fun getPublishedArtifactsInEnvironment(
-    dfe: DataFetchingEnvironment,
-    mdArtifactVersion: MdArtifactVersionInEnvironment
-  ): Pair<DeliveryArtifact, List<PublishedArtifactInEnvironment>> {
-    val deliveryConfig = getDeliveryConfigFromContext(dfe)
-    val applicationContext: ApplicationContext = DgsContext.getCustomContext(dfe) // the artifact versions store context
-    val deliveryArtifact = deliveryConfig.matchingArtifactByReference(mdArtifactVersion.reference)
-      ?: throw DgsEntityNotFoundException("Artifact ${mdArtifactVersion.reference} was not found in the delivery config") // the delivery artifact of this artifact
-    val artifactVersions = mdArtifactVersion.environment?.let { applicationContext.getArtifactVersions(deliveryArtifact = deliveryArtifact, environmentName = it) }
-      ?: throw DgsEntityNotFoundException("Environment ${mdArtifactVersion.environment} has not versions for artifact ${mdArtifactVersion.reference}")
-    return deliveryArtifact to artifactVersions
+    return applicationFetcherSupport.getDebianPackageDiff(dfe)
   }
 
   @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.LifecycleSteps)
   fun lifecycleSteps(dfe: DataFetchingEnvironment): CompletableFuture<List<MdLifecycleStep>>? {
     val dataLoader: DataLoader<ArtifactAndVersion, List<MdLifecycleStep>> = dfe.getDataLoader(LifecycleEventsByVersionDataLoader.Descriptor.name)
     val artifact: MdArtifactVersionInEnvironment = dfe.getSource()
-    val config = getDeliveryConfigFromContext(dfe)
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     val deliveryArtifact = config.matchingArtifactByReference(artifact.reference) ?: return null
     return dataLoader.load(
       ArtifactAndVersion(
@@ -278,7 +192,7 @@ class ApplicationFetcher(
   fun pinnedVersion(dfe: DataFetchingEnvironment): CompletableFuture<MdPinnedVersion>? {
     val dataLoader: DataLoader<PinnedArtifactAndEnvironment, MdPinnedVersion> = dfe.getDataLoader(PinnedVersionInEnvironmentDataLoader.Descriptor.name)
     val artifact: MdArtifact = dfe.getSource()
-    val config = getDeliveryConfigFromContext(dfe)
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     val deliveryArtifact = config.matchingArtifactByReference(artifact.reference) ?: return null
     return dataLoader.load(PinnedArtifactAndEnvironment(
       artifact = deliveryArtifact,
@@ -336,7 +250,7 @@ class ApplicationFetcher(
   @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Resources)
   fun artifactResources(dfe: DataFetchingEnvironment): List<MdResource>? {
     val artifact: MdArtifactVersionInEnvironment = dfe.getSource()
-    val config = getDeliveryConfigFromContext(dfe)
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     return artifact.environment?.let {
       config.resourcesUsing(artifact.reference, artifact.environment).map { it.toDgs(config, artifact.environment) }
     }
