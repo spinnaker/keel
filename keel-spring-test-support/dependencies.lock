@@ -1,7 +1,7 @@
 {
     "annotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         },
         "org.springframework.boot:spring-boot-configuration-processor": {
             "locked": "2.3.9.RELEASE"
@@ -111,7 +111,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         },
         "com.ninja-squad:springmockk": {
             "locked": "2.0.3"
@@ -902,7 +902,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         },
         "com.ninja-squad:springmockk": {
             "locked": "2.0.3"
@@ -1477,7 +1477,7 @@
     },
     "testAnnotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         }
     },
     "testCompileClasspath": {
@@ -1584,7 +1584,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         },
         "com.nhaarman.mockitokotlin2:mockito-kotlin": {
             "locked": "2.2.0"
@@ -2276,7 +2276,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.76.0"
+            "locked": "2.79.0"
         },
         "com.nhaarman.mockitokotlin2:mockito-kotlin": {
             "locked": "2.2.0"
