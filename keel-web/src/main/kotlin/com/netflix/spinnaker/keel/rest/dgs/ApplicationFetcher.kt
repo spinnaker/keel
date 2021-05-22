@@ -62,10 +62,10 @@ class ApplicationFetcher(
     context.deliveryConfig = config
     val environments: List<MdEnvironment> = config.environments.sortedWith { env1, env2 ->
       when {
-        env1.dependsOn(env2) -> 1
-        env2.dependsOn(env1) -> -1
-        env1.hasDependencies() && !env2.hasDependencies() -> 1
-        env2.hasDependencies() && !env1.hasDependencies() -> -1
+        env1.dependsOn(env2) -> -1
+        env2.dependsOn(env1) -> 1
+        env1.hasDependencies() && !env2.hasDependencies() -> -1
+        env2.hasDependencies() && !env1.hasDependencies() -> 1
         else -> 0
       }
     }.map { env ->
