@@ -27,11 +27,12 @@ class ArtifactInEnvironmentDataLoader(
 
   override fun load(keys: MutableSet<ArtifactAndEnvironment>, environment: BatchLoaderEnvironment):
     CompletionStage<MutableMap<ArtifactAndEnvironment, List<MdArtifactVersionInEnvironment>>> {
-    
+
     val applicationContext: ApplicationContext = DgsContext.getCustomContext(environment)
     return CompletableFuture.supplyAsync {
       val requestedStatuses = applicationContext.requestedStatuses
       val requestedVersionIds = applicationContext.requestedVersionIds
+      val requestedLimit = applicationContext.requestedLimit
       val allVersions = keys
         .associateWith { key ->
           keelRepository
@@ -44,6 +45,12 @@ class ArtifactInEnvironmentDataLoader(
           .filter {
             (requestedStatuses.isNullOrEmpty() || requestedStatuses.contains(it.status)) &&
               (requestedVersionIds.isNullOrEmpty() || requestedVersionIds.contains(it.version))
+          }.let {
+            if (requestedLimit != null) {
+              it.take(requestedLimit)
+            } else {
+              it
+            }
           }
       }.toMutableMap()
     }

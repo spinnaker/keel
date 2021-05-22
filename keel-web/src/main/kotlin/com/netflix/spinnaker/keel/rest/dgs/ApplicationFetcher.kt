@@ -119,7 +119,8 @@ class ApplicationFetcher(
   fun versions(
     dfe: DataFetchingEnvironment,
     @InputArgument("statuses", collectionType = MdArtifactStatusInEnvironment::class) statuses: List<MdArtifactStatusInEnvironment>?,
-    @InputArgument("versions") versionIds: List<String>?
+    @InputArgument("versions") versionIds: List<String>?,
+    @InputArgument("limit") limit: Int?
   ): CompletableFuture<List<DataFetcherResult<MdArtifactVersionInEnvironment>>>? {
     val dataLoader: DataLoader<ArtifactAndEnvironment, List<MdArtifactVersionInEnvironment>> = dfe.getDataLoader(ArtifactInEnvironmentDataLoader.Descriptor.name)
     val artifact: MdArtifact = dfe.getSource()
@@ -130,6 +131,9 @@ class ApplicationFetcher(
     }
     if (versionIds != null && applicationContext.requestedVersionIds == null) {
       applicationContext.requestedVersionIds = versionIds.toSet()
+    }
+    if (limit != null && applicationContext.requestedLimit == null) {
+      applicationContext.requestedLimit = limit
     }
 
     val deliveryArtifact = config.matchingArtifactByReference(artifact.reference) ?: return null
