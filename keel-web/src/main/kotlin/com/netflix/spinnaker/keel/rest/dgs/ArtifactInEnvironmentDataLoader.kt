@@ -41,7 +41,10 @@ class ArtifactInEnvironmentDataLoader(
       applicationContext.allVersions = allVersions
 
       allVersions.mapValues { (key, versions) ->
-        versions.map { it.toDgs() }
+
+        versions
+          .sortedByDescending { it.publishedArtifact.createdAt }
+          .map { it.toDgs() }
           .filter {
             (requestedStatuses.isNullOrEmpty() || requestedStatuses.contains(it.status)) &&
               (requestedVersionIds.isNullOrEmpty() || requestedVersionIds.contains(it.version))
