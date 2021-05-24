@@ -1,7 +1,7 @@
 {
     "annotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0"
+            "locked": "2.80.0"
         },
         "org.springframework.boot:spring-boot-configuration-processor": {
             "locked": "2.3.9.RELEASE"
@@ -277,27 +277,27 @@
             "project": true
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-core",
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-core"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-core": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-core",
                 "com.netflix.spinnaker.kork.internal:kork-web"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -305,26 +305,26 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-security": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-web"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-web": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0"
+            "locked": "2.80.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
@@ -1887,7 +1887,7 @@
             "project": true
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -1896,7 +1896,7 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -1904,7 +1904,7 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-core": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-core",
@@ -1914,7 +1914,7 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -1923,13 +1923,13 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-api",
@@ -1937,13 +1937,13 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-spring-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-security": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-retrofit",
@@ -1952,14 +1952,14 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-telemetry": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.kork.internal:kork-plugins"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-web": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-retrofit",
@@ -1967,7 +1967,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.keel:keel-core",
@@ -3171,7 +3171,7 @@
     },
     "testAnnotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0"
+            "locked": "2.80.0"
         }
     },
     "testCompileClasspath": {
@@ -3472,27 +3472,27 @@
             "project": true
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-core",
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-core"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-core": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-core",
                 "com.netflix.spinnaker.kork.internal:kork-web"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -3500,26 +3500,26 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-security": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-web"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-web": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-retrofit"
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0"
+            "locked": "2.80.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
@@ -5213,7 +5213,7 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-api",
                 "com.netflix.spinnaker.kork.internal:kork-artifacts",
@@ -5223,20 +5223,20 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-core",
                 "com.netflix.spinnaker.kork.internal:kork-plugins"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-artifacts": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-artifact"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-core": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-core",
@@ -5246,7 +5246,7 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-core",
@@ -5254,19 +5254,19 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-moniker": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-clouddriver"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-core"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.kork.internal:kork-api",
@@ -5274,13 +5274,13 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-spring-api": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-security": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-retrofit",
@@ -5289,13 +5289,13 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-telemetry": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-web": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.fiat.internal:fiat-api",
                 "com.netflix.spinnaker.keel:keel-retrofit",
@@ -5303,7 +5303,7 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.79.0",
+            "locked": "2.80.0",
             "transitive": [
                 "com.netflix.spinnaker.keel:keel-api",
                 "com.netflix.spinnaker.keel:keel-artifact",
