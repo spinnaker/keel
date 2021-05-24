@@ -63,6 +63,13 @@ type MdArtifactVersionInEnvironment {
   constraints: [MdConstraint!]
   verifications: [MdAction!]
   postDeploy: [MdAction!]
+  vetoed: MdVersionVetoed
+}
+
+type MdVersionVetoed {
+  vetoedBy: String
+  vetoedAt: InstantTime
+  comment: String
 }
 
 enum MdLifecycleEventScope {

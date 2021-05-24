@@ -27,6 +27,7 @@ import com.netflix.spinnaker.keel.graphql.types.MdPinnedVersion
 import com.netflix.spinnaker.keel.graphql.types.MdResource
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationState
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationStatus
+import com.netflix.spinnaker.keel.graphql.types.MdVersionVetoed
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -259,6 +260,23 @@ class ApplicationFetcher(
       config.resourcesUsing(artifact.reference, artifact.environment).map { it.toDgs(config, artifact.environment) }
     }
   }
+
+  @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Vetoed)
+  fun versionVetoed(dfe: DataFetchingEnvironment): CompletableFuture<MdVersionVetoed?>? {
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
+    val dataLoader: DataLoader<EnvironmentArtifactAndVersion, MdVersionVetoed?> = dfe.getDataLoader(VetoedDataLoader.Descriptor.name)
+    val artifact: MdArtifactVersionInEnvironment = dfe.getSource()
+    return artifact.environment?.let { environmentName ->
+      dataLoader.load(
+        EnvironmentArtifactAndVersion(
+          environmentName,
+          artifact.reference,
+          artifact.version,
+        )
+      )
+    }
+  }
+
 
 //  add function for putting the resources on the artifactVersion
 }
