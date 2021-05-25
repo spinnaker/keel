@@ -26,15 +26,17 @@ data class TestContainerVerification(
   val entrypoint: String? = null
 ) : Verification {
   override val type = TYPE
-  override val id = imageId
+  override val id by lazy {
+    "$image@${location.account}/${location.region}${entrypoint?.let { "[$it]" } ?: ""}"
+  }
 
   /**
    * Determine imageId depending on the newer field (image) or the deprecated fields (repository, tag)
    */
-  val imageId : String
+  val imageId: String
     get() =
       when {
-        image != null &&  image.contains(":") -> image
+        image != null && image.contains(":") -> image
         image != null && !image.contains(":") -> "${image}:latest"
 
         repository != null && tag != null -> "${repository}:${tag}"

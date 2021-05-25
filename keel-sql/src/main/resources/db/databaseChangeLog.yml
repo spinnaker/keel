@@ -314,3 +314,6 @@ databaseChangeLog:
   - include:
       file: changelog/20210505-environment-is-preview.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210525-migrate-verification-ids.yaml
+      relativeToChangelogFile: true
