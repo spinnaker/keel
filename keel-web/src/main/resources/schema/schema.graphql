@@ -63,10 +63,10 @@ type MdArtifactVersionInEnvironment {
   constraints: [MdConstraint!]
   verifications: [MdAction!]
   postDeploy: [MdAction!]
-  vetoed: MdVersionVetoed
+  veto: MdVersionVeto
 }
 
-type MdVersionVetoed {
+type MdVersionVeto {
   vetoedBy: String
   vetoedAt: InstantTime
   comment: String

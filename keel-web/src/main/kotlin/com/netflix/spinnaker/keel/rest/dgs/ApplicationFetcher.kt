@@ -6,7 +6,6 @@ import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
 import com.netflix.graphql.dgs.InputArgument
 import com.netflix.graphql.dgs.context.DgsContext
 import com.netflix.graphql.dgs.exceptions.DgsEntityNotFoundException
-import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.action.ActionType
 import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
@@ -27,7 +26,7 @@ import com.netflix.spinnaker.keel.graphql.types.MdPinnedVersion
 import com.netflix.spinnaker.keel.graphql.types.MdResource
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationState
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationStatus
-import com.netflix.spinnaker.keel.graphql.types.MdVersionVetoed
+import com.netflix.spinnaker.keel.graphql.types.MdVersionVeto
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
@@ -261,10 +260,10 @@ class ApplicationFetcher(
     }
   }
 
-  @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Vetoed)
-  fun versionVetoed(dfe: DataFetchingEnvironment): CompletableFuture<MdVersionVetoed?>? {
+  @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Veto)
+  fun versionVetoed(dfe: DataFetchingEnvironment): CompletableFuture<MdVersionVeto?>? {
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
-    val dataLoader: DataLoader<EnvironmentArtifactAndVersion, MdVersionVetoed?> = dfe.getDataLoader(VetoedDataLoader.Descriptor.name)
+    val dataLoader: DataLoader<EnvironmentArtifactAndVersion, MdVersionVeto?> = dfe.getDataLoader(VetoedDataLoader.Descriptor.name)
     val artifact: MdArtifactVersionInEnvironment = dfe.getSource()
     return artifact.environment?.let { environmentName ->
       dataLoader.load(
