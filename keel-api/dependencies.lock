@@ -1,7 +1,7 @@
 {
     "annotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "org.springframework.boot:spring-boot-configuration-processor": {
             "locked": "2.3.9.RELEASE"
@@ -180,19 +180,19 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.85.0",
+            "locked": "2.87.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
@@ -912,19 +912,19 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.85.0",
+            "locked": "2.87.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
@@ -1298,7 +1298,7 @@
     },
     "testAnnotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         }
     },
     "testCompileClasspath": {
@@ -1474,19 +1474,19 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.85.0",
+            "locked": "2.87.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
@@ -2220,19 +2220,19 @@
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-annotations": {
-            "locked": "2.85.0",
+            "locked": "2.87.0",
             "transitive": [
                 "com.netflix.spinnaker.kork.internal:kork-plugins-api"
             ]
         },
         "com.netflix.spinnaker.kork.internal:kork-exceptions": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.kork.internal:kork-plugins-api": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.85.0"
+            "locked": "2.87.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
             "locked": "2.3.49",
