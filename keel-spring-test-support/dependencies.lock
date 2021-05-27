@@ -1,7 +1,7 @@
 {
     "annotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         },
         "org.springframework.boot:spring-boot-configuration-processor": {
             "locked": "2.3.9.RELEASE"
@@ -170,7 +170,7 @@
             ]
         },
         "com.netflix.eureka:eureka-client": {
-            "locked": "1.10.13"
+            "locked": "1.10.14"
         },
         "com.netflix.netflix-commons:netflix-eventbus": {
             "locked": "0.3.0",
@@ -230,10 +230,10 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config",
                 "com.netflix.spring:spring-boot-netflix-conventions",
@@ -241,31 +241,31 @@
             ]
         },
         "com.netflix.spring:spring-boot-netflix-config": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-conventions": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-encryption": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-metrics": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-starter-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-starter-metrics": {
-            "locked": "2.3.49"
+            "locked": "2.3.50"
         },
         "com.ninja-squad:springmockk": {
             "locked": "2.0.3"
@@ -291,7 +291,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.15",
+            "locked": "1.4.16",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -329,6 +329,12 @@
                 "com.amazonaws:aws-java-sdk-core",
                 "commons-configuration:commons-configuration",
                 "org.apache.httpcomponents:httpclient"
+            ]
+        },
+        "io.github.x-stream:mxparser": {
+            "locked": "1.2.1",
+            "transitive": [
+                "com.thoughtworks.xstream:xstream"
             ]
         },
         "io.micrometer:micrometer-core": {
@@ -455,19 +461,19 @@
             ]
         },
         "netflix:metatron-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
         },
         "netflix:metatron-decrypt": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-encryption"
             ]
         },
         "netflix:metatron-ipc-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
@@ -875,13 +881,7 @@
         "xmlpull:xmlpull": {
             "locked": "1.1.3.1",
             "transitive": [
-                "com.thoughtworks.xstream:xstream"
-            ]
-        },
-        "xpp3:xpp3_min": {
-            "locked": "1.1.4c",
-            "transitive": [
-                "com.thoughtworks.xstream:xstream"
+                "io.github.x-stream:mxparser"
             ]
         }
     },
@@ -1255,7 +1255,7 @@
             ]
         },
         "com.netflix.eureka:eureka-client": {
-            "locked": "1.10.13"
+            "locked": "1.10.14"
         },
         "com.netflix.netflix-commons:netflix-eventbus": {
             "locked": "0.3.0",
@@ -1322,10 +1322,10 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config",
                 "com.netflix.spring:spring-boot-netflix-conventions",
@@ -1333,31 +1333,31 @@
             ]
         },
         "com.netflix.spring:spring-boot-netflix-config": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-conventions": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-encryption": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-metrics": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-starter-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-starter-metrics": {
-            "locked": "2.3.49"
+            "locked": "2.3.50"
         },
         "com.ninja-squad:springmockk": {
             "locked": "2.0.3"
@@ -1383,7 +1383,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.15",
+            "locked": "1.4.16",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -1434,6 +1434,12 @@
                 "com.amazonaws:aws-java-sdk-core",
                 "commons-configuration:commons-configuration",
                 "org.apache.httpcomponents:httpclient"
+            ]
+        },
+        "io.github.x-stream:mxparser": {
+            "locked": "1.2.1",
+            "transitive": [
+                "com.thoughtworks.xstream:xstream"
             ]
         },
         "io.micrometer:micrometer-core": {
@@ -1583,19 +1589,19 @@
             ]
         },
         "netflix:metatron-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
         },
         "netflix:metatron-decrypt": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-encryption"
             ]
         },
         "netflix:metatron-ipc-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
@@ -2075,19 +2081,13 @@
         "xmlpull:xmlpull": {
             "locked": "1.1.3.1",
             "transitive": [
-                "com.thoughtworks.xstream:xstream"
-            ]
-        },
-        "xpp3:xpp3_min": {
-            "locked": "1.1.4c",
-            "transitive": [
-                "com.thoughtworks.xstream:xstream"
+                "io.github.x-stream:mxparser"
             ]
         }
     },
     "testAnnotationProcessor": {
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         }
     },
     "testCompileClasspath": {
@@ -2253,7 +2253,7 @@
             ]
         },
         "com.netflix.eureka:eureka-client": {
-            "locked": "1.10.13"
+            "locked": "1.10.14"
         },
         "com.netflix.netflix-commons:netflix-eventbus": {
             "locked": "0.3.0",
@@ -2313,10 +2313,10 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config",
                 "com.netflix.spring:spring-boot-netflix-conventions",
@@ -2324,31 +2324,31 @@
             ]
         },
         "com.netflix.spring:spring-boot-netflix-config": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-conventions": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-encryption": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-metrics": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-starter-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-starter-metrics": {
-            "locked": "2.3.49"
+            "locked": "2.3.50"
         },
         "com.nhaarman.mockitokotlin2:mockito-kotlin": {
             "locked": "2.2.0"
@@ -2377,7 +2377,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.15",
+            "locked": "1.4.16",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -2415,6 +2415,12 @@
                 "com.amazonaws:aws-java-sdk-core",
                 "commons-configuration:commons-configuration",
                 "org.apache.httpcomponents:httpclient"
+            ]
+        },
+        "io.github.x-stream:mxparser": {
+            "locked": "1.2.1",
+            "transitive": [
+                "com.thoughtworks.xstream:xstream"
             ]
         },
         "io.micrometer:micrometer-core": {
@@ -2542,19 +2548,19 @@
             ]
         },
         "netflix:metatron-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
         },
         "netflix:metatron-decrypt": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-encryption"
             ]
         },
         "netflix:metatron-ipc-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
@@ -3040,13 +3046,7 @@
         "xmlpull:xmlpull": {
             "locked": "1.1.3.1",
             "transitive": [
-                "com.thoughtworks.xstream:xstream"
-            ]
-        },
-        "xpp3:xpp3_min": {
-            "locked": "1.1.4c",
-            "transitive": [
-                "com.thoughtworks.xstream:xstream"
+                "io.github.x-stream:mxparser"
             ]
         }
     },
@@ -3239,7 +3239,7 @@
             ]
         },
         "com.netflix.eureka:eureka-client": {
-            "locked": "1.10.13"
+            "locked": "1.10.14"
         },
         "com.netflix.netflix-commons:netflix-eventbus": {
             "locked": "0.3.0",
@@ -3306,10 +3306,10 @@
             ]
         },
         "com.netflix.spinnaker.netflixplatform:netflixplatform-bom": {
-            "locked": "2.89.0"
+            "locked": "2.90.0"
         },
         "com.netflix.spring:spring-boot-netflix-common": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config",
                 "com.netflix.spring:spring-boot-netflix-conventions",
@@ -3317,31 +3317,31 @@
             ]
         },
         "com.netflix.spring:spring-boot-netflix-config": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-conventions": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-encryption": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-config"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-metrics": {
-            "locked": "2.3.49",
+            "locked": "2.3.50",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-starter-metrics"
             ]
         },
         "com.netflix.spring:spring-boot-netflix-starter-metrics": {
-            "locked": "2.3.49"
+            "locked": "2.3.50"
         },
         "com.nhaarman.mockitokotlin2:mockito-kotlin": {
             "locked": "2.2.0"
@@ -3370,7 +3370,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.15",
+            "locked": "1.4.16",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -3421,6 +3421,12 @@
                 "com.amazonaws:aws-java-sdk-core",
                 "commons-configuration:commons-configuration",
                 "org.apache.httpcomponents:httpclient"
+            ]
+        },
+        "io.github.x-stream:mxparser": {
+            "locked": "1.2.1",
+            "transitive": [
+                "com.thoughtworks.xstream:xstream"
             ]
         },
         "io.micrometer:micrometer-core": {
@@ -3571,19 +3577,19 @@
             ]
         },
         "netflix:metatron-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
         },
         "netflix:metatron-decrypt": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "com.netflix.spring:spring-boot-netflix-encryption"
             ]
         },
         "netflix:metatron-ipc-common": {
-            "locked": "1.289.0",
+            "locked": "1.290.0",
             "transitive": [
                 "netflix:metatron-decrypt"
             ]
@@ -4135,13 +4141,7 @@
         "xmlpull:xmlpull": {
             "locked": "1.1.3.1",
             "transitive": [
-                "com.thoughtworks.xstream:xstream"
-            ]
-        },
-        "xpp3:xpp3_min": {
-            "locked": "1.1.4c",
-            "transitive": [
-                "com.thoughtworks.xstream:xstream"
+                "io.github.x-stream:mxparser"
             ]
         }
     }
