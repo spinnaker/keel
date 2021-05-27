@@ -317,3 +317,6 @@ databaseChangeLog:
   - include:
       file: changelog/20210525-migrate-verification-ids.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210526-remove-deprecated-verification-fields.yaml
+      relativeToChangelogFile: true
