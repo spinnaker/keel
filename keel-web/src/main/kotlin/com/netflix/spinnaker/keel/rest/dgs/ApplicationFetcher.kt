@@ -82,6 +82,7 @@ class ApplicationFetcher(
       MdEnvironment(
         id = env.name,
         name = env.name,
+        isPreview = env.isPreview,
         state = MdEnvironmentState(
           id = "${env.name}-state",
           artifacts = artifacts,
