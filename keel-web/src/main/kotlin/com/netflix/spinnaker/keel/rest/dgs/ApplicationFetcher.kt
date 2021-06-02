@@ -157,13 +157,13 @@ class ApplicationFetcher(
 
     with(diffContext) {
       return MdComparisonLinks(
-        toPreviousVersion = if (previousVersion != currentVersion) {
-          artifactVersionLinks.generateCompareLink(currentVersion.publishedArtifact, previousVersion?.publishedArtifact, deliveryArtifact)
+        toPreviousVersion = if (previousDeployedVersion != fetchedVersion) {
+          artifactVersionLinks.generateCompareLink(fetchedVersion.publishedArtifact, previousDeployedVersion?.publishedArtifact, deliveryArtifact)
         } else {
           null
         },
-        toCurrentVersion = if (currentVersion != currentVersion) {
-          artifactVersionLinks.generateCompareLink(currentVersion.publishedArtifact, currentVersion?.publishedArtifact, deliveryArtifact)
+        toCurrentVersion = if (currentDeployedVersion != fetchedVersion) {
+          artifactVersionLinks.generateCompareLink(fetchedVersion.publishedArtifact, currentDeployedVersion?.publishedArtifact, deliveryArtifact)
         } else {
           null
         }

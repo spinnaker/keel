@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.bakery.BakeryMetadataService
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
+import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdArtifactVersionInEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
@@ -53,27 +54,27 @@ class ApplicationFetcherSupport(
     val diffContext = getDiffContext(dfe)
 
     with(diffContext) {
-      val currentImage = runBlocking {
+      val fetchedImage = runBlocking {
         cloudDriverService.namedImages(
           user = DEFAULT_SERVICE_ACCOUNT,
-          imageName = currentVersion.publishedArtifact.normalizedVersion,
+          imageName = fetchedVersion.publishedArtifact.normalizedVersion,
           account = null
         ).firstOrNull()
-      } ?: throw ImageNotFound(currentVersion.publishedArtifact.version)
+      } ?: throw ImageNotFound(fetchedVersion.publishedArtifact.version)
 
-      val previewsImage = if (previousVersion != null) {
+      val previousImage = if (previousDeployedVersion != null) {
         runBlocking {
           cloudDriverService.namedImages(
             user = DEFAULT_SERVICE_ACCOUNT,
-            imageName = previousVersion.publishedArtifact.normalizedVersion,
+            imageName = previousDeployedVersion.publishedArtifact.normalizedVersion,
             account = null
           ).firstOrNull()
-        } ?: throw ImageNotFound(previousVersion.publishedArtifact.version)
+        } ?: throw ImageNotFound(previousDeployedVersion.publishedArtifact.version)
       } else {
         null
       }
 
-      val region = deliveryConfig.resourcesUsing(deliveryArtifact.reference, currentVersion.environmentName!!)
+      val region = deliveryConfig.resourcesUsing(deliveryArtifact.reference, fetchedVersion.environmentName!!)
         .mapNotNull {
           if (it.spec is Locatable<*>) {
             it.spec as Locatable<*>
@@ -84,12 +85,12 @@ class ApplicationFetcherSupport(
         .firstOrNull()
         ?.locations?.regions?.firstOrNull()
         ?: return null
-          .also { log.warn("Unable to determine region for $deliveryArtifact in environment ${currentVersion.environmentName}") }
+          .also { log.warn("Unable to determine region for $deliveryArtifact in environment ${fetchedVersion.environmentName}") }
 
       val diff = runBlocking {
         bakeryMetadataService.getPackageDiff(
-          oldImage = previewsImage?.normalizedImageName,
-          newImage = currentImage.normalizedImageName,
+          oldImage = previousImage?.normalizedImageName,
+          newImage = fetchedImage.normalizedImageName,
           region = region.name
         )
       }
@@ -100,9 +101,9 @@ class ApplicationFetcherSupport(
 
   /**
    * @return an [ArtifactDiffContext] object containing the [DeliveryConfig] and [DeliveryArtifact] associated
-   * with the DGS context, along with a [ArtifactDiffContext.currentVersion] representing
-   * the artifact version in the context, and a [ArtifactDiffContext.previousVersion] for the previous version,
-   * if applicable.
+   * with the DGS context, along with a [ArtifactDiffContext.fetchedVersion] representing
+   * the artifact version in the context, a [ArtifactDiffContext.previousDeployedVersion] for the previous version, and
+   * [ArtifactDiffContext.currentDeployedVersion] for the currently deployed version, if applicable.
    */
   fun getDiffContext(
     dfe: DataFetchingEnvironment
@@ -117,12 +118,17 @@ class ApplicationFetcherSupport(
     val artifactVersions = mdArtifactVersion.environment?.let { applicationContext.getArtifactVersions(deliveryArtifact = deliveryArtifact, environmentName = it) }
       ?: throw DgsEntityNotFoundException("Environment ${mdArtifactVersion.environment} has not versions for artifact ${mdArtifactVersion.reference}")
 
-    val currentVersion = artifactVersions.firstOrNull { it.publishedArtifact.version == mdArtifactVersion.version }
+    // The version we're currently fetching data for
+    val fetchedVersion = artifactVersions.firstOrNull { it.publishedArtifact.version == mdArtifactVersion.version }
       ?: throw DgsEntityNotFoundException("artifact ${mdArtifactVersion.reference} has no version named ${mdArtifactVersion.version}")
 
-    val previousVersion = artifactVersions.firstOrNull { it.replacedBy == currentVersion.publishedArtifact.version }
+    // The version that is currently deployed in this environment (if any)
+    val currentDeployedVersion = artifactVersions.firstOrNull { it.status == PromotionStatus.CURRENT }
 
-    return ArtifactDiffContext(deliveryConfig, deliveryArtifact, currentVersion, previousVersion)
+    // The version that was deployed before the fetchedVersion (if any)
+    val previousDeployedVersion = artifactVersions.firstOrNull { it.replacedBy == fetchedVersion.publishedArtifact.version }
+
+    return ArtifactDiffContext(deliveryConfig, deliveryArtifact, fetchedVersion, currentDeployedVersion, previousDeployedVersion)
   }
 }
 
@@ -131,6 +137,7 @@ class ImageNotFound(imageName: String) : SystemException("Image $imageName not f
 data class ArtifactDiffContext(
   val deliveryConfig: DeliveryConfig,
   val deliveryArtifact: DeliveryArtifact,
-  val currentVersion: PublishedArtifactInEnvironment,
-  val previousVersion: PublishedArtifactInEnvironment?
+  val fetchedVersion: PublishedArtifactInEnvironment,
+  val currentDeployedVersion: PublishedArtifactInEnvironment?,
+  val previousDeployedVersion: PublishedArtifactInEnvironment?
 )

@@ -47,12 +47,17 @@ class ApplicationFetcherSupportTests {
     } returns ArtifactDiffContext(
       deliveryConfig = deliveryConfig,
       deliveryArtifact = deliveryArtifact,
-      currentVersion = PublishedArtifactInEnvironment(
+      fetchedVersion = PublishedArtifactInEnvironment(
         publishedArtifact = deliveryArtifact.toArtifactVersion("fnord-1.0.1"),
         status = CURRENT,
         environmentName = "test"
       ),
-      previousVersion = PublishedArtifactInEnvironment(
+      currentDeployedVersion = PublishedArtifactInEnvironment(
+        publishedArtifact = deliveryArtifact.toArtifactVersion("fnord-1.0.1"),
+        status = CURRENT,
+        environmentName = "test"
+      ),
+      previousDeployedVersion = PublishedArtifactInEnvironment(
         publishedArtifact = deliveryArtifact.toArtifactVersion("fnord-1.0.0"),
         status = PREVIOUS,
         environmentName = "test",
