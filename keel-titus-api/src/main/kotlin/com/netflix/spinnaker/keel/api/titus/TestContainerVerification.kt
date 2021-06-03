@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.api.titus
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
 
@@ -15,7 +14,7 @@ data class TestContainerVerification(
     "$image@${location.account}/${location.region}${entrypoint?.let { "[$it]" } ?: ""}"
   }
 
-  @get:JsonIgnore
+//  @get:JsonIgnore
   val imageId: String
     get() =
       if (image.contains(":")) image
