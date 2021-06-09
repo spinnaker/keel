@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.api.titus
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroup.Location
 
@@ -12,10 +13,12 @@ data class TestContainerVerification(
 ) : Verification {
   override val type = TYPE
   override val id by lazy {
-    "$image@${location.account}/${location.region}${entrypoint?.let { "[$it]" } ?: ""}"
+    "$image@${location.account}/${location.region}${entrypoint?.let { "#${it.hash}" } ?: "" }"
   }
 
-//  @get:JsonIgnore
+  private val String.hash get() = Integer.toHexString(hashCode())
+
+  @get:JsonIgnore
   val imageId: String
     get() =
       if (image.contains(":")) image
