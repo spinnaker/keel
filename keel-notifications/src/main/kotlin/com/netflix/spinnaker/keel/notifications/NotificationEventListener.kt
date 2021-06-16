@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.notifications
 import com.netflix.spinnaker.config.BaseUrlConfig
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.NotificationConfig
+import com.netflix.spinnaker.keel.api.NotificationDisplay.NORMAL
 import com.netflix.spinnaker.keel.api.NotificationFrequency
 import com.netflix.spinnaker.keel.api.NotificationFrequency.normal
 import com.netflix.spinnaker.keel.api.NotificationFrequency.quiet
@@ -144,7 +145,7 @@ class NotificationEventListener(
 
       sendSlackMessage(config,
         SlackUnpinnedNotification(
-          latestArtifact = latestArtifact?.copy(reference = pinnedEnv.artifact.reference),
+          latestApprovedArtifactVersion = latestArtifact?.copy(reference = pinnedEnv.artifact.reference),
           pinnedArtifact = pinnedArtifact,
           application = config.application,
           time = clock.instant(),
@@ -423,6 +424,8 @@ class NotificationEventListener(
                   currentArtifact = currentArtifact,
                   deliveryArtifact = deliveryArtifact,
                   pinnedArtifact = pinnedArtifact,
+                  author = slackDetail.author,
+                  display = slackDetail.display ?: NORMAL
                 ),
                 MANUAL_JUDGMENT_UPDATE,
                 environment.name
@@ -508,8 +511,9 @@ class NotificationEventListener(
     notifications
       .filter { shouldSend(it, type) }
       .groupBy { it.address }
-      .forEach { (channel, _) ->
-        handler.sendMessage(message, channel)
+      .forEach { (channel, notificationConfigs) ->
+        val display = notificationConfigs.mapNotNull { it.display }.toSet().firstOrNull() ?: NORMAL
+        handler.sendMessage(message, channel, display)
       }
   }
 
