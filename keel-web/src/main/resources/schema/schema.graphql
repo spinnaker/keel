@@ -171,8 +171,8 @@ type MdResourceActuationState {
 }
 
 type MdResourceTask {
-  id: String
-  name: String
+  id: String!
+  name: String!
 }
 
 type MdResource {
