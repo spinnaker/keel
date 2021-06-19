@@ -12,6 +12,8 @@ import com.netflix.spinnaker.keel.api.ec2.LoadBalancerType.CLASSIC
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.network.NetworkEndpointType.DNS
+import com.netflix.spinnaker.keel.network.NetworkEndpointType.EUREKA_CLUSTER_DNS
+import com.netflix.spinnaker.keel.network.NetworkEndpointType.EUREKA_VIP_DNS
 import com.netflix.spinnaker.keel.test.TEST_API_V1
 import com.netflix.spinnaker.keel.test.computeResource
 import com.netflix.spinnaker.keel.test.resource
@@ -57,8 +59,8 @@ class NetworkEndpointProviderTests : JUnit5Minutests {
         with(computeResource) {
           val endpoints = subject.getNetworkEndpoints(this)
           expectThat(endpoints).contains(
-            NetworkEndpoint(DNS, "us-east-1", "${spec.moniker.toName()}.vip.us-east-1.test.acme.net"),
-            NetworkEndpoint(DNS, "us-east-1", "${spec.moniker.toName()}.cluster.us-east-1.test.acme.net")
+            NetworkEndpoint(EUREKA_VIP_DNS, "us-east-1", "${spec.moniker.toName()}.vip.us-east-1.test.acme.net"),
+            NetworkEndpoint(EUREKA_CLUSTER_DNS, "us-east-1", "${spec.moniker.toName()}.cluster.us-east-1.test.acme.net")
           )
         }
       }

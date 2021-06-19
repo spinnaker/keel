@@ -6,6 +6,8 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ec2.LoadBalancerSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.network.NetworkEndpointType.DNS
+import com.netflix.spinnaker.keel.network.NetworkEndpointType.EUREKA_CLUSTER_DNS
+import com.netflix.spinnaker.keel.network.NetworkEndpointType.EUREKA_VIP_DNS
 import kotlinx.coroutines.runBlocking
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component
@@ -27,8 +29,8 @@ class NetworkEndpointProvider(
           locations.regions.flatMap { region ->
             listOf(
               // Example: lpollolocaltest-feature-preview.vip.us-east-1.test.acme.net
-              NetworkEndpoint(DNS, region.name, "${moniker.toName()}.vip.${region.name}.${locations.account.environment}.${dnsConfig.defaultDomain}"),
-              NetworkEndpoint(DNS, region.name, "${moniker.toName()}.cluster.${region.name}.${locations.account.environment}.${dnsConfig.defaultDomain}"),
+              NetworkEndpoint(EUREKA_VIP_DNS, region.name, "${moniker.toName()}.vip.${region.name}.${locations.account.environment}.${dnsConfig.defaultDomain}"),
+              NetworkEndpoint(EUREKA_CLUSTER_DNS, region.name, "${moniker.toName()}.cluster.${region.name}.${locations.account.environment}.${dnsConfig.defaultDomain}"),
             )
           }.toSet()
         }
