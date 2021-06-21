@@ -108,8 +108,10 @@ class TestContainerVerificationEvaluator(
       .resourcesUsing(context.artifactReference, context.environmentName)
       .find { it.spec is ComputeResourceSpec<*> }
         ?.let {
-          networkEndpointProvider.getNetworkEndpoints(it).filter { endpoint ->
-            endpoint.region == verification.location.region
+          runBlocking {
+            networkEndpointProvider.getNetworkEndpoints(it).filter { endpoint ->
+              endpoint.region == verification.location.region
+            }
           }
         } ?: emptyList()
 
@@ -145,8 +147,10 @@ class TestContainerVerificationEvaluator(
       context.deliveryConfig.resources.find { resource ->
         resource.name in clusterLoadBalancers
       }?.let { loadBalancer ->
-        networkEndpointProvider.getNetworkEndpoints(loadBalancer).find {
-          it.region == verification.location.region
+        runBlocking {
+          networkEndpointProvider.getNetworkEndpoints(loadBalancer).find {
+            it.region == verification.location.region
+          }
         }
       }
     } else {

@@ -69,6 +69,7 @@ import com.netflix.spinnaker.keel.notifications.slack.handlers.SlackNotification
 import com.netflix.spinnaker.keel.notifications.slack.handlers.supporting
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionVetoed
 import com.netflix.spinnaker.keel.telemetry.VerificationCompleted
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
@@ -604,16 +605,18 @@ class NotificationEventListener(
     val environmentsLink = "${baseUrlConfig.baseUrl}/#/applications/${config.application}/environments/overview"
     val markdownComment = config.resourcesUsing(deliveryArtifact.reference, targetEnvironment.name)
       .joinToString("\n\n") { resource ->
-        "✅ &nbsp;[${resource.displayName} deployed to preview environment]($environmentsLink)" +
-          "\n\nEndpoints:\n" + networkEndpointProvider.getNetworkEndpoints(resource)
-            .groupBy { it.region }
-            .map { (region, endpoints) ->
-              "- $region:\n" +
-                endpoints.joinToString("\n") { endpoint ->
-                  // TODO: for load balancers infer the protocol from the listeners
-                  "  - [${endpoint.address}](https://${endpoint.address})"
-                }
-            }.joinToString("\n")
+        val endpoints = runBlocking {
+          networkEndpointProvider.getNetworkEndpoints(resource)
+        }.groupBy { it.region }
+
+        "✅ &nbsp;[${resource.kind.friendlyName} ${resource.name} deployed to preview environment]($environmentsLink)" +
+          "\n\nEndpoints:\n" + endpoints.map { (region, endpoints) ->
+            "- $region:\n" +
+              endpoints.joinToString("\n") { endpoint ->
+                // TODO: for load balancers infer the protocol from the listeners
+                "  - [${endpoint.address}](https://${endpoint.address})"
+              }
+          }.joinToString("\n")
       }
     scmNotifier.commentOnPullRequest(config, targetEnvironment, markdownComment)
   }

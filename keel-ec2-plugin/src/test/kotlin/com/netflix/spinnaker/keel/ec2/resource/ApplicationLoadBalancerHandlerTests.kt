@@ -120,6 +120,7 @@ internal class ApplicationLoadBalancerHandlerTests : JUnit5Minutests {
     moniker = null,
     loadBalancerName = "testapp-managedogge-wow",
     availabilityZones = setOf("us-east-1c", "us-east-1d"),
+    dnsName = "internal-testapp-managedogge-wow-1234567890.us-east-1.elb.amazonaws.com",
     vpcId = vpc.id,
     subnets = setOf(sub1.id, sub2.id),
     securityGroups = setOf(sg1.id),

@@ -20,7 +20,7 @@ import com.netflix.spinnaker.keel.titus.ContainerRunner
 import com.netflix.spinnaker.keel.titus.deliveryConfigWithClusterAndLoadBalancer
 import com.netflix.spinnaker.keel.titus.verification.TestContainerVerificationEvaluator.Companion.ENV_VAR_PREFIX
 import de.huxhorn.sulky.ulid.ULID
-import io.mockk.every
+import io.mockk.coEvery as every
 import io.mockk.mockk
 import io.mockk.slot
 import org.junit.jupiter.api.Test
