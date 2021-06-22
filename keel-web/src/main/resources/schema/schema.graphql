@@ -12,7 +12,7 @@ type MdApplication {
   isPaused: Boolean
   pausedInfo: MdPausedInfo
   environments: [MdEnvironment!]!
-  notifications: [MdNotification]
+  notifications: [MdNotification!]
 }
 
 type MdEnvironment {
@@ -301,7 +301,7 @@ input MdUnpinArtifactVersionPayload {
 
 type MdNotification {
   id: String!
-  level: String!
+  level: MdEventLevel!
   message: String!
   triggeredAt: InstantTime
   triggeredBy: String
@@ -310,6 +310,10 @@ type MdNotification {
   isActive: Boolean
   dismissedAt: InstantTime
   dismissedBy: String
+}
+
+enum MdEventLevel {
+  SUCCESS, INFO, WARNING, ERROR
 }
 
 input MdDismissNotificationPayload {

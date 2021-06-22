@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.bakery.diff.PackageDiff
 import com.netflix.spinnaker.keel.graphql.types.MdArtifact
 import com.netflix.spinnaker.keel.graphql.types.MdCommitInfo
+import com.netflix.spinnaker.keel.graphql.types.MdEventLevel
 import com.netflix.spinnaker.keel.graphql.types.MdGitMetadata
 import com.netflix.spinnaker.keel.graphql.types.MdLocation
 import com.netflix.spinnaker.keel.graphql.types.MdMoniker
@@ -106,7 +107,7 @@ fun Pause.toDgsPaused(): MdPausedInfo =
 fun DismissibleNotification.toDgs() =
   MdNotification(
     id = uid?.toString() ?: error("Can't convert application event with missing UID: $this"),
-    level = level.name,
+    level = MdEventLevel.valueOf(level.name),
     message = message,
     isActive = isActive,
     triggeredAt = triggeredAt,

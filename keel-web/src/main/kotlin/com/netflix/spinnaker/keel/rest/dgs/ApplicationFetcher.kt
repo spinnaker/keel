@@ -297,12 +297,10 @@ class ApplicationFetcher(
    * Fetches the list of dismissible notifications for the application in context.
    */
   @DgsData(parentType = DgsConstants.MDAPPLICATION.TYPE_NAME, field = DgsConstants.MDAPPLICATION.Notifications)
-  fun applicationNotifications(dfe: DataFetchingEnvironment): CompletableFuture<List<MdNotification>>? {
+  fun applicationNotifications(dfe: DataFetchingEnvironment): List<MdNotification>? {
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
-    return CompletableFuture.supplyAsync {
-      notificationRepository.notificationHistory(config.application, true, setOf(WARNING, ERROR))
-        .map { it.toDgs() }
-    }
+    return notificationRepository.notificationHistory(config.application, true, setOf(WARNING, ERROR))
+      .map { it.toDgs() }
   }
 
 //  add function for putting the resources on the artifactVersion
