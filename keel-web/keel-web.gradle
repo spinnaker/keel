@@ -1,9 +1,9 @@
 plugins {
   id("application")
+  id "io.spinnaker.package" version "8.12.0"
 }
 
 apply(plugin: "com.netflix.dgs.codegen")
-apply(plugin: "io.spinnaker.package")
 
 repositories {
   mavenCentral() // for graphql-java-extended-scalars
