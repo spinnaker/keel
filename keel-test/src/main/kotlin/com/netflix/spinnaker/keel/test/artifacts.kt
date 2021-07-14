@@ -22,6 +22,9 @@ class DummyArtifact(
 ) : DeliveryArtifact() {
   override val type: ArtifactType = "dummy"
   override val sortingStrategy = DummySortingStrategy
+  override fun copyWithName(name: String): DeliveryArtifact {
+    return this
+  }
 }
 
 object DummySortingStrategy : SortingStrategy {

@@ -12,11 +12,7 @@ import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.postdeploy.PostDeployAction
 import com.netflix.spinnaker.keel.api.schema.Description
-import com.netflix.spinnaker.keel.artifacts.DebianArtifact
-import com.netflix.spinnaker.keel.artifacts.DockerArtifact
-import com.netflix.spinnaker.keel.artifacts.NpmArtifact
 import com.netflix.spinnaker.keel.serialization.SubmittedEnvironmentDeserializer
-import com.netflix.spinnaker.kork.exceptions.UserException
 
 const val DEFAULT_SERVICE_ACCOUNT = "keel@spinnaker.io"
 
@@ -33,19 +29,14 @@ data class SubmittedDeliveryConfig(
 ) {
   val safeName: String
     @JsonIgnore get() = name ?: "$application-manifest"
-  
+
   fun toDeliveryConfig(): DeliveryConfig = DeliveryConfig(
     name = safeName,
     application = application,
     serviceAccount = serviceAccount
       ?: error("No service account specified, and no default applied"),
     artifacts = artifacts.mapTo(mutableSetOf()) { artifact ->
-      when (artifact) {
-        is DebianArtifact -> artifact.copy(deliveryConfigName = safeName)
-        is DockerArtifact -> artifact.copy(deliveryConfigName = safeName)
-        is NpmArtifact -> artifact.copy(deliveryConfigName = safeName)
-        else -> throw UserException("Unrecognized artifact sub-type: ${artifact.type} (${artifact.javaClass.name})")
-      }
+      artifact.copyWithName(safeName)
     },
     environments = environments.mapTo(mutableSetOf()) { env ->
       env.toEnvironment()
