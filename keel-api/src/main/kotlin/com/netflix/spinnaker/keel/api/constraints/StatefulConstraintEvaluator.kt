@@ -30,12 +30,12 @@ import com.netflix.spinnaker.keel.api.plugins.PluginNotificationConfig
  * If the state is 'done' (failed or passed) the specific implementations don't get called.
  * If the state is not 'done', underlying implementations [canPromote] functions get called.
  */
-interface StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAttributes> : ConstraintEvaluator<T> {
+interface StatefulConstraintEvaluator<CONSTRAINT : Constraint, ATTRIBUTES : ConstraintStateAttributes> : ConstraintEvaluator<CONSTRAINT> {
   /**
    * The type of the metadata saved about the constraint, surfaced here to automatically register it
    * for serialization
    */
-  val attributeType: SupportedConstraintAttributesType<A>
+  val attributeType: SupportedConstraintAttributesType<ATTRIBUTES>
 
   val repository: ConstraintRepository
 
@@ -73,11 +73,16 @@ interface StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAttribu
     }
 
     return when {
-      // if a user judged the constraint, take that status
-      state.judgedByUser() && state.failed() -> false
-      state.judgedByUser() && state.passed() -> true
-      // otherwise, ask the constraint to determine the status
-      else -> canPromote(artifact, version, deliveryConfig, targetEnvironment, constraint, state)
+      state.judgedByUser() &&  state.failed() -> false
+      state.judgedByUser() &&  state.passed() -> true
+      !state.judgedByUser() &&  shouldAlwaysReevaluate() -> {
+        canPromote(artifact, version, deliveryConfig, targetEnvironment, constraint, state)
+      }
+      !state.judgedByUser() && !shouldAlwaysReevaluate() && state.failed() -> false
+      !state.judgedByUser() && !shouldAlwaysReevaluate() && state.passed() -> false
+      else -> {
+        canPromote(artifact, version, deliveryConfig, targetEnvironment, constraint, state)
+      }
     }
   }
 
@@ -95,7 +100,7 @@ interface StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAttribu
     version: String,
     deliveryConfig: DeliveryConfig,
     targetEnvironment: Environment,
-    constraint: T,
+    constraint: CONSTRAINT,
     state: ConstraintState
   ): Boolean
 
@@ -127,4 +132,14 @@ interface StatefulConstraintEvaluator<T : Constraint, A : ConstraintStateAttribu
     // default implementation is a no-op
     return null
   }
+
+  /**
+   * Controls whether we should ask the constraint plugin to decide the result every time, or just when the
+   * status is not a terminal status.
+   *
+   * Return true to allow this constraint to be able to flip from pass to fail.
+   * Otherwise, once the constraint enters a pass/fail state, it stays there forever.
+   */
+  @JvmDefault
+  fun shouldAlwaysReevaluate(): Boolean = false
 }

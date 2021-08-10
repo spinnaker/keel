@@ -9,11 +9,11 @@ import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.StatefulConstraintEvaluator
 import com.netflix.spinnaker.keel.api.plugins.ConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintAttributes
-import com.netflix.spinnaker.keel.constraints.AllowedTimesConstraintEvaluator
 import com.netflix.spinnaker.keel.constraints.DependsOnConstraintAttributes
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.MANUAL_JUDGEMENT_CONSTRAINT_TYPE
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
+import com.netflix.spinnaker.keel.core.api.windowsNumeric
 import com.netflix.spinnaker.keel.graphql.types.MdConstraint
 import com.netflix.spinnaker.keel.graphql.types.MdConstraintStatus
 import com.netflix.spinnaker.keel.persistence.KeelRepository
@@ -29,7 +29,7 @@ import java.util.concurrent.CompletionStage
 @DgsDataLoader(name = ConstraintsDataLoader.Descriptor.name)
 class ConstraintsDataLoader(
   private val keelRepository: KeelRepository,
-  private val constraintEvaluators: List<ConstraintEvaluator<*>>,
+  constraintEvaluators: List<ConstraintEvaluator<*>>,
 ) : MappedBatchLoaderWithContext<EnvironmentArtifactAndVersion, List<MdConstraint>> {
 
   object Descriptor {
@@ -69,7 +69,13 @@ class ConstraintsDataLoader(
             )
             if (envConstraint is TimeWindowConstraint) {
               // we need to load in allowed time attrs to display in the UI
-              state = state.copy(attributes = AllowedTimesConstraintAttributes(AllowedTimesConstraintEvaluator.toNumericTimeWindows(envConstraint), envConstraint.tz, false))
+              state = state.copy(
+                attributes = AllowedTimesConstraintAttributes(
+                  allowedTimes = envConstraint.windowsNumeric,
+                  timezone = envConstraint.tz,
+                  currentlyPassing = false
+                )
+              )
             }
             state
           } else { // Stateless constraint
@@ -90,7 +96,6 @@ class ConstraintsDataLoader(
               status = if (passes) ConstraintStatus.PASS else ConstraintStatus.PENDING,
               attributes = when (envConstraint) {
                 is DependsOnConstraint -> DependsOnConstraintAttributes(envConstraint.environment, passes)
-                is TimeWindowConstraint -> AllowedTimesConstraintAttributes(AllowedTimesConstraintEvaluator.toNumericTimeWindows(envConstraint), envConstraint.tz, passes)
                 else -> null
               }
             )
@@ -106,6 +111,11 @@ class ConstraintsDataLoader(
   ): MutableMap<EnvironmentArtifactAndVersion, MutableList<ConstraintState>> {
     val persistedStates = keelRepository.constraintStateForEnvironments(config.name)
       .removePrivateConstraintAttrs() // remove attributes that should not be exposed
+      .filter { constraintState ->
+        // remove old state from any deleted constraints
+        val existingConstraints = config.environments.find { it.name == constraintState.environmentName }?.constraints?.map { it.type } ?: emptyList()
+        existingConstraints.contains(constraintState.type)
+      }
       .groupByTo(mutableMapOf()) {
         EnvironmentArtifactAndVersion(environmentName = it.environmentName, artifactReference = it.artifactReference, version = it.artifactVersion)
       }
@@ -148,5 +158,3 @@ fun ConstraintState.toDgs() =
     attributes = attributes,
     comment = comment
   )
-
-

@@ -520,11 +520,12 @@ class TitusClusterHandler(
         "credentials" to serverGroup.location.account,
         "moniker" to serverGroup.moniker.orcaClusterMoniker,
         "region" to serverGroup.location.region,
-        "estimatedInstanceWarmup" to it.warmup.seconds,
         "serverGroupName" to serverGroup.moniker.serverGroup,
         "targetTrackingConfiguration" to mapOf(
           "targetValue" to it.targetValue,
           "disableScaleIn" to it.disableScaleIn,
+          "scaleOutCooldown" to it.scaleOutCooldown?.seconds,
+          "scaleInCooldown" to it.scaleInCooldown?.seconds,
           "predefinedMetricSpecification" to when (val metricsSpec = it.predefinedMetricSpec) {
             null -> null
             else -> with(metricsSpec) {
@@ -542,9 +543,11 @@ class TitusClusterHandler(
                 namespace = namespace,
                 statistic = statistic,
                 unit = unit,
-                dimensions = dimensions?.map { d ->
-                  MetricDimensionModel(name = d.name, value = d.value)
-                }
+                dimensions = (
+                  dimensions?.map { d ->
+                    MetricDimensionModel(name = d.name, value = d.value)
+                  } ?: emptyList()
+                ) + MetricDimensionModel("AutoScalingGroupName", serverGroup.name)
               )
             }
           }
@@ -588,7 +591,6 @@ class TitusClusterHandler(
           "statistic" to it.statistic
         ),
         "step" to mapOf(
-          "estimatedInstanceWarmup" to it.warmup.seconds,
           "metricAggregationType" to it.metricAggregationType,
           "stepAdjustments" to it.stepAdjustments.map { adjustment ->
             StepAdjustmentModel(
@@ -885,9 +887,11 @@ class TitusClusterHandler(
           with((policy.policy as TargetPolicy).targetPolicyDescriptor) {
             TargetTrackingPolicy(
               name = policy.id,
-              warmup = Duration.ZERO,
+              warmup = null,
               targetValue = targetValue,
               disableScaleIn = disableScaleIn,
+              scaleInCooldown = Duration.ofSeconds(scaleInCooldownSec.toLong()),
+              scaleOutCooldown = Duration.ofSeconds(scaleOutCooldownSec.toLong()),
               customMetricSpec = customizedMetricSpecification?.let { metric ->
                 CustomizedMetricSpecification(
                   name = metric.metricName,

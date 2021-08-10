@@ -31,15 +31,17 @@ fun Iterable<Pair<String, String>>.toTags() = map { it.toTags() }
 
 fun Pair<String, String>.toTags() = BasicTag(first, second)
 
-fun ApplicationEventPublisher.publishDeliveryConfigImportFailed(application: String, event: CommitCreatedEvent, timestamp: Instant) {
+fun ApplicationEventPublisher.publishDeliveryConfigImportFailed(application: String, event: CommitCreatedEvent, timestamp: Instant, reason: String) {
   with(event) {
     publishEvent(DeliveryConfigImportFailed(
       triggeredAt = timestamp,
       application = application,
+      branch = targetBranch,
       repoType = repoType,
       projectKey = projectKey,
       repoSlug = repoSlug,
-      commitHash = commitHash
+      commitHash = commitHash,
+      reason = reason
     ))
   }
 }

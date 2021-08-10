@@ -1,14 +1,19 @@
 package com.netflix.spinnaker.keel.igor
 
 import com.netflix.spinnaker.keel.api.ScmInfo
-import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
+import com.netflix.spinnaker.keel.front50.model.Application
 import com.netflix.spinnaker.keel.igor.model.Branch
 import com.netflix.spinnaker.keel.igor.model.Comment
+import kotlinx.coroutines.runBlocking
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+
+data class RawDeliveryConfigResult(
+  val manifest: String
+)
 
 /**
  * Igor methods related to Source Control Management (SCM) operations.
@@ -25,6 +30,7 @@ interface ScmService: ScmInfo {
    *        in igor (which defaults to ".spinnaker"), for example "mydir/spinnaker.yml". The full path to the file
    *        is determined by concatenating the base path with this relative path (e.g. ".spinnaker/mydir/spinnaker.yml").
    * @param ref The git reference at which to retrieve to file (e.g. a commit hash, or a reference like "refs/heads/mybranch").
+   * @param raw returns the config as string if true, otherwise parses and converts the string to a map
    */
   @GET("/delivery-config/manifest")
   suspend fun getDeliveryConfigManifest(
@@ -32,8 +38,9 @@ interface ScmService: ScmInfo {
     @Query("project") projectKey: String,
     @Query("repository") repositorySlug: String,
     @Query("manifest") manifestPath: String,
-    @Query("ref") ref: String? = null
-  ): SubmittedDeliveryConfig
+    @Query("ref") ref: String? = null,
+    @Query("raw") raw: Boolean = true,
+    ): RawDeliveryConfigResult
 
   /**
    * Retrieves all SCM base links, as defined in Igor
@@ -59,4 +66,12 @@ interface ScmService: ScmInfo {
     @Path("pullRequestId") pullRequestId: String,
     @Body comment: Comment
   )
+}
+
+fun Application.getDefaultBranch(scmService: ScmService): String = runBlocking {
+  scmService.getDefaultBranch(
+    scmType = repoType ?: error("Missing SCM type in config for application $name"),
+    projectKey = repoProjectKey ?: error("Missing SCM project in config for application $name"),
+    repoSlug = repoSlug ?: error("Missing SCM repository in config for application $name")
+  ).name
 }
