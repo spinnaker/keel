@@ -13,6 +13,7 @@ import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.makeEnvironment
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.selectEnvironmentColumns
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.inline
 import java.time.Clock
 import java.time.Duration
 
@@ -56,6 +57,18 @@ class SqlEnvironmentDeletionRepository(
         ENVIRONMENT_DELETION,
         ENVIRONMENT_DELETION.ENVIRONMENT_UID.eq(environment.uid)
       )
+    }
+  }
+
+  override fun bulkGetMarkedForDeletion(environments: Set<Environment>): Map<Environment, Boolean> {
+    return sqlRetry.withRetry(READ) {
+      val markedForDeletion = jooq
+        .select(ENVIRONMENT_DELETION.ENVIRONMENT_UID)
+        .from(ENVIRONMENT_DELETION)
+        .where(ENVIRONMENT_DELETION.ENVIRONMENT_UID.`in`(environments.map { it.uid }))
+        .fetch(ENVIRONMENT_DELETION.ENVIRONMENT_UID)
+
+      environments.associateWith { markedForDeletion.contains(it.uid) }
     }
   }
 

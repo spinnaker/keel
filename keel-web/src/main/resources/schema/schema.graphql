@@ -29,6 +29,8 @@ type MdEnvironment {
   name: String!
   state: MdEnvironmentState!
   isPreview: Boolean
+  isDeleting: Boolean
+  gitMetadata: MdGitMetadata
 }
 
 type MdEnvironmentState {

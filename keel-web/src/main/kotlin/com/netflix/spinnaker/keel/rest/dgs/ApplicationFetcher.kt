@@ -23,11 +23,13 @@ import com.netflix.spinnaker.keel.graphql.types.MdComparisonLinks
 import com.netflix.spinnaker.keel.graphql.types.MdConstraint
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironmentState
+import com.netflix.spinnaker.keel.graphql.types.MdGitMetadata
 import com.netflix.spinnaker.keel.graphql.types.MdLifecycleStep
 import com.netflix.spinnaker.keel.graphql.types.MdNotification
 import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
 import com.netflix.spinnaker.keel.graphql.types.MdPausedInfo
 import com.netflix.spinnaker.keel.graphql.types.MdPinnedVersion
+import com.netflix.spinnaker.keel.graphql.types.MdPullRequest
 import com.netflix.spinnaker.keel.graphql.types.MdResource
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationState
 import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationStatus
@@ -53,14 +55,14 @@ import java.util.concurrent.CompletableFuture
  */
 @DgsComponent
 class ApplicationFetcher(
+  private val authorizationSupport: AuthorizationSupport,
   private val keelRepository: KeelRepository,
   private val resourceStatusService: ResourceStatusService,
   private val actuationPauser: ActuationPauser,
   private val artifactVersionLinks: ArtifactVersionLinks,
   private val applicationFetcherSupport: ApplicationFetcherSupport,
   private val notificationRepository: DismissibleNotificationRepository,
-  private val deliveryConfigImporter: DeliveryConfigImporter,
-  private val authorizationSupport: AuthorizationSupport,
+  private val deliveryConfigImporter: DeliveryConfigImporter
 ) {
 
   @DgsData(parentType = DgsConstants.QUERY.TYPE_NAME, field = DgsConstants.QUERY.Application)
@@ -100,7 +102,16 @@ class ApplicationFetcher(
           id = "${env.name}-state",
           artifacts = artifacts,
           resources = env.resources.map { it.toDgs(config, env.name) }
-        )
+        ),
+        gitMetadata = if (env.isPreview) {
+          MdGitMetadata(
+            repoName = env.repoKey,
+            branch = env.branch,
+            pullRequest = MdPullRequest(env.pullRequestId)
+          )
+        } else {
+          null
+        }
       )
     }
 
@@ -321,6 +332,16 @@ class ApplicationFetcher(
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     return notificationRepository.notificationHistory(config.application, true, setOf(WARNING, ERROR))
       .map { it.toDgs() }
+  }
+
+  @DgsData(parentType = DgsConstants.MDENVIRONMENT.TYPE_NAME, field = DgsConstants.MDENVIRONMENT.IsDeleting)
+  fun environmentIsDeleting(dfe: DataFetchingEnvironment): CompletableFuture<Boolean>? {
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
+    val dataLoader: DataLoader<Environment, Boolean> = dfe.getDataLoader(EnvironmentDeletionStatusLoader.NAME)
+    val environment = dfe.getSource<MdEnvironment>().let { mdEnv ->
+      config.environments.find { it.name == mdEnv.name }
+    }
+    return environment?.let { dataLoader.load(environment) }
   }
 
 //  add function for putting the resources on the artifactVersion
