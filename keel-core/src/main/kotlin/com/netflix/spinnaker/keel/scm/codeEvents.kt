@@ -182,8 +182,9 @@ fun PublishedArtifact.toCodeEvent(): CodeEvent? {
       authorName = authorName,
       authorEmail = authorEmail
     )
+    "create_tag" -> null // we just ignore tag creations
     else -> {
-      log.error("Unsupported code event type $type in $this")
+      log.warn("Unsupported code event type $type in $this")
       null
     }
   }
