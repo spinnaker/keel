@@ -38,7 +38,7 @@ data class SubmittedDeliveryConfig(
     serviceAccount = serviceAccount
       ?: error("No service account specified, and no default applied"),
     artifacts = artifacts.mapTo(mutableSetOf()) { artifact ->
-      artifact.copyWithName(safeName)
+      artifact.withDeliveryConfigName(safeName)
     },
     environments = environments.mapTo(mutableSetOf()) { env ->
       env.toEnvironment()

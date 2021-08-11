@@ -51,8 +51,8 @@ data class DockerArtifact(
     } else throw ValidationException(
       listOf("Unable to determine sorting strategy for $this. You must specify either `tagVersionStrategy` or `from` in your delivery config."))
 
-  override fun copyWithName(name: String): DeliveryArtifact {
-    return this.copy(deliveryConfigName = name)
+  override fun withDeliveryConfigName(deliveryConfigName: String): DeliveryArtifact {
+    return this.copy(deliveryConfigName = deliveryConfigName)
   }
 
   override fun toString(): String = super.toString()

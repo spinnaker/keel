@@ -25,8 +25,8 @@ data class NpmArtifact(
       NpmVersionSortingStrategy
     }
 
-  override fun copyWithName(name: String): DeliveryArtifact {
-    return this.copy(deliveryConfigName = name)
+  override fun withDeliveryConfigName(deliveryConfigName: String): DeliveryArtifact {
+    return this.copy(deliveryConfigName = deliveryConfigName)
   }
 
   override fun toString(): String = super.toString()
