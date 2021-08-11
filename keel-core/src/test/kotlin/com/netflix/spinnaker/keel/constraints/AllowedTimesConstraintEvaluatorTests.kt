@@ -13,6 +13,8 @@ import com.netflix.spinnaker.keel.core.api.ALLOWED_TIMES_CONSTRAINT_TYPE
 import com.netflix.spinnaker.keel.core.api.TimeWindow
 import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.core.api.TimeWindowNumeric
+import com.netflix.spinnaker.keel.core.api.windowsNumeric
+import com.netflix.spinnaker.keel.persistence.ArtifactRepository
 import com.netflix.spinnaker.kork.dynamicconfig.DynamicConfigService
 import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
@@ -88,7 +90,9 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       every { getConstraintState(manifest.name, environment.name, any(), ALLOWED_TIMES_CONSTRAINT_TYPE, any()) } returns pendingState
     }
 
-    val subject = AllowedTimesConstraintEvaluator(clock, dynamicConfigService, mockk(), repository)
+    val artifactRepository: ArtifactRepository = mockk()
+
+    val subject = AllowedTimesConstraintEvaluator(clock, dynamicConfigService, mockk(), repository, artifactRepository)
   }
 
   fun tests() = rootContext<Fixture> {
@@ -120,6 +124,38 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       val newState = slot<ConstraintState>()
       verify(exactly = 1) { repository.storeConstraintState(capture(newState)) }
       expectThat(newState.captured.status).isEqualTo(PASS)
+    }
+
+    context("with a limit on deployments") {
+      deriveFixture {
+        copy(constraint = constraint.copy(maxDeploysPerWindow = 2))
+      }
+
+      context("we have not deployed yet in this window") {
+        before {
+          every {
+            artifactRepository.deploymentsBetween(manifest, environment.name, any(), any())
+          } returns 0
+        }
+
+        test("we can promote") {
+          expectThat(subject.canPromote(artifact, "1.1", manifest, environment))
+            .isTrue()
+        }
+      }
+
+      context("we have already deployed several times") {
+        before {
+          every {
+            artifactRepository.deploymentsBetween(manifest, environment.name, any(), any())
+          } returns 2
+        }
+
+        test("we cannot promote") {
+          expectThat(subject.canPromote(artifact, "1.1", manifest, environment))
+            .isFalse()
+        }
+      }
     }
 
     context("with mutable clock") {
@@ -175,12 +211,12 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(2)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(setOf(1), IntRange(11,16).toSet()),
-            TimeWindowNumeric(setOf(3,4,5), setOf(13))
+            TimeWindowNumeric(setOf(1), (11..15).toSet()),
+            TimeWindowNumeric((3..5).toSet(), setOf(13))
           )
         }
       }
@@ -219,11 +255,11 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(1)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(IntRange(1,5).toSet(), IntRange(11,16).toSet()),
+            TimeWindowNumeric((1..5).toSet(), (11..15).toSet()),
           )
         }
       }
@@ -250,11 +286,11 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(1)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(IntRange(1,5).toSet(), emptySet()),
+            TimeWindowNumeric((1..5).toSet(), emptySet()),
           )
         }
       }
@@ -281,11 +317,11 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(1)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(IntRange(6,7).toSet(), emptySet()),
+            TimeWindowNumeric((6..7).toSet(), emptySet()),
           )
         }
       }
@@ -317,12 +353,12 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(2)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(setOf(4), IntRange(11,16).toSet()),
-            TimeWindowNumeric(IntRange(1,5).toSet(), IntRange(11,16).toSet())
+            TimeWindowNumeric(setOf(4), (11..15).toSet()),
+            TimeWindowNumeric((1..5).toSet(), (11..15).toSet())
           )
         }
       }
@@ -371,11 +407,11 @@ internal class AllowedTimesConstraintEvaluatorTests : JUnit5Minutests {
       }
 
       test("ui format is correct") {
-        val windows = AllowedTimesConstraintEvaluator.toNumericTimeWindows(constraint)
+        val windows = constraint.windowsNumeric
         expect {
           that(windows.size).isEqualTo(1)
           that(windows).containsExactlyInAnyOrder(
-            TimeWindowNumeric(setOf(2,1,7,6), setOf(23) + IntRange(0,10).toSet()),
+            TimeWindowNumeric(setOf(2, 1, 7, 6), setOf(23) + (0..9).toSet()),
           )
         }
       }

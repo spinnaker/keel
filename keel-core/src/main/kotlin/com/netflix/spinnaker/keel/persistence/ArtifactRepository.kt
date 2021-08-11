@@ -17,6 +17,7 @@ import com.netflix.spinnaker.keel.core.api.PublishedArtifactInEnvironment
 import com.netflix.spinnaker.keel.services.StatusInfoForArtifactInEnvironment
 import com.netflix.spinnaker.kork.exceptions.UserException
 import java.time.Duration
+import java.time.temporal.TemporalAccessor
 
 interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
@@ -378,6 +379,16 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
 
     return pending.filter { isOlder(artifact, it, currentVersion) }
   }
+
+  /**
+   * @return number of artifact versions deployed to [environmentName] between [startTime] and [endTime].
+   */
+  fun deploymentsBetween(
+    deliveryConfig: DeliveryConfig,
+    environmentName: String,
+    startTime: TemporalAccessor,
+    endTime: TemporalAccessor
+  ): Int
 }
 
 class NoSuchArtifactException(name: String, type: ArtifactType) :

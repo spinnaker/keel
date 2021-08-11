@@ -350,3 +350,9 @@ databaseChangeLog:
   - include:
       file: changelog/20210630-add-event-processing-queue.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210716-add-raw-delivery-config.yml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog/20210804-add-branch-to-dismissible-notifications.yml
+      relativeToChangelogFile: true

@@ -2,12 +2,15 @@ package com.netflix.spinnaker.keel.scm
 
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.front50.Front50Cache
-import com.netflix.spinnaker.keel.front50.model.Application
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter.Companion.DEFAULT_MANIFEST_PATH
 import com.netflix.spinnaker.keel.igor.ScmService
+import com.netflix.spinnaker.keel.igor.getDefaultBranch
+import com.netflix.spinnaker.keel.notifications.DeliveryConfigImportFailed
+import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.safeIncrement
+import com.netflix.spinnaker.keel.validators.DeliveryConfigValidator
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -23,6 +26,8 @@ import java.time.Clock
 class DeliveryConfigImportListener(
   private val repository: KeelRepository,
   private val deliveryConfigImporter: DeliveryConfigImporter,
+  private val deliveryConfigValidator: DeliveryConfigValidator,
+  private val notificationRepository: DismissibleNotificationRepository,
   private val front50Cache: Front50Cache,
   private val scmService: ScmService,
   private val springEnv: Environment,
@@ -55,11 +60,15 @@ class DeliveryConfigImportListener(
 
     val apps = runBlocking {
       try {
-        front50Cache.allApplications().also {
+        front50Cache.searchApplications(
+          "repoType" to event.repoType,
+          "repoProjectKey" to event.projectKey,
+          "repoSlug" to event.repoSlug
+        ).also {
           log.debug("Retrieved ${it.size} applications from Front50")
         }
       } catch (e: Exception) {
-        log.error("Error retrieving applications: $e", e)
+        log.error("Error searching applications: $e", e)
         null
       }
     } ?: return
@@ -70,11 +79,11 @@ class DeliveryConfigImportListener(
         app != null
           && app.managedDelivery?.importDeliveryConfig == true
           && event.matchesApplicationConfig(app)
-          && event.targetBranch == app.defaultBranch
+          && event.targetBranch == app.getDefaultBranch(scmService)
       }
 
     if (matchingApps.isEmpty()) {
-      log.debug("No applications with a matching default branch found for event: $event")
+      log.debug("No applications with matching SCM config found for event: $event")
       return
     }
 
@@ -88,28 +97,21 @@ class DeliveryConfigImportListener(
           manifestPath = DEFAULT_MANIFEST_PATH // TODO: allow location of manifest to be configurable
         ).also {
           event.emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_RETRIEVAL_SUCCESS, app.name)
+          log.info("Validating config for application ${app.name} from branch ${event.targetBranch}")
+          deliveryConfigValidator.validate(it)
         }
       } catch (e: Exception) {
         log.error("Error retrieving delivery config: $e", e)
         event.emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_RETRIEVAL_ERROR, app.name)
-        eventPublisher.publishDeliveryConfigImportFailed(app.name, event, clock.instant())
+        eventPublisher.publishDeliveryConfigImportFailed(app.name, event, clock.instant(), e.message ?: "Unknown reason")
         return@forEach
       }
 
       log.info("Creating/updating delivery config for application ${app.name} from branch ${event.targetBranch}")
       repository.upsertDeliveryConfig(newDeliveryConfig)
+      notificationRepository.dismissNotification(DeliveryConfigImportFailed::class.java, newDeliveryConfig.application, event.targetBranch)
     }
   }
-
-  private val Application.defaultBranch: String
-    get() = runBlocking {
-      scmService.getDefaultBranch(
-        scmType = repoType ?: error("Missing SCM type in config for application $name"),
-        projectKey = repoProjectKey ?: error("Missing SCM project in config for application $name"),
-        repoSlug = repoSlug ?: error("Missing SCM repository in config for application $name")
-      ).name
-    }
-
 
   private fun CodeEvent.emitCounterMetric(metric: String, extraTags: Collection<Pair<String, String>>, application: String? = null) =
     spectator.counter(metric, metricTags(application, extraTags) ).safeIncrement()

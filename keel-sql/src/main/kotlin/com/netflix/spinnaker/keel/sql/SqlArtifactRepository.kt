@@ -65,7 +65,9 @@ import org.springframework.context.ApplicationEventPublisher
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.time.Instant.EPOCH
+import java.time.temporal.TemporalAccessor
 import javax.xml.bind.DatatypeConverter
 
 class SqlArtifactRepository(
@@ -1793,6 +1795,27 @@ class SqlArtifactRepository(
       }
     }
   }
+
+  override fun deploymentsBetween(
+    deliveryConfig: DeliveryConfig,
+    environmentName: String,
+    startTime: TemporalAccessor,
+    endTime: TemporalAccessor
+  ): Int =
+    (Instant.from(startTime) to Instant.from(endTime)).let { (start, end) ->
+      require(start < end) {
+        "Start time $startTime must be before end time $endTime"
+      }
+      jooq
+        .selectCount()
+        .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .join(ENVIRONMENT).on(ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID))
+        .join(DELIVERY_CONFIG).on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+        .where(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+        .and(ENVIRONMENT.NAME.eq(environmentName))
+        .and(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.between(start, end))
+        .fetchSingleInto<Int>()
+    }
 
   private fun priorVersionDeployedIn(
     environmentId: String,

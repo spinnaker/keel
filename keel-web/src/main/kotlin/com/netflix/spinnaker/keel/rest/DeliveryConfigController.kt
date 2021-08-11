@@ -1,18 +1,22 @@
 package com.netflix.spinnaker.keel.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.auth.PermissionLevel.READ
+import com.netflix.spinnaker.keel.auth.PermissionLevel.WRITE
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport.TargetEntity.APPLICATION
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport.TargetEntity.SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.events.DeliveryConfigChangedNotification
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
+import com.netflix.spinnaker.keel.jackson.readValueInliningAliases
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICATION
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.schema.Generator
 import com.netflix.spinnaker.keel.schema.RootSchema
 import com.netflix.spinnaker.keel.schema.generateSchema
@@ -36,7 +40,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import io.swagger.v3.oas.annotations.parameters.RequestBody as SwaggerRequestBody
+import java.io.BufferedReader
+import java.io.InputStream
 import org.springframework.core.env.Environment as SpringEnvironment
 
 
@@ -51,9 +56,14 @@ class DeliveryConfigController(
   private val generator: Generator,
   private val publisher: ApplicationEventPublisher,
   private val mapper: ObjectMapper,
+  private val yamlMapper: YAMLMapper,
   private val springEnv: SpringEnvironment
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
+  data class GateRawConfig(
+    val content: String
+  )
 
   private val sendConfigChangedNotification: Boolean
     get() = springEnv.getProperty("keel.notifications.send-config-changed", Boolean::class.java, true)
@@ -65,19 +75,30 @@ class DeliveryConfigController(
     consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
-  @PreAuthorize(
-    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #deliveryConfig.application)
-    and @authorizationSupport.hasServiceAccountAccess(#deliveryConfig.serviceAccount)"""
-  )
   fun upsert(
-    @RequestBody
-    @SwaggerRequestBody(
-      description = "The delivery config. If its `name` matches an existing delivery config the operation is " +
-        "an update, otherwise a new delivery config is created."
-    )
-    deliveryConfig: SubmittedDeliveryConfig
+    stream: InputStream
   ): DeliveryConfig {
-    val metadata: Map<String,Any?> = deliveryConfig.metadata ?: mapOf()
+    val rawDeliveryConfig = readRawConfigFromStream(stream)
+    return upsertConfig(parseRawConfig(rawDeliveryConfig))
+  }
+
+  @Operation(
+    description = "Registers or updates a delivery config manifest from Gate"
+  )
+  @PostMapping(
+    path = ["/upsertGate"],
+    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  // We had to handle requests from gate separately, because gate was serializing the raw string incorrectly. Therefore, it's wrapped in a simple object
+  fun upsertFromGate(@RequestBody rawConfig: GateRawConfig): DeliveryConfig {
+    return upsertConfig(parseRawConfig(rawConfig.content))
+  }
+
+
+  private fun upsertConfig(deliveryConfig: SubmittedDeliveryConfig): DeliveryConfig {
+    deliveryConfig.checkPermissions()
+    val metadata: Map<String, Any?> = deliveryConfig.metadata ?: mapOf()
     val gitMetadata: GitMetadata? = try {
       val candidateMetadata = metadata.getOrDefault("gitMetadata", null)
       if (candidateMetadata != null) {
@@ -103,9 +124,15 @@ class DeliveryConfigController(
         log.debug("Upserting delivery config '${processedDeliveryConfig.name}' for app '${processedDeliveryConfig.application}'")
         val config = repository.upsertDeliveryConfig(processedDeliveryConfig)
         if (shouldNotifyOfConfigChange(existing, config)) {
-          publisher.publishEvent(DeliveryConfigChangedNotification(config = config, gitMetadata = gitMetadata, new = existing == null))
+          publisher.publishEvent(
+            DeliveryConfigChangedNotification(
+              config = config,
+              gitMetadata = gitMetadata,
+              new = existing == null
+            )
+          )
         }
-        return config
+        return config.copy(rawConfig = null)
       }
   }
 
@@ -113,7 +140,11 @@ class DeliveryConfigController(
     when {
       !sendConfigChangedNotification -> false
       existing == null -> true
-      DefaultResourceDiff(existing, new).hasChanges() -> true
+      DefaultResourceDiff(existing, new).also {
+        if (it.hasChanges()) {
+          log.debug("Found diffs in delivery config ${it.affectedRootPropertyNames}")
+        }
+      }.hasChanges() -> true
       else -> false
     }
 
@@ -174,9 +205,28 @@ class DeliveryConfigController(
     produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
   )
   @ResponseStatus(value = HttpStatus.NO_CONTENT)
-  @PreAuthorize("@authorizationSupport.hasApplicationPermission('READ', 'APPLICATION', #deliveryConfig.application)")
-  fun validate(@RequestBody deliveryConfig: SubmittedDeliveryConfig) {
-    validator.validate(deliveryConfig)
+  fun validate(stream: InputStream) {
+    val rawDeliveryConfig = readRawConfigFromStream(stream)
+    validateRawConfig(rawDeliveryConfig)
+  }
+
+  @Operation(
+    description = "Validate the provided delivery config"
+  )
+  @PostMapping(
+    path = ["validate/gate"],
+    consumes = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE],
+    produces = [APPLICATION_JSON_VALUE, APPLICATION_YAML_VALUE]
+  )
+  // We had to handle requests from gate separately, because gate was serializing the raw string incorrectly. Therefore, it's wrapped in a simple object
+  fun validateFromGate(@RequestBody rawConfig: GateRawConfig) {
+    validateRawConfig(rawConfig.content)
+  }
+
+  private fun validateRawConfig(rawDeliveryConfig: String) {
+    val config = parseRawConfig(rawDeliveryConfig)
+    authorizationSupport.checkApplicationPermission(READ, APPLICATION, config.application)
+    validator.validate(config)
   }
 
   @Operation(
@@ -196,12 +246,27 @@ class DeliveryConfigController(
     val deliveryConfig =
       importer.import(repoType, projectKey, repoSlug, manifestPath, ref ?: "refs/heads/master")
 
-    authorizationSupport.checkApplicationPermission(WRITE, APPLICATION, deliveryConfig.application)
-    deliveryConfig.serviceAccount?.also {
+    return upsertConfig(deliveryConfig)
+  }
+
+  private fun SubmittedDeliveryConfig.checkPermissions() {
+    authorizationSupport.checkApplicationPermission(WRITE, APPLICATION, application)
+    serviceAccount?.also {
       authorizationSupport.checkServiceAccountAccess(SERVICE_ACCOUNT, it)
     }
+  }
 
-    return upsert(deliveryConfig)
+  private fun readRawConfigFromStream(stream: InputStream): String {
+    var rawDeliveryConfig: String
+    BufferedReader(stream.reader()).use { reader ->
+      rawDeliveryConfig = reader.readText()
+    }
+    return rawDeliveryConfig
+  }
+
+  private fun parseRawConfig(rawDeliveryConfig: String): SubmittedDeliveryConfig {
+    return yamlMapper.readValueInliningAliases<SubmittedDeliveryConfig>(rawDeliveryConfig)
+      .copy(rawConfig = rawDeliveryConfig)
   }
 
   @Operation(

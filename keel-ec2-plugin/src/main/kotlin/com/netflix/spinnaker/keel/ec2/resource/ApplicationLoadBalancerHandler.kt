@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancer
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec
+import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.ApplicationLoadBalancerOverride
 import com.netflix.spinnaker.keel.api.ec2.CLOUD_PROVIDER
 import com.netflix.spinnaker.keel.api.ec2.EC2_APPLICATION_LOAD_BALANCER_V1_2
@@ -20,6 +21,7 @@ import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.ResourceNotFound
+import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.toEc2Api
@@ -217,12 +219,7 @@ class ApplicationLoadBalancerHandler(
                   moniker = if (lb.moniker != null) {
                     Moniker(lb.moniker!!.app, lb.moniker!!.stack, lb.moniker!!.detail)
                   } else {
-                    val parsedNamed = lb.loadBalancerName.split("-")
-                    Moniker(
-                      app = parsedNamed[0],
-                      stack = parsedNamed.getOrNull(1),
-                      detail = parsedNamed.getOrNull(2)
-                    )
+                    parseMoniker(lb.loadBalancerName)
                   },
                   location = Location(
                     account = account,
@@ -310,7 +307,7 @@ class ApplicationLoadBalancerHandler(
               "port" to it.port,
               "protocol" to it.protocol,
               "rules" to it.rules,
-              "defaultActions" to it.defaultActions.map { action ->
+              "defaultActions" to it.defaultActions.sortedBy(Action::order).map { action ->
                 mapOf(
                   "type" to action.type,
                   "order" to action.order,

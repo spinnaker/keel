@@ -7,9 +7,11 @@ import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.action.ActionType
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.constraints.UpdatedConstraintStatus
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.exceptions.InvalidConstraintException
+import com.netflix.spinnaker.keel.graphql.DgsConstants
 import com.netflix.spinnaker.keel.graphql.types.MdAction
 import com.netflix.spinnaker.keel.graphql.types.MdArtifactVersionActionPayload
 import com.netflix.spinnaker.keel.graphql.types.MdConstraintStatus
@@ -25,6 +27,7 @@ import com.netflix.spinnaker.keel.services.ApplicationService
 import com.netflix.spinnaker.keel.veto.unhappy.UnhappyVeto
 import de.huxhorn.sulky.ulid.ULID
 import org.slf4j.LoggerFactory
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.RequestHeader
 
 /**
@@ -36,21 +39,26 @@ class Mutations(
   private val actuationPauser: ActuationPauser,
   private val unhappyVeto: UnhappyVeto,
   private val deliveryConfigRepository: DeliveryConfigRepository,
-  private val notificationRepository: DismissibleNotificationRepository
+  private val notificationRepository: DismissibleNotificationRepository,
+  private val authorizationSupport: AuthorizationSupport,
 ) {
 
   companion object {
     private val log by lazy { LoggerFactory.getLogger(Mutations::class.java) }
   }
 
-  @DgsData(parentType = "Mutation", field = "recheckUnhappyResource")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = "recheckUnhappyResource")
   fun recheckUnhappyResource(
     @InputArgument resourceId: String
   ) {
     unhappyVeto.clearVeto(resourceId)
   }
 
-  @DgsData(parentType = "Mutation", field = "updateConstraintStatus")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.UpdateConstraintStatus)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun updateConstraintStatus(
     @InputArgument payload: MdConstraintStatusPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -68,7 +76,8 @@ class Mutations(
     }
   }
 
-  @DgsData(parentType = "Mutation", field = "toggleManagement")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.ToggleManagement)
+  @PreAuthorize("@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)")
   fun toggleManagement(
     @InputArgument application: String,
     @InputArgument isPaused: Boolean,
@@ -83,7 +92,11 @@ class Mutations(
     return true
   }
 
-  @DgsData(parentType = "Mutation", field = "pinArtifactVersion")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.PinArtifactVersion)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun pinArtifactVersion(
     @InputArgument payload: MdArtifactVersionActionPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -92,7 +105,11 @@ class Mutations(
     return true
   }
 
-  @DgsData(parentType = "Mutation", field = "unpinArtifactVersion")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.UnpinArtifactVersion)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun unpinArtifactVersion(
     @InputArgument payload: MdUnpinArtifactVersionPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -106,7 +123,11 @@ class Mutations(
     return true
   }
 
-  @DgsData(parentType = "Mutation", field = "markArtifactVersionAsBad")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.MarkArtifactVersionAsBad)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun markArtifactVersionAsBad(
     @InputArgument payload: MdArtifactVersionActionPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -115,7 +136,11 @@ class Mutations(
     return true
   }
 
-  @DgsData(parentType = "Mutation", field = "markArtifactVersionAsGood")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.MarkArtifactVersionAsGood)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun markArtifactVersionAsGood(
     @InputArgument payload: MdMarkArtifactVersionAsGoodPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -129,7 +154,11 @@ class Mutations(
     return true
   }
 
-  @DgsData(parentType = "Mutation", field = "retryArtifactVersionAction")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.RetryArtifactVersionAction)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun retryArtifactVersionAction(
     @InputArgument payload: MdRetryArtifactActionPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
@@ -163,13 +192,17 @@ class Mutations(
   /**
    * Dismisses a notification, given it's ID.
    */
-  @DgsData(parentType = "Mutation", field = "dismissNotification")
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.DismissNotification)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
   fun dismissNotification(
     @InputArgument payload: MdDismissNotificationPayload,
     @RequestHeader("X-SPINNAKER-USER") user: String
   ): Boolean {
     log.debug("Dismissing notification with ID=${payload.id} (by user $user)")
-    return notificationRepository.dismissNotification(ULID.parseULID(payload.id), user)
+    return notificationRepository.dismissNotificationById(payload.application, ULID.parseULID(payload.id), user)
   }
 }
 

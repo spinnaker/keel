@@ -8,17 +8,21 @@ import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
 import com.netflix.spinnaker.keel.api.artifacts.VirtualMachineOptions
 import com.netflix.spinnaker.keel.artifacts.DebianArtifact
+import com.netflix.spinnaker.keel.auth.PermissionLevel.READ
+import com.netflix.spinnaker.keel.auth.PermissionLevel.WRITE
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport.TargetEntity.APPLICATION
+import com.netflix.spinnaker.keel.auth.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedDeliveryConfig
 import com.netflix.spinnaker.keel.core.api.SubmittedEnvironment
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
+import com.netflix.spinnaker.keel.jackson.readValueInliningAliases
+import com.netflix.spinnaker.keel.notifications.DismissibleNotification
+import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoSuchDeliveryConfigName
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.READ
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.Action.WRITE
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.APPLICATION
-import com.netflix.spinnaker.keel.rest.AuthorizationSupport.TargetEntity.DELIVERY_CONFIG
 import com.netflix.spinnaker.keel.spring.test.MockEurekaConfiguration
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.TEST_API_V1
@@ -58,11 +62,14 @@ internal class DeliveryConfigControllerTests
 @Autowired constructor(
   val mvc: MockMvc,
   val jsonMapper: ObjectMapper,
-  val yamlMapper: YAMLMapper
+  val yamlMapper: YAMLMapper,
 ) : JUnit5Minutests {
 
   @MockkBean
   lateinit var repository: KeelRepository
+
+  @MockkBean
+  lateinit var notificationRepository: DismissibleNotificationRepository
 
   @MockkBean
   lateinit var authorizationSupport: AuthorizationSupport
@@ -164,11 +171,17 @@ internal class DeliveryConfigControllerTests
         |    - ap-south-1
         |environments:
         |- name: test
+        |  locations: &locations
+        |    account: "titustestvpc"
+        |    regions:
+        |      - name: us-west-2
         |  resources:
         |  - kind: test/whatever@v1
         |    spec:
         |      data: resource in test
         |      application: someapp
+        |      locations:
+        |        <<: *locations
         |- name: prod
         |  constraints:
         |  - type: depends-on
@@ -254,31 +267,44 @@ internal class DeliveryConfigControllerTests
       mapOf(
         APPLICATION_YAML to yamlPayload,
         APPLICATION_JSON to jsonPayload
-      ).forEach { (contentType, payload) ->
-        derivedContext<ResultActions>("persisting a delivery config as $contentType") {
-          fixture {
-            every {
-              repository.upsertDeliveryConfig(ofType<SubmittedDeliveryConfig>())
-            } answers {
-              firstArg<SubmittedDeliveryConfig>().toDeliveryConfig()
+      ).forEach { (contentType, configContent) ->
+        listOf(
+          "/delivery-configs" to configContent,
+          "/delivery-configs/upsertGate" to jsonMapper.writeValueAsString(
+            DeliveryConfigController.GateRawConfig(
+              configContent
+            )
+          )
+        ).forEach { (endpoint, configPayload) ->
+          derivedContext<ResultActions>("persisting a delivery config as $contentType") {
+            fixture {
+              every {
+                repository.upsertDeliveryConfig(ofType<SubmittedDeliveryConfig>())
+              } answers {
+                firstArg<SubmittedDeliveryConfig>().toDeliveryConfig()
+              }
+
+              every {
+                notificationRepository.dismissNotification(any<Class<DismissibleNotification>>(), any(), any(), any())
+              } returns true
+
+              every { repository.getDeliveryConfigForApplication(deliveryConfig.application) } returns deliveryConfig.toDeliveryConfig()
+
+              val request = post(endpoint)
+                .accept(contentType)
+                .contentType(contentType)
+                .content(configPayload)
+
+              mvc.perform(request)
             }
 
-            every { repository.getDeliveryConfigForApplication(deliveryConfig.application) } returns deliveryConfig.toDeliveryConfig()
+            test("the request is successful") {
+              andExpect(status().isOk)
+            }
 
-            val request = post("/delivery-configs")
-              .accept(contentType)
-              .contentType(contentType)
-              .content(payload)
-
-            mvc.perform(request)
-          }
-
-          test("the request is successful") {
-            andExpect(status().isOk)
-          }
-
-          test("the manifest is persisted") {
-            verify { repository.upsertDeliveryConfig(match<SubmittedDeliveryConfig> { it.application == "keel" }) }
+            test("the manifest is persisted") {
+              verify { repository.upsertDeliveryConfig(match<SubmittedDeliveryConfig> { it.application == "keel" }) }
+            }
           }
         }
 
@@ -289,7 +315,13 @@ internal class DeliveryConfigControllerTests
               else -> jsonMapper
             }
             val invalidPayload = mapper
-              .readValue<Map<String, Any?>>(payload)
+              .let {
+                if (it is YAMLMapper) {
+                  it.readValueInliningAliases<Map<String, Any?>>(configContent)
+                } else {
+                  it.readValue(configContent)
+                }
+              }
               .let { it - "application" }
               .let(mapper::writeValueAsString)
 

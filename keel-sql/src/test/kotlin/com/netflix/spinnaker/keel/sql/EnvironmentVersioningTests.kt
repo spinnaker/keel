@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.test.randomString
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
+import com.netflix.spinnaker.time.MutableClock
 import io.mockk.mockk
 import org.jooq.Table
 import org.junit.jupiter.api.AfterEach
@@ -40,7 +41,6 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isSuccess
-import java.time.Clock.systemUTC
 import java.time.Duration
 
 class EnvironmentVersioningTests {
@@ -48,6 +48,7 @@ class EnvironmentVersioningTests {
   private val objectMapper = configuredTestObjectMapper()
   private val retryProperties = RetryProperties(1, 0)
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
+  private val clock = MutableClock()
   private val resourceSpecIdentifier =
     ResourceSpecIdentifier(
       kind<DummyResourceSpec>("test/whatever@v1")
@@ -56,7 +57,7 @@ class EnvironmentVersioningTests {
 
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(
     jooq,
-    systemUTC(),
+    clock,
     resourceSpecIdentifier,
     objectMapper,
     sqlRetry,
@@ -66,7 +67,7 @@ class EnvironmentVersioningTests {
 
   private val artifactRepository = SqlArtifactRepository(
     jooq,
-    systemUTC(),
+    clock,
     objectMapper,
     sqlRetry,
     publisher = mockk(relaxed = true)
@@ -74,7 +75,7 @@ class EnvironmentVersioningTests {
 
   private val resourceRepository = SqlResourceRepository(
     jooq,
-    systemUTC(),
+    clock,
     resourceSpecIdentifier,
     emptyList(),
     objectMapper,
@@ -84,7 +85,7 @@ class EnvironmentVersioningTests {
 
   private val verificationRepository = SqlActionRepository(
     jooq = jooq,
-    clock = systemUTC(),
+    clock = clock,
     resourceSpecIdentifier = resourceSpecIdentifier,
     objectMapper = objectMapper,
     sqlRetry = sqlRetry,
@@ -96,7 +97,7 @@ class EnvironmentVersioningTests {
     artifactRepository,
     resourceRepository,
     verificationRepository,
-    systemUTC(),
+    clock,
     { },
     objectMapper
   )
@@ -104,6 +105,7 @@ class EnvironmentVersioningTests {
   @BeforeEach
   fun storeDeliveryConfig() {
     repository.upsertDeliveryConfig(deliveryConfig)
+
     deliveryConfigRepository.addArtifactVersionToEnvironment(
       deliveryConfig,
       deliveryConfig.environments.single().name,
@@ -137,9 +139,13 @@ class EnvironmentVersioningTests {
           copy(
             constraints = setOf(ManualJudgementConstraint()),
             verifyWith = listOf(DummyVerification()),
-            notifications = setOf(NotificationConfig(type = slack,
-              address = "#trashpandas",
-              frequency = normal))
+            notifications = setOf(
+              NotificationConfig(
+                type = slack,
+                address = "#trashpandas",
+                frequency = normal
+              )
+            )
           )
         }
           .let(::setOf)
