@@ -53,4 +53,9 @@ data class DeliveryConfig(
     }
     return target.constraints.first { it.type == constraintType }
   }
+
+  fun environmentNamed(name: String): Environment =
+    requireNotNull(environments.firstOrNull { it.name == name }) {
+      "No environment named $name exists in the configuration for application ${this.application}"
+    }
 }

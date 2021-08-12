@@ -170,6 +170,15 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   )
 
   /**
+   * @return the currently deployed artifact version for an artifact in an environment
+   */
+  fun getCurrentlyDeployedArtifactVersion(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    environmentName: String
+  ): PublishedArtifact?
+
+  /**
    * @return list of [EnvironmentArtifactVetoes] for all environments and artifacts defined
    * in the [deliveryConfig].
    */

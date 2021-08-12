@@ -41,7 +41,6 @@ class ArtifactInEnvironmentDataLoader(
       applicationContext.allVersions = allVersions
 
       allVersions.mapValues { (key, versions) ->
-
         versions
           .sortedByDescending { it.publishedArtifact.createdAt }
           .map { it.toDgs() }
@@ -80,6 +79,7 @@ fun PublishedArtifactInEnvironment.toDgs() =
     },
     environment = environmentName,
     reference = publishedArtifact.reference,
-    status = MdArtifactStatusInEnvironment.valueOf(status.name)
+    status = MdArtifactStatusInEnvironment.valueOf(status.name),
+    isCurrent = isCurrent
   )
 

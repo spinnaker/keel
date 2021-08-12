@@ -4,7 +4,6 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
-import com.netflix.spinnaker.keel.api.Verification
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType

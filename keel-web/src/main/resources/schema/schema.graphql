@@ -85,6 +85,7 @@ type MdArtifactVersionInEnvironment {
   verifications: [MdAction!]
   postDeploy: [MdAction!]
   veto: MdVersionVeto
+  isCurrent: Boolean
 }
 
 type MdVersionVeto {
