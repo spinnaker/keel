@@ -368,3 +368,6 @@ databaseChangeLog:
 - include:
     file: changelog/20210909-task-tracking-resource-and-environment.yml
     relativeToChangelogFile: true
+- include:
+    file: changelog/20210917-feature-rollout-table.yml
+    relativeToChangelogFile: true

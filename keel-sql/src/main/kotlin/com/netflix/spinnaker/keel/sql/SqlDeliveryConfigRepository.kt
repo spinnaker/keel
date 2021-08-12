@@ -18,6 +18,8 @@ import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.api.timestampAsInstant
+import com.netflix.spinnaker.keel.events.PersistentEvent.EventScope
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
 import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepository
@@ -45,6 +47,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.EVENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PREVIEW_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
+import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_VERSION
 import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -531,6 +534,26 @@ class SqlDeliveryConfigRepository(
           notificationsJson?.let { objectMapper.readValue(it) }
         } ?: emptySet()
     }
+
+  override fun resourceStatusesInEnvironment(
+    deliveryConfigName: String,
+    environmentName: String
+  ): Map<String, ResourceState> =
+    jooq
+      .select(RESOURCE.ID, RESOURCE_LAST_CHECKED.STATUS)
+      .from(RESOURCE)
+      .join(RESOURCE_LAST_CHECKED)
+      .on(RESOURCE_LAST_CHECKED.RESOURCE_UID.eq(RESOURCE.UID))
+      .join(ENVIRONMENT_RESOURCE)
+      .on(ENVIRONMENT_RESOURCE.RESOURCE_UID.eq(RESOURCE.UID))
+      .join(ACTIVE_ENVIRONMENT)
+      .on(ACTIVE_ENVIRONMENT.UID.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_UID))
+      .and(ACTIVE_ENVIRONMENT.VERSION.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_VERSION))
+      .and(ACTIVE_ENVIRONMENT.NAME.eq(environmentName))
+      .join(DELIVERY_CONFIG)
+      .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+      .and(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
+      .fetchMap(RESOURCE.ID, RESOURCE_LAST_CHECKED.STATUS)
 
   override fun deliveryConfigFor(resourceId: String): DeliveryConfig =
     // TODO: this implementation could be more efficient by sharing code with get(name)
