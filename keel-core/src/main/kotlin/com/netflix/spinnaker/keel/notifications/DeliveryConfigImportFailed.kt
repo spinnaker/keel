@@ -25,7 +25,7 @@ data class DeliveryConfigImportFailed(
   override val triggeredBy: String = "Managed Delivery"
   override val message: String
     get() {
-      return "Failed to import delivery config from branch $branch (#${commitHash.short}). Reason: $reason"
+      return "Failed to import delivery config from branch $branch [${commitHash.short}]. Reason: $reason"
     }
 
   private val String.short: String

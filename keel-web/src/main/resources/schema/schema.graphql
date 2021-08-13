@@ -13,8 +13,8 @@ type MdApplication {
   pausedInfo: MdPausedInfo
   environments: [MdEnvironment!]!
   notifications: [MdNotification!]
-  rawConfig: String
   gitIntegration: MdGitIntegration
+  config: MdConfig
 }
 
 type MdGitIntegration {
@@ -22,6 +22,14 @@ type MdGitIntegration {
   repository: String
   branch: String
   isEnabled: Boolean
+  link: String
+}
+
+type MdConfig {
+  id: ID!
+  updatedAt: InstantTime
+  rawConfig: String
+  processedConfig: String
 }
 
 type MdEnvironment {

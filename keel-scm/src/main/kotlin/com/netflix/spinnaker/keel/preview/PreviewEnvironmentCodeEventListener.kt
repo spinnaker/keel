@@ -17,6 +17,7 @@ import com.netflix.spinnaker.keel.docker.ReferenceProvider
 import com.netflix.spinnaker.keel.front50.Front50Cache
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter.Companion.DEFAULT_MANIFEST_PATH
+import com.netflix.spinnaker.keel.igor.ScmService
 import com.netflix.spinnaker.keel.notifications.DeliveryConfigImportFailed
 import com.netflix.spinnaker.keel.persistence.DependentAttachFilter.ATTACH_PREVIEW_ENVIRONMENTS
 import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
@@ -31,6 +32,7 @@ import com.netflix.spinnaker.keel.scm.PrDeletedEvent
 import com.netflix.spinnaker.keel.scm.PrEvent
 import com.netflix.spinnaker.keel.scm.PrMergedEvent
 import com.netflix.spinnaker.keel.scm.PrOpenedEvent
+import com.netflix.spinnaker.keel.scm.ScmUtils
 import com.netflix.spinnaker.keel.scm.matchesApplicationConfig
 import com.netflix.spinnaker.keel.scm.metricTags
 import com.netflix.spinnaker.keel.scm.publishDeliveryConfigImportFailed
@@ -63,7 +65,8 @@ class PreviewEnvironmentCodeEventListener(
   private val springEnv: Environment,
   private val spectator: Registry,
   private val clock: Clock,
-  private val eventPublisher: ApplicationEventPublisher
+  private val eventPublisher: ApplicationEventPublisher,
+  private val scmUtils: ScmUtils,
 ) {
   companion object {
     private val log by lazy { LoggerFactory.getLogger(PreviewEnvironmentCodeEventListener::class.java) }
@@ -155,6 +158,9 @@ class PreviewEnvironmentCodeEventListener(
       log.debug("Importing delivery config for app ${deliveryConfig.application} " +
         "from branch ${event.targetBranch}, commit ${event.commitHash}")
 
+      // We always want to dismiss the previous notifications, and if needed to create a new one
+      notificationRepository.dismissNotification(DeliveryConfigImportFailed::class.java, deliveryConfig.application, event.targetBranch)
+
       val newDeliveryConfig = try {
         deliveryConfigImporter.import(
           commitEvent = event,
@@ -167,14 +173,13 @@ class PreviewEnvironmentCodeEventListener(
       } catch (e: Exception) {
         log.error("Error retrieving delivery config: $e", e)
         event.emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_RETRIEVAL_ERROR, deliveryConfig.application)
-        eventPublisher.publishDeliveryConfigImportFailed(deliveryConfig.application, event, clock.instant(), e.message ?: "Unknown")
+        eventPublisher.publishDeliveryConfigImportFailed(deliveryConfig.application, event, clock.instant(), e.message ?: "Unknown", scmUtils.getCommitLink(event))
         return@forEach
       }
 
       log.info("Creating/updating preview environments for application ${deliveryConfig.application} " +
         "from branch ${event.targetBranch}")
       createPreviewEnvironments(event, newDeliveryConfig, previewEnvSpecs)
-      notificationRepository.dismissNotification(DeliveryConfigImportFailed::class.java, deliveryConfig.application, event.targetBranch)
       event.emitDurationMetric(COMMIT_HANDLING_DURATION, startTime, deliveryConfig.application)
     }
   }

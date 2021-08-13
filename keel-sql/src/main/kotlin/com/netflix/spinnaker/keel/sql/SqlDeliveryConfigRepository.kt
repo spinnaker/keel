@@ -109,17 +109,19 @@ class SqlDeliveryConfigRepository(
           DELIVERY_CONFIG.APPLICATION,
           DELIVERY_CONFIG.SERVICE_ACCOUNT,
           DELIVERY_CONFIG.METADATA,
-          DELIVERY_CONFIG.RAW_CONFIG
+          DELIVERY_CONFIG.RAW_CONFIG,
+          DELIVERY_CONFIG.UPDATED_AT,
         )
         .from(DELIVERY_CONFIG)
         .where(DELIVERY_CONFIG.APPLICATION.eq(application))
-        .fetchOne { (uid, name, application, serviceAccount, metadata, rawConfig) ->
+        .fetchOne { (uid, name, application, serviceAccount, metadata, rawConfig, updatedAt) ->
           DeliveryConfig(
             name = name,
             application = application,
             serviceAccount = serviceAccount,
             metadata = (metadata ?: emptyMap()) + mapOf("createdAt" to ULID.parseULID(uid).timestampAsInstant()),
-            rawConfig = rawConfig
+            rawConfig = rawConfig,
+            updatedAt = updatedAt
           ).let {
             attachDependents(it)
           }
@@ -270,10 +272,12 @@ class SqlDeliveryConfigRepository(
         .set(DELIVERY_CONFIG.SERVICE_ACCOUNT, serviceAccount)
         .set(DELIVERY_CONFIG.METADATA, metadata)
         .set(DELIVERY_CONFIG.RAW_CONFIG, rawConfig)
+        .set(DELIVERY_CONFIG.UPDATED_AT, clock.instant())
         .onDuplicateKeyUpdate()
         .set(DELIVERY_CONFIG.SERVICE_ACCOUNT, serviceAccount)
         .set(DELIVERY_CONFIG.METADATA, metadata)
         .set(DELIVERY_CONFIG.RAW_CONFIG, rawConfig)
+        .set(DELIVERY_CONFIG.UPDATED_AT, clock.instant())
         .execute()
 
       artifacts.forEach { artifact ->

@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.front50.Front50Cache
 import com.netflix.spinnaker.keel.front50.model.Application
 import com.netflix.spinnaker.keel.front50.model.DataSources
 import com.netflix.spinnaker.keel.igor.DeliveryConfigImporter
+import com.netflix.spinnaker.keel.igor.ScmService
 import com.netflix.spinnaker.keel.notifications.DeliveryConfigImportFailed
 import com.netflix.spinnaker.keel.persistence.ApproveOldVersionTests.DummyImplicitConstraint
 import com.netflix.spinnaker.keel.notifications.DismissibleNotification
@@ -50,6 +51,7 @@ import com.netflix.spinnaker.keel.scm.PrDeclinedEvent
 import com.netflix.spinnaker.keel.scm.PrDeletedEvent
 import com.netflix.spinnaker.keel.scm.PrMergedEvent
 import com.netflix.spinnaker.keel.scm.PrOpenedEvent
+import com.netflix.spinnaker.keel.scm.ScmUtils
 import com.netflix.spinnaker.keel.scm.toTags
 import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
 import com.netflix.spinnaker.keel.test.DummyDependentResourceSpec
@@ -100,6 +102,7 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
     val spectator: Registry = mockk()
     val eventPublisher: ApplicationEventPublisher = mockk()
     val validator: DeliveryConfigValidator = mockk()
+    val scmUtils: ScmUtils = mockk()
     val subject = spyk(PreviewEnvironmentCodeEventListener(
       repository = repository,
       environmentDeletionRepository = environmentDeletionRepository,
@@ -111,7 +114,8 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       springEnv = springEnv,
       spectator = spectator,
       clock = clock,
-      eventPublisher = eventPublisher
+      eventPublisher = eventPublisher,
+      scmUtils = scmUtils
     ))
 
     val appConfig = Application(
@@ -280,6 +284,10 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       every {
         notificationRepository.dismissNotification(any<Class<DismissibleNotification>>(), any(), any())
       } returns true
+
+      every {
+        scmUtils.getCommitLink(any())
+      } returns "https://commit-link.org"
     }
   }
 
