@@ -39,6 +39,7 @@ import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
+import com.netflix.spinnaker.keel.scm.ScmUtils
 import com.netflix.spinnaker.keel.services.ResourceStatusService
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -61,6 +62,7 @@ class ApplicationFetcher(
   private val artifactVersionLinks: ArtifactVersionLinks,
   private val applicationFetcherSupport: ApplicationFetcherSupport,
   private val notificationRepository: DismissibleNotificationRepository,
+  private val scmUtils: ScmUtils,
 ) {
 
   @DgsData(parentType = DgsConstants.QUERY.TYPE_NAME, field = DgsConstants.QUERY.Application)
@@ -73,7 +75,18 @@ class ApplicationFetcher(
     }
     val context: ApplicationContext = DgsContext.getCustomContext(dfe)
     context.deliveryConfig = config
-    val environments: List<MdEnvironment> = config.environments.sortedWith { env1, env2 ->
+    return MdApplication(
+      id = config.application,
+      name = config.application,
+      account = config.serviceAccount,
+      environments = emptyList()
+    )
+  }
+
+  @DgsData(parentType = DgsConstants.MDAPPLICATION.TYPE_NAME, field = DgsConstants.MDAPPLICATION.Environments)
+  fun environments(dfe: DgsDataFetchingEnvironment): List<DataFetcherResult<MdEnvironment>> {
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
+    return config.environments.sortedWith { env1, env2 ->
       when {
         env1.dependsOn(env2) -> -1
         env2.dependsOn(env1) -> 1
@@ -91,34 +104,42 @@ class ApplicationFetcher(
           type = artifact.type
         )
       }
-
-      MdEnvironment(
-        id = env.name,
-        name = env.name,
-        isPreview = env.isPreview,
-        state = MdEnvironmentState(
-          id = "${env.name}-state",
-          artifacts = artifacts,
-          resources = env.resources.map { it.toDgs(config, env.name) }
-        ),
-        gitMetadata = if (env.isPreview) {
-          MdGitMetadata(
-            repoName = env.repoKey,
-            branch = env.branch,
-            pullRequest = MdPullRequest(env.pullRequestId)
-          )
-        } else {
-          null
-        }
-      )
+      DataFetcherResult.newResult<MdEnvironment>().data(
+        MdEnvironment(
+          id = env.name,
+          name = env.name,
+          isPreview = env.isPreview,
+          basedOn = env.basedOn,
+          state = MdEnvironmentState(
+            id = "${env.name}-state",
+            artifacts = artifacts,
+            resources = env.resources.map { it.toDgs(config, env.name) }
+          ),
+        )
+      ).localContext(env).build()
     }
+  }
 
-    return MdApplication(
-      id = config.application,
-      name = config.application,
-      account = config.serviceAccount,
-      environments = environments,
-    )
+  @DgsData(parentType = DgsConstants.MDENVIRONMENT.TYPE_NAME, field = DgsConstants.MDENVIRONMENT.GitMetadata)
+  fun environmentGitMetadata(dfe: DgsDataFetchingEnvironment): MdGitMetadata? {
+    val env: Environment = dfe.getLocalContext()
+    return if (env.isPreview) {
+      MdGitMetadata(
+        repoName = env.repoKey,
+        branch = env.branch,
+        pullRequest = MdPullRequest(
+          number = env.pullRequestId,
+          link = scmUtils.getPullRequestLink(
+            env.repoType,
+            env.repoKey,
+            env.repoKey,
+            env.pullRequestId
+          )
+        )
+      )
+    } else {
+      null
+    }
   }
 
   @DgsData(parentType = DgsConstants.MDAPPLICATION.TYPE_NAME, field = DgsConstants.MDAPPLICATION.IsPaused)

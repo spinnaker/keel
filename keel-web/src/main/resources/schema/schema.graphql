@@ -33,12 +33,13 @@ type MdConfig {
 }
 
 type MdEnvironment {
-  id: String!
+  id: ID!
   name: String!
   state: MdEnvironmentState!
   isPreview: Boolean
   isDeleting: Boolean
   gitMetadata: MdGitMetadata
+  basedOn: String
 }
 
 type MdEnvironmentState {

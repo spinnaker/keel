@@ -49,6 +49,18 @@ class ScmUtils(
     }
   }
 
+  fun getPullRequestLink(repoType: String?, repoProjectKey: String?, repoSlug: String?, pullRequestId: String?): String? {
+    if (repoType == null || repoProjectKey == null || repoSlug == null || pullRequestId == null) {
+      return null
+    }
+    val scmBaseUrl = getScmBaseLink(repoType) ?: return null
+    return when (repoType) {
+      "stash" -> "$scmBaseUrl/projects/$repoProjectKey/repos/$repoSlug/pull-requests/$pullRequestId"
+      "github" -> "$scmBaseUrl/$repoProjectKey/$repoSlug/pull/$pullRequestId"
+      else -> null
+    }
+  }
+
   fun getScmBaseLink(repoType: String): String? = runBlocking {
     cache.get(repoType).await()
   }
