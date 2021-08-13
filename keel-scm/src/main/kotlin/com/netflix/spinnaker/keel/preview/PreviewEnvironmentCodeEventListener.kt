@@ -338,6 +338,7 @@ class PreviewEnvironmentCodeEventListener(
     val specArtifactReference = (spec as? ArtifactReferenceProvider)
       ?.artifactReference
       ?: return this
+        .also { log.debug("Artifact reference in original resource $id is null. Not updating with artifact from branch matching ${previewEnvSpec.branch}") }
 
     val originalArtifact = deliveryConfig.matchingArtifactByReference(specArtifactReference)
       ?: error("Artifact with reference '${specArtifactReference}' not found in delivery config for ${deliveryConfig.application}")
