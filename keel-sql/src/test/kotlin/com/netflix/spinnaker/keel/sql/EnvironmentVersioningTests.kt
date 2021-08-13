@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
@@ -80,7 +81,8 @@ class EnvironmentVersioningTests {
     emptyList(),
     objectMapper,
     sqlRetry,
-    mockk(relaxed = true)
+    mockk(relaxed = true),
+    NoopRegistry()
   )
 
   private val verificationRepository = SqlActionRepository(

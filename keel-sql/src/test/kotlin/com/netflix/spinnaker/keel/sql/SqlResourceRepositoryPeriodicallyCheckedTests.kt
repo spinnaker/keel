@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -41,7 +42,7 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
 
   override val factory: (clock: Clock) -> SqlResourceRepository = { clock ->
-    SqlResourceRepository(jooq, clock, DummyResourceSpecIdentifier, emptyList(), configuredObjectMapper(), sqlRetry, publisher = mockk(relaxed = true))
+    SqlResourceRepository(jooq, clock, DummyResourceSpecIdentifier, emptyList(), configuredObjectMapper(), sqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
   }
 
   val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, systemUTC(), DummyResourceSpecIdentifier, configuredObjectMapper(), sqlRetry, publisher = mockk(relaxed = true))

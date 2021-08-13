@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.persistence.DummyResourceSpecIdentifier
 import com.netflix.spinnaker.keel.persistence.ResourceRepositoryTests
@@ -32,7 +33,8 @@ internal class SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResourceR
       emptyList(),
       configuredObjectMapper(),
       sqlRetry,
-      publisher
+      publisher,
+      NoopRegistry()
     )
   }
 

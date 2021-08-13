@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.persistence.ApproveOldVersionTests
 import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
@@ -21,7 +22,7 @@ class SqlApproveOldVersionTests : ApproveOldVersionTests<CombinedRepository>() {
 
   override fun createKeelRepository(resourceSpecIdentifier: ResourceSpecIdentifier, mapper: ObjectMapper): CombinedRepository {
     val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, clock, resourceSpecIdentifier, mapper, sqlRetry, defaultArtifactSuppliers(), publisher = mockk(relaxed = true))
-    val resourceRepository = SqlResourceRepository(jooq, clock, resourceSpecIdentifier, emptyList(), mapper, sqlRetry, publisher = mockk(relaxed = true))
+    val resourceRepository = SqlResourceRepository(jooq, clock, resourceSpecIdentifier, emptyList(), mapper, sqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
     val artifactRepository = SqlArtifactRepository(jooq, clock, mapper, sqlRetry, defaultArtifactSuppliers(), publisher = mockk(relaxed = true))
     val verificationRepository = SqlActionRepository(jooq, clock, resourceSpecIdentifier, mapper, sqlRetry, environment = mockk())
     return CombinedRepository(

@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.jsontype.NamedType
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.core.api.MANUAL_JUDGEMENT_CONSTRAINT_TYPE
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.persistence.CombinedRepositoryTests
@@ -36,7 +37,7 @@ internal object SqlCombinedRepositoryTests :
     )
 
   override fun createResourceRepository(resourceSpecIdentifier: ResourceSpecIdentifier): SqlResourceRepository =
-    SqlResourceRepository(jooq, clock, resourceSpecIdentifier, emptyList(), objectMapper, sqlRetry, publisher = mockk(relaxed = true))
+    SqlResourceRepository(jooq, clock, resourceSpecIdentifier, emptyList(), objectMapper, sqlRetry, publisher = mockk(relaxed = true), spectator=NoopRegistry())
 
   override fun createArtifactRepository(): SqlArtifactRepository =
     SqlArtifactRepository(jooq, clock, objectMapper, sqlRetry, defaultArtifactSuppliers(), publisher = mockk(relaxed = true))

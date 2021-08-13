@@ -72,7 +72,8 @@ class SqlConfiguration
     resourceSpecIdentifier: ResourceSpecIdentifier,
     specMigrators: List<SpecMigrator<*, *>>,
     objectMapper: ObjectMapper,
-    publisher: ApplicationEventPublisher
+    publisher: ApplicationEventPublisher,
+    registry: Registry
   ) =
     SqlResourceRepository(
       jooq,
@@ -81,7 +82,8 @@ class SqlConfiguration
       specMigrators,
       objectMapper,
       SqlRetry(sqlRetryProperties),
-      publisher
+      publisher,
+      registry
     )
 
   @Bean

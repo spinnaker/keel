@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
@@ -56,7 +57,8 @@ class MigratorErrorTests {
     specMigrators = listOf(bedShittingSpecMigrator),
     objectMapper = objectMapper,
     sqlRetry = sqlRetry,
-    publisher = mockk(relaxed = true)
+    publisher = mockk(relaxed = true),
+    spectator = NoopRegistry()
   )
 
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(

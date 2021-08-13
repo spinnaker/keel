@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.persistence.DummyResourceSpecIdentifier
 import com.netflix.spinnaker.keel.persistence.UnhealthyRepositoryTests
@@ -21,7 +22,8 @@ internal object SqlUnhealthyRepositoryTests : UnhealthyRepositoryTests<SqlUnheal
     emptyList(),
     configuredObjectMapper(),
     sqlRetry,
-    publisher = mockk(relaxed = true)
+    publisher = mockk(relaxed = true),
+    spectator = NoopRegistry()
   )
 
   override fun factory(clock: Clock): SqlUnhealthyRepository =

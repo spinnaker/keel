@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Resource
@@ -121,7 +122,8 @@ internal class SqlDeliveryConfigRepositoryPeriodicallyCheckedTests :
         specMigrators = listOf(migrator),
         objectMapper = objectMapper,
         sqlRetry = sqlRetry,
-        publisher = mockk(relaxed = true)
+        publisher = mockk(relaxed = true),
+        spectator = NoopRegistry()
       )
 
       val factory = { clock: Clock ->

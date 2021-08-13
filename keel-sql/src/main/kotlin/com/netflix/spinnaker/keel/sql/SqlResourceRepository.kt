@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -53,10 +54,17 @@ open class SqlResourceRepository(
   private val specMigrators: List<SpecMigrator<*, *>>,
   private val objectMapper: ObjectMapper,
   private val sqlRetry: SqlRetry,
-  private val publisher: ApplicationEventPublisher
+  private val publisher: ApplicationEventPublisher,
+  private val spectator: Registry
 ) : ResourceRepository {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
+  /**
+   * Insert into RESOURCE_VERSION table is frequently deadlocking.
+   * Creating a metric to get insight into affected apps
+   */
+  private val resourceVersionInsertId = spectator.createId("resource.version.insert")
 
   private val resourceFactory = ResourceFactory(objectMapper, resourceSpecIdentifier, specMigrators)
 
@@ -162,12 +170,24 @@ open class SqlResourceRepository(
         }
     }
 
-    jooq.insertInto(RESOURCE_VERSION)
-      .set(RESOURCE_VERSION.RESOURCE_UID, uid)
-      .set(RESOURCE_VERSION.VERSION, version + 1)
-      .set(RESOURCE_VERSION.SPEC, objectMapper.writeValueAsString(resource.spec))
-      .set(RESOURCE_VERSION.CREATED_AT, clock.instant())
-      .execute()
+    try {
+      jooq.insertInto(RESOURCE_VERSION)
+        .set(RESOURCE_VERSION.RESOURCE_UID, uid)
+        .set(RESOURCE_VERSION.VERSION, version + 1)
+        .set(RESOURCE_VERSION.SPEC, objectMapper.writeValueAsString(resource.spec))
+        .set(RESOURCE_VERSION.CREATED_AT, clock.instant())
+        .execute()
+    } catch(e: Exception) {
+      spectator.counter(resourceVersionInsertId.withTags(
+        "success", "false",
+        "application", resource.application, // Capture the app on fail cases to help repro
+        "kind", resource.kind.toString()
+      ))
+        .increment()
+      throw e
+    }
+
+    spectator.counter(resourceVersionInsertId.withTag("success", "true")).increment()
 
     jooq.insertInto(RESOURCE_LAST_CHECKED)
       .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)

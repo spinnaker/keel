@@ -1,5 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
+import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
@@ -93,7 +94,8 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
       listOf(v1to2Migrator, v2to3Migrator),
       configuredObjectMapper(),
       sqlRetry,
-      publisher = mockk(relaxed = true)
+      publisher = mockk(relaxed = true),
+      spectator = NoopRegistry()
     )
 
     val ancientResource = resource(v1.kind, SpecV1("whatever"))
