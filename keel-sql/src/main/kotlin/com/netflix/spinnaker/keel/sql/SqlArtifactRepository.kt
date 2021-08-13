@@ -637,12 +637,25 @@ class SqlArtifactRepository(
     val artifactUid = artifact.uidString
     val artifactVersion = getArtifactVersion(artifact, version)
       ?: throw NoSuchArtifactVersionException(artifact, version)
-    val deployedAt = clock.instant()
 
     sqlRetry.withRetry(WRITE) {
       jooq.transaction { config ->
         val txn = DSL.using(config)
         log.debug("markAsSuccessfullyDeployedTo: start transaction. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+
+        //todo eb: remove once migration to new current table is complete
+        // this is to preserve the deplyedAt time
+        val previouslyDeployedTime: Instant? = txn.select(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+          .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+          .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(environmentUid))
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS.eq(CURRENT))
+          .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+          .firstOrNull()
+
+        val deployedAt = previouslyDeployedTime ?: clock.instant()
+
         val currentUpdates = txn
           .insertInto(ENVIRONMENT_ARTIFACT_VERSIONS)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, environmentUid)
