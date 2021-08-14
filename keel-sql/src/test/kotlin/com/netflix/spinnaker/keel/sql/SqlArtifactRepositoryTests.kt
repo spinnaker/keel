@@ -1,14 +1,11 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
+import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
 import com.netflix.spinnaker.keel.api.artifacts.BranchFilter
-import com.netflix.spinnaker.keel.api.artifacts.BuildMetadata
-import com.netflix.spinnaker.keel.api.artifacts.Commit
 import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
-import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
-import com.netflix.spinnaker.keel.api.artifacts.Repo
 import com.netflix.spinnaker.keel.artifacts.DockerArtifact
 import com.netflix.spinnaker.keel.persistence.ArtifactRepositoryTests
 import com.netflix.spinnaker.keel.persistence.DummyResourceSpecIdentifier
@@ -56,6 +53,14 @@ class SqlArtifactRepositoryTests : ArtifactRepositoryTests<SqlArtifactRepository
     deliveryConfigRepository.store(manifest)
   }
 
+  override fun SqlArtifactRepository.saveBadData(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    environment: Environment,
+    version: String
+  ) {
+    saveCorruptedData(deliveryConfig, artifact, version, environment.name)
+  }
 
   @AfterEach
   fun flush() {

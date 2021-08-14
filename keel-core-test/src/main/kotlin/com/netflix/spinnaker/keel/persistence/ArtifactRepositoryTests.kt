@@ -29,6 +29,7 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.PromotionStatus
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.SKIPPED
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.VETOED
 import com.netflix.spinnaker.time.MutableClock
@@ -48,6 +49,7 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isNotEmpty
+import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import java.time.Clock
@@ -61,6 +63,8 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
   val clock = MutableClock()
 
   open fun T.flush() {}
+
+  open fun T.saveBadData(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, environment: Environment, version: String) {}
 
   data class Fixture<T : ArtifactRepository>(
     val subject: T
@@ -806,13 +810,13 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
       }
 
       test("get artifact versions for deploying status") {
-        expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT)?.gitMetadata)
+        expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, CURRENT)?.gitMetadata)
           .isEqualTo(artifactMetadata.gitMetadata)
       }
 
       test("get a single results (and newest) data per status") {
         subject.markAsSuccessfullyDeployedTo(manifest, versionedReleaseDebian, version2, testEnvironment.name)
-        expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, PromotionStatus.CURRENT)?.gitMetadata)
+        expectThat(subject.getArtifactVersionByPromotionStatus(manifest, testEnvironment.name, versionedReleaseDebian, CURRENT)?.gitMetadata)
           .get { this?.commit }.isEqualTo("12345")
       }
 
@@ -854,6 +858,35 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version2, null, null))
         expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
           .isEqualTo(version2)
+      }
+    }
+
+    context("bad data migration") {
+      before {
+        persist()
+        subject.saveBadData(manifest, versionedReleaseDebian, testEnvironment, version1)
+      }
+
+      test("data is indeed bad") {
+        val current = subject.getCurrentlyDeployedArtifactVersion(manifest, versionedReleaseDebian, testEnvironment.name)
+        val deployedAt = current?.metadata?.get("deployedAt") as? Instant
+        val currentOld = subject.getAllVersionsForEnvironment(versionedReleaseDebian, manifest, testEnvironment.name)
+        val deployedAtOld = currentOld.find { it.status == CURRENT }?.deployedAt
+        expectThat(deployedAt).isNotNull()
+        expectThat(deployedAtOld).isNotNull()
+        expectThat(deployedAt!!.isBefore(deployedAtOld))
+      }
+
+      test("migration fixes bad data"){
+        subject.fixCorruptedDeployedAtData(manifest, versionedReleaseDebian, version1, testEnvironment.name)
+
+        val current = subject.getCurrentlyDeployedArtifactVersion(manifest, versionedReleaseDebian, testEnvironment.name)
+        val deployedAt = current?.metadata?.get("deployedAt") as? Instant
+        val currentOld = subject.getAllVersionsForEnvironment(versionedReleaseDebian, manifest, testEnvironment.name)
+        val deployedAtOld = currentOld.find { it.status == CURRENT }?.deployedAt
+        expectThat(deployedAt).isNotNull()
+        expectThat(deployedAtOld).isNotNull()
+        expectThat(deployedAt).isEqualTo(deployedAtOld)
       }
     }
   }

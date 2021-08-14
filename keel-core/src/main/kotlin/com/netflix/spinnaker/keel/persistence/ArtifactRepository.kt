@@ -170,6 +170,16 @@ interface ArtifactRepository : PeriodicallyCheckedRepository<DeliveryArtifact> {
   )
 
   /**
+   * In the process of moving to a separate current table, the existing deployedAt data in the
+   * ENVIRONMENT_ARTIFACT_VERSIONS was corrupted with the current time.
+   *
+   * This function repairs that data if it needs to, and is a noop otherwise.
+   *
+   * todo eb: remove this once it has done its job
+   */
+  fun fixCorruptedDeployedAtData(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
+
+  /**
    * @return the currently deployed artifact version for an artifact in an environment
    */
   fun getCurrentlyDeployedArtifactVersion(

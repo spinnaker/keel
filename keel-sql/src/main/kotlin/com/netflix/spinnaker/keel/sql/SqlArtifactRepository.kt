@@ -664,7 +664,7 @@ class SqlArtifactRepository(
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, deployedAt)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT)
           .onDuplicateKeyUpdate()
-          .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, clock.instant())
+          .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, deployedAt)
           .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT)
           .execute()
 
@@ -772,6 +772,94 @@ class SqlArtifactRepository(
     }
 
     log.debug("markAsSuccessfullyDeployedTo complete. name: ${artifact.name}. version: $version. env: $targetEnvironment")
+  }
+
+  override fun fixCorruptedDeployedAtData(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    version: String,
+    targetEnvironment: String
+  ) {
+    // This function fixes corrupt data in the case where the DEPLOYED_AT time in ENVIRONMENT_ARTIFACT_VERSIONS
+    //   is falsely newer than the DEPLOYED_AT time in CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.
+    // The time in CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS is correct, and I accidentally overwrote that correct time
+    // in the CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS table with the instant the transaction ran.. :(
+    sqlRetry.withRetry(WRITE) {
+      jooq
+        .select(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+        .from(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS)
+        .where(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.environmentNamed(targetEnvironment).uid))
+        .and(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+        .and(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+        .orderBy(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT.desc())
+        .limit(1) // take the latest one row, if one exists,
+        // because that was the one that was CURRENT most recently
+        // (there shouldn't be more than one here unless there was a basami bump that caused a redeploy)
+        .fetch(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+        .firstOrNull() // can exit if we don't have a current record in the new table
+        ?.let { correctDeployedAtTime ->
+          jooq.select(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+            .from(ENVIRONMENT_ARTIFACT_VERSIONS)
+            .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.environmentNamed(targetEnvironment).uid))
+            .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+            .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+            .fetch(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT)
+            .firstOrNull() // can exit if we don't have a record in the old table
+            ?.let { incorrectDeployedAtTime ->
+              when {
+                correctDeployedAtTime.isBefore(incorrectDeployedAtTime) -> {
+                  // I accidentally set the deploy times to 8/13/2020, so we want to take cases where the correct time is
+                  //  earlier than the incorrect time and restore the record to teh correct time.
+                  jooq.update(ENVIRONMENT_ARTIFACT_VERSIONS)
+                    .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, correctDeployedAtTime)
+                    .where(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(deliveryConfig.environmentNamed(targetEnvironment).uid))
+                    .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(artifact.uid))
+                    .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(version))
+                    .execute()
+                  // note: I'm not selecting on CURRENT status here because I want to update this time back to the
+                  //  right time even if the version has already been replaced
+                }
+                else -> return@withRetry
+              }
+            }
+        }
+    }
+  }
+
+  /**
+   * FOR TESTING
+   * todo eb: remove
+   */
+  fun saveCorruptedData(
+    deliveryConfig: DeliveryConfig,
+    artifact: DeliveryArtifact,
+    version: String,
+    targetEnvironment: String
+  ) {
+    sqlRetry.withRetry(WRITE) {
+      val deployedAt = clock.instant().minusSeconds(30)
+      jooq
+        .insertInto(ENVIRONMENT_ARTIFACT_VERSIONS)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, deliveryConfig.environmentNamed(targetEnvironment).uid)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, clock.instant()) // save current time here
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT)
+        .onDuplicateKeyUpdate()
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, clock.instant()) // save current time here
+        .set(ENVIRONMENT_ARTIFACT_VERSIONS.PROMOTION_STATUS, CURRENT)
+        .execute()
+
+      jooq
+        .insertInto(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS)
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.UID, randomUID().toString())
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID, deliveryConfig.environmentNamed(targetEnvironment).uid)
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID, artifact.uid)
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION, version)
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.DEPLOYED_AT, deployedAt) // save an older time here
+        .set(CURRENT_ENVIRONMENT_ARTIFACT_VERSIONS.JSON, "{}")
+        .execute()
+    }
   }
 
   override fun vetoedEnvironmentVersions(deliveryConfig: DeliveryConfig): List<EnvironmentArtifactVetoes> {
