@@ -185,8 +185,6 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
 
-  fun fixCorruptedDeployedAtData(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String)
-
   fun getEnvironmentSummaries(deliveryConfig: DeliveryConfig): List<EnvironmentSummary>
 
   fun getArtifactVersionsByStatus(deliveryConfig: DeliveryConfig, environmentName: String, statuses: List<PromotionStatus>): List<PublishedArtifact>

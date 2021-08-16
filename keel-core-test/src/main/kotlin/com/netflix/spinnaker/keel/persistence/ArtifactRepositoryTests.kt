@@ -64,8 +64,6 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
 
   open fun T.flush() {}
 
-  open fun T.saveBadData(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, environment: Environment, version: String) {}
-
   data class Fixture<T : ArtifactRepository>(
     val subject: T
   ) {
@@ -858,35 +856,6 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
         subject.pinEnvironment(manifest, EnvironmentArtifactPin(testEnvironment.name, versionedReleaseDebian.reference, version2, null, null))
         expectThat(subject.getPinnedVersion(manifest, testEnvironment.name, versionedReleaseDebian.reference))
           .isEqualTo(version2)
-      }
-    }
-
-    context("bad data migration") {
-      before {
-        persist()
-        subject.saveBadData(manifest, versionedReleaseDebian, testEnvironment, version1)
-      }
-
-      test("data is indeed bad") {
-        val current = subject.getCurrentlyDeployedArtifactVersion(manifest, versionedReleaseDebian, testEnvironment.name)
-        val deployedAt = current?.metadata?.get("deployedAt") as? Instant
-        val currentOld = subject.getAllVersionsForEnvironment(versionedReleaseDebian, manifest, testEnvironment.name)
-        val deployedAtOld = currentOld.find { it.status == CURRENT }?.deployedAt
-        expectThat(deployedAt).isNotNull()
-        expectThat(deployedAtOld).isNotNull()
-        expectThat(deployedAt!!.isBefore(deployedAtOld))
-      }
-
-      test("migration fixes bad data"){
-        subject.fixCorruptedDeployedAtData(manifest, versionedReleaseDebian, version1, testEnvironment.name)
-
-        val current = subject.getCurrentlyDeployedArtifactVersion(manifest, versionedReleaseDebian, testEnvironment.name)
-        val deployedAt = current?.metadata?.get("deployedAt") as? Instant
-        val currentOld = subject.getAllVersionsForEnvironment(versionedReleaseDebian, manifest, testEnvironment.name)
-        val deployedAtOld = currentOld.find { it.status == CURRENT }?.deployedAt
-        expectThat(deployedAt).isNotNull()
-        expectThat(deployedAtOld).isNotNull()
-        expectThat(deployedAt).isEqualTo(deployedAtOld)
       }
     }
   }

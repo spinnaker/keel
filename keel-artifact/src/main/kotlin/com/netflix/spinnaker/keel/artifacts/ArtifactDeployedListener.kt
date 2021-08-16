@@ -61,15 +61,6 @@ class ArtifactDeployedListener(
               targetEnvironment = env
             )
           )
-        } else { // todo eb: remove this
-          // fix corrupted data caused by the new current version table
-          log.info("Fixing corrupt data for app {} artifact {} ({}) in env {}", deliveryConfig.application, artifact.reference, event.artifactVersion, env.name)
-          repository.fixCorruptedDeployedAtData(
-            deliveryConfig = deliveryConfig,
-            artifact = artifact,
-            version = event.artifactVersion,
-            targetEnvironment = env.name
-          )
         }
       }
     }

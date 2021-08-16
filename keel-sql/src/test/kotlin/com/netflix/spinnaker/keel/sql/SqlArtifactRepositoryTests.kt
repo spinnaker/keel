@@ -53,15 +53,6 @@ class SqlArtifactRepositoryTests : ArtifactRepositoryTests<SqlArtifactRepository
     deliveryConfigRepository.store(manifest)
   }
 
-  override fun SqlArtifactRepository.saveBadData(
-    deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
-    environment: Environment,
-    version: String
-  ) {
-    saveCorruptedData(deliveryConfig, artifact, version, environment.name)
-  }
-
   @AfterEach
   fun flush() {
     cleanupDb(jooq)

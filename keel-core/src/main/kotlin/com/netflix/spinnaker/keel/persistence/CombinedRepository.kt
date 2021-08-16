@@ -449,14 +449,6 @@ class CombinedRepository(
   override fun markAsSuccessfullyDeployedTo(deliveryConfig: DeliveryConfig, artifact: DeliveryArtifact, version: String, targetEnvironment: String) =
     artifactRepository.markAsSuccessfullyDeployedTo(deliveryConfig, artifact, version, targetEnvironment)
 
-  override fun fixCorruptedDeployedAtData(
-    deliveryConfig: DeliveryConfig,
-    artifact: DeliveryArtifact,
-    version: String,
-    targetEnvironment: String
-  ) =
-    artifactRepository.fixCorruptedDeployedAtData(deliveryConfig, artifact, version, targetEnvironment)
-
   override fun getArtifactVersionsByStatus(
     deliveryConfig: DeliveryConfig,
     environmentName: String,
