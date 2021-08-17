@@ -45,7 +45,11 @@ class ArtifactInEnvironmentDataLoader(
           .sortedByDescending { it.publishedArtifact.createdAt }
           .map { it.toDgs() }
           .filter {
-            (requestedStatuses.isNullOrEmpty() || requestedStatuses.contains(it.status)) &&
+            (
+              requestedStatuses.isNullOrEmpty()
+                || requestedStatuses.contains(it.status)
+                || (requestedStatuses.contains(MdArtifactStatusInEnvironment.CURRENT) && it.isCurrent == true)
+              ) &&
               (requestedVersionIds.isNullOrEmpty() || requestedVersionIds.contains(it.version))
           }.let {
             if (requestedLimit != null) {
