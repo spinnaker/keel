@@ -49,6 +49,10 @@ class ScmUtils(
     }
   }
 
+  fun getPullRequestLink(event: PrEvent): String? {
+    return getPullRequestLink(event.repoType, event.projectKey, event.repoSlug, event.pullRequestId)
+  }
+
   fun getPullRequestLink(repoType: String?, repoProjectKey: String?, repoSlug: String?, pullRequestId: String?): String? {
     if (repoType == null || repoProjectKey == null || repoSlug == null || pullRequestId == null) {
       return null

@@ -59,7 +59,11 @@ abstract class PrEvent(
   open val pullRequestBranch: String,
   override val authorName: String? = null,
   override val authorEmail: String? = null
-) : CodeEvent(repoKey, targetBranch, pullRequestId, authorName, authorEmail)
+) : CodeEvent(repoKey, targetBranch, pullRequestId, authorName, authorEmail) {
+
+  val String.headOfBranch: String
+    get() = if (this.startsWith("refs/heads/")) this else "refs/heads/$this"
+}
 
 /**
  * Event that signals the creation of a PR.
@@ -73,6 +77,21 @@ data class PrOpenedEvent(
   override val authorEmail: String? = null
 ) : PrEvent(repoKey, targetBranch, pullRequestId, pullRequestBranch, authorName, authorEmail) {
   override val type: String = "pr.created"
+  init { validate() }
+}
+
+/**
+ * Event that signals an update of a PR.
+ */
+data class PrUpdatedEvent(
+  override val repoKey: String,
+  override val targetBranch: String,
+  override val pullRequestId: String,
+  override val pullRequestBranch: String,
+  override val authorName: String? = null,
+  override val authorEmail: String? = null
+) : PrEvent(repoKey, targetBranch, pullRequestId, pullRequestBranch, authorName, authorEmail) {
+  override val type: String = "pr.updated"
   init { validate() }
 }
 
@@ -151,6 +170,14 @@ fun PublishedArtifact.toCodeEvent(): CodeEvent? {
       authorEmail = authorEmail
     )
     "pr_opened" -> PrOpenedEvent(
+      repoKey = repoKey,
+      targetBranch = targetBranch,
+      pullRequestId = pullRequestId,
+      pullRequestBranch = pullRequestBranch,
+      authorName = authorName,
+      authorEmail = authorEmail
+    )
+    "pr_updated" -> PrUpdatedEvent(
       repoKey = repoKey,
       targetBranch = targetBranch,
       pullRequestId = pullRequestId,
