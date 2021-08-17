@@ -22,6 +22,7 @@ import com.netflix.spinnaker.keel.persistence.DependentAttachFilter.ATTACH_PREVI
 import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
 import com.netflix.spinnaker.keel.persistence.EnvironmentDeletionRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
+import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.scm.CodeEvent
 import com.netflix.spinnaker.keel.scm.CommitCreatedEvent
 import com.netflix.spinnaker.keel.scm.DELIVERY_CONFIG_RETRIEVAL_ERROR
@@ -67,6 +68,7 @@ class PreviewEnvironmentCodeEventListener(
   private val clock: Clock,
   private val eventPublisher: ApplicationEventPublisher,
   private val scmUtils: ScmUtils,
+  private val resourceFactory: ResourceFactory
 ) {
   companion object {
     private val log by lazy { LoggerFactory.getLogger(PreviewEnvironmentCodeEventListener::class.java) }
@@ -138,11 +140,11 @@ class PreviewEnvironmentCodeEventListener(
       return
     }
 
-    log.debug("Processing pr event: $event")
+    log.debug("Processing PR event: $event")
     val startTime = clock.instant()
 
     if (event.pullRequestId == null || event.pullRequestId == "-1") {
-      log.debug("Ignoring commit event as it's not associated with a PR: $event")
+      log.debug("Ignoring PR event as it's not associated with a PR: $event")
       return
     }
 
@@ -233,13 +235,7 @@ class PreviewEnvironmentCodeEventListener(
         verifyWith = previewEnvSpec.verifyWith,
         notifications = previewEnvSpec.notifications,
         resources = baseEnv.resources.mapNotNull { res ->
-          (res as? Resource<Monikered>)
-            ?.toPreviewResource(deliveryConfig, previewEnvSpec, prEvent.pullRequestBranch)
-            .also {
-              if (it == null) {
-                log.debug("Ignoring non-monikered resource ${res.id} since it might conflict with the base environment")
-              }
-            }
+          res.toPreviewResource(deliveryConfig, previewEnvSpec, prEvent.pullRequestBranch)
         }.toSet()
       ).apply {
         addMetadata(
@@ -272,15 +268,24 @@ class PreviewEnvironmentCodeEventListener(
    * its artifact reference (if applicable) updated to use the artifact matching the [PreviewEnvironmentSpec]
    * branch filter, if available.
    */
-  private fun <T: Monikered> Resource<T>.toPreviewResource(
+  private fun Resource<*>.toPreviewResource(
     deliveryConfig: DeliveryConfig,
     previewEnvSpec: PreviewEnvironmentSpec,
     branch: String
-  ): Resource<T>? {
-    log.debug("Copying resource ${this.id} to preview resource")
+  ): Resource<*>? {
+    // start by migrating the resource spec so we can rely on the latest implementation
+    var previewResource = resourceFactory.migrate(this)
 
-    // start by adding the branch detail to the moniker/name/id
-    var previewResource = withBranchDetail(branch)
+    if (previewResource.spec !is Monikered) {
+      log.debug("Ignoring non-monikered resource ${this.id} since it might conflict with the base environment")
+      return null
+    }
+
+    log.debug("Copying resource ${this.id} to preview resource")
+    previewResource = previewResource as Resource<Monikered>
+
+    // add the branch detail to the moniker/name/id
+    previewResource = previewResource.withBranchDetail(branch)
 
     // update artifact reference if applicable to match the branch filter of the preview environment
     if (spec is ArtifactReferenceProvider) {

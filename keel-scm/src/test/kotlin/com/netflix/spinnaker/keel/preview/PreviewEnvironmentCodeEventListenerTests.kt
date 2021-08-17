@@ -42,6 +42,8 @@ import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Co
 import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Companion.PREVIEW_ENVIRONMENT_MARK_FOR_DELETION_SUCCESS
 import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Companion.PREVIEW_ENVIRONMENT_UPSERT_ERROR
 import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Companion.PREVIEW_ENVIRONMENT_UPSERT_SUCCESS
+import com.netflix.spinnaker.keel.resources.ResourceFactory
+import com.netflix.spinnaker.keel.scm.CommitCreatedEvent
 import com.netflix.spinnaker.keel.scm.DELIVERY_CONFIG_RETRIEVAL_ERROR
 import com.netflix.spinnaker.keel.scm.DELIVERY_CONFIG_RETRIEVAL_SUCCESS
 import com.netflix.spinnaker.keel.scm.PrDeclinedEvent
@@ -101,6 +103,7 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
     val eventPublisher: ApplicationEventPublisher = mockk()
     val validator: DeliveryConfigValidator = mockk()
     val scmUtils: ScmUtils = mockk()
+    val resourceFactory: ResourceFactory = mockk()
     val subject = spyk(
       PreviewEnvironmentCodeEventListener(
         repository = repository,
@@ -114,7 +117,8 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         spectator = spectator,
         clock = clock,
         eventPublisher = eventPublisher,
-        scmUtils = scmUtils
+        scmUtils = scmUtils,
+        resourceFactory = resourceFactory
       )
     )
 
@@ -211,7 +215,6 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         springEnv.getProperty("keel.previewEnvironments.enabled", Boolean::class.java, true)
       } returns true
 
-
       every {
         spectator.counter(any(), any<Iterable<Tag>>())
       } returns mockk {
@@ -280,6 +283,12 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       every {
         scmUtils.getPullRequestLink(any())
       } returns "https://commit-link.org"
+
+      every {
+        resourceFactory.migrate(any())
+      } answers {
+        arg(0)
+      }
     }
   }
 
@@ -404,6 +413,13 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             expectThat(previewEnv.captured.metadata).containsKeys("basedOn", "repoKey", "branch", "pullRequestId")
           }
 
+          test("resources are migrated to their latest version before processing") {
+            val baseEnv = deliveryConfig.environments.first()
+            verify(exactly = baseEnv.resources.size) {
+              resourceFactory.migrate(any())
+            }
+          }
+
           test("the name of monikered resources is generated correctly") {
             val baseEnv = deliveryConfig.environments.first()
             val baseResource = baseEnv.resources.first() as Resource<Monikered>
@@ -475,7 +491,6 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         }
       }
 
-
       context("a PR event NOT matching a preview environment spec is received") {
         before {
           val nonMatchingPrEvent = prOpenedEvent.copy(pullRequestBranch = "not-a-match")
@@ -543,7 +558,7 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       }
     }
 
-    context("a pr event matching a preview spec branch filter but from a different app's repo") {
+    context("a PR event matching a preview spec branch filter but from a different app's repo") {
       before {
         setupMocks()
 

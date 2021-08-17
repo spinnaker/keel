@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind
+import com.netflix.spinnaker.keel.api.ResourceSpec
 import de.huxhorn.sulky.ulid.ULID
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -16,19 +18,15 @@ class ResourceFactory(
   private val resourceSpecIdentifier: ResourceSpecIdentifier,
   private val specMigrators: List<SpecMigrator<*, *>>
 ) {
+  private val log by lazy { LoggerFactory.getLogger(javaClass) }
+
   /**
    * @return a [Resource] of the specified [kind] with the given metadata and spec, potentially modified
    * by running any applicable spec migrations (i.e. the resource may have a different spec version than
    * the one defined in the spec JSON).
    */
   fun create(kind: String, metadataJson: String, specJson: String) =
-    createRaw(kind, metadataJson, specJson).let { resource ->
-      specMigrators
-        .migrate(resource.kind, resource.spec)
-        .let { (endKind, endSpec) ->
-          Resource(endKind, resource.metadata, endSpec)
-        }
-    }
+    createRaw(kind, metadataJson, specJson).migrateMe()
 
   /**
    * @return a [Resource] of the specified [kind] with the given metadata and spec, without running
@@ -42,6 +40,22 @@ class ResourceFactory(
         objectMapper.readValue(specJson, resourceSpecIdentifier.identify(it))
       )
     }
+
+  /**
+   * @return the [Resource] after running any applicable spec migrations (i.e. the returned resource may
+   * have a different [ResourceSpec] than the one originally in the resource).
+   */
+  fun migrate(resource: Resource<*>): Resource<*> {
+    val migrated = specMigrators
+      .migrate(resource.kind, resource.spec)
+      .let { (endKind, endSpec) ->
+        Resource(endKind, resource.metadata, endSpec)
+      }
+    log.debug("Migrated resource of kind ${resource.kind} to ${migrated.kind}")
+    return migrated
+  }
+
+  private fun Resource<*>.migrateMe() = migrate(this)
 
   private fun Map<String, Any?>.asResourceMetadata(): Map<String, Any?> =
     mapValues { if (it.key == "uid") ULID.parseULID(it.value.toString()) else it.value }
