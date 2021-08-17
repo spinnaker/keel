@@ -6,6 +6,7 @@ import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.persistence.EnvironmentDeletionRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ACTIVE_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_DELETION
+import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -23,19 +24,17 @@ import java.time.Duration
 class SqlEnvironmentDeletionRepository(
   jooq: DSLContext,
   clock: Clock,
-  resourceSpecIdentifier: ResourceSpecIdentifier,
   objectMapper: ObjectMapper,
   sqlRetry: SqlRetry,
-  artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList(),
-  specMigrators: List<SpecMigrator<*, *>> = emptyList(),
+  resourceFactory: ResourceFactory,
+  artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList()
 ) : SqlStorageContext(
   jooq,
   clock,
   sqlRetry,
   objectMapper,
-  resourceSpecIdentifier,
-  artifactSuppliers,
-  specMigrators
+  resourceFactory,
+  artifactSuppliers
 ), EnvironmentDeletionRepository {
 
   override fun markForDeletion(environment: Environment) {

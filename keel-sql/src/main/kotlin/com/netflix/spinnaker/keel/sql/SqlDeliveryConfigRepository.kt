@@ -47,6 +47,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PREVIEW_ENVIRONMENT
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_VERSION
+import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
@@ -81,20 +82,18 @@ import java.time.Instant.EPOCH
 class SqlDeliveryConfigRepository(
   jooq: DSLContext,
   clock: Clock,
-  resourceSpecIdentifier: ResourceSpecIdentifier,
   objectMapper: ObjectMapper,
+  resourceFactory: ResourceFactory,
   sqlRetry: SqlRetry,
   artifactSuppliers: List<ArtifactSupplier<*, *>> = emptyList(),
-  specMigrators: List<SpecMigrator<*, *>> = emptyList(),
   private val publisher: ApplicationEventPublisher
 ) : SqlStorageContext(
   jooq,
   clock,
   sqlRetry,
   objectMapper,
-  resourceSpecIdentifier,
-  artifactSuppliers,
-  specMigrators
+  resourceFactory,
+  artifactSuppliers
 ), DeliveryConfigRepository {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

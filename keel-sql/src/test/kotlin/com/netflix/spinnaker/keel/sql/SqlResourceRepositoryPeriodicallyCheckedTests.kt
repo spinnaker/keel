@@ -5,12 +5,12 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
-import com.netflix.spinnaker.keel.persistence.DummyResourceSpecIdentifier
 import com.netflix.spinnaker.keel.persistence.ResourceRepositoryPeriodicallyCheckedTests
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.TEST_API_V1
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
@@ -29,7 +29,6 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isSuccess
-import strikt.assertions.isTrue
 import java.time.Clock
 import java.time.Clock.systemUTC
 import java.time.Duration
@@ -40,12 +39,13 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
   private val jooq = testDatabase.context
   private val retryProperties = RetryProperties(1, 0)
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
+  private val resourceFactory = resourceFactory()
 
   override val factory: (clock: Clock) -> SqlResourceRepository = { clock ->
-    SqlResourceRepository(jooq, clock, DummyResourceSpecIdentifier, emptyList(), configuredObjectMapper(), sqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
+    SqlResourceRepository(jooq, clock, configuredObjectMapper(), resourceFactory, sqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
   }
 
-  val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, systemUTC(), DummyResourceSpecIdentifier, configuredObjectMapper(), sqlRetry, publisher = mockk(relaxed = true))
+  val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, systemUTC(), configuredObjectMapper(), resourceFactory, sqlRetry, publisher = mockk(relaxed = true))
 
   override val storeDeliveryConfig: (DeliveryConfig) -> Unit = deliveryConfigRepository::store
 

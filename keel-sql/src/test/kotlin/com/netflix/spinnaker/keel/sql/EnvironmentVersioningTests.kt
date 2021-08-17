@@ -7,7 +7,6 @@ import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.NotificationFrequency.normal
 import com.netflix.spinnaker.keel.api.NotificationType.slack
 import com.netflix.spinnaker.keel.api.Verification
-import com.netflix.spinnaker.keel.api.plugins.kind
 import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.persistence.CombinedRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ACTIVE_ENVIRONMENT
@@ -16,12 +15,12 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_RESOU
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_VERSION
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.ENVIRONMENT_VERSION_ARTIFACT_VERSION
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
-import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.defaultArtifactSuppliers
 import com.netflix.spinnaker.keel.test.deliveryConfig
 import com.netflix.spinnaker.keel.test.randomString
+import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
@@ -50,17 +49,14 @@ class EnvironmentVersioningTests {
   private val retryProperties = RetryProperties(1, 0)
   private val sqlRetry = SqlRetry(SqlRetryProperties(retryProperties, retryProperties))
   private val clock = MutableClock()
-  private val resourceSpecIdentifier =
-    ResourceSpecIdentifier(
-      kind<DummyResourceSpec>("test/whatever@v1")
-    )
+  private val resourceFactory = resourceFactory()
   val deliveryConfig = deliveryConfig()
 
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(
     jooq,
     clock,
-    resourceSpecIdentifier,
     objectMapper,
+    resourceFactory,
     sqlRetry,
     defaultArtifactSuppliers(),
     publisher = mockk(relaxed = true)
@@ -77,18 +73,17 @@ class EnvironmentVersioningTests {
   private val resourceRepository = SqlResourceRepository(
     jooq,
     clock,
-    resourceSpecIdentifier,
-    emptyList(),
     objectMapper,
+    resourceFactory,
     sqlRetry,
     mockk(relaxed = true),
     NoopRegistry()
   )
 
-  private val verificationRepository = SqlActionRepository(
+  private val actionRepository = SqlActionRepository(
     jooq = jooq,
     clock = clock,
-    resourceSpecIdentifier = resourceSpecIdentifier,
+    resourceFactory = resourceFactory,
     objectMapper = objectMapper,
     sqlRetry = sqlRetry,
     environment = MockEnvironment()
@@ -98,7 +93,7 @@ class EnvironmentVersioningTests {
     deliveryConfigRepository,
     artifactRepository,
     resourceRepository,
-    verificationRepository,
+    actionRepository,
     clock,
     { },
     objectMapper

@@ -26,8 +26,7 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PAUSED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_LAST_CHECKED
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_VERSION
-import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
-import com.netflix.spinnaker.keel.resources.SpecMigrator
+import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.telemetry.AboutToBeChecked
@@ -50,9 +49,8 @@ import java.time.Instant.EPOCH
 open class SqlResourceRepository(
   private val jooq: DSLContext,
   override val clock: Clock,
-  private val resourceSpecIdentifier: ResourceSpecIdentifier,
-  private val specMigrators: List<SpecMigrator<*, *>>,
   private val objectMapper: ObjectMapper,
+  private val resourceFactory: ResourceFactory,
   private val sqlRetry: SqlRetry,
   private val publisher: ApplicationEventPublisher,
   private val spectator: Registry
@@ -65,8 +63,6 @@ open class SqlResourceRepository(
    * Creating a metric to get insight into affected apps
    */
   private val resourceVersionInsertId = spectator.createId("resource.version.insert")
-
-  private val resourceFactory = ResourceFactory(objectMapper, resourceSpecIdentifier, specMigrators)
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
     sqlRetry.withRetry(READ) {
@@ -83,18 +79,12 @@ open class SqlResourceRepository(
 
   override fun get(id: String): Resource<ResourceSpec> =
     readResource(id) { kind, metadata, spec ->
-      resourceFactory.invoke(kind, metadata, spec)
+      resourceFactory.create(kind, metadata, spec)
     }
 
   override fun getRaw(id: String): Resource<ResourceSpec> =
     readResource(id) { kind, metadata, spec ->
-      parseKind(kind).let {
-        Resource(
-          it,
-          objectMapper.readValue<Map<String, Any?>>(metadata).asResourceMetadata(),
-          objectMapper.readValue(spec, resourceSpecIdentifier.identify(it))
-        )
-      }
+      resourceFactory.createRaw(kind, metadata, spec)
     }
 
   private fun readResource(id: String, callback: (String, String, String) -> Resource<ResourceSpec>): Resource<ResourceSpec> =
@@ -117,7 +107,7 @@ open class SqlResourceRepository(
         .where(ACTIVE_RESOURCE.APPLICATION.eq(application))
         .fetch()
         .map { (kind, metadata, spec) ->
-          resourceFactory.invoke(kind, metadata, spec)
+          resourceFactory.create(kind, metadata, spec)
         }
     }
   }
@@ -372,7 +362,7 @@ open class SqlResourceRepository(
       }
         .map { (uid, kind, metadata, spec) ->
           try {
-            resourceFactory.invoke(kind, metadata, spec)
+            resourceFactory.create(kind, metadata, spec)
           } catch (e: Exception) {
             jooq.insertInto(RESOURCE_LAST_CHECKED)
               .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
