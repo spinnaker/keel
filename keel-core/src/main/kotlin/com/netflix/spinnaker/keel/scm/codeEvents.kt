@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 )
 @JsonSubTypes(
   JsonSubTypes.Type(value = PrOpenedEvent::class, name = "pr.created"),
+  JsonSubTypes.Type(value = PrUpdatedEvent::class, name = "pr.updated"),
   JsonSubTypes.Type(value = PrMergedEvent::class, name = "pr.merged"),
   JsonSubTypes.Type(value = PrDeclinedEvent::class, name = "pr.declined"),
   JsonSubTypes.Type(value = PrDeletedEvent::class, name = "pr.deleted"),
