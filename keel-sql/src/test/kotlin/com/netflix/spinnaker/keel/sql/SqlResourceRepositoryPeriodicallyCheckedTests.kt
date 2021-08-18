@@ -32,6 +32,7 @@ import strikt.assertions.isSuccess
 import java.time.Clock
 import java.time.Clock.systemUTC
 import java.time.Duration
+import java.util.Collections.synchronizedSet
 
 internal object SqlResourceRepositoryPeriodicallyCheckedTests :
   ResourceRepositoryPeriodicallyCheckedTests<SqlResourceRepository>() {
@@ -68,23 +69,36 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
      * to be thread safe.
      */
     context("many threads are checking simultaneously") {
+
+
       before {
         val resources = (0..1000).mapTo(mutableSetOf()) { i ->
           val resource = resource(id = "fnord-$i")
           subject.store(resource)
         }
         storeDeliveryConfig(deliveryConfig(resources = resources))
+
       }
 
       test("each thread gets a unique set of resources") {
-        val results = mutableSetOf<Resource<ResourceSpec>>()
+        // We need to enable retries to handle occasional aborted transactions
+        val customSqlRetry = RetryProperties(2, 1).let {
+          SqlRetry(SqlRetryProperties(it, it))
+        }
+        // create a new repository object that is configured with our custom retries
+        val repo =
+          SqlResourceRepository(jooq, clock, configuredObjectMapper(), resourceFactory,
+            customSqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
+
+        val results = synchronizedSet<Resource<ResourceSpec>>(HashSet())
+
         doInParallel(500) {
-          nextResults().let(results::addAll)
+          repo.itemsDueForCheck(ifNotCheckedInLast, limit)
+            .onEach(repo::markCheckComplete)
+            .let(results::addAll)
         }
 
-        // this should have size 1000, except sometimes it has size 999. We don't know why.
-        // updating this test to not fail in that case since it doesn't seem to indicate a problem.
-        expectThat(results.size).describedAs("number of unique resources processed").isGreaterThanOrEqualTo(999)
+        expectThat(results.size).describedAs("number of unique resources processed (${results.size})").isEqualTo(1000)
       }
     }
   }

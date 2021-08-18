@@ -35,9 +35,7 @@ abstract class PeriodicallyCheckedRepositoryTests<T : Any, S : PeriodicallyCheck
 
     fun nextResults(): Collection<T> =
       subject.itemsDueForCheck(ifNotCheckedInLast, limit)
-        .also {
-          it.forEach(subject::markCheckComplete)
-        }
+        .onEach(subject::markCheckComplete)
   }
 
   fun tests() = rootContext<Fixture<T, S>> {

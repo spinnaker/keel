@@ -1,7 +1,6 @@
 package com.netflix.spinnaker.keel.sql
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceKind.Companion.parseKind
@@ -327,42 +326,54 @@ open class SqlResourceRepository(
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck)
     return sqlRetry.withRetry(WRITE) {
-      jooq.inTransaction {
-        select(
-          ACTIVE_RESOURCE.UID,
-          ACTIVE_RESOURCE.KIND,
-          ACTIVE_RESOURCE.METADATA,
-          ACTIVE_RESOURCE.SPEC,
-          ACTIVE_RESOURCE.APPLICATION,
-          RESOURCE_LAST_CHECKED.AT
-        )
-          .from(ACTIVE_RESOURCE, RESOURCE_LAST_CHECKED)
-          .where(ACTIVE_RESOURCE.UID.eq(RESOURCE_LAST_CHECKED.RESOURCE_UID))
-          .and(RESOURCE_LAST_CHECKED.AT.lessOrEqual(cutoff))
+
+      /**
+       * Ideally, we would use a single UPDATE ... RETURNING query instead of
+       * separate SELECT/UPDATE queries in a transaction
+       * Unfortunately, MySQL doesn't support RETURNING and jOOQ doesn't emulate it.
+       * see: https://github.com/jOOQ/jOOQ/issues/6865
+       */
+      val resourcesToCheck = jooq.inTransaction {
+        select(RESOURCE_LAST_CHECKED.RESOURCE_UID, RESOURCE_LAST_CHECKED.AT)
+          .from(RESOURCE_LAST_CHECKED)
+          .where(RESOURCE_LAST_CHECKED.AT.lessOrEqual(cutoff))
           .and(RESOURCE_LAST_CHECKED.IGNORE.notEqual(true))
           .orderBy(RESOURCE_LAST_CHECKED.AT)
           .limit(limit)
           .forUpdate()
           .fetch()
-          .also {
-            it.forEach { (uid, _, _, _, application, lastCheckedAt) ->
-              insertInto(RESOURCE_LAST_CHECKED)
-                .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
-                .set(RESOURCE_LAST_CHECKED.AT, now)
-                .onDuplicateKeyUpdate()
-                .set(RESOURCE_LAST_CHECKED.AT, now)
-                .execute()
-              publisher.publishEvent(AboutToBeChecked(
-                lastCheckedAt,
-                "resource",
-                "application:$application"
-              ))
-            }
+          .map {(uid, at) -> uid to at }
+          .toMap()
+          .also { m ->
+            update(RESOURCE_LAST_CHECKED)
+              .set(RESOURCE_LAST_CHECKED.AT, now)
+              .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(m.keys))
+              .execute()
           }
       }
-        .map { (uid, kind, metadata, spec) ->
+
+      jooq.select(
+        ACTIVE_RESOURCE.UID,
+        ACTIVE_RESOURCE.KIND,
+        ACTIVE_RESOURCE.METADATA,
+        ACTIVE_RESOURCE.SPEC,
+        ACTIVE_RESOURCE.APPLICATION
+      )
+        .from(ACTIVE_RESOURCE)
+        .where(ACTIVE_RESOURCE.UID.`in`(resourcesToCheck.keys))
+        .fetch()
+        .map { (uid, kind, metadata, spec, application) ->
           try {
+            publisher.publishEvent(
+              AboutToBeChecked(
+                resourcesToCheck[uid]!!,
+                "resource",
+                "application:$application"
+              )
+            )
+
             resourceFactory.create(kind, metadata, spec)
+
           } catch (e: Exception) {
             jooq.insertInto(RESOURCE_LAST_CHECKED)
               .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
