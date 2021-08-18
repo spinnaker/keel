@@ -390,8 +390,9 @@ class PreviewEnvironmentCodeEventListener(
         if (candidate != null) {
           log.debug("Checking if dependency needs renaming: kind '${candidate.kind.kind}', name '${candidate.name}', application '$application'")
           // special case for security group named after the app which is always included by default :-/
-          if (candidate.kind.kind.contains("security-group") && candidate.named(application)) {
-            log.debug("Skipping dependency rename for default security group $application in resource ${this.name}")
+          if (candidate.kind.kind.contains("security-group")
+            && (candidate.named(application) || candidate.named("$application-elb"))) {
+            log.debug("Skipping dependency rename for default security group ${candidate.name} in resource ${this.name}")
             dep
           } else {
             val newName = (candidate as Resource<Monikered>).withBranchDetail(branchDetail).name

@@ -43,7 +43,6 @@ import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Co
 import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Companion.PREVIEW_ENVIRONMENT_UPSERT_ERROR
 import com.netflix.spinnaker.keel.preview.PreviewEnvironmentCodeEventListener.Companion.PREVIEW_ENVIRONMENT_UPSERT_SUCCESS
 import com.netflix.spinnaker.keel.resources.ResourceFactory
-import com.netflix.spinnaker.keel.scm.CommitCreatedEvent
 import com.netflix.spinnaker.keel.scm.DELIVERY_CONFIG_RETRIEVAL_ERROR
 import com.netflix.spinnaker.keel.scm.DELIVERY_CONFIG_RETRIEVAL_SUCCESS
 import com.netflix.spinnaker.keel.scm.PrDeclinedEvent
@@ -77,6 +76,7 @@ import io.mockk.spyk
 import org.springframework.context.ApplicationEventPublisher
 import strikt.api.expectThat
 import strikt.assertions.contains
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.containsKeys
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
@@ -153,13 +153,23 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
     val artifactReferenceResource =
       artifactReferenceResource(artifactReference = artifactFromMain.reference, artifactType = DOCKER)
 
-    val defaultSecurityGroup = Resource(
+    val defaultAppSecurityGroup = Resource(
       kind = EC2_SECURITY_GROUP_V1.kind,
       metadata = mapOf("id" to "fnord", "application" to "fnord"),
       spec = SecurityGroupSpec(
         moniker = Moniker("fnord"),
         locations = locatableResource.spec.locations,
-        description = "default security group"
+        description = "default app security group"
+      )
+    )
+
+    val defaultElbSecurityGroup = Resource(
+      kind = EC2_SECURITY_GROUP_V1.kind,
+      metadata = mapOf("id" to "fnord", "application" to "fnord"),
+      spec = SecurityGroupSpec(
+        moniker = Moniker("fnord", "elb"),
+        locations = locatableResource.spec.locations,
+        description = "default loab balancer security group"
       )
     )
 
@@ -175,8 +185,13 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         ),
         Dependency(
           type = SECURITY_GROUP,
-          region = defaultSecurityGroup.spec.locations.regions.first().name,
-          name = defaultSecurityGroup.name
+          region = defaultAppSecurityGroup.spec.locations.regions.first().name,
+          name = defaultAppSecurityGroup.name
+        ),
+        Dependency(
+          type = SECURITY_GROUP,
+          region = defaultAppSecurityGroup.spec.locations.regions.first().name,
+          name = defaultElbSecurityGroup.name
         )
       )
     )
@@ -193,7 +208,8 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             locatableResource,
             artifactReferenceResource,
             resourceWithSameNameAsDefaultSecurityGroup, // name conflict with default sec group, but different kind
-            defaultSecurityGroup,
+            defaultAppSecurityGroup,
+            defaultElbSecurityGroup,
             dependentResource
           ),
           constraints = setOf(ManualJudgementConstraint()),
@@ -350,7 +366,7 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             }
           }
 
-          test("the notification was dimissed on successful import") {
+          test("delivery config import failure notification is dismissed on successful import") {
             verify {
               notificationRepository.dismissNotification(
                 any<Class<DismissibleNotification>>(),
@@ -463,11 +479,11 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
               .isEqualTo(dependency.spec.moniker.withBranchDetail(branchDetail).name)
           }
 
-          test("the name of the default security group is not changed in the dependencies") {
+          test("the names of the default security groups are not changed in the dependencies") {
             expectThat(previewEnv.captured.resources.first { it.spec is DummyDependentResourceSpec }.spec)
               .isA<Dependent>()
-              .get { dependsOn.first { it.type == SECURITY_GROUP }.name }
-              .isEqualTo(defaultSecurityGroup.name)
+              .get { dependsOn.filter { it.type == SECURITY_GROUP }.map { it.name } }
+              .containsExactlyInAnyOrder(defaultAppSecurityGroup.name, defaultElbSecurityGroup.name)
           }
         }
 

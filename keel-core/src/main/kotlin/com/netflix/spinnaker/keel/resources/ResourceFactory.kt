@@ -51,7 +51,7 @@ class ResourceFactory(
       .let { (endKind, endSpec) ->
         Resource(endKind, resource.metadata, endSpec)
       }
-    log.debug("Migrated resource of kind ${resource.kind} to ${migrated.kind}")
+    log.debug("Migrated resource ${resource.id} of kind ${resource.kind} to ${migrated.kind}")
     return migrated
   }
 
