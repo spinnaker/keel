@@ -765,6 +765,9 @@ class TitusClusterHandler(
       )
     )
 
+    log.debug("Checking if artifact should be marked as deployed in Titus cluster ${resource.id}: " +
+      "same container in all ASGs = $sameContainer, unhealthy regions = ${unhealthyRegions.joinToString()}")
+
     if (sameContainer && healthy) {
       // only publish a successfully deployed event if the server group is healthy
       val container = activeServerGroups.first().container
