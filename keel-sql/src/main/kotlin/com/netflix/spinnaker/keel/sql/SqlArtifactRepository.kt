@@ -54,9 +54,11 @@ import com.netflix.spinnaker.keel.telemetry.AboutToBeChecked
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import org.jooq.DSLContext
+import org.jooq.Record
 import org.jooq.Record1
 import org.jooq.Select
 import org.jooq.SelectConditionStep
+import org.jooq.SelectJoinStep
 import org.jooq.impl.DSL
 import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.selectOne
@@ -1280,6 +1282,28 @@ class SqlArtifactRepository(
         )
       }
 
+  /**
+   * Common select criteria for finding artifacts that belong with a delivery config and environment.
+   */
+  private fun <T : Record?> SelectJoinStep<T>.selectMatchingArtifactVersions(deliveryConfig: DeliveryConfig, environment: Environment, artifact: DeliveryArtifact) =
+    where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
+      .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
+      .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
+      .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
+      .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
+      .and(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
+      .and(ACTIVE_ENVIRONMENT.NAME.eq(environment.name))
+      .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
+      .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
+      .apply {
+        if (artifact.statuses.isNotEmpty()) {
+          and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.toTypedArray()))
+        }
+        // For preview environments, select only those artifact versions with a matching branch
+        if (environment.isPreview) {
+          and(ARTIFACT_VERSIONS_BRANCH.eq(ACTIVE_ENVIRONMENT_BRANCH))
+        }
+      }
 
   override fun getPendingVersionsInEnvironment(
     deliveryConfig: DeliveryConfig,
@@ -1288,6 +1312,7 @@ class SqlArtifactRepository(
   ): List<PublishedArtifact> {
     val artifact = deliveryConfig.matchingArtifactByReference(artifactReference)
       ?: throw ArtifactNotFoundException(artifactReference, deliveryConfig.name)
+    val environment = deliveryConfig.environmentNamed(environmentName)
     return sqlRetry.withRetry(READ) {
       jooq
         .select(
@@ -1305,16 +1330,7 @@ class SqlArtifactRepository(
           ACTIVE_ENVIRONMENT,
           DELIVERY_CONFIG
         )
-        .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-        .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
-        .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
-        .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
-        .and(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
-        .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
-        .and(ACTIVE_ENVIRONMENT.NAME.eq(environmentName))
-        .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-        .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-        .apply { if (artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.toTypedArray())) }
+        .selectMatchingArtifactVersions(deliveryConfig, environment, artifact)
         .andNotExists(
           selectOne()
             .from(ENVIRONMENT_ARTIFACT_VERSIONS)
@@ -1407,23 +1423,10 @@ class SqlArtifactRepository(
             ACTIVE_ENVIRONMENT,
             DELIVERY_CONFIG
           )
-          .where(DELIVERY_ARTIFACT.UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID))
-          .and(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
-          .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
-          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
+          .selectMatchingArtifactVersions(deliveryConfig, environment, artifact)
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_UID.eq(DELIVERY_ARTIFACT.UID))
+          .and(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID.eq(ACTIVE_ENVIRONMENT.UID))
           .and(ENVIRONMENT_ARTIFACT_VERSIONS.ARTIFACT_VERSION.eq(ARTIFACT_VERSIONS.VERSION))
-          .and(ACTIVE_ENVIRONMENT.UID.eq(ENVIRONMENT_ARTIFACT_VERSIONS.ENVIRONMENT_UID))
-          .and(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
-          .and(ACTIVE_ENVIRONMENT.NAME.eq(environment.name))
-          .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
-          .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-          .apply {
-            if (artifact.statuses.isNotEmpty()) {
-              and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.toTypedArray()))
-            }
-          }
 
         val pendingVersions = jooq
           .select(
@@ -1442,16 +1445,7 @@ class SqlArtifactRepository(
             ACTIVE_ENVIRONMENT,
             DELIVERY_CONFIG
           )
-          .where(DELIVERY_ARTIFACT.NAME.eq(artifact.name))
-          .and(DELIVERY_ARTIFACT.TYPE.eq(artifact.type))
-          .and(DELIVERY_ARTIFACT.REFERENCE.eq(artifact.reference))
-          .and(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME.eq(deliveryConfig.name))
-          .and(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID.eq(DELIVERY_CONFIG.UID))
-          .and(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
-          .and(ACTIVE_ENVIRONMENT.NAME.eq(environment.name))
-          .and(ARTIFACT_VERSIONS.NAME.eq(artifact.name))
-          .and(ARTIFACT_VERSIONS.TYPE.eq(artifact.type))
-          .apply { if (artifact.statuses.isNotEmpty()) and(ARTIFACT_VERSIONS.RELEASE_STATUS.`in`(*artifact.statuses.toTypedArray())) }
+          .selectMatchingArtifactVersions(deliveryConfig, environment, artifact)
           .andNotExists(
             selectOne()
               .from(ENVIRONMENT_ARTIFACT_VERSIONS)
@@ -1886,22 +1880,20 @@ class SqlArtifactRepository(
           .limit(limit)
           .forUpdate()
           .fetch()
-          .also {
-            it.forEach { (uid, _, _, _, _, deliveryConfigName, lastCheckedAt) ->
-              insertInto(ARTIFACT_LAST_CHECKED)
-                .set(ARTIFACT_LAST_CHECKED.ARTIFACT_UID, uid)
-                .set(ARTIFACT_LAST_CHECKED.AT, now)
-                .onDuplicateKeyUpdate()
-                .set(ARTIFACT_LAST_CHECKED.AT, now)
-                .execute()
-              publisher.publishEvent(
-                AboutToBeChecked(
-                  lastCheckedAt,
-                  "artifact",
-                  "deliveryConfig:$deliveryConfigName"
-                )
+          .onEach { (uid, _, _, _, _, deliveryConfigName, lastCheckedAt) ->
+            insertInto(ARTIFACT_LAST_CHECKED)
+              .set(ARTIFACT_LAST_CHECKED.ARTIFACT_UID, uid)
+              .set(ARTIFACT_LAST_CHECKED.AT, now)
+              .onDuplicateKeyUpdate()
+              .set(ARTIFACT_LAST_CHECKED.AT, now)
+              .execute()
+            publisher.publishEvent(
+              AboutToBeChecked(
+                lastCheckedAt,
+                "artifact",
+                "deliveryConfig:$deliveryConfigName"
               )
-            }
+            )
           }
           .map { (_, name, type, details, reference, deliveryConfigName) ->
             mapToArtifact(artifactSuppliers.supporting(type), name, type, details, reference, deliveryConfigName)

@@ -25,7 +25,6 @@ import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactPin
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVeto
 import com.netflix.spinnaker.keel.core.api.EnvironmentArtifactVetoes
 import com.netflix.spinnaker.keel.core.api.PinnedEnvironment
-import com.netflix.spinnaker.keel.core.api.PromotionStatus
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.DEPLOYING
 import com.netflix.spinnaker.keel.core.api.PromotionStatus.PENDING
@@ -96,7 +95,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val debianFilteredByBranch = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
-      reference = "feature-branch",
+      reference = "filteredByBranch",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       from = ArtifactOriginFilter(
         branch = BranchFilter(
@@ -108,7 +107,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val debianFilteredByBranchPrefix = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
-      reference = "feature-branch",
+      reference = "filteredByBranchPrefix",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       from = ArtifactOriginFilter(
         branch = BranchFilter(
@@ -120,7 +119,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val debianFilteredByBranchPattern = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
-      reference = "feature-branch-pattern",
+      reference = "filteredByBranchPattern",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       from = ArtifactOriginFilter(
         branch = BranchFilter(
@@ -132,7 +131,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val debianFilteredByPullRequest = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
-      reference = "feature-pr",
+      reference = "filteredByPullRequest",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       from = ArtifactOriginFilter(
         pullRequestOnly = true
@@ -142,7 +141,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val debianFilteredByPullRequestAndBranch = DebianArtifact(
       name = "keeldemo",
       deliveryConfigName = "my-manifest",
-      reference = "feature-pr-and-branch",
+      reference = "filteredByPullRequestAndBranch",
       vmOptions = VirtualMachineOptions(baseOs = "bionic", regions = setOf("us-west-2")),
       from = ArtifactOriginFilter(
         branch = BranchFilter(
@@ -154,6 +153,10 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
 
     val testEnvironment = Environment("test")
     val stagingEnvironment = Environment("staging")
+    val previewEnvironment1 = Environment("test-preview-branch1", isPreview = true)
+      .addMetadata("branch" to "feature/preview-branch1")
+    val previewEnvironment2 = Environment("test-preview-branch2", isPreview = true)
+      .addMetadata("branch" to "feature/preview-branch2")
     val manifest = DeliveryConfig(
       name = "my-manifest",
       application = "fnord",
@@ -165,9 +168,10 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
         debianFilteredByBranch,
         debianFilteredByBranchPattern,
         debianFilteredByPullRequest,
-        debianFilteredByPullRequestAndBranch
+        debianFilteredByPullRequestAndBranch,
+        debianFilteredByBranchPrefix
       ),
-      environments = setOf(testEnvironment, stagingEnvironment)
+      environments = setOf(testEnvironment, stagingEnvironment, previewEnvironment1, previewEnvironment2)
     )
     val version1 = "keeldemo-0.0.1~dev.8-h8.41595c4" // snapshot
     val version2 = "keeldemo-0.0.1~dev.9-h9.3d2c8ff" // snapshot
@@ -175,7 +179,8 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
     val version4 = "keeldemo-1.0.0-h11.518aea2" // release
     val version5 = "keeldemo-1.0.0-h12.4ea8a9d" // release
     val version6 = "master-h12.4ea8a9d"
-    val versionOnly = "0.0.1~dev.8-h8.41595c4"
+    val version7 = "keeldemo-pull.7-h20.d0349c3" // pull request build
+    val version8 = "keeldemo-pull.8-h21.27dc978" // pull request build
 
     val pin1 = EnvironmentArtifactPin(
       targetEnvironment = stagingEnvironment.name, // staging
@@ -244,6 +249,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
       register(debianFilteredByBranchPattern)
       register(debianFilteredByPullRequest)
       register(debianFilteredByPullRequestAndBranch)
+      register(debianFilteredByBranchPrefix)
     }
     persist(manifest)
   }
@@ -405,7 +411,7 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
           ).isEqualTo(15)
         }
 
-        test("fetch only versions with matching pattern") {
+        test("fetch only versions from pull requests") {
           storeVersionsForDebianFilteredByPullRequest((20 downTo 1).map { "keeldemo-any-string-$it" })
           expectThat(
             subject.getPendingVersionsInEnvironment(
@@ -414,6 +420,42 @@ abstract class ArtifactRepositoryPromotionFlowTests<T : ArtifactRepository> : JU
               testEnvironment.name
             ).size
           ).isEqualTo(10)
+        }
+
+        test("fetch only versions matching the preview environment branch") {
+          subject.storeArtifactVersion(debianFilteredByBranchPrefix.toArtifactVersion(version7,
+            gitMetadata = GitMetadata(commit = "sha1", branch = previewEnvironment1.branch))
+          )
+
+          subject.storeArtifactVersion(debianFilteredByBranchPrefix.toArtifactVersion(version8,
+            gitMetadata = GitMetadata(commit = "sha2", branch = previewEnvironment2.branch))
+          )
+
+          val env1Versions = subject.getPendingVersionsInEnvironment(
+            manifest,
+            debianFilteredByBranchPrefix.reference,
+            previewEnvironment1.name
+          )
+
+          val env2Versions = subject.getPendingVersionsInEnvironment(
+            manifest,
+            debianFilteredByBranchPrefix.reference,
+            previewEnvironment2.name
+          )
+
+          expectThat(env1Versions.map { it.version })
+            .containsExactly(version7)
+
+          expectThat(env2Versions.map { it.version })
+            .containsExactly(version8)
+
+          expectThat(versionsIn(previewEnvironment1, debianFilteredByBranchPrefix)) {
+            get(ArtifactVersionStatus::pending).containsExactly(version7)
+          }
+
+          expectThat(versionsIn(previewEnvironment2, debianFilteredByBranchPrefix)) {
+            get(ArtifactVersionStatus::pending).containsExactly(version8)
+          }
         }
       }
 

@@ -406,7 +406,7 @@ class NoSuchArtifactException(name: String, type: ArtifactType) :
 }
 
 class ArtifactNotFoundException(reference: String, deliveryConfig: String?) :
-  NoSuchEntityException("No artifact with reference $reference in delivery config $deliveryConfig is registered")
+  NoSuchEntityException("No artifact with reference $reference is registered in delivery config $deliveryConfig")
 
 class ArtifactAlreadyRegistered(name: String, type: ArtifactType) :
   UserException("The $type artifact $name is already registered")
