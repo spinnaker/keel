@@ -40,6 +40,7 @@ import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.value
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.core.env.Environment
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -52,7 +53,8 @@ open class SqlResourceRepository(
   private val resourceFactory: ResourceFactory,
   private val sqlRetry: SqlRetry,
   private val publisher: ApplicationEventPublisher,
-  private val spectator: Registry
+  private val spectator: Registry,
+  private val springEnv: Environment
 ) : ResourceRepository {
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
@@ -62,6 +64,9 @@ open class SqlResourceRepository(
    * Creating a metric to get insight into affected apps
    */
   private val resourceVersionInsertId = spectator.createId("resource.version.insert")
+
+  private val itemsDueForCheckCheckSingleSelectQuery : Boolean
+    get() = springEnv.getProperty("keel.items.due.for.check.single.select.query", Boolean::class.java, true)
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
     sqlRetry.withRetry(READ) {
@@ -322,7 +327,80 @@ open class SqlResourceRepository(
     }
   }
 
-  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>> {
+  override fun itemsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>> =
+    when (itemsDueForCheckCheckSingleSelectQuery) {
+      true -> itemsDueForCheckSingleSelectQuery(minTimeSinceLastCheck, limit)
+      false -> itemsDueForCheckMultipleQueries(minTimeSinceLastCheck, limit)
+    }
+
+  /**
+   * This implementation uses a single select query.
+   *
+   * This is the original implementation, but we often got deadlocks when people would update a delivery config,
+   * on inserting a record into the resource_version table, which is one of the tables that backs the active_resource
+   * view.
+   */
+  private fun itemsDueForCheckSingleSelectQuery(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>> {
+    val now = clock.instant()
+    val cutoff = now.minus(minTimeSinceLastCheck)
+    return sqlRetry.withRetry(WRITE) {
+      jooq.inTransaction {
+        select(
+          ACTIVE_RESOURCE.UID,
+          ACTIVE_RESOURCE.KIND,
+          ACTIVE_RESOURCE.METADATA,
+          ACTIVE_RESOURCE.SPEC,
+          ACTIVE_RESOURCE.APPLICATION,
+          RESOURCE_LAST_CHECKED.AT
+        )
+          .from(ACTIVE_RESOURCE, RESOURCE_LAST_CHECKED)
+          .where(ACTIVE_RESOURCE.UID.eq(RESOURCE_LAST_CHECKED.RESOURCE_UID))
+          .and(RESOURCE_LAST_CHECKED.AT.lessOrEqual(cutoff))
+          .and(RESOURCE_LAST_CHECKED.IGNORE.notEqual(true))
+          .orderBy(RESOURCE_LAST_CHECKED.AT)
+          .limit(limit)
+          .forUpdate()
+          .fetch()
+          .also {
+            it.forEach { (uid, _, _, _, application, lastCheckedAt) ->
+              insertInto(RESOURCE_LAST_CHECKED)
+                .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
+                .set(RESOURCE_LAST_CHECKED.AT, now)
+                .onDuplicateKeyUpdate()
+                .set(RESOURCE_LAST_CHECKED.AT, now)
+                .execute()
+              publisher.publishEvent(AboutToBeChecked(
+                lastCheckedAt,
+                "resource",
+                "application:$application"
+              ))
+            }
+          }
+      }
+        .map { (uid, kind, metadata, spec) ->
+          try {
+            resourceFactory.create(kind, metadata, spec)
+          } catch (e: Exception) {
+            jooq.insertInto(RESOURCE_LAST_CHECKED)
+              .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
+              .set(RESOURCE_LAST_CHECKED.IGNORE, true)
+              .onDuplicateKeyUpdate()
+              .set(RESOURCE_LAST_CHECKED.IGNORE, true)
+              .execute()
+            throw e
+          }
+        }
+    }
+  }
+
+  /**
+   * This implementation uses two select queries.
+   *
+   * The first query only runs against the resource_last_checked table. This is to reduce the scope of the FOR UPDATE
+   * lock.
+   *
+   */
+  private fun itemsDueForCheckMultipleQueries(minTimeSinceLastCheck: Duration, limit: Int): Collection<Resource<ResourceSpec>> {
     val now = clock.instant()
     val cutoff = now.minus(minTimeSinceLastCheck)
     return sqlRetry.withRetry(WRITE) {

@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.deliveryConfig
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
@@ -98,7 +99,8 @@ internal class LegacySpecUpgradeTests : JUnit5Minutests {
       resourceFactory,
       sqlRetry,
       publisher = mockk(relaxed = true),
-      spectator = NoopRegistry()
+      spectator = NoopRegistry(),
+      springEnv = mockEnvironment()
     )
 
     val ancientResource = resource(v1.kind, SpecV1("whatever"))

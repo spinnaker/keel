@@ -19,6 +19,7 @@ import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.defaultArtifactSuppliers
 import com.netflix.spinnaker.keel.test.deliveryConfig
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.randomString
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
@@ -26,6 +27,7 @@ import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
 import com.netflix.spinnaker.kork.sql.test.SqlTestUtil.cleanupDb
 import com.netflix.spinnaker.time.MutableClock
 import io.mockk.mockk
+import io.mockk.slot
 import org.jooq.Table
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -77,7 +79,8 @@ class EnvironmentVersioningTests {
     resourceFactory,
     sqlRetry,
     mockk(relaxed = true),
-    NoopRegistry()
+    NoopRegistry(),
+    mockEnvironment()
   )
 
   private val actionRepository = SqlActionRepository(

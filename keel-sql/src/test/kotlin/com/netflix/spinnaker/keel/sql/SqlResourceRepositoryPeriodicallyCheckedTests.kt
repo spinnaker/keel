@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.persistence.ResourceRepositoryPeriodicallyChec
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.TEST_API_V1
 import com.netflix.spinnaker.keel.test.deliveryConfig
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
@@ -43,7 +44,16 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
   private val resourceFactory = resourceFactory()
 
   override val factory: (clock: Clock) -> SqlResourceRepository = { clock ->
-    SqlResourceRepository(jooq, clock, configuredObjectMapper(), resourceFactory, sqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
+    SqlResourceRepository(
+      jooq,
+      clock,
+      configuredObjectMapper(),
+      resourceFactory,
+      sqlRetry,
+      publisher = mockk(relaxed = true),
+      spectator = NoopRegistry(),
+      springEnv = mockEnvironment()
+    )
   }
 
   val deliveryConfigRepository = SqlDeliveryConfigRepository(jooq, systemUTC(), configuredObjectMapper(), resourceFactory, sqlRetry, publisher = mockk(relaxed = true))
@@ -88,8 +98,7 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
         // create a new repository object that is configured with our custom retries
         val repo =
           SqlResourceRepository(jooq, clock, configuredObjectMapper(), resourceFactory,
-            customSqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry())
-
+            customSqlRetry, publisher = mockk(relaxed = true), spectator = NoopRegistry(), springEnv = mockEnvironment())
         val results = synchronizedSet<Resource<ResourceSpec>>(HashSet())
 
         doInParallel(500) {

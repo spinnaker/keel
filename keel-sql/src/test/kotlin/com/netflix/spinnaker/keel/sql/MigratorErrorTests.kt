@@ -11,6 +11,7 @@ import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.defaultArtifactSuppliers
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
@@ -61,7 +62,8 @@ class MigratorErrorTests {
     objectMapper = objectMapper,
     sqlRetry = sqlRetry,
     publisher = mockk(relaxed = true),
-    spectator = NoopRegistry()
+    spectator = NoopRegistry(),
+    springEnv = mockEnvironment()
   )
 
   private val deliveryConfigRepository = SqlDeliveryConfigRepository(

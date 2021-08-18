@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.persistence.DeliveryConfigRepositoryTests
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.defaultArtifactSuppliers
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
@@ -26,7 +27,8 @@ internal object SqlDeliveryConfigRepositoryTests : DeliveryConfigRepositoryTests
     SqlDeliveryConfigRepository(jooq, Clock.systemUTC(), objectMapper, resourceFactory(resourceSpecIdentifier), sqlRetry, defaultArtifactSuppliers(), publisher = publisher)
 
   override fun createResourceRepository(resourceSpecIdentifier: ResourceSpecIdentifier, publisher: ApplicationEventPublisher): SqlResourceRepository =
-    SqlResourceRepository(jooq, Clock.systemUTC(), objectMapper, resourceFactory(resourceSpecIdentifier), sqlRetry, publisher, NoopRegistry())
+    SqlResourceRepository(jooq, Clock.systemUTC(), objectMapper, resourceFactory(resourceSpecIdentifier), sqlRetry, publisher, NoopRegistry(), springEnv = mockEnvironment()
+    )
 
   override fun createArtifactRepository(publisher: ApplicationEventPublisher): SqlArtifactRepository =
     SqlArtifactRepository(jooq, Clock.systemUTC(), objectMapper, sqlRetry, defaultArtifactSuppliers(), publisher = publisher)

@@ -4,6 +4,7 @@ import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.persistence.UnhealthyRepositoryTests
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
@@ -23,7 +24,8 @@ internal object SqlUnhealthyRepositoryTests : UnhealthyRepositoryTests<SqlUnheal
     resourceFactory,
     sqlRetry,
     publisher = mockk(relaxed = true),
-    spectator = NoopRegistry()
+    spectator = NoopRegistry(),
+    springEnv = mockEnvironment()
   )
 
   override fun factory(clock: Clock): SqlUnhealthyRepository =

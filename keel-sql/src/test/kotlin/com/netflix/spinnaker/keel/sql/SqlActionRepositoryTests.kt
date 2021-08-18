@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.jackson.registerKeelApiModule
 import com.netflix.spinnaker.keel.persistence.ActionRepositoryTests
 import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
@@ -56,22 +57,6 @@ internal class SqlActionRepositoryTests :
     sqlRetry = sqlRetry,
     clock = clock
   )
-
-  /**
-   * Generate a mock Spring environment that returns the default value for all boolean properties
-   */
-  private fun mockEnvironment() : Environment {
-    val defaultValue = slot<Boolean>()
-    val environment: Environment = mockk()
-
-    every {
-      environment.getProperty(any(), Boolean::class.java, capture(defaultValue))
-    } answers {
-      defaultValue.captured
-    }
-
-    return environment
-  }
 
   override fun createSubject() =
     SqlActionRepository(

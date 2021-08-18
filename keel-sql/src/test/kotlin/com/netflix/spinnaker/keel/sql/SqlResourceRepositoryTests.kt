@@ -4,6 +4,7 @@ import com.netflix.spectator.api.NoopRegistry
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.persistence.ResourceRepositoryTests
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
+import com.netflix.spinnaker.keel.test.mockEnvironment
 import com.netflix.spinnaker.keel.test.resourceFactory
 import com.netflix.spinnaker.kork.sql.config.RetryProperties
 import com.netflix.spinnaker.kork.sql.config.SqlRetryProperties
@@ -34,7 +35,8 @@ internal class SqlResourceRepositoryTests : ResourceRepositoryTests<SqlResourceR
       resourceFactory,
       sqlRetry,
       publisher,
-      NoopRegistry()
+      NoopRegistry(),
+      springEnv = mockEnvironment()
     )
   }
 
