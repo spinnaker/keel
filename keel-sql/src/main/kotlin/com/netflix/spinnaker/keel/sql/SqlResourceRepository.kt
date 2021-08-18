@@ -66,7 +66,7 @@ open class SqlResourceRepository(
   private val resourceVersionInsertId = spectator.createId("resource.version.insert")
 
   private val itemsDueForCheckCheckSingleSelectQuery : Boolean
-    get() = springEnv.getProperty("keel.items.due.for.check.single.select.query", Boolean::class.java, true)
+    get() = springEnv.getProperty("keel.items.due.for.check.single.select.query", Boolean::class.java, false)
 
   override fun allResources(callback: (ResourceHeader) -> Unit) {
     sqlRetry.withRetry(READ) {
