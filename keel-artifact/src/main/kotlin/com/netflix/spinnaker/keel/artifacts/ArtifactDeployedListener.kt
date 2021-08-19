@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.artifacts
 
 import com.netflix.spinnaker.keel.api.events.ArtifactVersionDeployed
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.core.api.PromotionStatus.CURRENT
 import com.netflix.spinnaker.keel.events.ArtifactDeployedNotification
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import kotlinx.coroutines.runBlocking
@@ -42,14 +43,14 @@ class ArtifactDeployedListener(
       )
 
       if (approvedForEnv) {
-        val markedCurrentlyDeployed = repository.isCurrentlyDeployedTo(
+        val markedCurrentlyDeployed = repository.getArtifactPromotionStatus(
           deliveryConfig = deliveryConfig,
           artifact = artifact,
           version = event.artifactVersion,
           targetEnvironment = env.name
-        )
+        ) == CURRENT
         if (!markedCurrentlyDeployed) {
-          log.info("Marking {} as deployed in {} for config {} because it is already deployed", event.artifactVersion, env.name, deliveryConfig.name)
+          log.info("Marking {} as deployed in {} for config {} because it's not currently marked as deployed", event.artifactVersion, env.name, deliveryConfig.name)
           repository.markAsSuccessfullyDeployedTo(
             deliveryConfig = deliveryConfig,
             artifact = artifact,
