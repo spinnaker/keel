@@ -30,6 +30,9 @@ class ArtifactDeployedListener(
 
       // if there's no artifact associated with this resource, we do nothing.
       val artifact = resource.findAssociatedArtifact(deliveryConfig) ?: return@runBlocking
+        .also {
+          log.debug("Unable to find artifact associated with resource $resourceId in application ${deliveryConfig.application}")
+        }
 
       val approvedForEnv = repository.isApprovedFor(
         deliveryConfig = deliveryConfig,
@@ -61,7 +64,13 @@ class ArtifactDeployedListener(
               targetEnvironment = env
             )
           )
+        } else {
+          log.debug("$artifact version ${event.artifactVersion} is already marked as deployed to $env in" +
+            " application ${deliveryConfig.application}")
         }
+      } else {
+        log.debug("$artifact version ${event.artifactVersion} is not approved for $env in application" +
+          " ${deliveryConfig.application}, so not marking as deployed.")
       }
     }
 }
