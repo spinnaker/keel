@@ -210,6 +210,7 @@ class SqlActionRepository(
       .on(DELIVERY_CONFIG.UID.eq(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID))
       .where(DELIVERY_CONFIG.NAME.eq(deliveryConfig.name))
       .and(ACTIVE_ENVIRONMENT.NAME.eq(environment.name))
+      .and(ACTION_STATE.TYPE.eq(VERIFICATION))
       .and(ACTION_STATE.STATUS.eq(status))
       .fetch()
       .map { (artifactReference, version) ->
