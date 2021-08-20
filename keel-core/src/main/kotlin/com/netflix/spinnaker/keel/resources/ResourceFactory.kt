@@ -45,15 +45,15 @@ class ResourceFactory(
    * @return the [Resource] after running any applicable spec migrations (i.e. the returned resource may
    * have a different [ResourceSpec] than the one originally in the resource).
    */
-  fun migrate(resource: Resource<*>): Resource<*> {
-    val migrated = specMigrators
+  fun migrate(resource: Resource<*>): Resource<*> =
+    specMigrators
       .migrate(resource.kind, resource.spec)
       .let { (endKind, endSpec) ->
+        if (resource.kind != endKind) {
+          log.debug("Migrated resource ${resource.id} of kind ${resource.kind} to $endKind")
+        }
         Resource(endKind, resource.metadata, endSpec)
       }
-    log.debug("Migrated resource ${resource.id} of kind ${resource.kind} to ${migrated.kind}")
-    return migrated
-  }
 
   private fun Resource<*>.migrateMe() = migrate(this)
 

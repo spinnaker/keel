@@ -23,6 +23,7 @@ import com.netflix.spinnaker.keel.core.api.ManualJudgementConstraint
 import com.netflix.spinnaker.keel.core.api.SubmittedResource
 import com.netflix.spinnaker.keel.core.api.normalize
 import com.netflix.spinnaker.keel.events.ResourceCreated
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateManagedResourceException
 import com.netflix.spinnaker.keel.resources.ResourceFactory
@@ -162,6 +163,7 @@ abstract class CombinedRepositoryTests<D : DeliveryConfigRepository, R : Resourc
 
     fun resourcesDueForCheck() =
       subject.resourcesDueForCheck(Duration.ofMinutes(1), Int.MAX_VALUE)
+        .onEach { subject.markResourceCheckComplete(it, ResourceState.Ok) }
 
     fun CombinedRepository.allResourceNames(): List<String> =
       mutableListOf<String>()

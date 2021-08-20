@@ -48,8 +48,6 @@ import com.netflix.spinnaker.keel.persistence.metamodel.Tables.PREVIEW_ENVIRONME
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.RESOURCE_VERSION
 import com.netflix.spinnaker.keel.resources.ResourceFactory
-import com.netflix.spinnaker.keel.resources.ResourceSpecIdentifier
-import com.netflix.spinnaker.keel.resources.SpecMigrator
 import com.netflix.spinnaker.keel.sql.RetryCategory.READ
 import com.netflix.spinnaker.keel.sql.RetryCategory.WRITE
 import com.netflix.spinnaker.keel.sql.deliveryconfigs.attachDependents
@@ -1229,7 +1227,7 @@ class SqlDeliveryConfigRepository(
       }
   }
 
-  override fun markCheckComplete(deliveryConfig: DeliveryConfig) {
+  override fun markCheckComplete(deliveryConfig: DeliveryConfig, status: Any?) {
     sqlRetry.withRetry(WRITE) {
       jooq
         .update(DELIVERY_CONFIG_LAST_CHECKED)

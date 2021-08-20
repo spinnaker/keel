@@ -9,8 +9,10 @@ import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent
 import com.netflix.spinnaker.keel.events.PersistentEvent.EventScope
+import com.netflix.spinnaker.keel.events.ResourceCheckResult
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceHistoryEvent
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.persistence.NoSuchResourceId
 import com.netflix.spinnaker.keel.persistence.ResourceHeader
@@ -40,6 +42,7 @@ import org.jooq.impl.DSL.select
 import org.jooq.impl.DSL.value
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.context.event.EventListener
 import org.springframework.core.env.Environment
 import java.time.Clock
 import java.time.Duration
@@ -383,8 +386,12 @@ open class SqlResourceRepository(
           } catch (e: Exception) {
             jooq.insertInto(RESOURCE_LAST_CHECKED)
               .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
+              .set(RESOURCE_LAST_CHECKED.AT, now)
+              .set(RESOURCE_LAST_CHECKED.STATUS, ResourceState.Error)
               .set(RESOURCE_LAST_CHECKED.IGNORE, true)
               .onDuplicateKeyUpdate()
+              .set(RESOURCE_LAST_CHECKED.AT, now)
+              .set(RESOURCE_LAST_CHECKED.STATUS, ResourceState.Error)
               .set(RESOURCE_LAST_CHECKED.IGNORE, true)
               .execute()
             throw e
@@ -455,14 +462,39 @@ open class SqlResourceRepository(
           } catch (e: Exception) {
             jooq.insertInto(RESOURCE_LAST_CHECKED)
               .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, uid)
+              .set(RESOURCE_LAST_CHECKED.AT, now)
+              .set(RESOURCE_LAST_CHECKED.STATUS, ResourceState.Error)
               .set(RESOURCE_LAST_CHECKED.IGNORE, true)
               .onDuplicateKeyUpdate()
+              .set(RESOURCE_LAST_CHECKED.AT, now)
+              .set(RESOURCE_LAST_CHECKED.STATUS, ResourceState.Error)
               .set(RESOURCE_LAST_CHECKED.IGNORE, true)
               .execute()
             throw e
           }
         }
     }
+  }
+
+  override fun markCheckComplete(resource: Resource<*>, status: Any?) {
+    require(status is ResourceState)
+    sqlRetry.withRetry(WRITE) {
+      val now = clock.instant()
+      jooq
+        .insertInto(RESOURCE_LAST_CHECKED)
+        .set(RESOURCE_LAST_CHECKED.RESOURCE_UID, resource.uid)
+        .set(RESOURCE_LAST_CHECKED.STATUS, status)
+        .set(RESOURCE_LAST_CHECKED.STATUS_DETERMINED_AT, now)
+        .onDuplicateKeyUpdate()
+        .set(RESOURCE_LAST_CHECKED.STATUS, status)
+        .set(RESOURCE_LAST_CHECKED.STATUS_DETERMINED_AT, now)
+        .execute()
+    }
+  }
+
+  @EventListener(ResourceCheckResult::class)
+  fun onResourceChecked(event: ResourceCheckResult) {
+    markCheckComplete(get(event.id), event.state)
   }
 
   override fun triggerResourceRecheck(environmentName: String, application: String) {
@@ -481,12 +513,12 @@ open class SqlResourceRepository(
             .and(DELIVERY_CONFIG.APPLICATION.eq(application))
             .fetch()
 
-          log.debug("Triggering recheck for resources $resourceUids in environment $environmentName in application $application")
+        log.debug("Triggering recheck for resources $resourceUids in environment $environmentName in application $application")
 
-          txn.update(RESOURCE_LAST_CHECKED)
-            .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
-            .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(resourceUids))
-            .execute()
+        txn.update(RESOURCE_LAST_CHECKED)
+          .set(RESOURCE_LAST_CHECKED.AT, EPOCH.plusSeconds(1))
+          .where(RESOURCE_LAST_CHECKED.RESOURCE_UID.`in`(resourceUids))
+          .execute()
       }
     }
   }

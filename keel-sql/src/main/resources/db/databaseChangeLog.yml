@@ -362,3 +362,6 @@ databaseChangeLog:
   - include:
       file: changelog/20210811-add-updated-at-to-delivery-config.yml
       relativeToChangelogFile: true
+  - include:
+      file: changelog/20210818-last-resource-check-status.yml
+      relativeToChangelogFile: true

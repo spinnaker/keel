@@ -5,6 +5,7 @@ import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.plugins.UnsupportedKind
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.persistence.ResourceRepositoryPeriodicallyCheckedTests
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
 import com.netflix.spinnaker.keel.test.TEST_API_V1
@@ -28,7 +29,6 @@ import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
-import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isSuccess
 import java.time.Clock
 import java.time.Clock.systemUTC
@@ -103,7 +103,7 @@ internal object SqlResourceRepositoryPeriodicallyCheckedTests :
 
         doInParallel(500) {
           repo.itemsDueForCheck(ifNotCheckedInLast, limit)
-            .onEach(repo::markCheckComplete)
+            .onEach { repo.markCheckComplete(it, ResourceState.Ok) }
             .let(results::addAll)
         }
 

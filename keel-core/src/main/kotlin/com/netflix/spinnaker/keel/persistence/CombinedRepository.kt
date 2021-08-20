@@ -2,11 +2,17 @@ package com.netflix.spinnaker.keel.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spinnaker.keel.api.ActionStateUpdateContext
+import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.NotificationConfig
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.action.Action
+import com.netflix.spinnaker.keel.api.action.ActionRepository
+import com.netflix.spinnaker.keel.api.action.ActionState
+import com.netflix.spinnaker.keel.api.action.ActionStateFull
+import com.netflix.spinnaker.keel.api.action.ActionType.VERIFICATION
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactMetadata
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactType
@@ -15,12 +21,6 @@ import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.api.constraints.ConstraintState
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
 import com.netflix.spinnaker.keel.api.events.ArtifactRegisteredEvent
-import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
-import com.netflix.spinnaker.keel.api.action.Action
-import com.netflix.spinnaker.keel.api.action.ActionRepository
-import com.netflix.spinnaker.keel.api.action.ActionState
-import com.netflix.spinnaker.keel.api.action.ActionStateFull
-import com.netflix.spinnaker.keel.api.action.ActionType.VERIFICATION
 import com.netflix.spinnaker.keel.api.events.ConstraintStateChanged
 import com.netflix.spinnaker.keel.core.api.ApplicationSummary
 import com.netflix.spinnaker.keel.core.api.ArtifactSummaryInEnvironment
@@ -36,6 +36,7 @@ import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceHistoryEvent
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.services.StatusInfoForArtifactInEnvironment
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -305,17 +306,28 @@ class CombinedRepository(
   override fun constraintStateFor(application: String): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(application)
 
-  override fun constraintStateFor(deliveryConfigName: String, environmentName: String, limit: Int): List<ConstraintState> =
+  override fun constraintStateFor(
+    deliveryConfigName: String,
+    environmentName: String,
+    limit: Int
+  ): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(deliveryConfigName, environmentName, limit)
 
-  override fun constraintStateForEnvironments(deliveryConfigName: String, environmentUIDs: List<String>): List<ConstraintState> =
+  override fun constraintStateForEnvironments(
+    deliveryConfigName: String,
+    environmentUIDs: List<String>
+  ): List<ConstraintState> =
     deliveryConfigRepository.constraintStateForEnvironments(deliveryConfigName, environmentUIDs)
 
   override fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig> =
     deliveryConfigRepository.itemsDueForCheck(minTimeSinceLastCheck, limit)
 
+  override fun markResourceCheckComplete(resource: Resource<*>, state: ResourceState) {
+    resourceRepository.markCheckComplete(resource, state)
+  }
+
   override fun markDeliveryConfigCheckComplete(deliveryConfig: DeliveryConfig) {
-    deliveryConfigRepository.markCheckComplete(deliveryConfig)
+    deliveryConfigRepository.markCheckComplete(deliveryConfig, null)
   }
 
   override fun getApplicationSummaries(): Collection<ApplicationSummary> =

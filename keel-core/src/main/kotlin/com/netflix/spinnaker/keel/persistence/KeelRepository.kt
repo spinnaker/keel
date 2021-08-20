@@ -30,6 +30,7 @@ import com.netflix.spinnaker.keel.events.ApplicationEvent
 import com.netflix.spinnaker.keel.events.ResourceCreated
 import com.netflix.spinnaker.keel.events.ResourceEvent
 import com.netflix.spinnaker.keel.events.ResourceHistoryEvent
+import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.events.ResourceUpdated
 import com.netflix.spinnaker.keel.exceptions.DuplicateManagedResourceException
 import com.netflix.spinnaker.keel.persistence.ResourceRepository.Companion.DEFAULT_MAX_EVENTS
@@ -127,13 +128,25 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun deleteConstraintState(deliveryConfigName: String, environmentName: String, type: String)
 
-  fun queueArtifactVersionForApproval(deliveryConfigName: String, environmentName: String, artifact: DeliveryArtifact, artifactVersion: String)
+  fun queueArtifactVersionForApproval(
+    deliveryConfigName: String,
+    environmentName: String,
+    artifact: DeliveryArtifact,
+    artifactVersion: String
+  )
 
-  fun deleteArtifactVersionQueuedForApproval(deliveryConfigName: String, environmentName: String, artifact: DeliveryArtifact, artifactVersion: String)
+  fun deleteArtifactVersionQueuedForApproval(
+    deliveryConfigName: String,
+    environmentName: String,
+    artifact: DeliveryArtifact,
+    artifactVersion: String
+  )
 
   fun deliveryConfigsDueForCheck(minTimeSinceLastCheck: Duration, limit: Int): Collection<DeliveryConfig>
 
   fun markDeliveryConfigCheckComplete(deliveryConfig: DeliveryConfig)
+
+  fun markResourceCheckComplete(resource: Resource<*>, state: ResourceState)
 
   fun getApplicationSummaries(): Collection<ApplicationSummary>
 
@@ -279,7 +292,7 @@ interface KeelRepository : KeelReadOnlyRepository {
     minTimeSinceLastCheck: Duration,
     limit: Int
   ) : Collection<ArtifactInEnvironmentContext>
-  
+
   /**
    * Updates the state of [action] as run against [context].
    *
