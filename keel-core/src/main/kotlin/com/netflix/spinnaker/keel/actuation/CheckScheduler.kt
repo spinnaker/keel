@@ -2,6 +2,8 @@ package com.netflix.spinnaker.keel.actuation
 
 import com.netflix.spectator.api.BasicTag
 import com.netflix.spectator.api.Registry
+import com.netflix.spinnaker.config.ArtifactCheckConfig
+import com.netflix.spinnaker.config.EnvironmentCheckConfig
 import com.netflix.spinnaker.config.EnvironmentDeletionConfig
 import com.netflix.spinnaker.config.EnvironmentVerificationConfig
 import com.netflix.spinnaker.config.PostDeployActionsConfig
@@ -53,6 +55,8 @@ import kotlin.math.max
   EnvironmentDeletionConfig::class,
   EnvironmentVerificationConfig::class,
   PostDeployActionsConfig::class,
+  EnvironmentCheckConfig::class,
+  ArtifactCheckConfig::class
 )
 @Component
 class CheckScheduler(
@@ -64,6 +68,8 @@ class CheckScheduler(
   private val artifactHandlers: Collection<ArtifactHandler>,
   private val postDeployActionRunner: PostDeployActionRunner,
   private val resourceCheckConfig: ResourceCheckConfig,
+  private val environmentCheckConfig: EnvironmentCheckConfig,
+  private val artifactCheckConfig: ArtifactCheckConfig,
   private val verificationConfig: EnvironmentVerificationConfig,
   private val postDeployConfig: PostDeployActionsConfig,
   private val environmentDeletionConfig: EnvironmentDeletionConfig,
@@ -94,6 +100,15 @@ class CheckScheduler(
   private val checkMinAge: Duration
     get() = springEnv.getProperty("keel.check.min-age-duration", Duration::class.java, resourceCheckConfig.minAgeDuration)
 
+  private val resourceBatchSize: Int
+    get() = springEnv.getProperty("keel.resource-check.batch-size", Int::class.java, resourceCheckConfig.batchSize)
+
+  private val environmentBatchSize: Int
+    get() = springEnv.getProperty("keel.environment-check.batch-size", Int::class.java, environmentCheckConfig.batchSize)
+
+  private val artifactBatchSize: Int
+    get() = springEnv.getProperty("keel.artifact-check.batch-size", Int::class.java, artifactCheckConfig.batchSize)
+
   @Scheduled(fixedDelayString = "\${keel.resource-check.frequency:PT1S}")
   fun checkResources() {
     if (enabled.get()) {
@@ -102,7 +117,7 @@ class CheckScheduler(
         supervisorScope {
           runCatching {
             repository
-              .resourcesDueForCheck(checkMinAge, resourceCheckConfig.batchSize)
+              .resourcesDueForCheck(checkMinAge, resourceBatchSize)
           }
             .onFailure {
               publisher.publishEvent(ResourceLoadFailed(it))
@@ -142,7 +157,7 @@ class CheckScheduler(
       val job = launch(blankMDC) {
         supervisorScope {
           repository
-            .deliveryConfigsDueForCheck(checkMinAge, resourceCheckConfig.batchSize)
+            .deliveryConfigsDueForCheck(checkMinAge, environmentBatchSize)
             .forEach {
               try {
                 /**
@@ -152,7 +167,7 @@ class CheckScheduler(
                  * TODO: consider refactoring environmentPromotionChecker so that it can be called for
                  *  individual environments, allowing fairer timeouts.
                  */
-                withTimeout(resourceCheckConfig.timeoutDuration.toMillis() * max(it.environments.size, 1)) {
+                withTimeout(environmentCheckConfig.timeoutDuration.toMillis() * max(it.environments.size, 1)) {
                   launch { environmentPromotionChecker.checkEnvironments(it) }
                 }
               } catch (e: TimeoutCancellationException) {
@@ -178,7 +193,7 @@ class CheckScheduler(
       val job = launch(blankMDC) {
         supervisorScope {
           environmentDeletionRepository
-            .itemsDueForCheck(checkMinAge, resourceCheckConfig.batchSize)
+            .itemsDueForCheck(checkMinAge, environmentBatchSize)
             .forEach {
               try {
                 withTimeout(environmentDeletionConfig.check.timeoutDuration.toMillis()) {
@@ -203,10 +218,10 @@ class CheckScheduler(
       publisher.publishEvent(ScheduledArtifactCheckStarting)
       val job = launch(blankMDC) {
         supervisorScope {
-          repository.artifactsDueForCheck(checkMinAge, resourceCheckConfig.batchSize)
+          repository.artifactsDueForCheck(checkMinAge, artifactBatchSize)
             .forEach { artifact ->
               try {
-                withTimeout(resourceCheckConfig.timeoutDuration.toMillis()) {
+                withTimeout(artifactCheckConfig.timeoutDuration.toMillis()) {
                   launch {
                     artifactHandlers.forEach { handler ->
                       handler.handle(artifact)
