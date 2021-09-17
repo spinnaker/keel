@@ -169,7 +169,13 @@ class PreviewEnvironmentCodeEventListener(
       } catch (e: Exception) {
         log.error("Error retrieving delivery config: $e", e)
         event.emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_RETRIEVAL_ERROR, deliveryConfig.application)
-        eventPublisher.publishDeliveryConfigImportFailed(deliveryConfig.application, event, clock.instant(), e.message ?: "Unknown", scmUtils.getPullRequestLink(event))
+        eventPublisher.publishDeliveryConfigImportFailed(
+          deliveryConfig.application,
+          event,
+          clock.instant(),
+          e.message ?: "Unknown",
+          scmUtils.getPullRequestLink(event)
+        )
         return@forEach
       }
 

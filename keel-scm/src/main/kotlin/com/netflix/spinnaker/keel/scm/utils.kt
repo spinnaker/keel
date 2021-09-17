@@ -46,7 +46,7 @@ fun ApplicationEventPublisher.publishDeliveryConfigImportFailed(
       DeliveryConfigImportFailed(
         triggeredAt = timestamp,
         application = application,
-        branch = targetBranch,
+        branch = if (event is PrEvent) event.pullRequestBranch else targetBranch,
         repoType = repoType,
         projectKey = projectKey,
         repoSlug = repoSlug,

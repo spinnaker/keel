@@ -724,9 +724,11 @@ class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         }
 
         test("an event is published") {
+          val failureEvent = slot<DeliveryConfigImportFailed>()
           verify {
-            eventPublisher.publishEvent(any<DeliveryConfigImportFailed>())
+            eventPublisher.publishEvent(capture(failureEvent))
           }
+          expectThat(failureEvent.captured.branch).isEqualTo(prOpenedEvent.pullRequestBranch)
         }
       }
 

@@ -27,10 +27,12 @@ import io.mockk.called
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.env.Environment
 import strikt.api.expectThat
 import strikt.assertions.contains
+import strikt.assertions.isEqualTo
 import strikt.assertions.one
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
@@ -339,9 +341,11 @@ class DeliveryConfigImportListenerTests : JUnit5Minutests {
         }
 
         test("an event is published") {
+          val failureEvent = slot<DeliveryConfigImportFailed>()
           verify {
-            eventPublisher.publishEvent(any<DeliveryConfigImportFailed>())
+            eventPublisher.publishEvent(capture(failureEvent))
           }
+          expectThat(failureEvent.captured.branch).isEqualTo(commitEvent.targetBranch)
         }
       }
     }
