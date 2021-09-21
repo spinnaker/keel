@@ -43,6 +43,7 @@ import com.netflix.spinnaker.keel.api.titus.TitusServerGroup
 import com.netflix.spinnaker.keel.api.titus.TitusServerGroupSpec
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroupCollection
@@ -94,8 +95,19 @@ import io.mockk.coVerify as verify
 // todo eb: we could probably have generic cluster tests
 // where you provide the correct info for the spec and active server groups
 class TitusClusterHandlerTests : JUnit5Minutests {
+  val titusAccount = "titustest"
+  val awsAccount = "test"
+  val titusAccountCredential = Credential(
+    name = titusAccount,
+    type = "titus",
+    environment = "testenv",
+    attributes = mutableMapOf("awsAccount" to awsAccount, "registry" to awsAccount + "registry")
+  )
+
   val cloudDriverService = mockk<CloudDriverService>()
-  val cloudDriverCache = mockk<CloudDriverCache>()
+  val cloudDriverCache = mockk<CloudDriverCache>() {
+    every { credentialBy(titusAccount) } returns titusAccountCredential
+  }
   val orcaService = mockk<OrcaService>()
   val resolvers = emptyList<Resolver<TitusClusterSpec>>()
   val repository = mockk<KeelRepository>()
@@ -115,9 +127,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
   val sg2West = SecurityGroupSummary("keel-elb", "sg-235425234", "vpc-1")
   val sg1East = SecurityGroupSummary("keel", "sg-279585936", "vpc-1")
   val sg2East = SecurityGroupSummary("keel-elb", "sg-610264122", "vpc-1")
-
-  val titusAccount = "titustest"
-  val awsAccount = "test"
 
   val digestProvider = DigestProvider(
     organization = "spinnaker",
@@ -226,11 +235,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         every { securityGroupById(awsAccount, "us-east-1", sg2East.id) } returns sg2East
         every { securityGroupByName(awsAccount, "us-east-1", sg1East.name) } returns sg1East
         every { securityGroupByName(awsAccount, "us-east-1", sg2East.name) } returns sg2East
-
-        every { cloudDriverService.getAccountInformation(titusAccount) } returns mapOf(
-          "awsAccount" to awsAccount,
-          "registry" to awsAccount + "registry"
-        )
+        every { cloudDriverCache.credentialBy(titusAccount) } returns titusAccountCredential
       }
       every { repository.environmentFor(any()) } returns Environment("test")
       every {
@@ -428,6 +433,13 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     }
 
     context("a diff has been detected") {
+      before {
+        every { cloudDriverService.findDockerImages("testregistry", "spinnaker/keel", any(), any(), any()) } returns
+          listOf(
+            DockerImage("testregistry", "spinnaker/keel", "master-h2.blah", "sha:1111")
+          )
+      }
+
       context("the diff is only in capacity") {
 
         val modified = setOf(

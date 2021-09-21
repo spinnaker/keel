@@ -2,6 +2,7 @@ package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.netflix.rocket.api.artifact.internal.debian.DebianArtifactParser
+import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.NoStrategy
@@ -11,7 +12,6 @@ import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
 import com.netflix.spinnaker.keel.api.actuation.Job
-import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactStatus.UNKNOWN
 import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
@@ -70,7 +70,6 @@ import com.netflix.spinnaker.keel.clouddriver.model.subnet
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
-import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.ec2.toEc2Api
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
@@ -79,16 +78,12 @@ import com.netflix.spinnaker.keel.exceptions.ExportError
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.netflix.spinnaker.keel.orca.dependsOn
-import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
 import com.netflix.spinnaker.keel.orca.toOrcaJobProperties
-import com.netflix.spinnaker.keel.orca.waitStage
 import com.netflix.spinnaker.keel.parseAppVersion
 import com.netflix.spinnaker.keel.parseAppVersionOrNull
 import com.netflix.spinnaker.keel.plugin.buildSpecFromDiff
 import com.netflix.spinnaker.keel.retrofit.isNotFound
 import com.netflix.spinnaker.keel.serialization.configuredObjectMapper
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -173,220 +168,23 @@ class ClusterHandler(
         CurrentImages(supportedKind.kind, images, resource.id)
       }
 
-  override suspend fun upsert(
-    resource: Resource<ClusterSpec>,
-    resourceDiff: ResourceDiff<Map<String, ServerGroup>>
-  ): List<Task> =
-    coroutineScope {
-      val diffs = resourceDiff
-        .toIndividualDiffs()
-        .filter { diff -> diff.hasChanges() }
+  override fun ResourceDiff<ServerGroup>.moniker(): Moniker =
+    desired.moniker
 
-      val deferred: MutableList<Deferred<Task>> = mutableListOf()
-      val modifyDiffs = diffs.filter { it.isCapacityOrAutoScalingOnly() || it.isEnabledOnly() }
-      val createDiffs = diffs - modifyDiffs
+  override fun Resource<ClusterSpec>.isStaggeredDeploy(): Boolean =
+    spec.deployWith.isStaggered
 
-      if (modifyDiffs.isNotEmpty()) {
-        deferred.addAll(
-          modifyInPlace(resource, modifyDiffs)
-        )
-      }
+  override fun getDesiredAccount(diff: ResourceDiff<ServerGroup>): String =
+    diff.desired.location.account
 
-      val version = diffs.first().desired.launchConfiguration.appVersion
-        ?: throw MissingAppVersionException(resource.id)
+  override fun correlationId(resource: Resource<ClusterSpec>, diff: ResourceDiff<ServerGroup>): String =
+    "${resource.id}:${diff.desired.location.region}"
 
-      if (resource.spec.deployWith.isStaggered && createDiffs.isNotEmpty()) {
-        val tasks = upsertStaggered(resource, createDiffs, version)
-        return@coroutineScope tasks + deferred.map { it.await() }
-      }
+  override fun ResourceDiff<ServerGroup>.version(resource: Resource<ClusterSpec>): String =
+    desired.launchConfiguration.appVersion ?: throw MissingAppVersionException(resource.id)
 
-      deferred.addAll(
-        upsertUnstaggered(resource, createDiffs, version)
-      )
-
-      if (createDiffs.isNotEmpty()) {
-        notifyArtifactDeploying(resource, version)
-      }
-
-      return@coroutineScope deferred.map { it.await() }
-    }
-
-  private suspend fun modifyInPlace(
-    resource: Resource<ClusterSpec>,
-    diffs: List<ResourceDiff<ServerGroup>>
-  ): List<Deferred<Task>> =
-    coroutineScope {
-      diffs.mapNotNull { diff ->
-        val (job, description) = when {
-          diff.isCapacityOnly() -> listOf(diff.resizeServerGroupJob()) to "Modify capacity of server group ${diff.desired.moniker} in " +
-            "${diff.desired.location.account}/${diff.desired.location.region}"
-          diff.isAutoScalingOnly() -> diff.modifyScalingPolicyJob() to "Modify auto-scaling of server group ${diff.desired.moniker} in " +
-            "${diff.desired.location.account}/${diff.desired.location.region}"
-          diff.isEnabledOnly() -> {
-            val appVersion = diff.desired.launchConfiguration.appVersion
-              ?: throw MissingAppVersionException(resource.id)
-            val job = diff.disableOtherServerGroupJob(resource, appVersion)
-            listOf(job) to "Disable extra active server group ${job["asgName"]} in " +
-              "${diff.desired.location.account}/${diff.desired.location.region}"
-          }
-          else -> listOf(diff.resizeServerGroupJob()) + diff.modifyScalingPolicyJob(1) to "Modify capacity and auto-scaling of server group ${diff.desired.moniker} in " +
-            "${diff.desired.location.account}/${diff.desired.location.region}"
-        }
-
-        if (job.isEmpty()) {
-          null
-        } else {
-          log.info("Modifying server group in-place using task: {}", job)
-
-          async {
-            taskLauncher.submitJob(
-              resource = resource,
-              description = description,
-              correlationId = "${resource.id}:${diff.desired.location.region}",
-              stages = job
-            )
-          }
-        }
-      }
-    }
-
-  private suspend fun upsertUnstaggered(
-    resource: Resource<ClusterSpec>,
-    diffs: List<ResourceDiff<ServerGroup>>,
-    version: String,
-    dependsOn: String? = null
-  ): List<Deferred<Task>> =
-    coroutineScope {
-      diffs.mapNotNull { diff ->
-        val stages: MutableList<Map<String, Any?>> = mutableListOf()
-        var refId = 0
-
-        if (dependsOn != null) {
-          stages.add(dependsOn(dependsOn))
-          refId++
-        }
-
-        stages.add(diff.createServerGroupJob(refId, resource))
-        refId++
-
-        if (diff.shouldDeployAndModifyScalingPolicies()) {
-          stages.addAll(diff.modifyScalingPolicyJob(refId))
-        }
-
-        if (stages.isEmpty()) {
-          null
-        } else {
-          log.info("Upsert server group using task: {}", stages)
-
-          async {
-            taskLauncher.submitJob(
-              resource = resource,
-              description = "Deploy $version to server group ${diff.desired.moniker}  in " +
-                "${diff.desired.location.account}/${diff.desired.location.region}",
-              correlationId = "${resource.id}:${diff.desired.location.region}",
-              stages = stages
-            )
-          }
-        }
-      }
-    }
-
-  private suspend fun upsertStaggered(
-    resource: Resource<ClusterSpec>,
-    diffs: List<ResourceDiff<ServerGroup>>,
-    version: String
-  ): List<Task> =
-    coroutineScope {
-      val regionalDiffs = diffs.associateBy { it.desired.location.region }
-      val tasks: MutableList<Task> = mutableListOf()
-      var priorExecutionId: String? = null
-      val staggeredRegions = resource.spec.deployWith.stagger.map {
-        it.region
-      }
-        .toSet()
-
-      // If any, these are deployed in-parallel after all regions with a defined stagger
-      val unstaggeredRegions = regionalDiffs.keys - staggeredRegions
-
-      for (stagger in resource.spec.deployWith.stagger) {
-        if (!regionalDiffs.containsKey(stagger.region)) {
-          continue
-        }
-
-        val diff = regionalDiffs[stagger.region] as ResourceDiff<ServerGroup>
-        val stages: MutableList<Map<String, Any?>> = mutableListOf()
-        var refId = 0
-
-        /**
-         * Given regions staggered as [A, B, C], this makes the execution of the B
-         * `createServerGroup` task dependent on the A task, and C dependent on B,
-         * while preserving the unstaggered behavior of an orca task per region.
-         */
-        if (priorExecutionId != null) {
-          stages.add(dependsOn(priorExecutionId))
-          refId++
-        }
-
-        val stage = diff.createServerGroupJob(refId, resource).toMutableMap()
-
-        refId++
-
-        /**
-         * If regions are staggered by time windows, add a `restrictedExecutionWindow`
-         * to the `createServerGroup` stage.
-         */
-        if (stagger.hours != null) {
-          val hours = stagger.hours!!.split("-").map { it.toInt() }
-          stage.putAll(restrictedExecutionWindow(hours[0], hours[1]))
-        }
-
-        stages.add(stage)
-
-        if (diff.shouldDeployAndModifyScalingPolicies()) {
-          stages.addAll(diff.modifyScalingPolicyJob(refId))
-        }
-
-        if (stagger.pauseTime != null) {
-          stages.add(
-            waitStage(stagger.pauseTime!!, stages.size)
-          )
-        }
-
-        val deferred = async {
-          taskLauncher.submitJob(
-            resource = resource,
-            description = "Deploy $version to server group ${diff.desired.moniker} in " +
-              "${diff.desired.location.account}/${diff.desired.location.region}",
-            correlationId = "${resource.id}:${diff.desired.location.region}",
-            stages = stages
-          )
-        }
-
-        notifyArtifactDeploying(resource, version)
-
-        val task = deferred.await()
-        priorExecutionId = task.id
-        tasks.add(task)
-      }
-
-      /**
-       * `ClusterSpec.stagger` doesn't have to define a stagger for all of the regions clusters.
-       * If a cluster deploys into 4 regions [A, B, C, D] but only defines a stagger for [A, B],
-       * [C, D] will deploy in parallel after the completion of B and any pauseTime it defines.
-       */
-      if (unstaggeredRegions.isNotEmpty()) {
-        val unstaggeredDiffs = regionalDiffs
-          .filter { unstaggeredRegions.contains(it.key) }
-          .map { it.value }
-
-        tasks.addAll(
-          upsertUnstaggered(resource, unstaggeredDiffs, version, priorExecutionId)
-            .map { it.await() }
-        )
-      }
-
-      return@coroutineScope tasks
-    }
+  override fun Resource<ClusterSpec>.getDeployWith(): ClusterDeployStrategy =
+    spec.deployWith
 
   override suspend fun export(exportable: Exportable): ClusterSpec {
     // Get existing infrastructure
@@ -585,13 +383,15 @@ class ClusterHandler(
   /**
    * @return `true` if the only changes in the diff are to capacity.
    */
-  private fun ResourceDiff<ServerGroup>.isCapacityOnly(): Boolean =
-    current != null && affectedRootPropertyTypes.all { it == Capacity::class.java }
+  override fun ResourceDiff<ServerGroup>.isCapacityOnly(): Boolean =
+    current != null && affectedRootPropertyTypes.all {
+      it == Capacity::class.java || it == DefaultCapacity::class.java
+    }
 
   /**
    * @return `true` if the only changes in the diff are to scaling.
    */
-  private fun ResourceDiff<ServerGroup>.isAutoScalingOnly(): Boolean =
+  override fun ResourceDiff<ServerGroup>.isAutoScalingOnly(): Boolean =
     current != null &&
       affectedRootPropertyTypes.any { it == Scaling::class.java } &&
       affectedRootPropertyTypes.all { it == Capacity::class.java || it == Scaling::class.java } &&
@@ -607,17 +407,14 @@ class ClusterHandler(
       affectedRootPropertyNames.all { it == "onlyEnabledServerGroup" } &&
       current!!.onlyEnabledServerGroup != desired.onlyEnabledServerGroup
 
-  /**
-   * @return `true` if [current] doesn't exist and desired includes a scaling policy.
-   */
-  private fun ResourceDiff<ServerGroup>.shouldDeployAndModifyScalingPolicies(): Boolean =
-    (current == null && desired.scaling.hasScalingPolicies()) ||
-      (current != null && !isCapacityOrAutoScalingOnly() && hasScalingPolicyDiff())
+  override fun ResourceDiff<ServerGroup>.hasScalingPolicies(): Boolean =
+    desired.scaling.hasScalingPolicies()
+
 
   /**
    * @return `true` if [current] exists and the diff impacts scaling policies or capacity only.
    */
-  private fun ResourceDiff<ServerGroup>.isCapacityOrAutoScalingOnly(): Boolean =
+  override fun ResourceDiff<ServerGroup>.isCapacityOrAutoScalingOnly(): Boolean =
     current != null &&
       affectedRootPropertyTypes.all { it == Capacity::class.java || it == Scaling::class.java } &&
       current!!.scaling.suspendedProcesses == desired.scaling.suspendedProcesses
@@ -625,14 +422,14 @@ class ClusterHandler(
   /**
    * @return `true` if [current] exists and the diff includes a scaling policy change.
    */
-  private fun ResourceDiff<ServerGroup>.hasScalingPolicyDiff(): Boolean =
+  override fun ResourceDiff<ServerGroup>.hasScalingPolicyDiff(): Boolean =
     current != null && affectedRootPropertyTypes.contains(Scaling::class.java) &&
       (
         current!!.scaling.targetTrackingPolicies != desired.scaling.targetTrackingPolicies ||
           current!!.scaling.stepScalingPolicies != desired.scaling.stepScalingPolicies
         )
 
-  private fun ResourceDiff<ServerGroup>.disableOtherServerGroupJob(resource: Resource<ClusterSpec>, desiredVersion: String): Job {
+  override fun ResourceDiff<ServerGroup>.disableOtherServerGroupJob(resource: Resource<ClusterSpec>, desiredVersion: String): Job {
     val current = requireNotNull(current) {
       "Current server group must not be null when generating a disable job"
     }
@@ -677,8 +474,8 @@ class ClusterHandler(
     )
   }
 
-  private fun ResourceDiff<ServerGroup>.createServerGroupJob(refId: Int, resource: Resource<ClusterSpec>): Job =
-    createServerGroupJobBase(refId) + resource.spec.deployWith.toOrcaJobProperties("Amazon") +
+  override fun ResourceDiff<ServerGroup>.upsertServerGroupJob(resource: Resource<ClusterSpec>, startingRefId: Int, version: String?): Job =
+    createServerGroupJobBase(startingRefId) + resource.spec.deployWith.toOrcaJobProperties("Amazon") +
       mapOf("metadata" to mapOf("resource" to resource.id))
 
   private fun ResourceDiff<ServerGroup>.createServerGroupJobBase(startingRefId: Int = 0): Job =
@@ -757,7 +554,7 @@ class ClusterHandler(
         }
       }
 
-  private fun ResourceDiff<ServerGroup>.resizeServerGroupJob(): Job {
+  override fun ResourceDiff<ServerGroup>.resizeServerGroupJob(): Job {
     val current = requireNotNull(current) {
       "Current server group must not be null when generating a resize job"
     }
@@ -797,7 +594,7 @@ class ClusterHandler(
    * Scaling policies are treated as immutable by keel once applied. If an existing
    * policy is modified, it will be deleted and reapplied via a single task.
    */
-  private fun ResourceDiff<ServerGroup>.modifyScalingPolicyJob(startingRefId: Int = 0): List<Job> {
+  override fun ResourceDiff<ServerGroup>.modifyScalingPolicyJob(startingRefId: Int): List<Job> {
     var (refId, stages) = toDeletePolicyJob(startingRefId)
     val newTargetPolicies = when (current) {
       null -> desired.scaling.targetTrackingPolicies
@@ -845,11 +642,12 @@ class ClusterHandler(
     stages.addAll(
       policyNamesToRemove
         .map {
+          refId++
           mapOf(
-            "refId" to "${refId + 1}",
+            "refId" to refId.toString(),
             "requisiteStageRefIds" to when (refId) {
-              0 -> emptyList()
-              else -> listOf("$refId")
+              0, 1 -> listOf()
+              else -> listOf((refId - 1).toString())
             },
             "type" to "deleteScalingPolicy",
             "policyName" to it,
@@ -858,9 +656,7 @@ class ClusterHandler(
             "moniker" to current.moniker.orcaClusterMoniker,
             "region" to current.location.region,
             "serverGroupName" to current.moniker.serverGroup
-          ).also {
-            refId++
-          }
+          )
         }
     )
 
