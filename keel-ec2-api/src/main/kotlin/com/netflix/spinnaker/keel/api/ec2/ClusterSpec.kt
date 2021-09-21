@@ -83,7 +83,9 @@ private fun ClusterSpec.resolveLaunchConfiguration(region: SubnetAwareRegionSpec
       ?: defaults.launchConfiguration?.instanceMonitoring
       ?: LaunchConfiguration.DEFAULT_INSTANCE_MONITORING,
     ramdiskId = overrides[region.name]?.launchConfiguration?.ramdiskId
-      ?: defaults.launchConfiguration?.ramdiskId
+      ?: defaults.launchConfiguration?.ramdiskId,
+    requireIMDSv2 = (overrides[region.name]?.launchConfiguration?.instanceMetadataServiceVersion
+      ?: defaults.launchConfiguration?.instanceMetadataServiceVersion) == InstanceMetadataServiceVersion.V2
   )
 }
 
