@@ -885,7 +885,8 @@ class ClusterHandler(
           ?: launchTemplateData!!.monitoring.enabled,
 
         // Because launchConfig.ramdiskId can be null, need to do launchTemplateData?. instead of launchTemplateData!!
-        ramdiskId = (launchConfig?.ramdiskId ?: launchTemplateData?.ramDiskId).orNull()
+        ramdiskId = (launchConfig?.ramdiskId ?: launchTemplateData?.ramDiskId).orNull(),
+        requireIMDSv2 = launchTemplateData?.metadataOptions?.get("httpTokens") == "required"
       ),
       buildInfo = buildInfo?.toEc2Api(),
       capacity = capacity.let {
