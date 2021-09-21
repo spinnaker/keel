@@ -18,7 +18,6 @@ import com.netflix.spinnaker.keel.core.api.UID
 import com.netflix.spinnaker.keel.core.api.parseUID
 import com.netflix.spinnaker.keel.core.api.randomUID
 import com.netflix.spinnaker.keel.core.api.timestampAsInstant
-import com.netflix.spinnaker.keel.events.PersistentEvent.EventScope
 import com.netflix.spinnaker.keel.events.ResourceState
 import com.netflix.spinnaker.keel.pause.PauseScope
 import com.netflix.spinnaker.keel.pause.PauseScope.APPLICATION
@@ -551,7 +550,7 @@ class SqlDeliveryConfigRepository(
       .and(ACTIVE_ENVIRONMENT.VERSION.eq(ENVIRONMENT_RESOURCE.ENVIRONMENT_VERSION))
       .and(ACTIVE_ENVIRONMENT.NAME.eq(environmentName))
       .join(DELIVERY_CONFIG)
-      .on(DELIVERY_CONFIG.UID.eq(ENVIRONMENT.DELIVERY_CONFIG_UID))
+      .on(DELIVERY_CONFIG.UID.eq(ACTIVE_ENVIRONMENT.DELIVERY_CONFIG_UID))
       .and(DELIVERY_CONFIG.NAME.eq(deliveryConfigName))
       .fetchMap(RESOURCE.ID, RESOURCE_LAST_CHECKED.STATUS)
 
