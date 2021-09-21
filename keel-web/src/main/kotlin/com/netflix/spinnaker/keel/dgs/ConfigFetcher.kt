@@ -25,8 +25,14 @@ class ConfigFetcher(
       id = "${config.application}-${config.name}",
       updatedAt = config.updatedAt,
       rawConfig = config.rawConfig,
-      processedConfig = yamlMapper.writeValueAsString(config.copy(rawConfig = null))
+      previewEnvironmentsConfigured = config.previewEnvironments.isNotEmpty()
     )
+  }
+
+  @DgsData(parentType = DgsConstants.MDCONFIG.TYPE_NAME, field = DgsConstants.MDCONFIG.ProcessedConfig)
+  fun processedConfig(dfe: DgsDataFetchingEnvironment): String? {
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
+    return yamlMapper.writeValueAsString(config.copy(rawConfig = null))
   }
 
   @DgsData(parentType = DgsConstants.MDCONFIG.TYPE_NAME, field = DgsConstants.MDCONFIG.RawConfig)
