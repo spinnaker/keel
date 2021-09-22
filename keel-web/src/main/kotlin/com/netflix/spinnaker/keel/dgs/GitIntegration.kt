@@ -94,14 +94,19 @@ class GitIntegration(
   }
 
   private fun Application.toGitIntegration(): MdGitIntegration {
-    val branch = scmUtils.getDefaultBranch(this)
-    return MdGitIntegration(
-      id = "${name}-git-integration",
-      repository = "${repoProjectKey}/${repoSlug}",
-      branch = branch,
-      isEnabled = managedDelivery?.importDeliveryConfig,
-      manifestPath = managedDelivery?.manifestPath ?: DEFAULT_MANIFEST_PATH,
-      link = scmUtils.getBranchLink(repoType, repoProjectKey, repoSlug, branch),
-    )
+    try {
+      scmUtils.getDefaultBranch(this)
+    } catch (e: Exception) {
+      throw DgsEntityNotFoundException("Unable to retrieve your app's git repo details. Please check the app config.")
+    }.let { branch ->
+      return MdGitIntegration(
+        id = "${name}-git-integration",
+        repository = "${repoProjectKey}/${repoSlug}",
+        branch = branch,
+        isEnabled = managedDelivery?.importDeliveryConfig,
+        manifestPath = managedDelivery?.manifestPath ?: DEFAULT_MANIFEST_PATH,
+        link = scmUtils.getBranchLink(repoType, repoProjectKey, repoSlug, branch),
+      )
+    }
   }
 }
