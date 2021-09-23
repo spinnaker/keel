@@ -371,3 +371,6 @@ databaseChangeLog:
 - include:
     file: changelog/20210917-feature-rollout-table.yml
     relativeToChangelogFile: true
+- include:
+    file: changelog/20210923-rename-feature-rollout-table.yml
+    relativeToChangelogFile: true
