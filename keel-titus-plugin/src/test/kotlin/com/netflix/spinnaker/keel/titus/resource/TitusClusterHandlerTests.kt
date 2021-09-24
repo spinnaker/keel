@@ -750,7 +750,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
             "credentials" to allServerGroups.accountName,
             "cloudProvider" to "titus",
             "user" to resource.serviceAccount,
-            "completeOtherBranchesThenFail" to false,
+            "completeOtherBranchesThenFail" to true,
             "continuePipeline" to false,
             "failPipeline" to false,
           )

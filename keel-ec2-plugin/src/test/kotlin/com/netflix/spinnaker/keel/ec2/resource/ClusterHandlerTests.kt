@@ -1145,7 +1145,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
             "credentials" to allServerGroups.accountName,
             "cloudProvider" to "aws",
             "user" to resource.serviceAccount,
-            "completeOtherBranchesThenFail" to false,
+            "completeOtherBranchesThenFail" to true,
             "continuePipeline" to false,
             "failPipeline" to false,
           )

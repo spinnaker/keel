@@ -104,8 +104,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
           "credentials" to resource.spec.locations.account,
           "cloudProvider" to cloudProvider,
           "user" to resource.serviceAccount,
-          // the following 3 properties just say "halt this branch of the pipeline"
-          "completeOtherBranchesThenFail" to false,
+          // the following 3 properties just say "try all parallel branches but fail the pipeline if any branch fails"
+          "completeOtherBranchesThenFail" to true,
           "continuePipeline" to false,
           "failPipeline" to false,
         )
