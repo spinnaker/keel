@@ -136,6 +136,24 @@ internal class InstanceMetadataServiceResolverTests {
   }
 
   @Test
+  fun `uses v2 if this is a new cluster regardless of the state of any preceding ones`() {
+    val cluster = spec.toResource()
+
+    // this cluster doesn't even exist yet
+    every { resourceToCurrentState(cluster) } returns emptyMap()
+
+    // resources in the previous environment are not in a stable state (e.g. whole app is being created)
+    every {
+      dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any())
+    } returns listOf(previousEnvironmentSpec.toResource()).associate { it.id to Diff }
+
+    expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
+
+    // this isn't really a rollout
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+  }
+
+  @Test
   fun `does not apply v2 if v2 has not been rolled out to a previous environment`() {
     val cluster = spec.toResource()
     val previousEnvironmentCluster = previousEnvironmentSpec.toResource()
