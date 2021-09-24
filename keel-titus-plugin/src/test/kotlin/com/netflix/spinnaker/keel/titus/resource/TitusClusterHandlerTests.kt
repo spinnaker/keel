@@ -47,6 +47,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroupCollection
+import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
@@ -744,7 +745,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
           mapOf(
             "type" to "destroyServerGroup",
             "asgName" to it.name,
-            "moniker" to it.moniker,
+            "moniker" to it.moniker.orcaClusterMoniker,
             "serverGroupName" to it.name,
             "region" to it.region,
             "credentials" to allServerGroups.accountName,

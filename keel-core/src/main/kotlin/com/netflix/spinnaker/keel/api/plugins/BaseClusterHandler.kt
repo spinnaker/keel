@@ -8,6 +8,7 @@ import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.actuation.Job
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
+import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -98,7 +99,7 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
         mapOf(
           "type" to "destroyServerGroup",
           "asgName" to serverGroup.name,
-          "moniker" to serverGroup.moniker,
+          "moniker" to serverGroup.moniker.orcaClusterMoniker,
           "serverGroupName" to serverGroup.name,
           "region" to region,
           "credentials" to resource.spec.locations.account,

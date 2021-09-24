@@ -40,6 +40,7 @@ import com.netflix.spinnaker.keel.clouddriver.model.Network
 import com.netflix.spinnaker.keel.clouddriver.model.SecurityGroupSummary
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroupCollection
 import com.netflix.spinnaker.keel.clouddriver.model.Subnet
+import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.model.OrchestrationRequest
@@ -1139,7 +1140,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
           mapOf(
             "type" to "destroyServerGroup",
             "asgName" to it.name,
-            "moniker" to it.moniker,
+            "moniker" to it.moniker.orcaClusterMoniker,
             "serverGroupName" to it.name,
             "region" to it.region,
             "credentials" to allServerGroups.accountName,
