@@ -14,7 +14,6 @@ import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.LaunchConfiguration
 import com.netflix.spinnaker.keel.api.support.EventPublisher
-import com.netflix.spinnaker.keel.ec2.resolvers.InstanceMetadataServiceResolver.Companion.featureName
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.events.ResourceState.Diff
 import com.netflix.spinnaker.keel.events.ResourceState.Ok
@@ -89,7 +88,7 @@ internal class InstanceMetadataServiceResolverTests {
 
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
 
-    verify { featureRolloutRepository.markRolloutStarted(featureName, cluster.id) }
+    verify { featureRolloutRepository.markRolloutStarted(resolver.featureName, cluster.id) }
   }
 
   @Test
@@ -198,7 +197,7 @@ internal class InstanceMetadataServiceResolverTests {
 
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
 
-    verify { featureRolloutRepository.markRolloutStarted(featureName, cluster.id) }
+    verify { featureRolloutRepository.markRolloutStarted(resolver.featureName, cluster.id) }
   }
 
   @Test
@@ -206,7 +205,7 @@ internal class InstanceMetadataServiceResolverTests {
     val cluster = spec.toResource()
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    every { featureRolloutRepository.countRolloutAttempts(featureName, cluster.id) } returns 1
+    every { featureRolloutRepository.countRolloutAttempts(resolver.featureName, cluster.id) } returns 1
     every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V1)
 
     // there are no previous environments to consider
@@ -216,10 +215,10 @@ internal class InstanceMetadataServiceResolverTests {
     // the rollout is attempted again
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
 
-    verify { featureRolloutRepository.markRolloutStarted(featureName, cluster.id) }
+    verify { featureRolloutRepository.markRolloutStarted(resolver.featureName, cluster.id) }
 
     // … but we also emit an event to indicate it may not be working
-    verify { eventPublisher.publishEvent(FeatureRolloutFailed(featureName, cluster.id)) }
+    verify { eventPublisher.publishEvent(FeatureRolloutFailed(resolver.featureName, cluster.id)) }
   }
 
   @Test
@@ -236,7 +235,7 @@ internal class InstanceMetadataServiceResolverTests {
     } returns true
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    every { featureRolloutRepository.countRolloutAttempts(featureName, cluster.id) } returns 1
+    every { featureRolloutRepository.countRolloutAttempts(resolver.featureName, cluster.id) } returns 1
     every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V1)
 
     // there are no previous environments to consider
@@ -245,11 +244,11 @@ internal class InstanceMetadataServiceResolverTests {
 
     // the rollout is NOT attempted again
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
-    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(featureName, cluster.id) }
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(resolver.featureName, cluster.id) }
     verify(exactly = 0) { eventPublisher.publishEvent(ofType<FeatureRolloutAttempted>()) }
 
     // … but we also emit an event to indicate it may not be working
-    verify { eventPublisher.publishEvent(FeatureRolloutFailed(featureName, cluster.id)) }
+    verify { eventPublisher.publishEvent(FeatureRolloutFailed(resolver.featureName, cluster.id)) }
   }
 
   private val Assertion.Builder<Resource<ClusterSpec>>.instanceMetadataServiceVersion: Assertion.Builder<InstanceMetadataServiceVersion?>
