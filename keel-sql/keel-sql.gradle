@@ -214,6 +214,11 @@ jooq {
                 enumConverter = true
                 includeExpression = "TASK_TRACKING.SUBJECT_TYPE"
               }
+              forcedType {
+                userType = "com.netflix.spinnaker.keel.rollout.RolloutStatus"
+                enumConverter = true
+                includeExpression = "FEATURE_ROLLOUT.STATUS"
+              }
             }
           }
           target {

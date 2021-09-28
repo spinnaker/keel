@@ -7,8 +7,11 @@ import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.events.ResourceState.Ok
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
-import com.netflix.spinnaker.keel.persistence.countRolloutAttempts
 import com.netflix.spinnaker.keel.persistence.markRolloutStarted
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.FAILED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.NOT_STARTED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SKIPPED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SUCCESSFUL
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -62,14 +65,44 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
    */
   abstract fun deactivate(resource: Resource<SPEC>): Resource<SPEC>
 
-  override fun invoke(resource: Resource<SPEC>): Resource<SPEC> =
-    when {
+  /**
+   * `true` if the state of this resolved resource indicates that it exists, `false` if it's a new resource that has not
+   * been created yet.
+   */
+  abstract val RESOLVED.exists: Boolean
+
+  override fun invoke(resource: Resource<SPEC>): Resource<SPEC> {
+    val currentState by lazy {
+      runBlocking(IO) {
+        resourceToCurrentState(resource)
+      }
+    }
+
+    val (status, attemptCount) = featureRolloutRepository.rolloutStatus(featureName, resource.id)
+
+    return when {
       isExplicitlySpecified(resource) -> {
         log.debug("{} explicitly specifies {}", resource.id, featureName)
+        featureRolloutRepository.updateStatus(featureName, resource.id, SKIPPED)
         resource
       }
-      isAlreadyRolledOutToThisResource(resource) -> {
-        log.debug("cluster {} is already using {}", resource.id, featureName)
+      status == SUCCESSFUL -> {
+        log.debug("{} was already successfully rolled out to {}", featureName, resource.id)
+        activate(resource)
+      }
+      status == FAILED -> {
+        log.debug("rollout of {} to {} was unsuccessful previously", featureName, resource.id)
+        deactivate(resource)
+      }
+      isNewResource(currentState) -> {
+        log.debug("{} is a new resource, so applying {} right away", resource.id, featureName)
+        featureRolloutRepository.markRolloutStarted(featureName, resource.id)
+        eventPublisher.publishEvent(FeatureRolloutAttempted(featureName, resource))
+        activate(resource)
+      }
+      isAlreadyRolledOutToThisResource(currentState) -> {
+        log.debug("{} is already using {}", resource.id, featureName)
+        featureRolloutRepository.updateStatus(featureName, resource.id, SUCCESSFUL)
         activate(resource)
       }
       !previousEnvironmentsStable(resource) -> {
@@ -78,14 +111,16 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
           resource.id,
           featureName
         )
+        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
         deactivate(resource)
       }
       !isRolledOutToPreviousEnvironments(resource) -> {
         log.debug("{} is not yet rolled out to dependent environments for {}", featureName, resource.id)
+        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
         deactivate(resource)
       }
       else -> {
-        val wasTriedBefore = featureRolloutRepository.countRolloutAttempts(featureName, resource) > 0
+        val wasTriedBefore = attemptCount > 0
 
         if (wasTriedBefore) {
           log.warn("{} rollout has been attempted before for {} and may have failed", featureName, resource.id)
@@ -94,6 +129,7 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
 
         if (wasTriedBefore && stopRolloutOnApparentFailure) {
           log.warn("not applying {} to {}", featureName, resource.id)
+          featureRolloutRepository.updateStatus(featureName, resource.id, FAILED)
           deactivate(resource)
         } else {
           log.debug("applying {} to {}", featureName, resource.id)
@@ -103,11 +139,13 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
         }
       }
     }
+  }
 
-  private fun isAlreadyRolledOutToThisResource(resource: Resource<SPEC>): Boolean =
-    runBlocking(IO) {
-      isAppliedTo(resourceToCurrentState(resource))
-    }
+  private fun isAlreadyRolledOutToThisResource(currentState: RESOLVED): Boolean =
+    isAppliedTo(currentState)
+
+  private fun isNewResource(currentState: RESOLVED): Boolean =
+    !currentState.exists
 
   private fun isRolledOutToPreviousEnvironments(resource: Resource<SPEC>): Boolean =
     runBlocking(IO) {

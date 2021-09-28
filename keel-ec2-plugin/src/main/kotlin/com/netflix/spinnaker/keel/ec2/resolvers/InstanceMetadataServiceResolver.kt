@@ -50,6 +50,9 @@ class InstanceMetadataServiceResolver(
   override fun deactivate(resource: Resource<ClusterSpec>) =
     resourceInstanceMetadataServiceVersion.set(resource, V1)
 
+  override val Map<String, ServerGroup>.exists: Boolean
+    get() = isNotEmpty()
+
   private val resourceSpec: Lens<Resource<ClusterSpec>, ClusterSpec> = Lens(
     get = Resource<ClusterSpec>::spec,
     set = { resource, spec -> resource.copy(spec = spec) }

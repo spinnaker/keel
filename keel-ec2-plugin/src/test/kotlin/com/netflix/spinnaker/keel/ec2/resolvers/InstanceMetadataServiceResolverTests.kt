@@ -20,6 +20,11 @@ import com.netflix.spinnaker.keel.events.ResourceState.Ok
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.FeatureRolloutAttempted
 import com.netflix.spinnaker.keel.rollout.FeatureRolloutFailed
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.FAILED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.IN_PROGRESS
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.NOT_STARTED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SKIPPED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SUCCESSFUL
 import com.netflix.spinnaker.keel.test.resource
 import io.mockk.mockk
 import io.mockk.verify
@@ -33,7 +38,7 @@ internal class InstanceMetadataServiceResolverTests {
   private val dependentEnvironmentFinder: DependentEnvironmentFinder = mockk()
   private val resourceToCurrentState: suspend (Resource<ClusterSpec>) -> Map<String, ServerGroup> = mockk()
   private val featureRolloutRepository: FeatureRolloutRepository = mockk(relaxUnitFun = true) {
-    every { countRolloutAttempts(any(), any()) } returns 0
+    every { rolloutStatus(any(), any()) } returns (NOT_STARTED to 0)
   }
   private val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
   private val springEnvironment: Environment = mockk() {
@@ -102,6 +107,7 @@ internal class InstanceMetadataServiceResolverTests {
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, cluster.id, SKIPPED) }
   }
 
   @Test
@@ -115,6 +121,9 @@ internal class InstanceMetadataServiceResolverTests {
 
     // this is not considered starting a rollout
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+
+    // we take this as confirmation the rollout worked
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, cluster.id, SUCCESSFUL) }
   }
 
   @Test
@@ -132,6 +141,7 @@ internal class InstanceMetadataServiceResolverTests {
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, cluster.id, NOT_STARTED) }
   }
 
   @Test
@@ -148,8 +158,9 @@ internal class InstanceMetadataServiceResolverTests {
 
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
 
-    // this isn't really a rollout
-    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    // this isn't really a rollout, but we still want to track success in case we have to roll it back
+    verify { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify { eventPublisher.publishEvent(ofType<FeatureRolloutAttempted>()) }
   }
 
   @Test
@@ -174,6 +185,7 @@ internal class InstanceMetadataServiceResolverTests {
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, cluster.id, NOT_STARTED) }
   }
 
   @Test
@@ -205,7 +217,7 @@ internal class InstanceMetadataServiceResolverTests {
     val cluster = spec.toResource()
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    every { featureRolloutRepository.countRolloutAttempts(resolver.featureName, cluster.id) } returns 1
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, cluster.id) } returns (IN_PROGRESS to 1)
     every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V1)
 
     // there are no previous environments to consider
@@ -235,7 +247,7 @@ internal class InstanceMetadataServiceResolverTests {
     } returns true
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    every { featureRolloutRepository.countRolloutAttempts(resolver.featureName, cluster.id) } returns 1
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, cluster.id) } returns (IN_PROGRESS to 1)
     every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V1)
 
     // there are no previous environments to consider
@@ -244,11 +256,46 @@ internal class InstanceMetadataServiceResolverTests {
 
     // the rollout is NOT attempted again
     expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
-    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(resolver.featureName, cluster.id) }
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
     verify(exactly = 0) { eventPublisher.publishEvent(ofType<FeatureRolloutAttempted>()) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, cluster.id, FAILED) }
 
-    // … but we also emit an event to indicate it may not be working
+    // … and we emit an event to indicate it may not be working
     verify { eventPublisher.publishEvent(FeatureRolloutFailed(resolver.featureName, cluster.id)) }
+  }
+
+  @Test
+  fun `applies v2 if it has been successfully applied before, but the current state has gone out of sync`() {
+    val cluster = spec.toResource()
+
+    // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, cluster.id) } returns (SUCCESSFUL to 1)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V1)
+
+    // we know it's safe to use V2
+    expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V2
+
+    // this is not a new rollout so we don't update the database or trigger events
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
+    verify(exactly = 0) { featureRolloutRepository.updateStatus(any(), any(), any()) }
+  }
+
+  @Test
+  fun `does not apply v2 if it has been unsuccessfully applied before`() {
+    val cluster = spec.toResource()
+
+    // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, cluster.id) } returns (FAILED to 1)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toActualServerGroups(V2)
+
+    // we know it's safe to use V2
+    expectThat(resolver(cluster)).instanceMetadataServiceVersion isEqualTo V1
+
+    // this is not a new rollout so we don't update the database or trigger events
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
+    verify(exactly = 0) { featureRolloutRepository.updateStatus(any(), any(), any()) }
   }
 
   private val Assertion.Builder<Resource<ClusterSpec>>.instanceMetadataServiceVersion: Assertion.Builder<InstanceMetadataServiceVersion?>
