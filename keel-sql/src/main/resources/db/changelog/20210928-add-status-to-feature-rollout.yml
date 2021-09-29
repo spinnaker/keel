@@ -11,7 +11,8 @@ databaseChangeLog:
             type: varchar(64)
             constraints:
             - nullable: false
-          value: PENDING
+            value: IN_PROGRESS
+            afterColumn: resource_id
     - dropNotNullConstraint:
         tableName: feature_rollout
         columnName: first_attempt_at
