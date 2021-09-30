@@ -120,7 +120,7 @@ class EC2Config {
     )
 
   @Bean
-  fun instanceMetadataServiceResolver(
+  fun ec2InstanceMetadataServiceResolver(
     dependentEnvironmentFinder: DependentEnvironmentFinder,
     applicationContext: ApplicationContext,
     featureRolloutRepository: FeatureRolloutRepository,

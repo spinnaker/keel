@@ -61,7 +61,7 @@ class TitusConfig {
   )
 
   @Bean
-  fun instanceMetadataServiceResolver(
+  fun titusInstanceMetadataServiceResolver(
     dependentEnvironmentFinder: DependentEnvironmentFinder,
     applicationContext: ApplicationContext,
     featureRolloutRepository: FeatureRolloutRepository,
