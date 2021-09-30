@@ -22,12 +22,18 @@ import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
+import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
+import com.netflix.spinnaker.keel.titus.InstanceMetadataServiceResolver
 import com.netflix.spinnaker.keel.titus.TitusClusterHandler
+import org.springframework.beans.factory.getBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
 import java.time.Clock
 
 @Configuration
@@ -53,4 +59,27 @@ class TitusConfig {
     resolvers,
     clusterExportHelper
   )
+
+  @Bean
+  fun instanceMetadataServiceResolver(
+    dependentEnvironmentFinder: DependentEnvironmentFinder,
+    applicationContext: ApplicationContext,
+    featureRolloutRepository: FeatureRolloutRepository,
+    eventPublisher: EventPublisher,
+    springEnvironment: Environment
+  ): InstanceMetadataServiceResolver {
+    // This is necessary to avoid a circular bean dependency as Resolver instances (like we're creating here)
+    // get wired into ResourceHandlers, but here the Resolver needs a capability provided by the ResourceHandler.
+    val clusterHandler by lazy { applicationContext.getBean<TitusClusterHandler>() }
+
+    return InstanceMetadataServiceResolver(
+      dependentEnvironmentFinder,
+      // although it looks like this could be optimized to clusterHandler::current that will cause the bean to get
+      // created right away, which will blow up with a circular dependency
+      { clusterHandler.current(it) },
+      featureRolloutRepository,
+      eventPublisher,
+      springEnvironment
+    )
+  }
 }
