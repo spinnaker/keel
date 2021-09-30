@@ -174,6 +174,7 @@ class ApplicationService(
   }
 
   fun pin(user: String, application: String, pin: EnvironmentArtifactPin) {
+    log.info("Pinning application $application by user $user: {}", pin)
     val config = repository.getDeliveryConfigForApplication(application)
     repository.pinEnvironment(config, pin.copy(pinnedBy = user))
     repository.triggerDeliveryConfigRecheck(application) // recheck environments to reflect pin immediately

@@ -1178,6 +1178,7 @@ class SqlDeliveryConfigRepository(
   }
 
   override fun triggerRecheck(application: String) {
+    log.info("Triggering delivery config recheck for application $application")
     val uid = sqlRetry.withRetry(READ) {
       jooq.select(DELIVERY_CONFIG.UID)
         .from(DELIVERY_CONFIG)
