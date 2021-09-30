@@ -78,7 +78,7 @@ class GitIntegration(
     @InputArgument application: String,
   ): Boolean {
     val front50App = runBlocking {
-      front50Cache.applicationByName(application)
+      front50Cache.applicationByName(application, invalidateCache = true)
     }
     val defaultBranch = scmUtils.getDefaultBranch(front50App)
     val deliveryConfig =
