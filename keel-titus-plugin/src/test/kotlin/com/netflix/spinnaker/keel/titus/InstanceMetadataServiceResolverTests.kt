@@ -15,6 +15,8 @@ import com.netflix.spinnaker.keel.docker.ReferenceProvider
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolverTests
+import com.netflix.spinnaker.keel.titus.optics.titusClusterSpecAccountLens
+import com.netflix.spinnaker.keel.titus.optics.titusClusterSpecStackLens
 import org.springframework.core.env.Environment
 import strikt.api.Assertion
 import strikt.assertions.get
@@ -55,15 +57,16 @@ internal class InstanceMetadataServiceResolverTests :
     container = ReferenceProvider(reference = "fnord-docker")
   )
 
-  override val previousEnvironmentSpec = clusterSpecAccount.set(clusterSpecStack.set(spec, "test"), "test")
+  override val previousEnvironmentSpec =
+    titusClusterSpecAccountLens.set(titusClusterSpecStackLens.set(spec, "test"), "test")
 
   override val nonExistentResolvedResource = emptyMap<String, TitusServerGroup>()
 
   override fun TitusClusterSpec.withFeatureApplied() =
-    titusClusterSpecContainerAttributes.set(this, mapOf("titusParameter.agent.imds.requireToken" to "true"))
+    titusClusterSpecImdsRequireTokenLens.set(this, "true")
 
   override fun TitusClusterSpec.withFeatureNotApplied() =
-    titusClusterSpecContainerAttributes.set(this, mapOf("titusParameter.agent.imds.requireToken" to "false"))
+    titusClusterSpecImdsRequireTokenLens.set(this, "false")
 
   override fun TitusClusterSpec.toResolvedType(featureActive: Boolean) =
     locations.regions.map(SimpleRegionSpec::name).associateWith { region ->

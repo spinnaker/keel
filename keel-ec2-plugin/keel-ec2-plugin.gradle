@@ -2,6 +2,7 @@ dependencies {
   api(project(":keel-api"))
   api(project(":keel-ec2-api"))
   implementation(project(":keel-core")) // TODO: ideally not
+  implementation(project(":keel-optics"))
   implementation(project(":keel-clouddriver"))
   implementation(project(":keel-orca"))
   implementation(project(":keel-retrofit"))
@@ -14,7 +15,6 @@ dependencies {
   implementation("com.netflix.frigga:frigga")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
   implementation("io.swagger.core.v3:swagger-annotations:2.1.2")
-  implementation("io.arrow-kt:arrow-optics:1.0.0")
 
   testImplementation(project(":keel-test"))
   testImplementation(project(":keel-retrofit-test-support"))

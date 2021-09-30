@@ -1,9 +1,7 @@
 package com.netflix.spinnaker.keel.ec2.resolvers
 
-import arrow.optics.Lens
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ec2.ClusterSpec
-import com.netflix.spinnaker.keel.api.ec2.ClusterSpec.ServerGroupSpec
 import com.netflix.spinnaker.keel.api.ec2.EC2_CLUSTER_V1_1
 import com.netflix.spinnaker.keel.api.ec2.InstanceMetadataServiceVersion
 import com.netflix.spinnaker.keel.api.ec2.InstanceMetadataServiceVersion.V1
@@ -11,7 +9,11 @@ import com.netflix.spinnaker.keel.api.ec2.InstanceMetadataServiceVersion.V2
 import com.netflix.spinnaker.keel.api.ec2.LaunchConfigurationSpec
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.ec2.optics.clusterSpecDefaultsLens
+import com.netflix.spinnaker.keel.ec2.optics.launchConfigurationSpecInstanceMetadataServiceVersionLens
+import com.netflix.spinnaker.keel.ec2.optics.serverGroupSpecLaunchConfigurationSpecLens
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
+import com.netflix.spinnaker.keel.optics.resourceSpecLens
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolver
 import org.springframework.core.env.Environment
@@ -42,46 +44,21 @@ class InstanceMetadataServiceResolver(
     actualResource.values.all { it.launchConfiguration.requireIMDSv2 }
 
   override fun isExplicitlySpecified(resource: Resource<ClusterSpec>) =
-    resourceInstanceMetadataServiceVersion.get(resource) != null
+    clusterResourceInstanceMetadataServiceVersionLens.get(resource) != null
 
   override fun activate(resource: Resource<ClusterSpec>) =
-    resourceInstanceMetadataServiceVersion.set(resource, V2)
+    clusterResourceInstanceMetadataServiceVersionLens.set(resource, V2)
 
   override fun deactivate(resource: Resource<ClusterSpec>) =
-    resourceInstanceMetadataServiceVersion.set(resource, V1)
+    clusterResourceInstanceMetadataServiceVersionLens.set(resource, V1)
 
   override val Map<String, ServerGroup>.exists: Boolean
     get() = isNotEmpty()
-
-  private val resourceSpec: Lens<Resource<ClusterSpec>, ClusterSpec> = Lens(
-    get = Resource<ClusterSpec>::spec,
-    set = { resource, spec -> resource.copy(spec = spec) }
-  )
-
-  private val clusterSpecDefaults: Lens<ClusterSpec, ServerGroupSpec> = Lens(
-    get = ClusterSpec::defaults,
-    set = { spec, defaults -> spec.copy(_defaults = defaults) }
-  )
-
-  private val serverGroupSpecLaunchConfigurationSpec: Lens<ServerGroupSpec, LaunchConfigurationSpec?> = Lens(
-    get = ServerGroupSpec::launchConfiguration,
-    set = { serverGroupSpec, launchConfigurationSpec -> serverGroupSpec.copy(launchConfiguration = launchConfigurationSpec) }
-  )
-
-  private val launchConfigurationSpecInstanceMetadataServiceVersion: Lens<LaunchConfigurationSpec?, InstanceMetadataServiceVersion?> =
-    Lens(
-      get = { it?.instanceMetadataServiceVersion },
-      set = { launchConfigurationSpec, instanceMetadataServiceVersion ->
-        launchConfigurationSpec?.copy(
-          instanceMetadataServiceVersion = instanceMetadataServiceVersion
-        ) ?: LaunchConfigurationSpec(instanceMetadataServiceVersion = instanceMetadataServiceVersion)
-      }
-    )
 
   /**
    * Composed lens that lets us set the deeply nested [LaunchConfigurationSpec.instanceMetadataServiceVersion] property
    * directly on the [Resource].
    */
-  private val resourceInstanceMetadataServiceVersion =
-    resourceSpec compose clusterSpecDefaults compose serverGroupSpecLaunchConfigurationSpec compose launchConfigurationSpecInstanceMetadataServiceVersion
+  private val clusterResourceInstanceMetadataServiceVersionLens =
+    resourceSpecLens<ClusterSpec>() compose clusterSpecDefaultsLens compose serverGroupSpecLaunchConfigurationSpecLens compose launchConfigurationSpecInstanceMetadataServiceVersionLens
 }

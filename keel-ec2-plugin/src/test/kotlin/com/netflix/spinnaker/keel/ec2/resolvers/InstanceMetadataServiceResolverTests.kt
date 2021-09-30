@@ -14,6 +14,8 @@ import com.netflix.spinnaker.keel.api.ec2.Location
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.LaunchConfiguration
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.ec2.optics.clusterSpecAccountLens
+import com.netflix.spinnaker.keel.ec2.optics.clusterSpecStackLens
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolverTests
@@ -53,19 +55,8 @@ internal class InstanceMetadataServiceResolverTests :
     )
   )
 
-  override val previousEnvironmentSpec = ClusterSpec(
-    moniker = Moniker(
-      app = "fnord",
-      stack = "test"
-    ),
-    locations = SubnetAwareLocations(
-      account = "test",
-      subnet = "internal",
-      regions = setOf(
-        SubnetAwareRegionSpec(name = "us-west-2")
-      )
-    )
-  )
+  override val previousEnvironmentSpec =
+    clusterSpecAccountLens.set(clusterSpecStackLens.set(spec, "test"), "test")
 
   override val nonExistentResolvedResource = emptyMap<String, ServerGroup>()
 
