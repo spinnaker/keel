@@ -319,33 +319,35 @@ class DeliveryConfigImportListenerTests : JUnit5Minutests {
         setupMocks()
       }
 
-      context("failure to retrieve delivery config") {
-        modifyFixture {
-          every {
-            importer.import(commitEvent, manifestPath = any())
-          } throws SystemException("oh noes!")
-        }
-
-        before {
-          subject.handleCodeEvent(commitEvent)
-        }
-
-        test("a delivery config retrieval error is counted") {
-          val tags = mutableListOf<Iterable<Tag>>()
-          verify {
-            spectator.counter(CODE_EVENT_COUNTER, capture(tags))
+      listOf(commitEvent, prMergedEvent).forEach { event ->
+        context("failure to retrieve delivery config for $event") {
+          modifyFixture {
+            every {
+              importer.import(event, manifestPath = any())
+            } throws SystemException("oh noes!")
           }
-          expectThat(tags).one {
-            contains(DELIVERY_CONFIG_RETRIEVAL_ERROR.toTags())
-          }
-        }
 
-        test("an event is published") {
-          val failureEvent = slot<DeliveryConfigImportFailed>()
-          verify {
-            eventPublisher.publishEvent(capture(failureEvent))
+          before {
+            subject.handleCodeEvent(event)
           }
-          expectThat(failureEvent.captured.branch).isEqualTo(commitEvent.targetBranch)
+
+          test("a delivery config retrieval error is counted") {
+            val tags = mutableListOf<Iterable<Tag>>()
+            verify {
+              spectator.counter(CODE_EVENT_COUNTER, capture(tags))
+            }
+            expectThat(tags).one {
+              contains(DELIVERY_CONFIG_RETRIEVAL_ERROR.toTags())
+            }
+          }
+
+          test("an event is published") {
+            val failureEvent = slot<DeliveryConfigImportFailed>()
+            verify {
+              eventPublisher.publishEvent(capture(failureEvent))
+            }
+            expectThat(failureEvent.captured.branch).isEqualTo(event.targetBranch)
+          }
         }
       }
     }

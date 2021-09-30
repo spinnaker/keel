@@ -172,6 +172,7 @@ class PreviewEnvironmentCodeEventListener(
         eventPublisher.publishDeliveryConfigImportFailed(
           deliveryConfig.application,
           event,
+          event.pullRequestBranch,
           clock.instant(),
           e.message ?: "Unknown",
           scmUtils.getPullRequestLink(event)

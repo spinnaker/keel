@@ -123,6 +123,7 @@ class DeliveryConfigImportListener(
         eventPublisher.publishDeliveryConfigImportFailed(
           app.name,
           event,
+          event.targetBranch,
           clock.instant(),
           e.message ?: "Unknown reason",
           scmUtils.getCommitLink(event)
