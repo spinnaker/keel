@@ -17,7 +17,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
-import org.springframework.core.env.Environment
 
 /**
  * Base class for [Resolver] implementations that are used to safely roll out features to each environment in an
@@ -28,15 +27,13 @@ import org.springframework.core.env.Environment
  * - it is currently active, or all of the following apply:
  *   - all resources of the same type in previous environments have the feature activated.
  *   - all resources in previous environments are "healthy".
- *   - the rollout of the feature was not attempted before for the same resource and the [stopRolloutOnApparentFailure]
- *     flag is set.
+ *   - the rollout of the feature was not attempted before for the same resource.
  */
 abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
   private val dependentEnvironmentFinder: DependentEnvironmentFinder,
   private val resourceToCurrentState: suspend (Resource<SPEC>) -> RESOLVED,
   private val featureRolloutRepository: FeatureRolloutRepository,
-  private val eventPublisher: EventPublisher,
-  private val springEnvironment: Environment
+  private val eventPublisher: EventPublisher
 ) : Resolver<SPEC> {
 
   /**
@@ -119,24 +116,17 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
         featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
         deactivate(resource)
       }
+      attemptCount > 0 -> {
+        log.warn("{} rollout has been attempted before for {} and appears to have failed", featureName, resource.id)
+        eventPublisher.publishEvent(FeatureRolloutFailed(featureName, resource))
+        featureRolloutRepository.updateStatus(featureName, resource.id, FAILED)
+        deactivate(resource)
+      }
       else -> {
-        val wasTriedBefore = attemptCount > 0
-
-        if (wasTriedBefore) {
-          log.warn("{} rollout has been attempted before for {} and may have failed", featureName, resource.id)
-          eventPublisher.publishEvent(FeatureRolloutFailed(featureName, resource))
-        }
-
-        if (wasTriedBefore && stopRolloutOnApparentFailure) {
-          log.warn("not applying {} to {}", featureName, resource.id)
-          featureRolloutRepository.updateStatus(featureName, resource.id, FAILED)
-          deactivate(resource)
-        } else {
-          log.debug("applying {} to {}", featureName, resource.id)
-          featureRolloutRepository.markRolloutStarted(featureName, resource)
-          eventPublisher.publishEvent(FeatureRolloutAttempted(featureName, resource))
-          activate(resource)
-        }
+        log.debug("applying {} to {}", featureName, resource.id)
+        featureRolloutRepository.markRolloutStarted(featureName, resource)
+        eventPublisher.publishEvent(FeatureRolloutAttempted(featureName, resource))
+        activate(resource)
       }
     }
   }
@@ -160,9 +150,6 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
       dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(resource)
     return dependentEnvironmentResourceStatuses.values.all { it == Ok }
   }
-
-  private val stopRolloutOnApparentFailure: Boolean
-    get() = springEnvironment.getProperty("keel.rollout.${featureName}.stopOnFailure", Boolean::class.java, false)
 
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 }

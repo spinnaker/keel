@@ -12,7 +12,6 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.springframework.core.env.Environment
 import strikt.api.Assertion
 import strikt.api.expectThat
 
@@ -26,8 +25,7 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     dependentEnvironmentFinder: DependentEnvironmentFinder,
     resourceToCurrentState: suspend (Resource<SPEC>) -> RESOLVED,
     featureRolloutRepository: FeatureRolloutRepository,
-    eventPublisher: EventPublisher,
-    springEnvironment: Environment
+    eventPublisher: EventPublisher
   ): RESOLVER
 
   abstract fun SPEC.withFeatureApplied(): SPEC
@@ -42,10 +40,6 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     coEvery { rolloutStatus(any(), any()) } returns (RolloutStatus.NOT_STARTED to 0)
   }
   private val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
-  private val springEnvironment: Environment = mockk() {
-    // assume the stop rollout flag is not set / default
-    coEvery { getProperty("keel.rollout.imdsv2.stopOnFailure", Boolean::class.java, false) } returns false
-  }
 
   private fun SPEC.toResource() = resource(
     kind = kind,
@@ -57,8 +51,7 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
       dependentEnvironmentFinder,
       resourceToCurrentState,
       featureRolloutRepository,
-      eventPublisher,
-      springEnvironment
+      eventPublisher
     )
   }
 
@@ -195,43 +188,8 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
   }
 
   @Test
-  fun `emits an event if v2 rollout has been attempted before and seemingly not worked`() {
+  fun `stops rollout if it has been attempted before and seemingly not worked`() {
     val resource = spec.toResource()
-
-    // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    coEvery {
-      featureRolloutRepository.rolloutStatus(
-        resolver.featureName,
-        resource.id
-      )
-    } returns (RolloutStatus.IN_PROGRESS to 1)
-    coEvery { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
-
-    // there are no previous environments to consider
-    coEvery { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
-    coEvery { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
-
-    // the rollout is attempted again
-    expectThat(resolver(resource)).featureIsApplied()
-
-    verify { featureRolloutRepository.markRolloutStarted(resolver.featureName, resource.id) }
-
-    // … but we also emit an event to indicate it may not be working
-    verify { eventPublisher.publishEvent(FeatureRolloutFailed(resolver.featureName, resource.id)) }
-  }
-
-  @Test
-  fun `stops rollout if behavior flag is set, v2 rollout has been attempted before and seemingly not worked`() {
-    val resource = spec.toResource()
-
-    // the flag indicating we should stop rollout if it appears to have failed is set
-    coEvery {
-      springEnvironment.getProperty(
-        "keel.rollout.imdsv2.stopOnFailure",
-        Boolean::class.java,
-        false
-      )
-    } returns true
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
     coEvery {

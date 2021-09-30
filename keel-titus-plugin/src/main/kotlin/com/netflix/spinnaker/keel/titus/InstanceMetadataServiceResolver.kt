@@ -12,20 +12,17 @@ import com.netflix.spinnaker.keel.optics.resourceSpecLens
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolver
 import com.netflix.spinnaker.keel.titus.optics.titusClusterSpecContainerAttributesLens
-import org.springframework.core.env.Environment
 
 class InstanceMetadataServiceResolver(
   dependentEnvironmentFinder: DependentEnvironmentFinder,
   resourceToCurrentState: suspend (Resource<TitusClusterSpec>) -> Map<String, TitusServerGroup>,
   featureRolloutRepository: FeatureRolloutRepository,
-  eventPublisher: EventPublisher,
-  springEnvironment: Environment
+  eventPublisher: EventPublisher
 ) : RolloutAwareResolver<TitusClusterSpec, Map<String, TitusServerGroup>>(
   dependentEnvironmentFinder,
   resourceToCurrentState,
   featureRolloutRepository,
-  eventPublisher,
-  springEnvironment
+  eventPublisher
 ) {
   override val supportedKind = TITUS_CLUSTER_V1
   override val featureName = "imdsv2"

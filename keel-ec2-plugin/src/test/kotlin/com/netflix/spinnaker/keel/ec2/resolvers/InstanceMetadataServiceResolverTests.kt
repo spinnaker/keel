@@ -19,7 +19,6 @@ import com.netflix.spinnaker.keel.ec2.optics.clusterSpecStackLens
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolverTests
-import org.springframework.core.env.Environment
 import strikt.api.*
 import strikt.assertions.*
 
@@ -30,14 +29,12 @@ internal class InstanceMetadataServiceResolverTests :
     dependentEnvironmentFinder: DependentEnvironmentFinder,
     resourceToCurrentState: suspend (Resource<ClusterSpec>) -> Map<String, ServerGroup>,
     featureRolloutRepository: FeatureRolloutRepository,
-    eventPublisher: EventPublisher,
-    springEnvironment: Environment
+    eventPublisher: EventPublisher
   ) = InstanceMetadataServiceResolver(
     dependentEnvironmentFinder,
     resourceToCurrentState,
     featureRolloutRepository,
-    eventPublisher,
-    springEnvironment
+    eventPublisher
   )
 
   override val kind = EC2_CLUSTER_V1_1.kind

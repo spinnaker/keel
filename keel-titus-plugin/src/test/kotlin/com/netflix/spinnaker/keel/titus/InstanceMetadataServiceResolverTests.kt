@@ -17,7 +17,6 @@ import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.rollout.RolloutAwareResolverTests
 import com.netflix.spinnaker.keel.titus.optics.titusClusterSpecAccountLens
 import com.netflix.spinnaker.keel.titus.optics.titusClusterSpecStackLens
-import org.springframework.core.env.Environment
 import strikt.api.Assertion
 import strikt.assertions.get
 import strikt.assertions.hasEntry
@@ -32,14 +31,12 @@ internal class InstanceMetadataServiceResolverTests :
     dependentEnvironmentFinder: DependentEnvironmentFinder,
     resourceToCurrentState: suspend (Resource<TitusClusterSpec>) -> Map<String, TitusServerGroup>,
     featureRolloutRepository: FeatureRolloutRepository,
-    eventPublisher: EventPublisher,
-    springEnvironment: Environment
+    eventPublisher: EventPublisher
   ) = InstanceMetadataServiceResolver(
     dependentEnvironmentFinder,
     resourceToCurrentState,
     featureRolloutRepository,
-    eventPublisher,
-    springEnvironment
+    eventPublisher
   )
 
   override val kind = TITUS_CLUSTER_V1.kind
