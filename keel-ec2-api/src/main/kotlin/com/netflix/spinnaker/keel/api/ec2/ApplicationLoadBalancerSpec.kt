@@ -4,6 +4,7 @@ import com.netflix.spinnaker.keel.api.Dependency
 import com.netflix.spinnaker.keel.api.DependencyType.SECURITY_GROUP
 import com.netflix.spinnaker.keel.api.Dependent
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action.AuthenticateOidcAction
 import com.netflix.spinnaker.keel.api.ec2.ApplicationLoadBalancerSpec.Action.ForwardAction
@@ -41,6 +42,15 @@ data class ApplicationLoadBalancerSpec(
       overrides.flatMap { (region, override) ->
         override.dependencies?.securityGroupNames?.map { Dependency(SECURITY_GROUP, region, it) } ?: emptySet()
       }
+
+  override fun deepRename(suffix: String): ApplicationLoadBalancerSpec {
+    return copy(
+      moniker = moniker.withSuffix(suffix),
+      targetGroups = targetGroups.map { targetGroup ->
+        targetGroup.copy(name = "${targetGroup.name}-$suffix")
+      }.toSet()
+    )
+  }
 
   data class Listener(
     val port: Int,

@@ -144,6 +144,9 @@ data class TitusClusterSpec(
       }
       deps
     }.toSet()
+
+  override fun deepRename(suffix: String) =
+    copy(moniker = moniker.withSuffix(suffix))
 }
 
 data class TitusServerGroupSpec(
