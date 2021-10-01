@@ -314,9 +314,9 @@ class ApplicationFetcher(
     }
   }
 
-  @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Resources)
+  @DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.Resources)
   fun artifactResources(dfe: DataFetchingEnvironment): List<MdResource>? {
-    val artifact: MdArtifactVersionInEnvironment = dfe.getSource()
+    val artifact: MdArtifact = dfe.getSource()
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
     return artifact.environment?.let {
       config.resourcesUsing(artifact.reference, artifact.environment).map { it.toDgs(config, artifact.environment) }
