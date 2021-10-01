@@ -5,15 +5,21 @@ import com.netflix.spinnaker.keel.api.ResourceKind
 import com.netflix.spinnaker.keel.api.ResourceSpec
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.environments.DependentEnvironmentFinder
-import com.netflix.spinnaker.keel.events.ResourceState
+import com.netflix.spinnaker.keel.events.ResourceState.Diff
+import com.netflix.spinnaker.keel.events.ResourceState.Ok
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.FAILED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.IN_PROGRESS
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.NOT_STARTED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SKIPPED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.SUCCESSFUL
 import com.netflix.spinnaker.keel.test.resource
-import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectThat
+import io.mockk.coEvery as every
 
 abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RESOLVER : RolloutAwareResolver<SPEC, RESOLVED>> {
   abstract val kind: ResourceKind
@@ -37,7 +43,7 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
   private val dependentEnvironmentFinder: DependentEnvironmentFinder = mockk()
   private val resourceToCurrentState: suspend (Resource<SPEC>) -> RESOLVED = mockk()
   private val featureRolloutRepository: FeatureRolloutRepository = mockk(relaxUnitFun = true) {
-    coEvery { rolloutStatus(any(), any()) } returns (RolloutStatus.NOT_STARTED to 0)
+    every { rolloutStatus(any(), any()) } returns (NOT_STARTED to 0)
   }
   private val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
 
@@ -60,11 +66,11 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // the cluster currently uses v1
-    coEvery { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
+    every { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
 
     // there are no previous environments to consider
-    coEvery { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
-    coEvery { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
+    every { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
+    every { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
 
     expectThat(resolver(resource)).featureIsApplied()
 
@@ -74,15 +80,15 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
   @Test
   fun `leaves setting alone if it is explicitly specified`() {
     // there are no previous environments to consider
-    coEvery { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
-    coEvery { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
+    every { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
+    every { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
 
     val resource = spec.withFeatureNotApplied().toResource()
 
     expectThat(resolver(resource)).featureIsNotApplied()
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
-    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, RolloutStatus.SKIPPED) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, SKIPPED) }
   }
 
   @Test
@@ -90,7 +96,7 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // the cluster currently uses v2
-    coEvery { resourceToCurrentState(resource) } returns spec.toResolvedType(true)
+    every { resourceToCurrentState(resource) } returns spec.toResolvedType(true)
 
     expectThat(resolver(resource)).featureIsApplied()
 
@@ -98,7 +104,7 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
 
     // we take this as confirmation the rollout worked
-    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, RolloutStatus.SUCCESSFUL) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, SUCCESSFUL) }
   }
 
   @Test
@@ -106,17 +112,17 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // the cluster currently uses v2
-    coEvery { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
+    every { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
 
     // resources in the previous environment are not in a stable state
-    coEvery {
+    every {
       dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any())
-    } returns listOf(previousEnvironmentSpec.toResource()).associate { it.id to ResourceState.Diff }
+    } returns listOf(previousEnvironmentSpec.toResource()).associate { it.id to Diff }
 
     expectThat(resolver(resource)).featureIsNotApplied()
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
-    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, RolloutStatus.NOT_STARTED) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, NOT_STARTED) }
   }
 
   @Test
@@ -124,12 +130,12 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // this cluster doesn't even exist yet
-    coEvery { resourceToCurrentState(resource) } returns nonExistentResolvedResource
+    every { resourceToCurrentState(resource) } returns nonExistentResolvedResource
 
     // resources in the previous environment are not in a stable state (e.g. whole app is being created)
-    coEvery {
+    every {
       dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any())
-    } returns listOf(previousEnvironmentSpec.toResource()).associate { it.id to ResourceState.Diff }
+    } returns listOf(previousEnvironmentSpec.toResource()).associate { it.id to Diff }
 
     expectThat(resolver(resource)).featureIsApplied()
 
@@ -144,23 +150,23 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val previousEnvironmentResource = previousEnvironmentSpec.toResource()
 
     // the cluster currently uses v1
-    coEvery { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
+    every { resourceToCurrentState(resource) } returns spec.toResolvedType(false)
 
     // the previous environment is in a stable state…
-    coEvery {
+    every {
       dependentEnvironmentFinder.resourceStatusesInDependentEnvironments((any()))
-    } returns listOf(previousEnvironmentResource).associate { it.id to ResourceState.Ok }
+    } returns listOf(previousEnvironmentResource).associate { it.id to Ok }
 
     // … but its clusters are also still using v1
-    coEvery {
+    every {
       dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>())
     } returns listOf(previousEnvironmentResource)
-    coEvery { resourceToCurrentState(previousEnvironmentResource) } returns previousEnvironmentSpec.toResolvedType(false)
+    every { resourceToCurrentState(previousEnvironmentResource) } returns previousEnvironmentSpec.toResolvedType(false)
 
     expectThat(resolver(resource)).featureIsNotApplied()
 
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
-    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, RolloutStatus.NOT_STARTED) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, NOT_STARTED) }
   }
 
   @Test
@@ -169,18 +175,18 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val previousEnvironmentResource = previousEnvironmentSpec.toResource()
 
     // the cluster currently uses v1
-    coEvery { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
 
     // the previous environment is in a stable state…
-    coEvery {
+    every {
       dependentEnvironmentFinder.resourceStatusesInDependentEnvironments((any()))
-    } returns listOf(previousEnvironmentResource).associate { it.id to ResourceState.Ok }
-    coEvery {
+    } returns listOf(previousEnvironmentResource).associate { it.id to Ok }
+    every {
       dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>())
     } returns listOf(previousEnvironmentResource)
 
     // … and its clusters are already upgraded to v2
-    coEvery { resourceToCurrentState(previousEnvironmentResource) } returns previousEnvironmentSpec.toResolvedType(true)
+    every { resourceToCurrentState(previousEnvironmentResource) } returns previousEnvironmentSpec.toResolvedType(true)
 
     expectThat(resolver(resource)).featureIsApplied()
 
@@ -192,23 +198,18 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    coEvery {
-      featureRolloutRepository.rolloutStatus(
-        resolver.featureName,
-        resource.id
-      )
-    } returns (RolloutStatus.IN_PROGRESS to 1)
-    coEvery { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, resource.id) } returns (IN_PROGRESS to 1)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
 
     // there are no previous environments to consider
-    coEvery { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
-    coEvery { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
+    every { dependentEnvironmentFinder.resourceStatusesInDependentEnvironments(any()) } returns emptyMap()
+    every { dependentEnvironmentFinder.resourcesOfSameKindInDependentEnvironments(any<Resource<SPEC>>()) } returns emptyList()
 
     // the rollout is NOT attempted again
     expectThat(resolver(resource)).featureIsNotApplied()
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
     verify(exactly = 0) { eventPublisher.publishEvent(ofType<FeatureRolloutAttempted>()) }
-    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, RolloutStatus.FAILED) }
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, FAILED) }
 
     // … and we emit an event to indicate it may not be working
     verify { eventPublisher.publishEvent(FeatureRolloutFailed(resolver.featureName, resource.id)) }
@@ -219,13 +220,8 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    coEvery {
-      featureRolloutRepository.rolloutStatus(
-        resolver.featureName,
-        resource.id
-      )
-    } returns (RolloutStatus.SUCCESSFUL to 1)
-    coEvery { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, resource.id) } returns (SUCCESSFUL to 1)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
 
     // we know it's safe to use V2
     expectThat(resolver(resource)).featureIsApplied()
@@ -241,20 +237,36 @@ abstract class RolloutAwareResolverTests<SPEC : ResourceSpec, RESOLVED : Any, RE
     val resource = spec.toResource()
 
     // a rollout was attempted before, but the cluster is still using v1 (e.g. failed to start with v2)
-    coEvery {
-      featureRolloutRepository.rolloutStatus(
-        resolver.featureName,
-        resource.id
-      )
-    } returns (RolloutStatus.FAILED to 1)
-    coEvery { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(true)
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, resource.id) } returns (FAILED to 1)
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(false)
 
-    // we know it's safe to use V2
+    // we know it's not safe to use V2
     expectThat(resolver(resource)).featureIsNotApplied()
 
     // this is not a new rollout so we don't update the database or trigger events
     verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
     verify(exactly = 0) { eventPublisher.publishEvent(any()) }
     verify(exactly = 0) { featureRolloutRepository.updateStatus(any(), any(), any()) }
+  }
+
+  @Test
+  fun `records success if a rollout fails initially but the user fixes it`() {
+    val resource = spec.toResource()
+
+    // a rollout was attempted before and failed
+    every { featureRolloutRepository.rolloutStatus(resolver.featureName, resource.id) } returns (FAILED to 1)
+
+    // but the user has fixed things so the feature has been applied
+    every { resourceToCurrentState(spec.toResource()) } returns spec.toResolvedType(true)
+
+    // we know it's safe to use V2
+    expectThat(resolver(resource)).featureIsApplied()
+
+    // this is not a new rollout
+    verify(exactly = 0) { featureRolloutRepository.markRolloutStarted(any(), any()) }
+    verify(exactly = 0) { eventPublisher.publishEvent(any()) }
+
+    // but we should now record that it's successful
+    verify { featureRolloutRepository.updateStatus(resolver.featureName, resource.id, SUCCESSFUL) }
   }
 }

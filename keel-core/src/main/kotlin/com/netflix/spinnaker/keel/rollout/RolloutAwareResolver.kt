@@ -9,6 +9,7 @@ import com.netflix.spinnaker.keel.events.ResourceState.Ok
 import com.netflix.spinnaker.keel.persistence.FeatureRolloutRepository
 import com.netflix.spinnaker.keel.persistence.markRolloutStarted
 import com.netflix.spinnaker.keel.rollout.RolloutStatus.FAILED
+import com.netflix.spinnaker.keel.rollout.RolloutStatus.IN_PROGRESS
 import com.netflix.spinnaker.keel.rollout.RolloutStatus.NOT_STARTED
 import com.netflix.spinnaker.keel.rollout.RolloutStatus.SKIPPED
 import com.netflix.spinnaker.keel.rollout.RolloutStatus.SUCCESSFUL
@@ -79,51 +80,47 @@ abstract class RolloutAwareResolver<SPEC : ResourceSpec, RESOLVED : Any>(
 
     return when {
       isExplicitlySpecified(resource) -> {
-        log.debug("{} explicitly specifies {}", resource.id, featureName)
+        log.debug("rollout {}->{}: feature is explicitly specified", featureName, resource.id)
         featureRolloutRepository.updateStatus(featureName, resource.id, SKIPPED)
         resource
       }
-      status == SUCCESSFUL -> {
-        log.debug("{} was already successfully rolled out to {}", featureName, resource.id)
-        activate(resource)
-      }
-      status == FAILED -> {
-        log.debug("rollout of {} to {} was unsuccessful previously", featureName, resource.id)
-        deactivate(resource)
-      }
       isNewResource(currentState) -> {
-        log.debug("{} is a new resource, so applying {} right away", resource.id, featureName)
+        log.debug("rollout {}->{}: new resource, so applying right away", featureName, resource.id)
         featureRolloutRepository.markRolloutStarted(featureName, resource.id)
         eventPublisher.publishEvent(FeatureRolloutAttempted(featureName, resource))
         activate(resource)
       }
       isAlreadyRolledOutToThisResource(currentState) -> {
-        log.debug("{} is already using {}", resource.id, featureName)
+        log.debug("rollout {}->{}: feature is active", featureName, resource.id)
         featureRolloutRepository.updateStatus(featureName, resource.id, SUCCESSFUL)
         activate(resource)
       }
-      !previousEnvironmentsStable(resource) -> {
-        log.debug(
-          "dependent environments for {} are not currently stable, not rolling out {}",
-          resource.id,
-          featureName
-        )
-        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
+      status == SUCCESSFUL -> {
+        log.debug("rollout {}->{}: already successfully rolled out", featureName, resource.id)
+        activate(resource)
+      }
+      status == FAILED -> {
+        log.debug("rollout {}->{}: rollout was unsuccessful previously", featureName, resource.id)
         deactivate(resource)
       }
-      !isRolledOutToPreviousEnvironments(resource) -> {
-        log.debug("{} is not yet rolled out to dependent environments for {}", featureName, resource.id)
-        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
-        deactivate(resource)
-      }
-      attemptCount > 0 -> {
-        log.warn("{} rollout has been attempted before for {} and appears to have failed", featureName, resource.id)
+      status == IN_PROGRESS -> {
+        log.warn("rollout {}->{}: attempted before and appears to have failed", featureName, resource.id)
         eventPublisher.publishEvent(FeatureRolloutFailed(featureName, resource))
         featureRolloutRepository.updateStatus(featureName, resource.id, FAILED)
         deactivate(resource)
       }
+      !previousEnvironmentsStable(resource) -> {
+        log.debug("rollout {}->{}: dependent environments are not currently stable", featureName, resource.id)
+        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
+        deactivate(resource)
+      }
+      !isRolledOutToPreviousEnvironments(resource) -> {
+        log.debug("rollout {}->{}: not yet rolled out to dependent environments", featureName, resource.id)
+        featureRolloutRepository.updateStatus(featureName, resource.id, NOT_STARTED)
+        deactivate(resource)
+      }
       else -> {
-        log.debug("applying {} to {}", featureName, resource.id)
+        log.debug("rollout {}->{}: rolling out feature", featureName, resource.id)
         featureRolloutRepository.markRolloutStarted(featureName, resource)
         eventPublisher.publishEvent(FeatureRolloutAttempted(featureName, resource))
         activate(resource)
