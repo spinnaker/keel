@@ -10,6 +10,7 @@ import com.netflix.spinnaker.keel.api.DependencyType.SECURITY_GROUP
 import com.netflix.spinnaker.keel.api.Dependent
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.Moniker
+import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
@@ -64,6 +65,7 @@ import com.netflix.spinnaker.keel.test.applicationLoadBalancer
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.debianArtifact
 import com.netflix.spinnaker.keel.test.dockerArtifact
+import com.netflix.spinnaker.keel.test.locatableResource
 import com.netflix.spinnaker.keel.test.resource
 import com.netflix.spinnaker.keel.test.submittedResource
 import com.netflix.spinnaker.keel.test.titusCluster
@@ -88,13 +90,14 @@ import strikt.assertions.containsKeys
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.one
 import java.time.Clock
 import java.time.Duration
 import io.mockk.coEvery as every
 import io.mockk.coVerify as verify
 
-internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
+class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
   class Fixture {
     private val objectMapper = configuredTestObjectMapper()
     private val clock: Clock = MutableClock()
@@ -456,10 +459,10 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
 
           test("the name of the preview environment is generated correctly") {
             val baseEnv = deliveryConfig.environments.first()
-            val suffix = prEvent.pullRequestBranch.shortHash
+            val branchDetail = prEvent.pullRequestBranch.toPreviewName()
 
             expectThat(previewEnv.captured) {
-              get { name }.isEqualTo("${baseEnv.name}-$suffix")
+              get { name }.isEqualTo("${baseEnv.name}-$branchDetail")
             }
           }
 
@@ -481,13 +484,35 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             }
           }
 
-          test("resource names are updated with branch hash") {
+          test("the name of monikered resources is updated with branch detail") {
             val baseEnv = deliveryConfig.environments.first()
-            val baseResource = baseEnv.resources.first()
+            val baseResource = baseEnv.resources.first() as Resource<Monikered>
             val previewResource = previewEnv.captured.resources.first()
 
-            expectThat(previewResource)
-              .isEqualTo(baseResource.deepRename(prEvent.pullRequestBranch.shortHash))
+            expectThat(previewResource.spec)
+              .isA<Monikered>()
+              .get { moniker }
+              .isEqualTo(subject.withBranchDetail(baseResource, prEvent.pullRequestBranch).spec.moniker)
+          }
+
+          test("updated resource names respect the max allowed length") {
+            // monikered resources with and without stack and detail
+            listOf(
+              locatableResource(moniker = Moniker(app = "fnord", stack = "stack", detail = "detail")),
+              locatableResource(moniker = Moniker(app = "fnord", stack = "stack")),
+              locatableResource(moniker = Moniker(app = "fnord")),
+            ).forEach { resource ->
+              val updatedName = subject.withBranchDetail(resource, "feature/a-very-long-branch-name").name
+              expectThat(updatedName.length)
+                .describedAs("length of preview resource name $updatedName (${updatedName.length})")
+                .isLessThanOrEqualTo(MAX_RESOURCE_NAME_LENGTH)
+            }
+          }
+
+          test("updated resource names are DNS-compatible") {
+            val resource = locatableResource(moniker = Moniker(app = "fnord"))
+            val updatedName = subject.withBranchDetail(resource, "feature/a_branch_name_with_underscores").name
+            expectThat(updatedName).not().contains("_")
           }
 
           test("the artifact reference in a resource is updated to match the preview environment branch filter") {
@@ -502,13 +527,13 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
           }
 
           test("the names of resource dependencies present in the preview environment are adjusted to match") {
-            val suffix = prEvent.pullRequestBranch.shortHash
+            val branchDetail = prEvent.pullRequestBranch.toPreviewName()
             val dependency = applicationLoadBalancer
 
             expectThat(previewEnv.captured.resources.find { it.basedOn == clusterWithDependencies.id }?.spec)
               .isA<Dependent>()
               .get { dependsOn.first { it.type == LOAD_BALANCER }.name }
-              .isEqualTo(dependency.spec.moniker.withSuffix(suffix).name)
+              .isEqualTo(dependency.spec.moniker.withBranchDetail(branchDetail).name)
           }
 
           test("the names of the default security groups are not changed in the dependencies") {

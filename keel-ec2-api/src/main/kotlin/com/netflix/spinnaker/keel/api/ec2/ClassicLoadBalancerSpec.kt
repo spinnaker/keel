@@ -37,9 +37,6 @@ data class ClassicLoadBalancerSpec(
       overrides.flatMap { (region, override) ->
         override.dependencies?.securityGroupNames?.map { Dependency(SECURITY_GROUP, region, it) } ?: emptySet()
       }
-
-  override fun deepRename(suffix: String): ClassicLoadBalancerSpec =
-    copy(moniker = moniker.withSuffix(suffix))
 }
 
 data class ClassicLoadBalancerOverride(
