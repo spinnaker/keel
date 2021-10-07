@@ -3,6 +3,8 @@ package com.netflix.spinnaker.keel.sql
 import com.netflix.spinnaker.config.RetentionProperties
 import com.netflix.spinnaker.keel.api.TaskStatus
 import com.netflix.spinnaker.keel.api.TaskStatus.RUNNING
+import com.netflix.spinnaker.keel.api.actuation.SubjectType
+import com.netflix.spinnaker.keel.persistence.TaskForResource
 import com.netflix.spinnaker.keel.persistence.TaskRecord
 import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.persistence.metamodel.Tables.TASK_TRACKING
@@ -54,6 +56,68 @@ class SqlTaskTrackingRepository(
         .map { (taskId, taskName, subjectType, application, environmentName, resourceId) ->
           TaskRecord(taskId, taskName, subjectType, application, environmentName, resourceId)
         }
+        .toSet()
+    }
+
+  override fun getTasks(resourceId: String, limit: Int): Set<TaskForResource> =
+    sqlRetry.withRetry(READ) {
+      jooq
+        .select(
+          TASK_TRACKING.TASK_ID,
+          TASK_TRACKING.TASK_NAME,
+          TASK_TRACKING.STARTED_AT,
+          TASK_TRACKING.ENDED_AT
+        )
+        .from(TASK_TRACKING)
+        .where(TASK_TRACKING.RESOURCE_ID.eq(resourceId))
+        .limit(limit)
+        .fetch()
+        .map { (taskId, taskName, startedAt, endedAt) ->
+          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt)
+        }
+        .toSet()
+    }
+
+  override fun getLatestBatchOfTasks(resourceId: String): Set<TaskForResource> {
+    val tasks = sqlRetry.withRetry(READ) {
+      jooq
+        .select(
+          TASK_TRACKING.TASK_ID,
+          TASK_TRACKING.TASK_NAME,
+          TASK_TRACKING.STARTED_AT,
+          TASK_TRACKING.ENDED_AT
+        )
+        .from(TASK_TRACKING)
+        .where(TASK_TRACKING.RESOURCE_ID.eq(resourceId))
+        .limit(20) // probably more than the max number of tasks we launch at once? may need to tune
+        .fetch()
+        .map { (taskId, taskName, startedAt, endedAt) ->
+          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt)
+        }
+    }
+
+    val mostRecentCompleted = tasks
+      .filter { it.endedAt != null}
+      .maxByOrNull { it.startedAt }
+    // we start tasks within the same 30 seconds, so find the rest of the batch
+    //  that goes with the most recently completed task.
+    val batchCuttofTime = mostRecentCompleted?.startedAt?.minusSeconds(30)
+    return tasks.filter { it.endedAt == null || it.startedAt.isAfter(batchCuttofTime) }.toSet()
+  }
+
+
+  override fun getInFlightTasks(application: String, environmentName: String): Set<String> =
+    sqlRetry.withRetry(READ) {
+      jooq
+        .select(
+          TASK_TRACKING.TASK_ID
+        )
+        .from(TASK_TRACKING)
+        .where(TASK_TRACKING.APPLICATION.eq(application))
+        .and(TASK_TRACKING.ENVIRONMENT_NAME.eq(environmentName))
+        .and(TASK_TRACKING.SUBJECT_TYPE.eq(SubjectType.RESOURCE)) //todo eb: verifications/constraints as well?
+        .and(TASK_TRACKING.ENDED_AT.isNull)
+        .fetch(TASK_TRACKING.TASK_ID)
         .toSet()
     }
 

@@ -41,6 +41,7 @@ import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository
 import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.persistence.NoDeliveryConfigForApplication
+import com.netflix.spinnaker.keel.persistence.TaskTrackingRepository
 import com.netflix.spinnaker.keel.scm.ScmUtils
 import com.netflix.spinnaker.keel.services.ResourceStatusService
 import graphql.execution.DataFetcherResult
@@ -65,7 +66,8 @@ class ApplicationFetcher(
   private val applicationFetcherSupport: ApplicationFetcherSupport,
   private val notificationRepository: DismissibleNotificationRepository,
   private val scmUtils: ScmUtils,
-  private val executionSummaryService: ExecutionSummaryService
+  private val executionSummaryService: ExecutionSummaryService,
+  private val taskTrackingRepository: TaskTrackingRepository
 ) {
 
   @DgsData(parentType = DgsConstants.QUERY.TYPE_NAME, field = DgsConstants.QUERY.Application)
@@ -155,27 +157,6 @@ class ApplicationFetcher(
   fun pausedInfo(dfe: DgsDataFetchingEnvironment): MdPausedInfo? {
     val app: MdApplication = dfe.getSource()
     return actuationPauser.getApplicationPauseInfo(app.name)?.toDgsPaused()
-  }
-
-  @DgsData(parentType = DgsConstants.MDRESOURCE.TYPE_NAME, field = DgsConstants.MDRESOURCE.State)
-  fun resourceStatus(dfe: DgsDataFetchingEnvironment): MdResourceActuationState {
-    val resource: MdResource = dfe.getSource()
-    val state = resourceStatusService.getActuationState(resource.id)
-    return MdResourceActuationState(
-      status = MdResourceActuationStatus.valueOf(state.status.name),
-      reason = state.reason,
-      event = state.eventMessage,
-      tasks = state.tasks?.map {
-        MdResourceTask(id = it.id, name = it.name)
-      }
-    )
-  }
-
-  @DgsData(parentType = DgsConstants.MDRESOURCETASK.TYPE_NAME, field = DgsConstants.MDRESOURCETASK.Summary)
-  fun taskSummary(dfe: DgsDataFetchingEnvironment): MdExecutionSummary {
-    val task: MdResourceTask = dfe.getSource()
-    val summary = executionSummaryService.getSummary(task.id)
-    return summary.toDgs()
   }
 
   @DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.Versions)
@@ -314,15 +295,6 @@ class ApplicationFetcher(
     }
   }
 
-  @DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.Resources)
-  fun artifactResources(dfe: DataFetchingEnvironment): List<MdResource>? {
-    val artifact: MdArtifact = dfe.getSource()
-    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
-    return artifact.environment?.let {
-      config.resourcesUsing(artifact.reference, artifact.environment).map { it.toDgs(config, artifact.environment) }
-    }
-  }
-
   @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Veto)
   fun versionVetoed(dfe: DataFetchingEnvironment): CompletableFuture<MdVersionVeto?>? {
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
@@ -358,8 +330,6 @@ class ApplicationFetcher(
     }
     return environment?.let { dataLoader.load(environment) }
   }
-
-//  add function for putting the resources on the artifactVersion
 }
 
 fun Environment.dependsOn(another: Environment) =

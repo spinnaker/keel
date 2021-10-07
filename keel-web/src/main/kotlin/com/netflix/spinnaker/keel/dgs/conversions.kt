@@ -32,11 +32,13 @@ import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
 import com.netflix.spinnaker.keel.graphql.types.MdPausedInfo
 import com.netflix.spinnaker.keel.graphql.types.MdPullRequest
 import com.netflix.spinnaker.keel.graphql.types.MdResource
+import com.netflix.spinnaker.keel.graphql.types.MdResourceTask
 import com.netflix.spinnaker.keel.graphql.types.MdRolloutTargetStatus
 import com.netflix.spinnaker.keel.graphql.types.MdStageDetail
 import com.netflix.spinnaker.keel.graphql.types.MdTaskStatus
 import com.netflix.spinnaker.keel.notifications.DismissibleNotification
 import com.netflix.spinnaker.keel.pause.Pause
+import com.netflix.spinnaker.keel.persistence.TaskForResource
 
 
 fun GitMetadata.toDgs(): MdGitMetadata =
@@ -131,13 +133,21 @@ fun DismissibleNotification.toDgs() =
     dismissedBy = dismissedBy
   )
 
-fun ExecutionSummary.toDgs() = MdExecutionSummary(
-  status = status.toDgs(),
-  currentStage = currentStage?.toDgs(),
-  stages = stages.map { it.toDgs() },
-  deployTargets = deployTargets.map { it.toDgs() },
-  error = error
-)
+fun ExecutionSummary.toDgs() =
+  MdExecutionSummary(
+    status = status.toDgs(),
+    currentStage = currentStage?.toDgs(),
+    stages = stages.map { it.toDgs() },
+    deployTargets = deployTargets.map { it.toDgs() },
+    error = error
+  )
+
+fun TaskForResource.toDgs() =
+  MdResourceTask(
+    id = id,
+    name = name,
+    running = endedAt == null
+  )
 
 fun RolloutTargetWithStatus.toDgs() =
   MdDeployTarget(

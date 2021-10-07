@@ -189,6 +189,7 @@ enum MdResourceActuationStatus {
 }
 
 type MdResourceActuationState {
+  resourceId: String!
   status: MdResourceActuationStatus!
   reason: String
   event: String
@@ -198,6 +199,7 @@ type MdResourceActuationState {
 type MdResourceTask {
   id: String!
   name: String!
+  running: Boolean!
   summary: MdExecutionSummary
 }
 

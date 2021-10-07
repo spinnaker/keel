@@ -1,16 +1,23 @@
 package com.netflix.spinnaker.keel.persistence
 
+import com.netflix.spinnaker.keel.api.TaskStatus
 import com.netflix.spinnaker.keel.api.TaskStatus.SUCCEEDED
+import com.netflix.spinnaker.keel.api.TaskStatus.TERMINAL
 import com.netflix.spinnaker.keel.api.actuation.SubjectType.RESOURCE
 import com.netflix.spinnaker.keel.test.randomString
 import com.netflix.spinnaker.time.MutableClock
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.first
+import strikt.assertions.hasSize
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isSuccess
 import java.time.Clock
+import java.time.Duration
 
 abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
 
@@ -21,8 +28,9 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
 
   val subject by lazy { factory(clock) }
 
-  val taskRecord1 = TaskRecord("123", "Upsert server group", RESOURCE, randomString(), randomString(), randomString())
-  val taskRecord2 = TaskRecord("456", "Bake", RESOURCE, randomString(), null, null)
+  val taskRecord1 = TaskRecord("1", "Upsert server group", RESOURCE, randomString(), randomString(), randomString())
+  val taskRecord2 = TaskRecord("2", "Bake", RESOURCE, randomString(), null, null)
+  val taskRecord3 = TaskRecord("3", "Upsert server group", RESOURCE, "app", "env", "resource")
 
   @AfterEach
   fun cleanup() {
@@ -54,5 +62,36 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
     expectThat(subject.getIncompleteTasks().size).isEqualTo(1)
     subject.updateStatus(taskRecord1.id, SUCCEEDED)
     expectThat(subject.getIncompleteTasks()).isEmpty()
+  }
+
+  @Test
+  fun `fetching by batch works`() {
+    // we fetch all running tasks, plus the last "batch" of completed tasks.
+
+    subject.store(taskRecord3.copy(id = "1", name = "upsert1"))
+    clock.tickMinutes(2)
+    subject.updateStatus("1", SUCCEEDED)
+    clock.tickMinutes(2)
+
+    subject.store(taskRecord3.copy(id = "4", name = "upsert2"))
+    clock.tickSeconds(1)
+    subject.store(taskRecord3.copy(id = "5", name = "upsert3"))
+    clock.tickSeconds(1)
+    subject.store(taskRecord3.copy(id = "6", name = "upsert4"))
+
+    clock.tickMinutes(2)
+    subject.updateStatus("4", TERMINAL)
+
+    //since the second 'wave' of tasks has one failed task, we fetch that whole wave
+    val tasks = subject.getLatestBatchOfTasks("resource")
+    expectThat(tasks).hasSize(3)
+    expectThat(tasks.map { it.id }).containsExactlyInAnyOrder("4", "5", "6")
+  }
+
+  @Test
+  fun `fetching empty batch works`() {
+    expectCatching { subject.getLatestBatchOfTasks("resource") }
+      .isSuccess()
+      .isEmpty()
   }
 }
