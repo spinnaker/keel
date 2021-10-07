@@ -207,6 +207,9 @@ data class ClusterSpec(
       deps
     }.toSet()
 
+  override fun deepRename(suffix: String) =
+    copy(moniker = moniker.withSuffix(suffix))
+
   data class ServerGroupSpec(
     val launchConfiguration: LaunchConfigurationSpec? = null,
     val capacity: CapacitySpec? = null,
