@@ -3,11 +3,11 @@ dependencies {
   api("com.squareup.retrofit2:converter-jackson")
   api("org.jetbrains.kotlinx:kotlinx-coroutines-core")
 
-  api("io.spinnaker.kork:kork-web")
-  implementation("io.spinnaker.kork:kork-security")
+  api("com.netflix.spinnaker.kork.internal:kork-web")
+  implementation("com.netflix.spinnaker.kork.internal:kork-security")
   implementation("com.squareup.okhttp3:logging-interceptor")
-  implementation("io.spinnaker.fiat:fiat-api:${fiatVersion}")
-  implementation("io.spinnaker.fiat:fiat-core:${fiatVersion}")
+  implementation("com.netflix.spinnaker.fiat.internal:fiat-api")
+  implementation("com.netflix.spinnaker.fiat.internal:fiat-core")
 
   testImplementation("com.squareup.okhttp3:mockwebserver")
   testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
