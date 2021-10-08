@@ -94,4 +94,29 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
       .isSuccess()
       .isEmpty()
   }
+
+  @Test
+  fun `given 40 sequentially completed tasks, we only return the latest task because it doesn't have any others in its batch`() {
+    for (i in 1..40) {
+      val id = "$i"
+      subject.store(
+        TaskRecord(
+          id = id,
+          name = "($i)Upsert server group",
+          subjectType = RESOURCE,
+          application = "app",
+          environmentName = "env",
+          resourceId = "resource"
+        )
+      )
+      clock.tickMinutes(5) // task runs for 5 minutes
+      subject.updateStatus(id, SUCCEEDED)
+      clock.tickDays(1)
+      clock.tickMinutes((1L..1000L).random())
+    }
+
+    val tasks = subject.getLatestBatchOfTasks("resource")
+    expectThat(tasks).hasSize(1)
+    expectThat(tasks.map { it.id }).containsExactlyInAnyOrder("40")
+  }
 }

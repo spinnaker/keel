@@ -89,6 +89,7 @@ class SqlTaskTrackingRepository(
         )
         .from(TASK_TRACKING)
         .where(TASK_TRACKING.RESOURCE_ID.eq(resourceId))
+        .orderBy(TASK_TRACKING.STARTED_AT.desc())
         .limit(20) // probably more than the max number of tasks we launch at once? may need to tune
         .fetch()
         .map { (taskId, taskName, startedAt, endedAt) ->
