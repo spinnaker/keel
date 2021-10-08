@@ -421,6 +421,9 @@ class CombinedRepository(
   override fun getArtifactVersion(artifact: DeliveryArtifact, version: String, status: ArtifactStatus?): PublishedArtifact? =
     artifactRepository.getArtifactVersion(artifact, version, status)
 
+  override fun getLatestApprovedInEnvArtifactVersion(config: DeliveryConfig, artifact: DeliveryArtifact, environmentName: String): PublishedArtifact? =
+    artifactRepository.getLatestApprovedInEnvArtifactVersion(config, artifact, environmentName)
+
   override fun updateArtifactMetadata(artifact: PublishedArtifact, artifactMetadata: ArtifactMetadata) =
     artifactRepository.updateArtifactMetadata(artifact, artifactMetadata)
 

@@ -77,6 +77,7 @@ type MdArtifact {
   reference: String!
   versions(statuses: [MdArtifactStatusInEnvironment!], versions: [String!], limit: Int): [MdArtifactVersionInEnvironment!]
   pinnedVersion: MdPinnedVersion
+  latestApprovedVersion: MdArtifactVersionInEnvironment
   resources: [MdResource!]
 }
 

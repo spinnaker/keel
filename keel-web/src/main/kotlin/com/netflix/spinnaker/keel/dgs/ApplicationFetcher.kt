@@ -248,6 +248,22 @@ class ApplicationFetcher(
     ))
   }
 
+  @DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.LatestApprovedVersion)
+  fun latestApprovedVersion(dfe: DataFetchingEnvironment): MdArtifactVersionInEnvironment? {
+    val artifact: MdArtifact = dfe.getSource()
+    val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
+    val deliveryArtifact = config.matchingArtifactByReference(artifact.reference) ?: return null
+
+    //[gyardeni + rhorev] please note - some values (like MdComparisonLinks) will not be retrieved for MdArtifactVersionInEnvironment
+    //due to our current dgs model.
+    keelRepository.getLatestApprovedInEnvArtifactVersion(config, deliveryArtifact, artifact.environment)
+      ?.let {
+        return it.toDgs(artifact.environment)
+      }
+
+    return null
+  }
+
   @DgsData(parentType = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.TYPE_NAME, field = DgsConstants.MDARTIFACTVERSIONINENVIRONMENT.Constraints)
   fun artifactConstraints(dfe: DataFetchingEnvironment): CompletableFuture<List<MdConstraint>>? {
     val dataLoader: DataLoader<EnvironmentArtifactAndVersion, List<MdConstraint>> = dfe.getDataLoader(ConstraintsDataLoader.Descriptor.name)

@@ -10,12 +10,13 @@ import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.TaskStatus
 import com.netflix.spinnaker.keel.api.actuation.ExecutionSummary
 import com.netflix.spinnaker.keel.api.actuation.RolloutStatus
-import com.netflix.spinnaker.keel.api.actuation.RolloutTarget
 import com.netflix.spinnaker.keel.api.actuation.RolloutTargetWithStatus
 import com.netflix.spinnaker.keel.api.actuation.Stage
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
+import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.bakery.diff.PackageDiff
 import com.netflix.spinnaker.keel.graphql.types.MdArtifact
+import com.netflix.spinnaker.keel.graphql.types.MdArtifactVersionInEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdCommitInfo
 import com.netflix.spinnaker.keel.graphql.types.MdDeployLocation
 import com.netflix.spinnaker.keel.graphql.types.MdDeployTarget
@@ -191,3 +192,18 @@ fun TaskStatus.toDgs(): MdTaskStatus =
     TaskStatus.BUFFERED -> MdTaskStatus.BUFFERED
     TaskStatus.SKIPPED -> MdTaskStatus.SKIPPED
 }
+
+fun PublishedArtifact.toDgs(environmentName: String) =
+  MdArtifactVersionInEnvironment(
+    id = "latest-approved-${environmentName}-${reference}-${version}",
+    version = version,
+    buildNumber = buildNumber,
+    createdAt = createdAt,
+    gitMetadata = if (gitMetadata == null) {
+      null
+    } else {
+      gitMetadata?.toDgs()
+    },
+    environment = environmentName,
+    reference = reference,
+  )
