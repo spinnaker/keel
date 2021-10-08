@@ -67,7 +67,7 @@ class AdminService(
    * Removes the stored state we have for any stateful constraints for an environment
    * so they will evaluate again
    */
-  fun forceConstraintReevaluation(application: String, environment: String, type: String? = null) {
+  fun forceConstraintReevaluation(application: String, environment: String, reference: String, version: String, type: String? = null) {
     log.info("[app=$application, env=$environment] Forcing reevaluation of stateful constraints.")
     if (type != null) {
       log.info("[app=$application, env=$environment] Forcing only type $type")
@@ -80,7 +80,7 @@ class AdminService(
       if (constraint is StatefulConstraint) {
         if (type == null || type == constraint.type) {
           log.info("[app=$application, env=$environment] Deleting constraint state for ${constraint.type}.")
-          repository.deleteConstraintState(deliveryConfig.name, environment, constraint.type)
+          repository.deleteConstraintState(deliveryConfig.name, environment, reference, version, constraint.type)
         }
       }
     }

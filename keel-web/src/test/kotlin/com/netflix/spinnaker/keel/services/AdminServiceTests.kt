@@ -60,8 +60,10 @@ class AdminServiceTests : JUnit5Minutests {
       )
     )
 
+    val artifactReference = "myartifact"
+
     val artifact = mockk<DeliveryArtifact> {
-      every { reference } returns "myartifact"
+      every { reference } returns artifactReference
     }
 
     val deliveryConfig = DeliveryConfig(
@@ -126,20 +128,22 @@ class AdminServiceTests : JUnit5Minutests {
     }
 
     context("forcing environment constraint reevaluation") {
+      val version = "v0"
       test("clears state only for stateful constraints") {
-        subject.forceConstraintReevaluation(application, environment.name)
 
-        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "manual-judgement") }
-        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "pipeline") }
-        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "allowed-times") }
+        subject.forceConstraintReevaluation(application, environment.name, artifactReference, version)
+
+        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name,artifactReference, version, "manual-judgement") }
+        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, artifactReference, version, "pipeline") }
+        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, artifactReference, version, "allowed-times") }
       }
 
       test("clears a specific constraint type when asked to") {
-        subject.forceConstraintReevaluation(application, environment.name, "pipeline")
+        subject.forceConstraintReevaluation(application, environment.name, artifact.reference, version, "pipeline")
 
-        verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "manual-judgement") }
-        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "pipeline") }
-        verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, "allowed-times") }
+        verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, artifactReference, version, "manual-judgement") }
+        verify(exactly = 1) { repository.deleteConstraintState(deliveryConfig.name, environment.name, artifactReference, version, "pipeline") }
+        verify(exactly = 0) { repository.deleteConstraintState(deliveryConfig.name, environment.name, artifactReference, version, "allowed-times") }
       }
     }
 

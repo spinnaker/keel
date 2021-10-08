@@ -314,6 +314,7 @@ type MdAction {
 
 type Mutation @extends {
   updateConstraintStatus(payload: MdConstraintStatusPayload!): Boolean
+  restartConstraintEvaluation(payload: MdRestartConstraintEvaluationPayload!): Boolean
   toggleManagement(application: ID!, isPaused: Boolean!, comment: String): Boolean
   pinArtifactVersion(payload: MdArtifactVersionActionPayload!): Boolean
   markArtifactVersionAsBad(payload: MdArtifactVersionActionPayload!): Boolean
@@ -325,6 +326,15 @@ type Mutation @extends {
   toggleResourceManagement(payload: MdToggleResourceManagementPayload): Boolean
   importDeliveryConfig(application: String!): Boolean
 }
+
+input MdRestartConstraintEvaluationPayload {
+  application: String!
+  environment: String!
+  type: String!
+  reference: String!
+  version: String!
+}
+
 
 input MdToggleResourceManagementPayload {
   id: ID!

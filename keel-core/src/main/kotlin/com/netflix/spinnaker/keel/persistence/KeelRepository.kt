@@ -126,7 +126,7 @@ interface KeelRepository : KeelReadOnlyRepository {
 
   fun getConstraintStateById(uid: UID): ConstraintState?
 
-  fun deleteConstraintState(deliveryConfigName: String, environmentName: String, type: String)
+  fun deleteConstraintState(deliveryConfigName: String, environmentName: String, reference: String, version: String, type: String): Int
 
   fun queueArtifactVersionForApproval(
     deliveryConfigName: String,

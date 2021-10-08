@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.dgs
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.InputArgument
+import com.netflix.graphql.dgs.exceptions.DgsEntityNotFoundException
 import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.action.ActionType
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus
@@ -18,6 +19,7 @@ import com.netflix.spinnaker.keel.graphql.types.MdConstraintStatus
 import com.netflix.spinnaker.keel.graphql.types.MdConstraintStatusPayload
 import com.netflix.spinnaker.keel.graphql.types.MdDismissNotificationPayload
 import com.netflix.spinnaker.keel.graphql.types.MdMarkArtifactVersionAsGoodPayload
+import com.netflix.spinnaker.keel.graphql.types.MdRestartConstraintEvaluationPayload
 import com.netflix.spinnaker.keel.graphql.types.MdRetryArtifactActionPayload
 import com.netflix.spinnaker.keel.graphql.types.MdToggleResourceManagementPayload
 import com.netflix.spinnaker.keel.graphql.types.MdUnpinArtifactVersionPayload
@@ -53,6 +55,21 @@ class Mutations(
     @InputArgument resourceId: String
   ) {
     unhappyVeto.clearVeto(resourceId)
+  }
+
+  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.RestartConstraintEvaluation)
+  @PreAuthorize(
+    """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
+    and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
+  )
+  fun restartConstraintEvaluation(
+    @InputArgument payload: MdRestartConstraintEvaluationPayload,
+  ): Boolean {
+    val config = deliveryConfigRepository.getByApplication(payload.application)
+    if (deliveryConfigRepository.getConstraintState(config.name, payload.environment, payload.version, payload.type, payload.reference) == null) {
+      throw DgsEntityNotFoundException("Constraint ${payload.type} not found for version ${payload.version} of ${payload.reference}")
+    }
+    return deliveryConfigRepository.deleteConstraintState(config.name, payload.environment, payload.reference, payload.version, payload.type) > 0
   }
 
   @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.UpdateConstraintStatus)

@@ -802,40 +802,20 @@ class SqlDeliveryConfigRepository(
   override fun deleteConstraintState(
     deliveryConfigName: String,
     environmentName: String,
+    reference: String,
+    version: String,
     type: String
-  ) {
+  ): Int {
     val envUidSelect = envUid(deliveryConfigName, environmentName)
-    sqlRetry.withRetry(WRITE) {
-      jooq.select(CURRENT_CONSTRAINT.APPLICATION, CURRENT_CONSTRAINT.ENVIRONMENT_UID)
-        .from(CURRENT_CONSTRAINT)
-        .where(
-          CURRENT_CONSTRAINT.ENVIRONMENT_UID.eq(envUidSelect),
-          CURRENT_CONSTRAINT.TYPE.eq(type)
-        )
-        .fetch { (application, envUid) ->
-          jooq.deleteFrom(CURRENT_CONSTRAINT)
-            .where(
-              CURRENT_CONSTRAINT.APPLICATION.eq(application),
-              CURRENT_CONSTRAINT.ENVIRONMENT_UID.eq(envUid),
-              CURRENT_CONSTRAINT.TYPE.eq(type)
-            )
-            .execute()
-        }
-
-      val ids: List<String> = jooq.select(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID)
-        .from(ENVIRONMENT_ARTIFACT_CONSTRAINT)
+    return sqlRetry.withRetry(WRITE) {
+      jooq.deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
         .where(
           ENVIRONMENT_ARTIFACT_CONSTRAINT.ENVIRONMENT_UID.eq(envUidSelect),
-          ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE.eq(type)
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.TYPE.eq(type),
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_VERSION.eq(version),
+          ENVIRONMENT_ARTIFACT_CONSTRAINT.ARTIFACT_REFERENCE.eq(reference),
         )
-        .fetch(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID)
-        .sorted()
-
-      ids.chunked(DELETE_CHUNK_SIZE).forEach {
-        jooq.deleteFrom(ENVIRONMENT_ARTIFACT_CONSTRAINT)
-          .where(ENVIRONMENT_ARTIFACT_CONSTRAINT.UID.`in`(*it.toTypedArray()))
-          .execute()
-      }
+        .execute()
     }
   }
 

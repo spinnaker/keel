@@ -149,8 +149,10 @@ interface DeliveryConfigRepository : PeriodicallyCheckedRepository<DeliveryConfi
   fun deleteConstraintState(
     deliveryConfigName: String,
     environmentName: String,
+    reference: String,
+    version: String,
     type: String
-  )
+  ): Int
 
   /**
    * Rolls up the most recent constraint states (maximum of one per (Environment, ConstraintType))

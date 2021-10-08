@@ -303,8 +303,8 @@ class CombinedRepository(
   override fun getConstraintStateById(uid: UID): ConstraintState? =
     deliveryConfigRepository.getConstraintStateById(uid)
 
-  override fun deleteConstraintState(deliveryConfigName: String, environmentName: String, type: String) =
-    deliveryConfigRepository.deleteConstraintState(deliveryConfigName, environmentName, type)
+  override fun deleteConstraintState(deliveryConfigName: String, environmentName: String, reference: String, version: String, type: String): Int =
+    deliveryConfigRepository.deleteConstraintState(deliveryConfigName, environmentName, reference, version, type)
 
   override fun constraintStateFor(application: String): List<ConstraintState> =
     deliveryConfigRepository.constraintStateFor(application)
