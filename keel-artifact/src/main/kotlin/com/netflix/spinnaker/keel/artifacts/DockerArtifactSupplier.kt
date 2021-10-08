@@ -45,8 +45,13 @@ class DockerArtifactSupplier(
             reference = dockerImage.repository.substringAfter(':', dockerImage.repository),
             version = dockerImage.tag,
             metadata = let {
+              val metadata = mapOf<String, Any?>(
+                "fullImagePath" to dockerImage.artifact.reference,
+                "clouddriverAccount" to dockerImage.account,
+                "registry" to dockerImage.registry,
+              )
               if (dockerImage.commitId != null && dockerImage.buildNumber != null) {
-                mapOf(
+                metadata + mapOf(
                   "commitId" to dockerImage.commitId,
                   "prCommitId" to dockerImage.prCommitId,
                   "buildNumber" to dockerImage.buildNumber,
@@ -54,7 +59,7 @@ class DockerArtifactSupplier(
                   "createdAt" to dockerImage.date
                 )
               } else {
-                emptyMap()
+                metadata
               }
             }
           )

@@ -21,10 +21,20 @@ data class DockerImage(
   val account: String,
   val repository: String,
   val tag: String,
+  val artifact: ArtifactProperty,
+  val registry: String,
   val digest: String?,
   val buildNumber: String? = null,
   val commitId: String? = null,
   val prCommitId: String? = null,
   val branch: String? = null,
   val date: String? = null
+)
+
+data class ArtifactProperty(
+  val metadata: Map<String, Any?>,
+  val name: String,
+  val reference: String,
+  val type: String,
+  val version: String
 )
