@@ -46,7 +46,7 @@ class DockerArtifactSupplier(
             version = dockerImage.tag,
             metadata = let {
               val metadata = mapOf<String, Any?>(
-                "fullImagePath" to dockerImage.artifact.reference,
+                "fullImagePath" to dockerImage.artifact?.reference,
                 "clouddriverAccount" to dockerImage.account,
                 "registry" to dockerImage.registry,
               )
