@@ -38,6 +38,9 @@ class ManualJudgementUpdateHandler(
         else -> "rejected"
       }
 
+      //flag if there's more than a single artifact, so we would notify the user which artifact it is
+      val moreThanOneArtifact = config.artifacts.size != 1
+
       val baseBlocks = ManualJudgmentNotificationHandler.constructMessageWithoutButtons(
         targetEnvironment,
         application,
@@ -45,6 +48,7 @@ class ManualJudgementUpdateHandler(
         pinnedArtifact,
         gitDataGenerator,
         0, // clear the num ahead text on resend
+        moreThanOneArtifact,
         verb
       )
 
