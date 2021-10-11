@@ -51,7 +51,7 @@ internal class DockerArtifactSupplierTests : JUnit5Minutests {
         "registry" to "index.docker.io"
       ),
       name = dockerArtifact.name,
-      reference = "index.docker.io/" + dockerArtifact.name,
+      reference = "index.docker.io/${dockerArtifact.name}:${versions.last()}",
       type = "docker",
       version = "1"
     )
