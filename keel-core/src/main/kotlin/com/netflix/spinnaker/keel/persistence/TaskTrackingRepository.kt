@@ -9,7 +9,7 @@ interface TaskTrackingRepository {
   fun getIncompleteTasks(): Set<TaskRecord>
   fun updateStatus(taskId: String, status: TaskStatus)
   fun getTasks(resourceId: String, limit: Int = 5): Set<TaskForResource>
-  fun getInFlightTasks(application: String, environmentName: String): Set<String>
+  fun getInFlightTasks(application: String, environmentName: String): Set<TaskForResource>
   fun delete(taskId: String)
 
   /**
@@ -25,7 +25,8 @@ data class TaskRecord(
   val subjectType: SubjectType,
   val application: String,
   val environmentName: String?,
-  val resourceId: String?
+  val resourceId: String?,
+  val artifactVersion: String?
 )
 
 data class TaskForResource(
@@ -33,5 +34,6 @@ data class TaskForResource(
   val name: String,
   val resourceId: String,
   val startedAt: Instant,
-  val endedAt: Instant?
+  val endedAt: Instant?,
+  val artifactVersion: String?
 )

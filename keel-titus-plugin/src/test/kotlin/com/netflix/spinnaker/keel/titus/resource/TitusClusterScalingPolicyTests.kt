@@ -214,7 +214,7 @@ class TitusClusterScalingPolicyTests {
   val stages = slot<List<Job>>()
   val taskLauncher = mockk<TaskLauncher>() {
     every {
-      submitJob(any(), any(), any(), capture(stages))
+      submitJob(any(), any(), any(), capture(stages), any())
     } answers {
       Task(randomUID().toString(), arg(1))
     }

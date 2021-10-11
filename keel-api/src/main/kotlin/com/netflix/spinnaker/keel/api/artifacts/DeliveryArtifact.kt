@@ -155,5 +155,14 @@ abstract class DeliveryArtifact {
       .map { (it.spec as? ArtifactReferenceProvider)?.artifactReference }
       .contains(reference)
 
+  /**
+   * returns the resource ids using the artifact in the environment
+   */
+  fun resourcesUsing(environment: Environment) =
+    environment
+      .resources
+      .filter { reference == (it.spec as? ArtifactReferenceProvider)?.artifactReference }
+      .map { it.id }
+
   override fun toString() = "${type.toUpperCase()} artifact $name (ref: $reference)"
 }

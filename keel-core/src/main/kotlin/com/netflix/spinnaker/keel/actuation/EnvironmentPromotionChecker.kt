@@ -33,7 +33,7 @@ class EnvironmentPromotionChecker(
   private val publisher: ApplicationEventPublisher,
   private val artifactConfig: ArtifactConfig,
   private val springEnv: SpringEnvironment,
-  private val clock: Clock = Clock.systemDefaultZone()
+  private val clock: Clock
 ) {
   private val log by lazy { LoggerFactory.getLogger(javaClass) }
 

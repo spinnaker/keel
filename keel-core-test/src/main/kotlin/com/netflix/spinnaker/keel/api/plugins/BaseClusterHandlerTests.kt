@@ -8,9 +8,6 @@ import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.time.MutableClock
-import dev.minutest.junit.JUnit5Minutests
-import dev.minutest.rootContext
-import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -98,7 +95,7 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `staggered deploy, multi region, image diff`() {
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getMultiRegionStaggeredDeployCluster()
     runBlocking { handler.upsert(resource, getDiffInImage(resource)) }
@@ -133,23 +130,27 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `staggered deploy, multi region, capacity diff (no stagger resize stages)`() {
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getMultiRegionStaggeredDeployCluster()
     runBlocking { handler.upsert(resource, getDiffInCapacity(resource)) }
 
-    val eastStages = slots[0]
-    val westStages = slots[1]
+    val region1Stages = slots[0]
+    val region2Stages = slots[1]
+    val stages = slots.associate {
+      it[0]["region"] to it[0]
+    }
+
     expect {
-      that(eastStages).isNotEmpty().hasSize(1)
-      val resizeEast = eastStages[0]
+      that(region1Stages).isNotEmpty().hasSize(1)
+      val resizeEast = stages["east"] as Map<String, Any?>
       that(resizeEast["type"]).isEqualTo("resizeServerGroup")
       that(resizeEast["refId"]).isEqualTo("1")
       that(resizeEast["requisiteRefIds"]).isNull()
       that(resizeEast["region"]).isEqualTo("east")
 
-      that(westStages).isNotEmpty().hasSize(1)
-      val resizeWest = westStages[0]
+      that(region2Stages).isNotEmpty().hasSize(1)
+      val resizeWest = stages["west"] as Map<String, Any?>
       that(resizeWest["type"]).isEqualTo("resizeServerGroup")
       that(resizeWest["refId"]).isEqualTo("1")
       that(resizeWest["requisiteRefIds"]).isNull()
@@ -160,7 +161,7 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `non staggered deploy, multi region, image diff`() {
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getMultiRegionCluster()
     runBlocking { handler.upsert(resource, getDiffInImage(resource)) }
@@ -185,7 +186,7 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `non staggered deploy, one region, capacity diff`() {
     val slots = mutableListOf<List<Job>>()
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getSingleRegionCluster()
     runBlocking { handler.upsert(resource, getDiffInCapacity(resource)) }
@@ -201,7 +202,7 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `non staggered deploy, one region, image diff`() {
     val slots = mutableListOf<List<Job>>()
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getSingleRegionCluster()
     runBlocking { handler.upsert(resource, getDiffInImage(resource)) }

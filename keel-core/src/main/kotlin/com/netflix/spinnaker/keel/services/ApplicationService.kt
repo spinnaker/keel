@@ -3,6 +3,7 @@ package com.netflix.spinnaker.keel.services
 import com.netflix.spectator.api.BasicTag
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.config.ArtifactConfig
+import com.netflix.spinnaker.keel.actuation.EnvironmentTaskCanceler
 import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
@@ -89,6 +90,7 @@ class ApplicationService(
   private val spectator: Registry,
   private val artifactConfig: ArtifactConfig,
   private val artifactVersionLinks: ArtifactVersionLinks,
+  private val environmentTaskCanceler: EnvironmentTaskCanceler
 ) : CoroutineScope {
   override val coroutineContext: CoroutineContext = Dispatchers.Default
 
@@ -177,6 +179,7 @@ class ApplicationService(
     log.info("Pinning application $application by user $user: {}", pin)
     val config = repository.getDeliveryConfigForApplication(application)
     repository.pinEnvironment(config, pin.copy(pinnedBy = user))
+    environmentTaskCanceler.cancelTasksForPin(application, pin, user)
     repository.triggerDeliveryConfigRecheck(application) // recheck environments to reflect pin immediately
     publisher.publishEvent(PinnedNotification(config, pin.copy(pinnedBy = user)))
   }
@@ -203,6 +206,7 @@ class ApplicationService(
     if (!succeeded) {
       throw InvalidVetoException(application, veto.targetEnvironment, veto.reference, veto.version)
     }
+    environmentTaskCanceler.cancelTasksForVeto(application, veto, user)
     repository.triggerDeliveryConfigRecheck(application) // recheck environments to reflect veto immediately
     publisher.publishEvent(MarkAsBadNotification(
       config = config,

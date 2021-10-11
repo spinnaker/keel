@@ -28,9 +28,9 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
 
   val subject by lazy { factory(clock) }
 
-  val taskRecord1 = TaskRecord("1", "Upsert server group", RESOURCE, randomString(), randomString(), randomString())
-  val taskRecord2 = TaskRecord("2", "Bake", RESOURCE, randomString(), null, null)
-  val taskRecord3 = TaskRecord("3", "Upsert server group", RESOURCE, "app", "env", "resource")
+  val taskRecord1 = TaskRecord("1", "Upsert server group", RESOURCE, randomString(), randomString(), randomString(), "v1")
+  val taskRecord2 = TaskRecord("2", "Bake", RESOURCE, randomString(), null, null, "v2")
+  val taskRecord3 = TaskRecord("3", "Upsert server group", RESOURCE, "app", "env", "resource", "v3")
 
   @AfterEach
   fun cleanup() {
@@ -106,7 +106,8 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
           subjectType = RESOURCE,
           application = "app",
           environmentName = "env",
-          resourceId = "resource"
+          resourceId = "resource",
+          artifactVersion = id
         )
       )
       clock.tickMinutes(5) // task runs for 5 minutes

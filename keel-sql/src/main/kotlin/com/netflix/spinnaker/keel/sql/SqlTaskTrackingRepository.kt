@@ -34,6 +34,7 @@ class SqlTaskTrackingRepository(
         .set(TASK_TRACKING.APPLICATION, task.application)
         .set(TASK_TRACKING.ENVIRONMENT_NAME, task.environmentName)
         .set(TASK_TRACKING.RESOURCE_ID, task.resourceId)
+        .set(TASK_TRACKING.ARTIFACT_VERSION, task.artifactVersion)
         .onDuplicateKeyIgnore()
         .execute()
     }
@@ -48,13 +49,14 @@ class SqlTaskTrackingRepository(
           TASK_TRACKING.SUBJECT_TYPE,
           TASK_TRACKING.APPLICATION,
           TASK_TRACKING.ENVIRONMENT_NAME,
-          TASK_TRACKING.RESOURCE_ID
+          TASK_TRACKING.RESOURCE_ID,
+          TASK_TRACKING.ARTIFACT_VERSION
         )
         .from(TASK_TRACKING)
         .where(TASK_TRACKING.ENDED_AT.isNull)
         .fetch()
-        .map { (taskId, taskName, subjectType, application, environmentName, resourceId) ->
-          TaskRecord(taskId, taskName, subjectType, application, environmentName, resourceId)
+        .map { (taskId, taskName, subjectType, application, environmentName, resourceId, version) ->
+          TaskRecord(taskId, taskName, subjectType, application, environmentName, resourceId, version)
         }
         .toSet()
     }
@@ -66,14 +68,15 @@ class SqlTaskTrackingRepository(
           TASK_TRACKING.TASK_ID,
           TASK_TRACKING.TASK_NAME,
           TASK_TRACKING.STARTED_AT,
-          TASK_TRACKING.ENDED_AT
+          TASK_TRACKING.ENDED_AT,
+          TASK_TRACKING.ARTIFACT_VERSION
         )
         .from(TASK_TRACKING)
         .where(TASK_TRACKING.RESOURCE_ID.eq(resourceId))
         .limit(limit)
         .fetch()
-        .map { (taskId, taskName, startedAt, endedAt) ->
-          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt)
+        .map { (taskId, taskName, startedAt, endedAt, version) ->
+          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt, version)
         }
         .toSet()
     }
@@ -85,15 +88,16 @@ class SqlTaskTrackingRepository(
           TASK_TRACKING.TASK_ID,
           TASK_TRACKING.TASK_NAME,
           TASK_TRACKING.STARTED_AT,
-          TASK_TRACKING.ENDED_AT
+          TASK_TRACKING.ENDED_AT,
+          TASK_TRACKING.ARTIFACT_VERSION
         )
         .from(TASK_TRACKING)
         .where(TASK_TRACKING.RESOURCE_ID.eq(resourceId))
         .orderBy(TASK_TRACKING.STARTED_AT.desc())
         .limit(20) // probably more than the max number of tasks we launch at once? may need to tune
         .fetch()
-        .map { (taskId, taskName, startedAt, endedAt) ->
-          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt)
+        .map { (taskId, taskName, startedAt, endedAt, version) ->
+          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt, version)
         }
     }
 
@@ -107,18 +111,26 @@ class SqlTaskTrackingRepository(
   }
 
 
-  override fun getInFlightTasks(application: String, environmentName: String): Set<String> =
+  override fun getInFlightTasks(application: String, environmentName: String): Set<TaskForResource> =
     sqlRetry.withRetry(READ) {
       jooq
         .select(
-          TASK_TRACKING.TASK_ID
+          TASK_TRACKING.TASK_ID,
+          TASK_TRACKING.TASK_NAME,
+          TASK_TRACKING.RESOURCE_ID,
+          TASK_TRACKING.STARTED_AT,
+          TASK_TRACKING.ENDED_AT,
+          TASK_TRACKING.ARTIFACT_VERSION
         )
         .from(TASK_TRACKING)
         .where(TASK_TRACKING.APPLICATION.eq(application))
         .and(TASK_TRACKING.ENVIRONMENT_NAME.eq(environmentName))
         .and(TASK_TRACKING.SUBJECT_TYPE.eq(SubjectType.RESOURCE)) //todo eb: verifications/constraints as well?
         .and(TASK_TRACKING.ENDED_AT.isNull)
-        .fetch(TASK_TRACKING.TASK_ID)
+        .fetch()
+        .map { (taskId, taskName, resourceId, startedAt, endedAt, version) ->
+          TaskForResource(taskId, taskName, resourceId, startedAt, endedAt, version)
+        }
         .toSet()
     }
 

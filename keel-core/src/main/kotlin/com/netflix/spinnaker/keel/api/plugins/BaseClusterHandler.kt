@@ -121,7 +121,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
           description = "Delete cluster ${resource.name} in account ${resource.spec.locations.account}" +
             " (${regions.joinToString()})",
           correlationId = "${resource.id}:delete",
-          stages = stages
+          stages = stages,
+          artifactVersion = null
         )
       )
     }
@@ -285,7 +286,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
               resource = resource,
               description = description,
               correlationId = correlationId(resource, diff),
-              stages = job
+              stages = job,
+              artifactVersion = diff.version(resource)
             )
           }
         }
@@ -328,7 +330,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
               resource = resource,
               description = diff.upsertMessage(version),
               correlationId = correlationId(resource, diff),
-              stages = stages
+              stages = stages,
+              artifactVersion = diff.version(resource)
             )
           }
         }
@@ -401,7 +404,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
             resource = resource,
             description = diff.upsertMessage(version),
             correlationId = correlationId(resource, diff),
-            stages = stages
+            stages = stages,
+            artifactVersion = diff.version(resource)
           )
         }
 

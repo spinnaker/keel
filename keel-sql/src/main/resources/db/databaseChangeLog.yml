@@ -380,3 +380,6 @@ databaseChangeLog:
 - include:
     file: changelog/20211007-task-tracking-indecies.yml
     relativeToChangelogFile: true
+- include:
+    file: changelog/20211008-version-task-tracking.yml
+    relativeToChangelogFile: true

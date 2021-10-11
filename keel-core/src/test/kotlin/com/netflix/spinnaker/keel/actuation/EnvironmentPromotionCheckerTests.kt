@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.persistence.KeelRepository
 import com.netflix.spinnaker.keel.telemetry.ArtifactVersionApproved
 import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
 import com.netflix.spinnaker.keel.test.resource
+import com.netflix.spinnaker.time.MutableClock
 import dev.minutest.junit.JUnit5Minutests
 import dev.minutest.rootContext
 import io.mockk.every
@@ -67,7 +68,8 @@ internal class NewEnvironmentPromotionCheckerTests : JUnit5Minutests {
       environmentConstraintRunner,
       publisher,
       ArtifactConfig(),
-      springEnv
+      springEnv,
+      MutableClock()
     )
 
     val dockerArtifact = DockerArtifact(
