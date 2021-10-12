@@ -109,6 +109,9 @@ class CheckScheduler(
   private val artifactBatchSize: Int
     get() = springEnv.getProperty("keel.artifact-check.batch-size", Int::class.java, artifactCheckConfig.batchSize)
 
+  private val verificationBatchSize: Int
+    get() = springEnv.getProperty("keel.verification.batch-size", Int::class.java, verificationConfig.batchSize)
+
   @Scheduled(fixedDelayString = "\${keel.resource-check.frequency:PT1S}")
   fun checkResources() {
     if (enabled.get()) {
@@ -250,7 +253,7 @@ class CheckScheduler(
       val job = launch(blankMDC) {
         supervisorScope {
           repository
-            .nextEnvironmentsForVerification(verificationConfig.minAgeDuration, verificationConfig.batchSize)
+            .nextEnvironmentsForVerification(verificationConfig.minAgeDuration, verificationBatchSize)
             .forEach {
               try {
                 withTimeout(verificationConfig.timeoutDuration.toMillis()) {
