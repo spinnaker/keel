@@ -241,7 +241,7 @@ abstract class BaseClusterHandlerTests<
   @Test
   fun `managed rollout image diff plus capacity change`() {
     val slots = mutableListOf<List<Job>>()
-    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
     val resource = getMultiRegionManagedRolloutCluster()
     runBlocking { handler.upsert(resource, getCreateAndModifyDiff(resource)) }
