@@ -3,7 +3,7 @@ package com.netflix.spinnaker.keel.dgs
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
-import com.netflix.spinnaker.keel.api.actuation.ExecutionSummaryService
+import com.netflix.spinnaker.keel.actuation.ExecutionSummaryService
 import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
 import com.netflix.spinnaker.keel.auth.AuthorizationSupport
 import com.netflix.spinnaker.keel.graphql.DgsConstants

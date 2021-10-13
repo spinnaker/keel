@@ -205,11 +205,11 @@ type MdResourceTask {
 }
 
 type MdExecutionSummary {
+  id: ID!
   status: MdTaskStatus!
   currentStage: MdStageDetail,
   stages: [MdStageDetail!]
   deployTargets: [MdDeployTarget!]
-  completedDeployTargets: [MdDeployTarget!]
   error: String
 }
 

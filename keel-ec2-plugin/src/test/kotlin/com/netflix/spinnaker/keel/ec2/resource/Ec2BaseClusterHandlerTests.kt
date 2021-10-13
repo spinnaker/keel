@@ -1,9 +1,12 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
+import com.netflix.spinnaker.keel.api.Highlander
+import com.netflix.spinnaker.keel.api.ManagedRolloutConfig
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
+import com.netflix.spinnaker.keel.api.SelectionStrategy
 import com.netflix.spinnaker.keel.api.StaggeredRegion
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareRegionSpec
@@ -25,8 +28,6 @@ import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
-import com.nhaarman.mockitokotlin2.any
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import org.springframework.core.env.Environment
@@ -63,7 +64,9 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
     ),
     _defaults = ClusterSpec.ServerGroupSpec(
       launchConfiguration = launchConfigurationSpec
-    )
+    ),
+    deployWith = Highlander(),
+    managedRollout = ManagedRolloutConfig(enabled = false)
   )
 
   override fun createSpyHandler(
@@ -134,6 +137,22 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
     )
   }
 
+  override fun getMultiRegionManagedRolloutCluster(): Resource<ClusterSpec> {
+    val spec = baseSpec.copy(
+      locations = SubnetAwareLocations(
+        account = "account",
+        regions = setOf(SubnetAwareRegionSpec("east"), SubnetAwareRegionSpec("west")),
+        subnet = "subnet-1"
+      ),
+      managedRollout = ManagedRolloutConfig(enabled = true, selectionStrategy = SelectionStrategy.ALPHABETICAL)
+    )
+    return Resource(
+      kind = EC2_CLUSTER_V1_1.kind,
+      metadata = metadata,
+      spec = spec
+    )
+  }
+
   override fun getDiffInMoreThanEnabled(resource: Resource<ClusterSpec>): ResourceDiff<Map<String, ServerGroup>> {
     val currentServerGroups = resource.spec.resolve()
       .byRegion()
@@ -159,6 +178,17 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
   override fun getDiffInImage(resource: Resource<ClusterSpec>): ResourceDiff<Map<String, ServerGroup>> {
     val current = resource.spec.resolve().byRegion()
     val desired = resource.spec.resolve().map { it.withADifferentImage() }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  override fun getCreateAndModifyDiff(resource: Resource<ClusterSpec>): ResourceDiff<Map<String, ServerGroup>> {
+    val current = resource.spec.resolve().byRegion()
+    val desired = resource.spec.resolve().map {
+      when(it.location.region) {
+        "east" -> it.withADifferentImage()
+        else -> it.withDoubleCapacity()
+      }
+    }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
 

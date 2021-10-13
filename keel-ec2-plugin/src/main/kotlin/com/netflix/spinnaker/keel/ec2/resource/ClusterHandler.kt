@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.keel.ec2.resource
 
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.netflix.buoy.sdk.model.RolloutTarget
 import com.netflix.rocket.api.artifact.internal.debian.DebianArtifactParser
 import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.Exportable
@@ -49,6 +50,10 @@ import com.netflix.spinnaker.keel.api.ec2.byRegion
 import com.netflix.spinnaker.keel.api.ec2.hasScalingPolicies
 import com.netflix.spinnaker.keel.api.ec2.resolve
 import com.netflix.spinnaker.keel.api.ec2.resolveCapacity
+import com.netflix.spinnaker.keel.api.ec2.resolveDependencies
+import com.netflix.spinnaker.keel.api.ec2.resolveHealth
+import com.netflix.spinnaker.keel.api.ec2.resolveScaling
+import com.netflix.spinnaker.keel.api.ec2.resolveTags
 import com.netflix.spinnaker.keel.api.plugins.BaseClusterHandler
 import com.netflix.spinnaker.keel.api.plugins.CurrentImages
 import com.netflix.spinnaker.keel.api.plugins.ImageInRegion
@@ -75,6 +80,7 @@ import com.netflix.spinnaker.keel.ec2.toEc2Api
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
 import com.netflix.spinnaker.keel.exceptions.ActiveServerGroupsException
 import com.netflix.spinnaker.keel.exceptions.ExportError
+import com.netflix.spinnaker.keel.filterNotNullValues
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
 import com.netflix.spinnaker.keel.orca.OrcaService
@@ -93,6 +99,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.netflix.buoy.sdk.model.Location as RolloutLocation
 import com.netflix.spinnaker.keel.clouddriver.model.ServerGroup as ClouddriverServerGroup
 
 /**
@@ -174,8 +181,20 @@ class ClusterHandler(
   override fun Resource<ClusterSpec>.isStaggeredDeploy(): Boolean =
     spec.deployWith.isStaggered
 
+  override fun Resource<ClusterSpec>.isManagedRollout(): Boolean =
+    spec.managedRollout?.enabled ?: false
+
+  override fun Resource<ClusterSpec>.regions(): List<String> =
+    spec.locations.regions.map { it.name }
+
+  override fun Resource<ClusterSpec>.moniker(): Moniker =
+    spec.moniker
+
   override fun getDesiredAccount(diff: ResourceDiff<ServerGroup>): String =
     diff.desired.location.account
+
+  override fun Resource<ClusterSpec>.account(): String =
+    spec.locations.account
 
   override fun correlationId(resource: Resource<ClusterSpec>, diff: ResourceDiff<ServerGroup>): String =
     "${resource.id}:${diff.desired.location.region}"
@@ -356,14 +375,9 @@ class ClusterHandler(
   }
 
   override suspend fun actuationInProgress(resource: Resource<ClusterSpec>) =
-    resource
-      .spec
-      .locations
-      .regions
-      .map { it.name }
-      .any { region ->
+    generateCorrelationIds(resource).any { correlationId ->
         orcaService
-          .getCorrelatedExecutions("${resource.id}:$region")
+          .getCorrelatedExecutions(correlationId)
           .isNotEmpty()
       }
 
@@ -554,6 +568,148 @@ class ClusterHandler(
         }
       }
 
+  override fun Resource<ClusterSpec>.upsertServerGroupManagedRolloutJob(
+    diffs: List<ResourceDiff<ServerGroup>>,
+    version: String?
+  ): Job =
+    mapOf(
+      "refId" to "1",
+      "type" to "managedRollout",
+      "input" to mapOf(
+        "selectionStrategy" to spec.managedRollout?.selectionStrategy,
+        "targets" to spec.generateRolloutTargets(diffs),
+        "clusterDefinitions" to listOf(toManagedRolloutClusterDefinition(diffs))
+      ),
+      "reason" to "Diff detected at ${clock.instant().iso()}",
+    )
+
+  // todo eb: individual server group deploy strategy?
+  // todo eb: scaling policies?
+  private fun Resource<ClusterSpec>.toManagedRolloutClusterDefinition(diffs: List<ResourceDiff<ServerGroup>>) =
+    with(spec) {
+      val dependencies = resolveDependencies()
+
+      mutableMapOf(
+        "application" to moniker.app,
+        "stack" to moniker.stack,
+        "freeFormDetails" to moniker.detail,
+        "loadBalancers" to dependencies.loadBalancerNames,
+        "targetGroups" to dependencies.targetGroups,
+        "securityGroups" to dependencies.securityGroupNames,
+        "targetHealthyDeployPercentage" to 100, // TODO: any reason to do otherwise?
+        "tags" to resolveTags(),
+        "useAmiBlockDeviceMappings" to false, // TODO: any reason to do otherwise?
+        "copySourceCustomBlockDeviceMappings" to false, // TODO: any reason to do otherwise?
+        "virtualizationType" to "hvm", // TODO: any reason to do otherwise?
+        "moniker" to moniker.orcaClusterMoniker,
+        "suspendedProcesses" to resolveScaling().suspendedProcesses,
+        "reason" to "Diff detected at ${clock.instant().iso()}",
+        "cloudProvider" to EC2_CLOUD_PROVIDER,
+        "account" to locations.account,
+        "subnetType" to diffs.map { it.desired.location.subnet }.first(), //todo eb: why? yes?
+        "capacity" to resolveCapacity(),
+      ) + resolveHealth().toMapForOrca() +
+        mapOf("overrides" to buildOverrides(diffs)) +
+        spec.deployWith.toOrcaJobProperties("Amazon")
+    }
+
+  fun Resource<ClusterSpec>.buildOverrides(diffs: List<ResourceDiff<ServerGroup>>): Map<String, Any?> {
+    val overrides: MutableMap<String, Any?> = spec.overrides.toMutableMap()
+    val launchConfigOverrides = diffs.generateLaunchConfigOverrides()
+    val capacityForScalingOverrides = generateCapacityOverridesIfAutoscaling(diffs)
+    diffs.forEach { diff ->
+      val region = getDesiredRegion(diff)
+      val existingOverride: MutableMap<String, Any?> = mapper.convertValue(overrides[region] ?: mutableMapOf<String, Any?>())
+      val availabilityZones = mutableMapOf("availabilityZones" to mutableMapOf(region to diff.desired.location.availabilityZones))
+      val regionalLaunchConfig: MutableMap<String, Any?> = mapper.convertValue(launchConfigOverrides[region] ?: mutableMapOf<String, Any?>())
+      val capacity: MutableMap<String, Any?> = mapper.convertValue(capacityForScalingOverrides[region] ?: mutableMapOf<String, Any?>())
+      overrides[region] = existingOverride + availabilityZones + regionalLaunchConfig + capacity
+    }
+    return overrides
+  }
+
+  private fun Health.toMapForOrca() =
+    mutableMapOf(
+      "cooldown" to cooldown.seconds,
+      "enabledMetrics" to enabledMetrics,
+      "healthCheckType" to healthCheckType.name,
+      "healthCheckGracePeriod" to warmup.seconds,
+      "terminationPolicies" to terminationPolicies.map(TerminationPolicy::name),
+    )
+
+  private fun LaunchConfiguration.toMapForOrca(): Map<String, Any?> =
+    mutableMapOf(
+      "instanceMonitoring" to instanceMonitoring,
+      "ebsOptimized" to ebsOptimized,
+      "iamRole" to iamRole,
+      "amiName" to imageId,
+      "keyPair" to keyPair,
+      "instanceType" to instanceType,
+      "requireIMDSv2" to requireIMDSv2,
+    )
+
+  /**
+   * Creates a map of region to launch config settings so that the ami name is resolved by region.
+   */
+  private fun List<ResourceDiff<ServerGroup>>.generateLaunchConfigOverrides(): Map<String, Map<String, Any?>> =
+    associate { getDesiredRegion(it) to it.desired.launchConfiguration.toMapForOrca() }
+
+  // generates targets only for diff clusters
+  private fun ClusterSpec.generateRolloutTargets(diffs: List<ResourceDiff<ServerGroup>>): List<Map<String, Any>> =
+    diffs
+      .map {
+        mapper.convertValue(
+          RolloutTarget(
+            EC2_CLOUD_PROVIDER,
+            RolloutLocation(
+              locations.account,
+              getDesiredRegion(it),
+              emptyList() // todo eb: should this be availability zones? is this only if you want to stagger deployment by availibility?
+            )
+          )
+        )
+      }
+
+  /**
+   * If the cluster has autoscaling, we need to generate the right desired capacity
+   * so that we don't drastically downsize it.
+   * Here we generate the capacity in an override block to hand to the managed rollout stage.
+   *
+   * @return an override block keyed by region
+   */
+  private fun Resource<ClusterSpec>.generateCapacityOverridesIfAutoscaling(
+    diffs: List<ResourceDiff<ServerGroup>>
+  ): Map<String, Any> {
+    val defaultCapacity = spec.resolveCapacity()
+    return diffs.associate { diff ->
+      val capacity: Map<String, Any>? = when(diff.desired.capacity) {
+        is DefaultCapacity -> null
+        is AutoScalingCapacity -> mapOf (
+          "capacity" to DefaultCapacity(
+            min = defaultCapacity.min,
+            max = defaultCapacity.max,
+            desired = diff.resolveDesiredCapacity()
+          )
+        )
+      }
+      getDesiredRegion(diff) to capacity
+    }.filterNotNullValues()
+  }
+
+
+  /**
+   * For server groups with scaling policies, the [ClusterSpec] will not include a desired value. so we use the higher
+   * of the desired value the server group we're replacing uses, or the min. This means we won't catastrophically down-
+   * size a server group by deploying it.
+   */
+  private fun ResourceDiff<ServerGroup>.resolveDesiredCapacity() =
+    when (desired.capacity) {
+      // easy case: spec supplied the desired value as there are no scaling policies in effect
+      is DefaultCapacity -> desired.capacity.desired
+      // scaling policies exist, so use a safe value
+      is AutoScalingCapacity -> maxOf(current?.capacity?.desired ?: 0, desired.capacity.min)
+    }
+
   override fun ResourceDiff<ServerGroup>.resizeServerGroupJob(): Job {
     val current = requireNotNull(current) {
       "Current server group must not be null when generating a resize job"
@@ -573,19 +729,6 @@ class ClusterHandler(
       "serverGroupName" to current.name
     )
   }
-
-  /**
-   * For server groups with scaling policies, the [ClusterSpec] will not include a desired value. so we use the higher
-   * of the desired value the server group we're replacing uses, or the min. This means we won't catastrophically down-
-   * size a server group by deploying it.
-   */
-  private fun ResourceDiff<ServerGroup>.resolveDesiredCapacity() =
-    when (desired.capacity) {
-      // easy case: spec supplied the desired value as there are no scaling policies in effect
-      is DefaultCapacity -> desired.capacity.desired
-      // scaling policies exist, so use a safe value
-      is AutoScalingCapacity -> maxOf(current?.capacity?.desired ?: 0, desired.capacity.min)
-    }
 
   /**
    * @return list of stages to remove or create scaling policies in-place on the

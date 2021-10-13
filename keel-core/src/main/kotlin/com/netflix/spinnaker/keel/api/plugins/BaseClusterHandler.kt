@@ -61,6 +61,12 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
    */
   abstract fun getUnhealthyRegionsForActiveServerGroup(resource: Resource<SPEC>): List<String>
 
+  /**
+   * Generates a list of possible correlation ids used to check for running executions
+   */
+  fun generateCorrelationIds(resource: Resource<SPEC>): List<String> =
+    resource.regions().map { "${resource.id}:$it" } + "${resource.id}:managed-rollout"
+
   override suspend fun willTakeAction(
     resource: Resource<SPEC>,
     resourceDiff: ResourceDiff<Map<String, RESOLVED>>
@@ -153,6 +159,11 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
   abstract fun ResourceDiff<RESOLVED>.upsertServerGroupJob(resource: Resource<SPEC>, startingRefId: Int = 0, version: String? = null): Job
 
   /**
+   * return the job needed to upsert a server group using managed rollout
+   */
+  abstract fun Resource<SPEC>.upsertServerGroupManagedRolloutJob(diffs: List<ResourceDiff<RESOLVED>>, version: String? = null): Job
+
+  /**
    * return the version that will be deployed, represented as an appversion or a tag or a sha
    */
   abstract fun ResourceDiff<RESOLVED>.version(resource: Resource<SPEC>): String
@@ -167,6 +178,9 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
 
   fun accountRegionString(diff: ResourceDiff<RESOLVED>): String =
     "${getDesiredAccount(diff)}/${getDesiredRegion(diff)}"
+
+  fun accountRegionString(resource: Resource<SPEC>, diffs: List<ResourceDiff<RESOLVED>>): String =
+    "${resource.account()}/${diffs.map { getDesiredRegion(it) }.joinToString(",")}"
 
   fun ResourceDiff<RESOLVED>.capacityOnlyMessage(): String =
     "Resize server group ${moniker()} in " +
@@ -185,11 +199,19 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
       accountRegionString(this)
 
   fun ResourceDiff<RESOLVED>.upsertMessage(version: String): String =
-    "Deploy $version to server group ${moniker()}  in " +
+    "Deploy $version to server group ${moniker()} in " +
       accountRegionString(this)
+
+  fun Resource<SPEC>.upsertManagedRolloutMessage(version: String, diffs: List<ResourceDiff<RESOLVED>>): String =
+    "Deploy $version to cluster ${moniker()} in " +
+      accountRegionString(this, diffs) + " using a managed rollout"
 
   abstract fun correlationId(resource: Resource<SPEC>, diff: ResourceDiff<RESOLVED>): String
   abstract fun Resource<SPEC>.isStaggeredDeploy(): Boolean
+  abstract fun Resource<SPEC>.isManagedRollout(): Boolean
+  abstract fun Resource<SPEC>.regions(): List<String>
+  abstract fun Resource<SPEC>.moniker(): Moniker
+  abstract fun Resource<SPEC>.account(): String
   abstract fun ResourceDiff<RESOLVED>.hasScalingPolicies(): Boolean
   abstract fun ResourceDiff<RESOLVED>.isCapacityOrAutoScalingOnly(): Boolean
 
@@ -242,6 +264,12 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
       if (resource.isStaggeredDeploy() && createDiffs.isNotEmpty()) {
         val tasks = upsertStaggered(resource, createDiffs, version)
         return@coroutineScope tasks + deferred.map { it.await() }
+      }
+
+      // if managed rollout, do an upsert managed rollout stage.
+      if (resource.isManagedRollout() && createDiffs.isNotEmpty()) {
+        val task = upsertManagedRollout(resource, createDiffs, version)
+        return@coroutineScope listOf(task) + deferred.map { it.await() }
       }
 
       deferred.addAll(
@@ -433,6 +461,22 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
       }
 
       return@coroutineScope tasks
+    }
+
+  suspend fun upsertManagedRollout(
+    resource: Resource<SPEC>,
+    diffs: List<ResourceDiff<RESOLVED>>,
+    version: String
+  ): Task {
+      val stages = listOf(resource.upsertServerGroupManagedRolloutJob(diffs, version).toMutableMap())
+      log.info("Upsert server group using managed rollout and task: {}", stages)
+
+      return taskLauncher.submitJob(
+        resource = resource,
+        description = resource.upsertManagedRolloutMessage(version, diffs),
+        correlationId = "${resource.id}:managed-rollout",
+        stages = stages
+      )
     }
 
   fun notifyArtifactDeploying(resource: Resource<SPEC>, versions: Set<String>) {

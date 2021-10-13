@@ -8,7 +8,7 @@ import com.netflix.graphql.dgs.context.DgsContext
 import com.netflix.graphql.dgs.exceptions.DgsEntityNotFoundException
 import com.netflix.spinnaker.keel.api.Environment
 import com.netflix.spinnaker.keel.api.action.ActionType
-import com.netflix.spinnaker.keel.api.actuation.ExecutionSummaryService
+import com.netflix.spinnaker.keel.actuation.ExecutionSummaryService
 import com.netflix.spinnaker.keel.artifacts.ArtifactVersionLinks
 import com.netflix.spinnaker.keel.auth.AuthorizationSupport
 import com.netflix.spinnaker.keel.core.api.DependsOnConstraint
@@ -24,7 +24,6 @@ import com.netflix.spinnaker.keel.graphql.types.MdComparisonLinks
 import com.netflix.spinnaker.keel.graphql.types.MdConstraint
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironment
 import com.netflix.spinnaker.keel.graphql.types.MdEnvironmentState
-import com.netflix.spinnaker.keel.graphql.types.MdExecutionSummary
 import com.netflix.spinnaker.keel.graphql.types.MdGitMetadata
 import com.netflix.spinnaker.keel.graphql.types.MdLifecycleStep
 import com.netflix.spinnaker.keel.graphql.types.MdNotification
@@ -32,10 +31,6 @@ import com.netflix.spinnaker.keel.graphql.types.MdPackageDiff
 import com.netflix.spinnaker.keel.graphql.types.MdPausedInfo
 import com.netflix.spinnaker.keel.graphql.types.MdPinnedVersion
 import com.netflix.spinnaker.keel.graphql.types.MdPullRequest
-import com.netflix.spinnaker.keel.graphql.types.MdResource
-import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationState
-import com.netflix.spinnaker.keel.graphql.types.MdResourceActuationStatus
-import com.netflix.spinnaker.keel.graphql.types.MdResourceTask
 import com.netflix.spinnaker.keel.graphql.types.MdVersionVeto
 import com.netflix.spinnaker.keel.pause.ActuationPauser
 import com.netflix.spinnaker.keel.persistence.DismissibleNotificationRepository

@@ -2,8 +2,8 @@ package com.netflix.spinnaker.keel.services
 
 import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.StatefulConstraint
-import com.netflix.spinnaker.keel.api.actuation.ExecutionSummary
-import com.netflix.spinnaker.keel.api.actuation.ExecutionSummaryService
+import com.netflix.spinnaker.keel.actuation.ExecutionSummary
+import com.netflix.spinnaker.keel.actuation.ExecutionSummaryService
 import com.netflix.spinnaker.keel.api.constraints.ConstraintStatus.OVERRIDE_FAIL
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.api.plugins.supporting

@@ -15,7 +15,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
+import strikt.assertions.contains
 import strikt.assertions.hasSize
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isNotEmpty
@@ -36,14 +38,17 @@ abstract class BaseClusterHandlerTests<
     taskLauncher: TaskLauncher,
   ): HANDLER
   abstract fun getSingleRegionCluster(): Resource<SPEC>
-  abstract fun getRegions(resource: Resource<SPEC>): List<String>
   abstract fun getMultiRegionCluster(): Resource<SPEC>
-  abstract fun getDiffInMoreThanEnabled(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
-  abstract fun getDiffOnlyInEnabled(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
-
   abstract fun getMultiRegionStaggeredDeployCluster(): Resource<SPEC>
+  abstract fun getMultiRegionManagedRolloutCluster(): Resource<SPEC>
+
+  abstract fun getRegions(resource: Resource<SPEC>): List<String>
+  abstract fun getDiffInMoreThanEnabled(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
+
+  abstract fun getDiffOnlyInEnabled(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
   abstract fun getDiffInCapacity(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
   abstract fun getDiffInImage(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
+  abstract fun getCreateAndModifyDiff(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
 
   val clock: Clock = MutableClock()
   val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
@@ -212,6 +217,48 @@ abstract class BaseClusterHandlerTests<
       that(stages.size).isEqualTo(1)
       that(stages.first()["type"]).isEqualTo("createServerGroup")
       that(stages.first()["refId"]).isEqualTo("1")
+    }
+  }
+
+  @Test
+  fun `managed rollout image diff`() {
+    val slots = mutableListOf<List<Job>>()
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+
+    val resource = getMultiRegionManagedRolloutCluster()
+    runBlocking { handler.upsert(resource, getDiffInImage(resource)) }
+    val stages = slots[0]
+    expect {
+      that(slots.size).isEqualTo(1)
+      that(stages.size).isEqualTo(1)
+      val managedRolloutStage = stages.first()
+      that(managedRolloutStage["type"]).isEqualTo("managedRollout")
+      that(managedRolloutStage["refId"]).isEqualTo("1")
+      that(managedRolloutStage["input"]).isA<Map<String, Any?>>()
+    }
+  }
+
+  @Test
+  fun `managed rollout image diff plus capacity change`() {
+    val slots = mutableListOf<List<Job>>()
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
+
+    val resource = getMultiRegionManagedRolloutCluster()
+    runBlocking { handler.upsert(resource, getCreateAndModifyDiff(resource)) }
+    val firstTask = slots[0]
+    val secondTask = slots[1]
+    expect {
+      that(slots.size).isEqualTo(2)
+      that(firstTask).isNotEmpty().hasSize(1)
+      that(secondTask).isNotEmpty().hasSize(1)
+      val modifyStage = firstTask.first()
+      that(modifyStage["type"]).isEqualTo("resizeServerGroup")
+      that(modifyStage["refId"]).isEqualTo("1")
+      val managedRolloutStage = secondTask.first()
+      that(managedRolloutStage["type"]).isEqualTo("managedRollout")
+      that(managedRolloutStage["refId"]).isEqualTo("1")
+      val targets = (managedRolloutStage["input"] as Map<String, Any?>)["targets"] as List<Map<String,Any?>>
+      that(targets).hasSize(1)
     }
   }
 }

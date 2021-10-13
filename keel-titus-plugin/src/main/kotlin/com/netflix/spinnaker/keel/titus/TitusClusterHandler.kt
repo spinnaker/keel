@@ -18,6 +18,7 @@
 package com.netflix.spinnaker.keel.titus
 
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.netflix.buoy.sdk.model.RolloutTarget
 import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -101,6 +102,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.netflix.buoy.sdk.model.Location as RolloutLocation
 import com.netflix.spinnaker.keel.clouddriver.model.TitusServerGroup as ClouddriverTitusServerGroup
 
 /**
@@ -134,16 +136,11 @@ class TitusClusterHandler(
       .byRegion()
 
   override suspend fun actuationInProgress(resource: Resource<TitusClusterSpec>): Boolean =
-    resource
-      .spec
-      .locations
-      .regions
-      .map { it.name }
-      .any { region ->
-        orcaService
-          .getCorrelatedExecutions("${resource.id}:$region", resource.serviceAccount)
-          .isNotEmpty()
-      }
+    generateCorrelationIds(resource).any { correlationId ->
+      orcaService
+        .getCorrelatedExecutions(correlationId)
+        .isNotEmpty()
+    }
 
   override fun getDesiredRegion(diff: ResourceDiff<TitusServerGroup>): String =
     diff.desired.location.region
@@ -209,6 +206,18 @@ class TitusClusterHandler(
 
   override fun Resource<TitusClusterSpec>.isStaggeredDeploy(): Boolean =
     spec.deployWith.isStaggered
+
+  override fun Resource<TitusClusterSpec>.isManagedRollout(): Boolean =
+    spec.managedRollout?.enabled ?: false
+
+  override fun Resource<TitusClusterSpec>.regions(): List<String> =
+    spec.locations.regions.map { it.name }
+
+  override fun Resource<TitusClusterSpec>.account(): String =
+    spec.locations.account
+
+  override fun Resource<TitusClusterSpec>.moniker() =
+    spec.moniker
 
   override fun ResourceDiff<TitusServerGroup>.hasScalingPolicies(): Boolean =
     desired.scaling.hasScalingPolicies()
@@ -680,6 +689,70 @@ class TitusClusterHandler(
       .let { job ->
         job + resource.spec.deployWith.toOrcaJobProperties("Titus") +
           mapOf("metadata" to mapOf("resource" to resource.id))
+      }
+
+  override fun Resource<TitusClusterSpec>.upsertServerGroupManagedRolloutJob(
+    diffs: List<ResourceDiff<TitusServerGroup>>,
+    version: String?
+  ): Job {
+    val image = diffs.first().generateImageJson(version) // image json should be the same for all regions.
+
+    return mapOf(
+      "refId" to "1",
+      "type" to "managedRollout",
+      "input" to mapOf(
+        "selectionStrategy" to spec.managedRollout?.selectionStrategy,
+        "targets" to spec.generateRolloutTargets(diffs),
+        "clusterDefinitions" to listOf(toManagedRolloutClusterDefinition(image))
+      ),
+      "reason" to "Diff detected at ${clock.instant().iso()}",
+    )
+  }
+
+  // todo eb: individual server group deploy strategy?
+  // todo eb: scaling policies?
+  private fun Resource<TitusClusterSpec>.toManagedRolloutClusterDefinition(image: Map<String, Any>) =
+    with(spec) {
+      val dependencies = resolveDependencies()
+      mapOf(
+        "application" to moniker.app,
+        "stack" to moniker.stack,
+        "freeFormDetails" to moniker.detail,
+        "inService" to true,
+        "targetHealthyDeployPercentage" to 100, // TODO: any reason to do otherwise?
+        "cloudProvider" to TITUS_CLOUD_PROVIDER,
+        "network" to "default",
+        "registry" to runBlocking { getRegistryForTitusAccount(locations.account) },
+        "capacity" to resolveCapacity(),
+        "capacityGroup" to resolveCapacityGroup(),
+        "securityGroups" to dependencies.securityGroupNames,
+        "loadBalancers" to dependencies.loadBalancerNames,
+        "targetGroups" to dependencies.targetGroups,
+        "entryPoint" to resolveEntryPoint(),
+        "env" to resolveEnv(),
+        "containerAttributes" to resolveContainerAttributes(),
+        "tags" to resolveTags(),
+        "resources" to resolveResources(),
+        "constraints" to resolveConstraints(),
+        "migrationPolicy" to resolveMigrationPolicy(),
+        "scaling" to resolveScaling(), //todo eb: is this even right?
+        "overrides" to spec.overrides
+      ) + image + spec.deployWith.toOrcaJobProperties("Titus")
+    }
+
+  private fun TitusClusterSpec.generateRolloutTargets(diffs: List<ResourceDiff<TitusServerGroup>>): List<Map<String, Any>> =
+    diffs
+      .map {
+        mapper.convertValue(
+          RolloutTarget(
+            TITUS_CLOUD_PROVIDER,
+            RolloutLocation(
+              locations.account,
+              getDesiredRegion(it),
+              emptyList()
+            )
+          )
+        )
       }
 
   /**

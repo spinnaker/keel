@@ -8,10 +8,10 @@ import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SubnetAwareLocations
 import com.netflix.spinnaker.keel.api.TaskStatus
-import com.netflix.spinnaker.keel.api.actuation.ExecutionSummary
-import com.netflix.spinnaker.keel.api.actuation.RolloutStatus
-import com.netflix.spinnaker.keel.api.actuation.RolloutTargetWithStatus
-import com.netflix.spinnaker.keel.api.actuation.Stage
+import com.netflix.spinnaker.keel.actuation.ExecutionSummary
+import com.netflix.spinnaker.keel.actuation.RolloutStatus
+import com.netflix.spinnaker.keel.actuation.RolloutTargetWithStatus
+import com.netflix.spinnaker.keel.actuation.Stage
 import com.netflix.spinnaker.keel.api.artifacts.GitMetadata
 import com.netflix.spinnaker.keel.api.artifacts.PublishedArtifact
 import com.netflix.spinnaker.keel.bakery.diff.PackageDiff
@@ -23,7 +23,6 @@ import com.netflix.spinnaker.keel.graphql.types.MdDeployTarget
 import com.netflix.spinnaker.keel.graphql.types.MdEventLevel
 import com.netflix.spinnaker.keel.graphql.types.MdExecutionSummary
 import com.netflix.spinnaker.keel.graphql.types.MdGitMetadata
-import com.netflix.spinnaker.keel.graphql.types.MdLifecycleEventStatus
 import com.netflix.spinnaker.keel.graphql.types.MdLocation
 import com.netflix.spinnaker.keel.graphql.types.MdMoniker
 import com.netflix.spinnaker.keel.graphql.types.MdNotification
@@ -136,6 +135,7 @@ fun DismissibleNotification.toDgs() =
 
 fun ExecutionSummary.toDgs() =
   MdExecutionSummary(
+    id = "$id:summary",
     status = status.toDgs(),
     currentStage = currentStage?.toDgs(),
     stages = stages.map { it.toDgs() },

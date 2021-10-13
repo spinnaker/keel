@@ -1,9 +1,12 @@
 package com.netflix.spinnaker.keel.titus.resource
 
+import com.netflix.spinnaker.keel.api.Highlander
+import com.netflix.spinnaker.keel.api.ManagedRolloutConfig
 import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.RedBlack
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
+import com.netflix.spinnaker.keel.api.SelectionStrategy
 import com.netflix.spinnaker.keel.api.SimpleLocations
 import com.netflix.spinnaker.keel.api.SimpleRegionSpec
 import com.netflix.spinnaker.keel.api.StaggeredRegion
@@ -21,7 +24,6 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
-import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
@@ -29,7 +31,6 @@ import com.netflix.spinnaker.keel.orca.OrcaService
 import com.netflix.spinnaker.keel.titus.TitusClusterHandler
 import com.netflix.spinnaker.keel.titus.byRegion
 import com.netflix.spinnaker.keel.titus.resolve
-import com.nhaarman.mockitokotlin2.any
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -67,7 +68,9 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
     container = DigestProvider(organization = "waffles", image = "butter", digest = "1234567890"),
     _defaults = TitusServerGroupSpec(
       capacity = ClusterSpec.CapacitySpec(1, 4, 2)
-    )
+    ),
+    managedRollout = ManagedRolloutConfig(enabled = false),
+    deployWith = Highlander()
   )
 
   override fun getRegions(resource: Resource<TitusClusterSpec>): List<String> =
@@ -134,6 +137,21 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
     )
   }
 
+  override fun getMultiRegionManagedRolloutCluster(): Resource<TitusClusterSpec> {
+    val spec = baseSpec.copy(
+      locations = SimpleLocations(
+        account = "account",
+        regions = setOf(SimpleRegionSpec("east"), SimpleRegionSpec("west"))
+      ),
+      managedRollout = ManagedRolloutConfig(enabled = true, selectionStrategy = SelectionStrategy.ALPHABETICAL)
+    )
+    return Resource(
+      kind = TITUS_CLUSTER_V1.kind,
+      metadata = metadata,
+      spec = spec
+    )
+  }
+
   override fun getDiffInMoreThanEnabled(resource: Resource<TitusClusterSpec>): ResourceDiff<Map<String, TitusServerGroup>> {
     val currentServerGroups = resource.spec.resolve()
       .byRegion()
@@ -159,6 +177,17 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
   override fun getDiffInImage(resource: Resource<TitusClusterSpec>): ResourceDiff<Map<String, TitusServerGroup>> {
     val current = resource.spec.resolve().byRegion()
     val desired = resource.spec.resolve().map { it.withADifferentImage() }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  override fun getCreateAndModifyDiff(resource: Resource<TitusClusterSpec>): ResourceDiff<Map<String, TitusServerGroup>> {
+    val current = resource.spec.resolve().byRegion()
+    val desired = resource.spec.resolve().map {
+      when(it.location.region) {
+        "east" -> it.withADifferentImage()
+        else -> it.withDoubleCapacity()
+      }
+    }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
 
