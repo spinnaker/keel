@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.services
+package com.netflix.spinnaker.keel.admin
 
 import com.netflix.spinnaker.keel.api.ArtifactInEnvironmentContext
 import com.netflix.spinnaker.keel.api.StatefulConstraint

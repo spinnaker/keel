@@ -127,7 +127,7 @@ class AuthorizationSupport(
         APPLICATION -> repository.getDeliveryConfigForApplication(identifier).serviceAccount
         DELIVERY_CONFIG -> repository.getDeliveryConfig(identifier).serviceAccount
       }
-      checkPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ignored")
+      checkPermission(auth, serviceAccount, "SERVICE_ACCOUNT", "ACCESS")
     }
   }
 

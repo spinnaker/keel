@@ -1,4 +1,4 @@
-package com.netflix.spinnaker.keel.services
+package com.netflix.spinnaker.keel.admin
 
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Environment
@@ -14,6 +14,7 @@ import com.netflix.spinnaker.keel.core.api.TimeWindowConstraint
 import com.netflix.spinnaker.keel.front50.Front50Cache
 import com.netflix.spinnaker.keel.front50.Front50Service
 import com.netflix.spinnaker.keel.front50.model.Application
+import com.netflix.spinnaker.keel.front50.model.GenericStage
 import com.netflix.spinnaker.keel.front50.model.ManagedDeliveryConfig
 import com.netflix.spinnaker.keel.front50.model.Pipeline
 import com.netflix.spinnaker.keel.front50.model.Stage
@@ -88,7 +89,7 @@ class AdminServiceTests : JUnit5Minutests {
       application = front50Application.name,
       disabled = false,
       triggers = listOf(Trigger(type = "trigger", enabled = true, application = front50Application.name)),
-      _stages = listOf(Stage(type = "importDeliveryConfig", name = "Import config", refId = "1"))
+      _stages = listOf(GenericStage(type = "importDeliveryConfig", name = "Import config", refId = "1"))
     )
 
     val executionSummaryService: ExecutionSummaryService = mockk()
@@ -216,7 +217,7 @@ class AdminServiceTests : JUnit5Minutests {
         before {
           every { front50Cache.pipelinesByApplication(front50Application.name) } returns listOf(
             importPipeline.copy(
-              _stages = listOf(Stage(type = "coolStage", name = "cool", refId = "1"))
+              _stages = listOf(GenericStage(type = "coolStage", name = "cool", refId = "1"))
             )
           )
         }
