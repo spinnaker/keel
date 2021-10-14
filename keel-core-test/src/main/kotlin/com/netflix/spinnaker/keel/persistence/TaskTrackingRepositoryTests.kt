@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.persistence
 
-import com.netflix.spinnaker.keel.api.TaskStatus
 import com.netflix.spinnaker.keel.api.TaskStatus.SUCCEEDED
 import com.netflix.spinnaker.keel.api.TaskStatus.TERMINAL
 import com.netflix.spinnaker.keel.api.actuation.SubjectType.RESOURCE
@@ -17,7 +16,6 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 import java.time.Clock
-import java.time.Duration
 
 abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
 
@@ -66,18 +64,18 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
 
   @Test
   fun `fetching by batch works`() {
-    // we fetch all running tasks, plus the last "batch" of completed tasks.
+    // we fetch a singe batch of tasks
 
-    subject.store(taskRecord3.copy(id = "1", name = "upsert1"))
+    subject.store(taskRecord3.copy(id = "1", name = "upsert1", artifactVersion = "v1"))
     clock.tickMinutes(2)
     subject.updateStatus("1", SUCCEEDED)
     clock.tickMinutes(2)
 
-    subject.store(taskRecord3.copy(id = "4", name = "upsert2"))
+    subject.store(taskRecord3.copy(id = "4", name = "upsert2", artifactVersion = "v2"))
     clock.tickSeconds(1)
-    subject.store(taskRecord3.copy(id = "5", name = "upsert3"))
+    subject.store(taskRecord3.copy(id = "5", name = "upsert3", artifactVersion = "v2"))
     clock.tickSeconds(1)
-    subject.store(taskRecord3.copy(id = "6", name = "upsert4"))
+    subject.store(taskRecord3.copy(id = "6", name = "upsert4", artifactVersion = "v2"))
 
     clock.tickMinutes(2)
     subject.updateStatus("4", TERMINAL)

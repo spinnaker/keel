@@ -81,6 +81,14 @@ class SqlTaskTrackingRepository(
         .toSet()
     }
 
+  /**
+   * This is the list of tasks that we show to users in the UI.
+   *
+   * We only want to show one "batch" of tasks for a resource Id.
+   *  Clusters have a recorded version, so a 'batch' is updates that have the same artifact_version.
+   *  For resources without a version it's everything that was started within 30 seconds
+   *    of the most recent task (because we launch groups of tasks at once).
+   */
   override fun getLatestBatchOfTasks(resourceId: String): Set<TaskForResource> {
     val tasks = sqlRetry.withRetry(READ) {
       jooq
@@ -101,14 +109,25 @@ class SqlTaskTrackingRepository(
         }
     }
 
-    val mostRecentCompleted = tasks
-      .filter { it.endedAt != null}
+    val mostRecentStarted = tasks
       .maxByOrNull { it.startedAt }
-    // we start tasks within the same 30 seconds, so find the rest of the batch
-    //  that goes with the most recently completed task.
-    val batchCuttofTime = mostRecentCompleted?.startedAt?.minusSeconds(30)
-    return tasks.filter { it.endedAt == null || it.startedAt.isAfter(batchCuttofTime) }.toSet()
+
+    val version = mostRecentStarted?.artifactVersion
+    return if (version != null) {
+      tasks.getTaskBatchVersion(version)
+    } else {
+      // we start tasks within the same 30 seconds, so find the rest of the batch
+      //  that goes with the most recently completed task.
+      val batchCutofTime = mostRecentStarted?.startedAt?.minusSeconds(30)
+      tasks.getTaskBatchNoVersion(batchCutofTime)
+    }
   }
+
+  private fun List<TaskForResource>.getTaskBatchNoVersion(cutoff: Instant?) =
+    filter { it.endedAt == null || it.startedAt.isAfter(cutoff) }.toSet()
+
+  private fun List<TaskForResource>.getTaskBatchVersion(version: String) =
+    filter { it.endedAt == null || it.artifactVersion == version }.toSet()
 
 
   override fun getInFlightTasks(application: String, environmentName: String): Set<TaskForResource> =
