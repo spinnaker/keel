@@ -306,13 +306,15 @@ class ApplicationLoadBalancerHandler(
             mapOf(
               "port" to it.port,
               "protocol" to it.protocol,
-              "rules" to it.rules,
-              "defaultActions" to it.defaultActions.sortedBy(Action::order).map { action ->
+              "rules" to it.rules.map { rule ->
                 mapOf(
-                  "type" to action.type,
-                  "order" to action.order,
-                ) + action.toOrcaRequest()
+                  "priority" to rule.priority,
+                  "conditions" to rule.conditions,
+                  "default" to rule.default,
+                  "actions" to rule.actions.map(Action::toOrcaRequest)
+                )
               },
+              "defaultActions" to it.defaultActions.sortedBy(Action::order).map(Action::toOrcaRequest),
             ).run {
               it.certificate?.let { certificateName ->
                 this + mapOf(
