@@ -13,6 +13,8 @@ import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
+import com.netflix.spinnaker.keel.api.artifacts.DEBIAN
+import com.netflix.spinnaker.keel.api.artifacts.DOCKER
 import com.netflix.spinnaker.keel.api.artifacts.branchName
 import com.netflix.spinnaker.keel.api.artifacts.branchStartsWith
 import com.netflix.spinnaker.keel.api.ec2.ClusterDependencies
@@ -59,7 +61,6 @@ import com.netflix.spinnaker.keel.scm.ScmUtils
 import com.netflix.spinnaker.keel.scm.toTags
 import com.netflix.spinnaker.keel.test.DummyArtifactReferenceResourceSpec
 import com.netflix.spinnaker.keel.test.DummyLocatableResourceSpec
-import com.netflix.spinnaker.keel.test.DummyResourceSpec
 import com.netflix.spinnaker.keel.test.applicationLoadBalancer
 import com.netflix.spinnaker.keel.test.configuredTestObjectMapper
 import com.netflix.spinnaker.keel.test.debianArtifact
@@ -89,6 +90,7 @@ import strikt.assertions.endsWith
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isTrue
 import strikt.assertions.one
 import java.time.Clock
 import java.time.Duration
@@ -239,7 +241,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       application = "fnord",
       name = "myconfig",
       serviceAccount = "keel@keel.io",
-      artifacts = setOf(dockerFromMain, dockerFromBranch, debianFromMain, debianFromBranch),
+      artifacts = setOf(dockerFromMain, debianFromMain),
       environments = setOf(
         Environment(
           name = "test",
@@ -264,7 +266,10 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
       )
     )
 
-    val previewEnv = slot<Environment>()
+    val previewEnvSpec = deliveryConfig.previewEnvironments.first()
+    val updatedConfig = slot<DeliveryConfig>()
+    val previewEnv by lazy { updatedConfig.captured.environments.find { it.isPreview }!! }
+    val previewArtifacts by lazy { updatedConfig.captured.artifacts.filter { it.isPreview } }
 
     fun setupMocks() {
       every {
@@ -326,9 +331,9 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         )
       }
 
-      every { repository.upsertResource<DummyResourceSpec>(any(), any()) } just runs
+      every { repository.getDeliveryConfig(deliveryConfig.name) } returns deliveryConfig
 
-      every { repository.storeEnvironment(any(), capture(previewEnv)) } just runs
+      every { repository.upsertDeliveryConfig(capture(updatedConfig)) } answers { updatedConfig.captured }
 
       every { environmentDeletionRepository.markForDeletion(any()) } just runs
 
@@ -439,45 +444,64 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             }
           }
 
-          test("a preview environment and associated resources are created/updated") {
-            previewEnv.captured.resources.forEach { previewResource ->
-              verify {
-                repository.upsertResource(previewResource, deliveryConfig.name)
-              }
-            }
+          test("the delivery config is updated in the database") {
             verify {
-              repository.storeEnvironment(deliveryConfig.name, previewEnv.captured)
+              repository.upsertDeliveryConfig(any<DeliveryConfig>())
+            }
+            expectThat(updatedConfig.captured.environments.size > deliveryConfig.environments.size)
+            expectThat(updatedConfig.captured.artifacts.size > deliveryConfig.artifacts.size)
+          }
+
+          test("the updated delivery config contains preview artifacts") {
+            expectThat(previewArtifacts) {
+              one {
+                get { name }.isEqualTo(dockerFromMain.name)
+                get { type }.isEqualTo(dockerFromMain.type)
+                get { from!!.branch }.isEqualTo(previewEnvSpec.branch)
+              }
+              one {
+                get { name }.isEqualTo(debianFromMain.name)
+                get { type }.isEqualTo(debianFromMain.type)
+                get { from!!.branch }.isEqualTo(previewEnvSpec.branch)
+              }
             }
           }
 
+          test("the updated delivery config contains the preview environment") {
+            expectThat(updatedConfig.captured.environments)
+              .one {
+                get { isPreview }.isTrue()
+              }
+          }
+
           test("the preview environment has no constraints or post-deploy actions") {
-            expectThat(previewEnv.captured.constraints).isEmpty()
-            expectThat(previewEnv.captured.postDeploy).isEmpty()
+            expectThat(previewEnv.constraints).isEmpty()
+            expectThat(previewEnv.postDeploy).isEmpty()
           }
 
           test("the name of the preview environment is generated correctly") {
             val baseEnv = deliveryConfig.environments.first()
             val suffix = prEvent.pullRequestBranch.shortHash
 
-            expectThat(previewEnv.captured) {
+            expectThat(previewEnv) {
               get { name }.isEqualTo("${baseEnv.name}-$suffix")
             }
           }
 
           test("relevant metadata is added to the preview environment") {
-            expectThat(previewEnv.captured.metadata).containsKeys("basedOn", "repoKey", "branch", "pullRequestId")
+            expectThat(previewEnv.metadata).containsKeys("basedOn", "repoKey", "branch", "pullRequestId")
           }
 
           test("resources are migrated to their latest version before processing") {
-            val baseEnv = deliveryConfig.environments.first()
-            verify(exactly = baseEnv.resources.size) {
-              resourceFactory.migrate(any())
+            verify {
+              resourceFactory.migrate(clusterWithOldSpecVersion)
             }
+
             @Suppress("DEPRECATION")
             expect {
               that(clusterWithOldSpecVersion.kind)
                 .isEqualTo(EC2_CLUSTER_V1.kind)
-              that(previewEnv.captured.resources.find { it.basedOn == clusterWithOldSpecVersion.id }!!.kind)
+              that(previewEnv.resources.find { it.basedOn == clusterWithOldSpecVersion.id }!!.kind)
                 .isEqualTo(EC2_CLUSTER_V1_1.kind)
             }
           }
@@ -485,7 +509,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
           test("resource names/IDs are updated with branch hash") {
             val baseEnv = deliveryConfig.environments.first()
             val baseResource = baseEnv.resources.first()
-            val previewResource = previewEnv.captured.resources.first()
+            val previewResource = previewEnv.resources.first()
 
             expectThat(previewResource).run {
               isEqualTo(baseResource.deepRename(prEvent.pullRequestBranch.shortHash))
@@ -494,55 +518,32 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             }
           }
 
-          test("the artifact reference in a resource is updated to match the preview environment branch filter") {
-            expectThat(previewEnv.captured.resources.find { it.basedOn == cluster.id }?.spec)
+          test("the artifact reference in a resource is updated to match the preview artifact") {
+            expectThat(previewEnv.resources.find { it.basedOn == cluster.id }?.spec)
               .isA<ArtifactReferenceProvider>()
-              .get { artifactReference }.isEqualTo(dockerFromBranch.reference)
+              .get { artifactReference }.isEqualTo(previewArtifacts.find { it.type == DOCKER }!!.reference)
 
-            expectThat(previewEnv.captured.resources.find { it.basedOn == clusterWithOldSpecVersion.id }?.spec)
+            expectThat(previewEnv.resources.find { it.basedOn == clusterWithOldSpecVersion.id }?.spec)
               // this also demonstrates that the old cluster spec gets migrated and now supports the standard artifact reference interface
               .isA<ArtifactReferenceProvider>()
-              .get { artifactReference }.isEqualTo(debianFromBranch.reference)
+              .get { artifactReference }.isEqualTo(previewArtifacts.find { it.type == DEBIAN }!!.reference)
           }
 
           test("the names of resource dependencies present in the preview environment are adjusted to match") {
             val suffix = prEvent.pullRequestBranch.shortHash
             val dependency = applicationLoadBalancer
 
-            expectThat(previewEnv.captured.resources.find { it.basedOn == clusterWithDependencies.id }?.spec)
+            expectThat(previewEnv.resources.find { it.basedOn == clusterWithDependencies.id }?.spec)
               .isA<Dependent>()
               .get { dependsOn.first { it.type == LOAD_BALANCER }.name }
               .isEqualTo(dependency.spec.moniker.withSuffix(suffix).name)
           }
 
           test("the names of the default security groups are not changed in the dependencies") {
-            expectThat(previewEnv.captured.resources.find { it.basedOn == clusterWithDependencies.id }?.spec)
+            expectThat(previewEnv.resources.find { it.basedOn == clusterWithDependencies.id }?.spec)
               .isA<Dependent>()
               .get { dependsOn.filter { it.type == SECURITY_GROUP }.map { it.name }.toSet() }
               .containsExactlyInAnyOrder(defaultAppSecurityGroup.name, defaultElbSecurityGroup.name)
-          }
-        }
-
-        context("without an artifact in the delivery config matching the branch filter") {
-          modifyFixture {
-            deliveryConfig = deliveryConfig.run {
-              copy(
-                artifacts = artifacts.map {
-                  if (it == dockerFromBranch) dockerWithNonMatchingFilter else it
-                }.toSet()
-              )
-            }
-          }
-
-          before {
-            setupMocks() // to pick up the updated delivery config above
-            subject.handlePrEvent(prEvent)
-          }
-
-          test("the artifact reference in a resource is not updated") {
-            expectThat(previewEnv.captured.resources.find { it.basedOn == cluster.id }?.spec)
-              .isA<ArtifactReferenceProvider>()
-              .get { artifactReference }.isEqualTo(dockerFromMain.reference)
           }
         }
       }
@@ -610,7 +611,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
             every {
               repository.getDeliveryConfig(deliveryConfig.name)
             } returns deliveryConfig.copy(
-              environments = deliveryConfig.environments + setOf(previewEnv.captured)
+              environments = deliveryConfig.environments + setOf(previewEnv)
             )
 
             subject.handlePrFinished(prEvent)
@@ -618,7 +619,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
 
           test("the matching preview environment is marked for deletion") {
             verify {
-              environmentDeletionRepository.markForDeletion(previewEnv.captured)
+              environmentDeletionRepository.markForDeletion(previewEnv)
             }
           }
 
@@ -651,9 +652,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
 
       test("event is ignored") {
         verify(exactly = 0) {
-          repository.upsertResource<DummyLocatableResourceSpec>(any(), deliveryConfig.name)
-          repository.upsertResource<DummyArtifactReferenceResourceSpec>(any(), deliveryConfig.name)
-          repository.storeEnvironment(deliveryConfig.name, any())
+          repository.upsertDeliveryConfig(any<DeliveryConfig>())
         }
         verify {
           importer wasNot called
@@ -733,10 +732,10 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
         }
       }
 
-      context("failure to upsert preview environment") {
+      context("failure to upsert delivery config") {
         modifyFixture {
           every {
-            repository.storeEnvironment(any(), any())
+            repository.upsertDeliveryConfig(any<DeliveryConfig>())
           } throws SystemException("oh noes!")
         }
 
@@ -760,9 +759,7 @@ internal class PreviewEnvironmentCodeEventListenerTests : JUnit5Minutests {
   private fun TestContextBuilder<Fixture, Fixture>.testEventIgnored() {
     test("event is ignored") {
       verify(exactly = 0) {
-        repository.upsertResource<DummyLocatableResourceSpec>(any(), deliveryConfig.name)
-        repository.upsertResource<DummyArtifactReferenceResourceSpec>(any(), deliveryConfig.name)
-        repository.storeEnvironment(deliveryConfig.name, any())
+        repository.upsertDeliveryConfig(any<DeliveryConfig>())
       }
       verify {
         importer wasNot called

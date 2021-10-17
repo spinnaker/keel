@@ -104,6 +104,9 @@ abstract class DeliveryArtifact {
   /** Filters for the artifact origin in source control. */
   open val from: ArtifactOriginFilter? = null
 
+  /** Whether this artifact was created for a preview environment. */
+  open val isPreview: Boolean = false
+
   @get:ExcludedFromDiff
   val filteredByBranch: Boolean
     get() = from?.branch != null

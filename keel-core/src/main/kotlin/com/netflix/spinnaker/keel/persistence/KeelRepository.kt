@@ -110,16 +110,6 @@ interface KeelRepository : KeelReadOnlyRepository {
   fun deleteEnvironment(deliveryConfigName: String, environmentName: String)
 
   /**
-   * Stores/updates an [Environment] associated with a [DeliveryConfig].
-   *
-   * Generally, updating environments should be done via [store]. This method is primarily
-   * intended to support the creation of preview environments, where none of the other
-   * properties of the delivery config have changed, which allows us to use a more efficient
-   * storage algorithm.
-   */
-  fun storeEnvironment(deliveryConfigName: String, environment: Environment)
-
-  /**
    * If the constraint state changed, publishes a [ConstraintStateChanged] event.
    */
   fun storeConstraintState(state: ConstraintState)

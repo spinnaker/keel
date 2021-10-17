@@ -249,9 +249,6 @@ class CombinedRepository(
   override fun deleteEnvironment(deliveryConfigName: String, environmentName: String) =
     deliveryConfigRepository.deleteEnvironment(deliveryConfigName, environmentName)
 
-  override fun storeEnvironment(deliveryConfigName: String, environment: Environment) =
-    deliveryConfigRepository.storeEnvironment(deliveryConfigName, environment)
-
   override fun storeConstraintState(state: ConstraintState) {
     val previousState = getConstraintState(
       deliveryConfigName = state.deliveryConfigName,

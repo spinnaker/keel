@@ -105,6 +105,7 @@ class SqlArtifactRepository(
         .set(DELIVERY_ARTIFACT.TYPE, artifact.type)
         .set(DELIVERY_ARTIFACT.REFERENCE, artifact.reference)
         .set(DELIVERY_ARTIFACT.DELIVERY_CONFIG_NAME, artifact.deliveryConfigName)
+        .set(DELIVERY_ARTIFACT.IS_PREVIEW, artifact.isPreview)
         .set(DELIVERY_ARTIFACT.DETAILS, artifact.detailsAsJson())
         .onDuplicateKeyUpdate()
         .set(DELIVERY_ARTIFACT.NAME, artifact.name)

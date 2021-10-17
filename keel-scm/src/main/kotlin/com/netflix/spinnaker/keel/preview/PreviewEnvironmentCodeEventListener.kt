@@ -6,10 +6,11 @@ import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.ArtifactReferenceProvider
 import com.netflix.spinnaker.keel.api.DeliveryConfig
 import com.netflix.spinnaker.keel.api.Dependent
-import com.netflix.spinnaker.keel.api.Monikered
 import com.netflix.spinnaker.keel.api.PreviewEnvironmentSpec
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceSpec
+import com.netflix.spinnaker.keel.api.artifacts.ArtifactOriginFilter
+import com.netflix.spinnaker.keel.api.artifacts.DeliveryArtifact
 import com.netflix.spinnaker.keel.api.titus.TitusClusterSpec
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
 import com.netflix.spinnaker.keel.front50.Front50Cache
@@ -95,7 +96,7 @@ class PreviewEnvironmentCodeEventListener(
     }
 
     log.debug("Processing PR finished event: $event")
-    matchingPreviewEnvironmentSpecs(event).forEach { (deliveryConfig, _) ->
+    event.matchingPreviewEnvironmentSpecs().forEach { (deliveryConfig, _) ->
       // Need to get a fully-hydrated delivery config here because the one we get above doesn't include environments
       // for the sake of performance.
       val hydratedDeliveryConfig = repository.getDeliveryConfig(deliveryConfig.name)
@@ -143,17 +144,20 @@ class PreviewEnvironmentCodeEventListener(
       return
     }
 
-    matchingPreviewEnvironmentSpecs(event).forEach { (deliveryConfig, previewEnvSpecs) ->
+    event.matchingPreviewEnvironmentSpecs().forEach { (deliveryConfig, previewEnvSpecs) ->
       log.debug("Importing delivery config for app ${deliveryConfig.application} " +
         "from branch ${event.pullRequestBranch}")
 
       // We always want to dismiss the previous notifications, and if needed to create a new one
       notificationRepository.dismissNotification(DeliveryConfigImportFailed::class.java, deliveryConfig.application, event.pullRequestBranch)
+
       val manifestPath = runBlocking {
         front50Cache.applicationByName(deliveryConfig.application).managedDelivery?.manifestPath
       }
+
       val commitEvent = event.toCommitEvent()
-      val newDeliveryConfig = try {
+
+      val deliveryConfigFromBranch = try {
         deliveryConfigImporter.import(
           codeEvent = commitEvent,
           manifestPath = manifestPath
@@ -178,7 +182,7 @@ class PreviewEnvironmentCodeEventListener(
 
       log.info("Creating/updating preview environments for application ${deliveryConfig.application} " +
         "from branch ${event.pullRequestBranch}")
-      createPreviewEnvironments(event, newDeliveryConfig, previewEnvSpecs)
+      createPreviewEnvironments(event, deliveryConfig, deliveryConfigFromBranch, previewEnvSpecs)
       event.emitDurationMetric(COMMIT_HANDLING_DURATION, startTime, deliveryConfig.application)
     }
   }
@@ -186,8 +190,8 @@ class PreviewEnvironmentCodeEventListener(
   /**
    * Returns a map of [DeliveryConfig]s to the [PreviewEnvironmentSpec]s that match the code event.
    */
-  private fun matchingPreviewEnvironmentSpecs(event: CodeEvent): Map<DeliveryConfig, List<PreviewEnvironmentSpec>> {
-    val branchToMatch = if (event is PrEvent) event.pullRequestBranch else event.targetBranch
+  private fun CodeEvent.matchingPreviewEnvironmentSpecs(): Map<DeliveryConfig, List<PreviewEnvironmentSpec>> {
+    val branchToMatch = if (this is PrEvent) pullRequestBranch else targetBranch
     return repository
       .allDeliveryConfigs(ATTACH_PREVIEW_ENVIRONMENTS)
       .associateWith { deliveryConfig ->
@@ -196,22 +200,22 @@ class PreviewEnvironmentCodeEventListener(
             front50Cache.applicationByName(deliveryConfig.application)
           } catch (e: Exception) {
             log.error("Error retrieving application ${deliveryConfig.application}: $e")
-            event.emitCounterMetric(CODE_EVENT_COUNTER, APPLICATION_RETRIEVAL_ERROR, deliveryConfig.application)
+            emitCounterMetric(CODE_EVENT_COUNTER, APPLICATION_RETRIEVAL_ERROR, deliveryConfig.application)
             null
           }
         }
 
         deliveryConfig.previewEnvironments.filter { previewEnvSpec ->
-          event.matchesApplicationConfig(appConfig) && previewEnvSpec.branch.matches(branchToMatch)
+          matchesApplicationConfig(appConfig) && previewEnvSpec.branch.matches(branchToMatch)
         }
       }
       .filterValues { it.isNotEmpty() }
       .also {
         if (it.isEmpty()) {
-          log.debug("No delivery configs with matching preview environments found for event: $event")
-          event.emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_NOT_FOUND)
+          log.debug("No delivery configs with matching preview environments found for code event: $this")
+          emitCounterMetric(CODE_EVENT_COUNTER, DELIVERY_CONFIG_NOT_FOUND)
         } else if (it.size > 1 || it.any { (_, previewEnvSpecs) -> previewEnvSpecs.size > 1 }) {
-          log.warn("Expected a single delivery config and preview env spec to match code event, found many: $event")
+          log.warn("Expected a single delivery config and preview env spec to match code event, found many: $this")
         }
       }
   }
@@ -222,14 +226,34 @@ class PreviewEnvironmentCodeEventListener(
    */
   private fun createPreviewEnvironments(
     prEvent: PrEvent,
-    deliveryConfig: DeliveryConfig,
+    originalConfig: DeliveryConfig,
+    configFromBranch: DeliveryConfig,
     previewEnvSpecs: List<PreviewEnvironmentSpec>
   ) {
+    // Need to get a fully-hydrated delivery config here because the one we get above doesn't include environments
+    // for the sake of performance.
+    val hydratedOriginalConfig = repository.getDeliveryConfig(originalConfig.name)
+
     previewEnvSpecs.forEach { previewEnvSpec ->
-      val baseEnv = deliveryConfig.environments.find { it.name == previewEnvSpec.baseEnvironment }
+      val baseEnv = configFromBranch.environments.find { it.name == previewEnvSpec.baseEnvironment }
         ?: error("Environment '${previewEnvSpec.baseEnvironment}' referenced in preview environment spec not found.")
 
       val suffix = prEvent.pullRequestBranch.shortHash
+
+      // Before generating the preview environment, create artifacts with the same branch filter as the preview
+      // environment spec, which will be substituted in the preview resources
+      val previewArtifacts = baseEnv.resources.mapNotNull { resource ->
+        log.debug("Looking for artifact associated with resource {} in delivery config for {} from branch {}",
+          resource.id, configFromBranch.application, prEvent.pullRequestBranch)
+        resourceFactory.migrate(resource).findAssociatedArtifact(configFromBranch)
+      }.map { artifact ->
+        val previewArtifact = artifact.toPreviewArtifact(configFromBranch, previewEnvSpec)
+        log.debug("Generated preview artifact $previewArtifact with branch filter ${previewEnvSpec.branch}")
+        previewArtifact
+      }.toSet()
+
+      // Add the preview artifacts to the updated config we need to store
+      var updatedConfig = hydratedOriginalConfig.run { copy(artifacts = artifacts + previewArtifacts) }
 
       val previewEnv = baseEnv.copy(
         name = "${baseEnv.name}-$suffix",
@@ -239,7 +263,7 @@ class PreviewEnvironmentCodeEventListener(
         verifyWith = previewEnvSpec.verifyWith,
         notifications = previewEnvSpec.notifications,
         resources = baseEnv.resources.mapNotNull { res ->
-          res.toPreviewResource(deliveryConfig, previewEnvSpec, suffix)
+          res.toPreviewResource(updatedConfig, previewEnvSpec, suffix)
         }.toSet()
       ).apply {
         addMetadata(
@@ -250,21 +274,35 @@ class PreviewEnvironmentCodeEventListener(
         )
       }
 
-      log.debug("Creating/updating preview environment ${previewEnv.name} for application ${deliveryConfig.application} " +
+      // Add the preview environment to the updated config we need to store
+      updatedConfig = updatedConfig.run { copy(environments = environments + previewEnv) }
+
+      log.debug("Updating delivery config with preview environment ${previewEnv.name} for application ${configFromBranch.application} " +
         "from branch ${prEvent.pullRequestBranch}")
       try {
-        // TODO: run all these within a single transaction
-        previewEnv.resources.forEach { resource ->
-          repository.upsertResource(resource, deliveryConfig.name)
-        }
-        repository.storeEnvironment(deliveryConfig.name, previewEnv)
-        prEvent.emitCounterMetric(CODE_EVENT_COUNTER, PREVIEW_ENVIRONMENT_UPSERT_SUCCESS, deliveryConfig.application)
+        repository.upsertDeliveryConfig(updatedConfig)
+        prEvent.emitCounterMetric(CODE_EVENT_COUNTER, PREVIEW_ENVIRONMENT_UPSERT_SUCCESS, configFromBranch.application)
       } catch (e: Exception) {
-        log.error("Error storing/updating preview environment ${deliveryConfig.application}/${previewEnv.name}: $e", e)
-        prEvent.emitCounterMetric(CODE_EVENT_COUNTER, PREVIEW_ENVIRONMENT_UPSERT_ERROR, deliveryConfig.application)
+        log.error("Error storing/updating preview environment ${configFromBranch.application}/${previewEnv.name}: $e", e)
+        prEvent.emitCounterMetric(CODE_EVENT_COUNTER, PREVIEW_ENVIRONMENT_UPSERT_ERROR, configFromBranch.application)
       }
     }
   }
+
+  /**
+   * Creates a copy of the [DeliveryArtifact] with the [ArtifactOriginFilter] replaced to match the branch
+   * filter in the [PreviewEnvironmentSpec].
+   */
+  private fun DeliveryArtifact.toPreviewArtifact(deliveryConfig: DeliveryConfig, previewEnvSpec: PreviewEnvironmentSpec) =
+    // we convert to a map and back because the artifact sub-types are unknown at compile time
+    objectMapper.convertValue<MutableMap<String, Any?>>(this)
+      .let {
+        it["deliveryConfigName"] = deliveryConfig.name
+        it["reference"] = "$reference-preview-${previewEnvSpec.branch.toString().shortHash}"
+        it["from"] = ArtifactOriginFilter(branch = previewEnvSpec.branch)
+        it["isPreview"] = true
+        objectMapper.convertValue<DeliveryArtifact>(it)
+      }
 
   /**
    * Converts a [Resource] to its preview environment version, i.e. a resource with the exact same
