@@ -94,6 +94,32 @@ abstract class TaskTrackingRepositoryTests<T : TaskTrackingRepository> {
   }
 
   @Test
+  fun `fetching by batch includes only tasks started within 30s for the same version`() {
+    for (i in 1..5) {
+      val id = "$i"
+      subject.store(
+        TaskRecord(
+          id = id,
+          name = "($i)Upsert server group",
+          subjectType = RESOURCE,
+          application = "app",
+          environmentName = "env",
+          resourceId = "resource",
+          artifactVersion = "v1"
+        )
+      )
+      clock.tickMinutes(5) // task runs for 5 minutes
+      subject.updateStatus(id, SUCCEEDED)
+      clock.tickMinutes(6)
+    }
+
+    val tasks = subject.getLatestBatchOfTasks("resource")
+    expectThat(tasks).hasSize(1)
+    expectThat(tasks.map { it.artifactVersion }).containsExactlyInAnyOrder("v1")
+    expectThat(tasks.map { it.id }).containsExactlyInAnyOrder("5")
+  }
+
+  @Test
   fun `given 40 sequentially completed tasks, we only return the latest task because it doesn't have any others in its batch`() {
     for (i in 1..40) {
       val id = "$i"

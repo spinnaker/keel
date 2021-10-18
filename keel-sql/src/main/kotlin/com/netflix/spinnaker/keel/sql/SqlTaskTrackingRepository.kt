@@ -112,23 +112,20 @@ class SqlTaskTrackingRepository(
     val mostRecentStarted = tasks
       .maxByOrNull { it.startedAt }
 
+    // we start tasks within the same 30 seconds, so find the rest of the batch
+    //  that goes with the most recently completed task.
+    val batchCutofTime = mostRecentStarted?.startedAt?.minusSeconds(30)
+
     val version = mostRecentStarted?.artifactVersion
-    return if (version != null) {
-      tasks.getTaskBatchVersion(version)
-    } else {
-      // we start tasks within the same 30 seconds, so find the rest of the batch
-      //  that goes with the most recently completed task.
-      val batchCutofTime = mostRecentStarted?.startedAt?.minusSeconds(30)
-      tasks.getTaskBatchNoVersion(batchCutofTime)
-    }
+    return tasks
+      .getTaskBatch(batchCutofTime)
+      .filter { task ->
+        task.artifactVersion == null || task.artifactVersion == version
+      }.toSet()
   }
 
-  private fun List<TaskForResource>.getTaskBatchNoVersion(cutoff: Instant?) =
+  private fun List<TaskForResource>.getTaskBatch(cutoff: Instant?) =
     filter { it.endedAt == null || it.startedAt.isAfter(cutoff) }.toSet()
-
-  private fun List<TaskForResource>.getTaskBatchVersion(version: String) =
-    filter { it.endedAt == null || it.artifactVersion == version }.toSet()
-
 
   override fun getInFlightTasks(application: String, environmentName: String): Set<TaskForResource> =
     sqlRetry.withRetry(READ) {
