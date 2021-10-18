@@ -50,8 +50,11 @@ dependencies {
   implementation("com.netflix.spinnaker.kork.internal:kork-plugins")
   implementation("com.slack.api:bolt-servlet:${slackSdkVersion}")
   implementation("com.graphql-java:graphql-java-extended-scalars:16.0.1")
-  implementation(platform('com.netflix.graphql.dgs:graphql-dgs-platform-dependencies:4.3.2'))
+
+  // DGS dependencies
+  implementation(platform('com.netflix.graphql.dgs:graphql-dgs-platform-dependencies:4.9.0'))
   implementation("com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter")
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-joda'
 
   runtimeOnly("com.netflix.spinnaker.kork.internal:kork-runtime")
   runtimeOnly("io.springfox:springfox-boot-starter:3.0.0")

@@ -35,7 +35,10 @@ class GitIntegration(
   private val deliveryConfigUpserter: DeliveryConfigUpserter,
   private val importer: DeliveryConfigImporter,
 ) {
-  @DgsData(parentType = DgsConstants.MDAPPLICATION.TYPE_NAME, field = DgsConstants.MDAPPLICATION.GitIntegration)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MDAPPLICATION.TYPE_NAME, field = DgsConstants.MDAPPLICATION.GitIntegration),
+    DgsData(parentType = DgsConstants.MD_APPLICATION.TYPE_NAME, field = DgsConstants.MD_APPLICATION.GitIntegration),
+  )
   fun gitIntegration(dfe: DgsDataFetchingEnvironment): MdGitIntegration {
     val app: MdApplication = dfe.getSource()
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
@@ -44,7 +47,10 @@ class GitIntegration(
     }.toGitIntegration()
   }
 
-  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.UpdateGitIntegration)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.UpdateGitIntegration),
+    DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.Md_updateGitIntegration),
+  )
   @PreAuthorize(
     """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #payload.application)
     and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #payload.application)"""
@@ -69,7 +75,10 @@ class GitIntegration(
     return updatedFront50App.toGitIntegration()
   }
 
-  @DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.ImportDeliveryConfig)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.ImportDeliveryConfig),
+    DgsData(parentType = DgsConstants.MUTATION.TYPE_NAME, field = DgsConstants.MUTATION.Md_importDeliveryConfig),
+  )
   @PreAuthorize(
     """@authorizationSupport.hasApplicationPermission('WRITE', 'APPLICATION', #application)
     and @authorizationSupport.hasServiceAccountAccess('APPLICATION', #application)"""

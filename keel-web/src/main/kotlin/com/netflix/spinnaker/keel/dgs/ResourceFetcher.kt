@@ -37,7 +37,10 @@ class ResourceFetcher(
   private val executionSummaryService: ExecutionSummaryService,
   private val taskTrackingRepository: TaskTrackingRepository
 ) {
-  @DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.Resources)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MDARTIFACT.TYPE_NAME, field = DgsConstants.MDARTIFACT.Resources),
+    DgsData(parentType = DgsConstants.MD_ARTIFACT.TYPE_NAME, field = DgsConstants.MD_ARTIFACT.Resources),
+  )
   fun artifactResources(dfe: DataFetchingEnvironment): List<MdResource>? {
     val artifact: MdArtifact = dfe.getSource()
     val config = applicationFetcherSupport.getDeliveryConfigFromContext(dfe)
@@ -46,7 +49,10 @@ class ResourceFetcher(
     }
   }
 
-  @DgsData(parentType = DgsConstants.MDRESOURCE.TYPE_NAME, field = DgsConstants.MDRESOURCE.State)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MDRESOURCE.TYPE_NAME, field = DgsConstants.MDRESOURCE.State),
+    DgsData(parentType = DgsConstants.MD_RESOURCE.TYPE_NAME, field = DgsConstants.MD_RESOURCE.State),
+  )
   fun resourceStatus(dfe: DgsDataFetchingEnvironment): MdResourceActuationState {
     val resource: MdResource = dfe.getSource()
     val state = resourceStatusService.getActuationState(resource.id)
@@ -58,7 +64,10 @@ class ResourceFetcher(
     )
   }
 
-  @DgsData(parentType = DgsConstants.MDRESOURCEACTUATIONSTATE.TYPE_NAME, field = DgsConstants.MDRESOURCEACTUATIONSTATE.Tasks)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MDRESOURCEACTUATIONSTATE.TYPE_NAME, field = DgsConstants.MDRESOURCEACTUATIONSTATE.Tasks),
+    DgsData(parentType = DgsConstants.MD_RESOURCEACTUATIONSTATE.TYPE_NAME, field = DgsConstants.MD_RESOURCEACTUATIONSTATE.Tasks),
+  )
   fun resourceTask(dfe: DgsDataFetchingEnvironment): List<MdResourceTask> {
     val resourcceState: MdResourceActuationState = dfe.getSource()
     val tasks = taskTrackingRepository.getLatestBatchOfTasks(resourceId = resourcceState.resourceId)
@@ -66,7 +75,10 @@ class ResourceFetcher(
   }
 
 
-  @DgsData(parentType = DgsConstants.MDRESOURCETASK.TYPE_NAME, field = DgsConstants.MDRESOURCETASK.Summary)
+  @DgsData.List(
+    DgsData(parentType = DgsConstants.MDRESOURCETASK.TYPE_NAME, field = DgsConstants.MDRESOURCETASK.Summary),
+    DgsData(parentType = DgsConstants.MD_RESOURCETASK.TYPE_NAME, field = DgsConstants.MD_RESOURCETASK.Summary),
+  )
   fun taskSummary(dfe: DgsDataFetchingEnvironment): MdExecutionSummary {
     val task: MdResourceTask = dfe.getSource()
     val summary = executionSummaryService.getSummary(task.id)
