@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.api.plugins.Resolver
 import com.netflix.spinnaker.keel.api.support.EventPublisher
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
+import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.igor.artifact.ArtifactService
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
@@ -175,9 +176,9 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
     return DefaultResourceDiff(desired, current)
   }
 
-  override fun getDiffInImage(resource: Resource<ClusterSpec>): ResourceDiff<Map<String, ServerGroup>> {
+  override fun getDiffInImage(resource: Resource<ClusterSpec>, version: String?): ResourceDiff<Map<String, ServerGroup>> {
     val current = resource.spec.resolve().byRegion()
-    val desired = resource.spec.resolve().map { it.withADifferentImage() }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version ?: "112233") }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
 
@@ -185,12 +186,54 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
     val current = resource.spec.resolve().byRegion()
     val desired = resource.spec.resolve().map {
       when(it.location.region) {
-        "east" -> it.withADifferentImage()
+        "east" -> it.withADifferentImage("1.2.3")
         else -> it.withDoubleCapacity()
       }
     }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
+
+  override fun getDiffForRollback(
+    resource: Resource<ClusterSpec>,
+    version: String,
+    currentMoniker: Moniker
+  ): ResourceDiff<Map<String, ServerGroup>> {
+    val current = resource.spec.resolve().map { it.withMoniker(currentMoniker) }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version) }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  override fun getDiffForRollbackPlusCapacity(
+    resource: Resource<ClusterSpec>,
+    version: String,
+    currentMoniker: Moniker
+  ): ResourceDiff<Map<String, ServerGroup>> {
+    val current = resource.spec.resolve().map { it.withMoniker(currentMoniker) }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version).withZeroCapacity() }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  override fun getRollbackServerGroupsByRegion(
+    resource: Resource<ClusterSpec>,
+    version: String,
+    rollbackMoniker: Moniker
+  ): Map<String, List<ServerGroup>> =
+    resource
+      .spec
+      .resolve()
+      .map { it.withADifferentImage(version).withMoniker(rollbackMoniker) }
+      .associate { it.location.region to listOf(it) }
+
+  override fun getRollbackServerGroupsByRegionZeroCapacity(
+    resource: Resource<ClusterSpec>,
+    version: String,
+    rollbackMoniker: Moniker
+  ): Map<String, List<ServerGroup>> =
+    resource
+      .spec
+      .resolve()
+      .map { it.withADifferentImage(version).withMoniker(rollbackMoniker).withZeroCapacity() }
+      .associate { it.location.region to listOf(it) }
 
   private fun ServerGroup.withDoubleCapacity(): ServerGroup =
     copy(
@@ -201,14 +244,26 @@ class Ec2BaseClusterHandlerTests : BaseClusterHandlerTests<ClusterSpec, ServerGr
       )
     )
 
+  private fun ServerGroup.withZeroCapacity(): ServerGroup =
+    copy(
+      capacity = Capacity.DefaultCapacity(
+        min = 0,
+        max = 0,
+        desired = 0
+      )
+    )
+
   private fun ServerGroup.withManyEnabled(): ServerGroup =
     copy(
       onlyEnabledServerGroup = false
     )
 
-  private fun ServerGroup.withADifferentImage(): ServerGroup =
+  private fun ServerGroup.withMoniker(moniker: Moniker): ServerGroup =
+    copy(name = moniker.serverGroup)
+
+  private fun ServerGroup.withADifferentImage(version: String): ServerGroup =
     copy(launchConfiguration = launchConfiguration.copy(
-      appVersion = "my-app-2.0.0",
-      imageId = "id-2",
+      appVersion = version,
+      imageId = "id-$version",
     ))
 }

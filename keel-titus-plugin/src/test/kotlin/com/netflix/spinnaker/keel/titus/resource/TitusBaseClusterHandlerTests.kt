@@ -24,6 +24,7 @@ import com.netflix.spinnaker.keel.clouddriver.CloudDriverCache
 import com.netflix.spinnaker.keel.clouddriver.CloudDriverService
 import com.netflix.spinnaker.keel.clouddriver.model.Credential
 import com.netflix.spinnaker.keel.clouddriver.model.DockerImage
+import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.orca.ClusterExportHelper
@@ -174,9 +175,9 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
     return DefaultResourceDiff(desired, current)
   }
 
-  override fun getDiffInImage(resource: Resource<TitusClusterSpec>): ResourceDiff<Map<String, TitusServerGroup>> {
+  override fun getDiffInImage(resource: Resource<TitusClusterSpec>, version: String?): ResourceDiff<Map<String, TitusServerGroup>> {
     val current = resource.spec.resolve().byRegion()
-    val desired = resource.spec.resolve().map { it.withADifferentImage() }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version ?: "1255555555555555") }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
 
@@ -184,12 +185,55 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
     val current = resource.spec.resolve().byRegion()
     val desired = resource.spec.resolve().map {
       when(it.location.region) {
-        "east" -> it.withADifferentImage()
+        "east" -> it.withADifferentImage("1255555555555555")
         else -> it.withDoubleCapacity()
       }
     }.byRegion()
     return DefaultResourceDiff(desired, current)
   }
+
+  override fun getDiffForRollback(
+    resource: Resource<TitusClusterSpec>,
+    version: String,
+    currentMoniker: Moniker
+  ): ResourceDiff<Map<String, TitusServerGroup>> {
+    val current = resource.spec.resolve().map { it.withMoniker(currentMoniker) }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version) }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  override fun getDiffForRollbackPlusCapacity(
+    resource: Resource<TitusClusterSpec>,
+    version: String,
+    currentMoniker: Moniker
+  ): ResourceDiff<Map<String, TitusServerGroup>> {
+    val current = resource.spec.resolve().map { it.withMoniker(currentMoniker) }.byRegion()
+    val desired = resource.spec.resolve().map { it.withADifferentImage(version).withZeroCapacity() }.byRegion()
+    return DefaultResourceDiff(desired, current)
+  }
+
+  // this needs to return server groups with an actual server group moniker
+  override fun getRollbackServerGroupsByRegion(
+    resource: Resource<TitusClusterSpec>,
+    version: String,
+    rollbackMoniker: Moniker
+  ): Map<String, List<TitusServerGroup>> =
+    resource
+      .spec
+      .resolve()
+      .map { it.withADifferentImage(version).withMoniker(rollbackMoniker) }
+      .associate { it.location.region to listOf(it) }
+
+  override fun getRollbackServerGroupsByRegionZeroCapacity(
+    resource: Resource<TitusClusterSpec>,
+    version: String,
+    rollbackMoniker: Moniker
+  ): Map<String, List<TitusServerGroup>> =
+    resource
+      .spec
+      .resolve()
+      .map { it.withADifferentImage(version).withMoniker(rollbackMoniker).withZeroCapacity() }
+      .associate { it.location.region to listOf(it) }
 
   private fun TitusServerGroup.withDoubleCapacity(): TitusServerGroup =
     copy(
@@ -200,13 +244,23 @@ class TitusBaseClusterHandlerTests : BaseClusterHandlerTests<TitusClusterSpec, T
       )
     )
 
-  private fun TitusServerGroup.withManyEnabled(): TitusServerGroup =
+  private fun TitusServerGroup.withZeroCapacity(): TitusServerGroup =
     copy(
-      onlyEnabledServerGroup = false
+      capacity = Capacity.DefaultCapacity(
+        min = 0,
+        max = 0,
+        desired = 0
+      )
     )
 
-  private fun TitusServerGroup.withADifferentImage(): TitusServerGroup =
+  private fun TitusServerGroup.withManyEnabled(): TitusServerGroup =
+    copy(onlyEnabledServerGroup = false)
+
+  private fun TitusServerGroup.withMoniker(moniker: Moniker): TitusServerGroup =
+    copy(name = moniker.serverGroup)
+
+  private fun TitusServerGroup.withADifferentImage(version: String): TitusServerGroup =
     copy(
-      container = DigestProvider(organization = "waffles", image = "syrup", digest = "1255555555555555"),
+      container = DigestProvider(organization = "waffles", image = "syrup", digest = version),
     )
 }

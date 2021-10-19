@@ -105,7 +105,9 @@ class TitusClusterHandlerTests : JUnit5Minutests {
     attributes = mutableMapOf("awsAccount" to awsAccount, "registry" to awsAccount + "registry")
   )
 
-  val cloudDriverService = mockk<CloudDriverService>()
+  val cloudDriverService = mockk<CloudDriverService>() {
+    every { listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
+  }
   val cloudDriverCache = mockk<CloudDriverCache>() {
     every { credentialBy(titusAccount) } returns titusAccountCredential
   }
@@ -442,7 +444,6 @@ class TitusClusterHandlerTests : JUnit5Minutests {
       }
 
       context("the diff is only in capacity") {
-
         val modified = setOf(
           serverGroupEast.copy(name = activeServerGroupResponseEast.name),
           serverGroupWest.copy(name = activeServerGroupResponseWest.name).withDoubleCapacity()
@@ -455,6 +456,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("resolving diff resizes the current server group") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID())}
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           runBlocking {
             upsert(resource, diff)
@@ -536,6 +538,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("resolving diff clones the current server group by tag") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           runBlocking {
             upsert(resource, diff)
@@ -569,6 +572,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("events are fired for the artifact deploying") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           runBlocking {
             upsert(resource, diff)
@@ -581,6 +585,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("resolving diff clones the current server group by digest") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           runBlocking {
             upsert(resource, diff)
@@ -603,6 +608,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("the default deploy strategy is used") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           val deployWith = RedBlack()
           runBlocking {
@@ -622,6 +628,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("the deploy strategy is configured") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           val deployWith = RedBlack(
             resizePreviousToZero = true,
@@ -646,6 +653,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         test("a different deploy strategy is used") {
           val slot = slot<OrchestrationRequest>()
           every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
 
           runBlocking {
             upsert(resource.copy(spec = resource.spec.copy(deployWith = Highlander())), diff)
@@ -666,6 +674,7 @@ class TitusClusterHandlerTests : JUnit5Minutests {
         before {
           every { cloudDriverService.findDockerImages("testregistry", "spinnaker/keel", any(), any(), any()) } returns
             listOf(DockerImage("testregistry", "spinnaker/keel", "master-h2.blah", "sha:1111"))
+          every { cloudDriverService.listTitusServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection(titusAccount, emptySet())
         }
         val modified = setOf(
           serverGroupEast.copy(name = activeServerGroupResponseEast.name).withDifferentRuntimeOptions(),

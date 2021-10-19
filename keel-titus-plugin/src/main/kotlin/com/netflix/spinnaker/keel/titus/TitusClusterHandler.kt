@@ -75,9 +75,11 @@ import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
 import com.netflix.spinnaker.keel.clouddriver.model.TitusActiveServerGroup
 import com.netflix.spinnaker.keel.clouddriver.model.TitusScaling.Policy.StepPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.TitusScaling.Policy.TargetPolicy
+import com.netflix.spinnaker.keel.clouddriver.model.toActive
 import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.docker.DigestProvider
 import com.netflix.spinnaker.keel.docker.ReferenceProvider
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
@@ -183,6 +185,9 @@ class TitusClusterHandler(
   override fun ResourceDiff<TitusServerGroup>.moniker(): Moniker =
     desired.moniker
 
+  override fun TitusServerGroup.moniker(): Moniker =
+    moniker
+
   override fun ResourceDiff<TitusServerGroup>.version(resource: Resource<TitusClusterSpec>): String {
     val tags = runBlocking {
       getTagsForDigest(desired.container, desired.location.account)
@@ -208,7 +213,7 @@ class TitusClusterHandler(
     spec.deployWith.isStaggered
 
   override fun Resource<TitusClusterSpec>.isManagedRollout(): Boolean =
-    spec.managedRollout?.enabled ?: false
+    spec.managedRollout.enabled
 
   override fun Resource<TitusClusterSpec>.regions(): List<String> =
     spec.locations.regions.map { it.name }
@@ -233,6 +238,14 @@ class TitusClusterHandler(
         current!!.scaling.targetTrackingPolicies != desired.scaling.targetTrackingPolicies ||
           current!!.scaling.stepScalingPolicies != desired.scaling.stepScalingPolicies
         )
+
+  override suspend fun getServerGroupsByRegion(resource: Resource<TitusClusterSpec>): Map<String, List<TitusServerGroup>> =
+    getExistingServerGroupsByRegion(resource)
+      .mapValues { regionalList ->
+        regionalList.value.map { serverGroup: ClouddriverTitusServerGroup ->
+          serverGroup.toActive().toTitusServerGroup()
+        }
+      }
 
   override fun Resource<TitusClusterSpec>.getDeployWith(): ClusterDeployStrategy =
     spec.deployWith
@@ -408,6 +421,30 @@ class TitusClusterHandler(
       "asgName" to sgToDisable.name
     )
   }
+
+  override fun ResourceDiff<TitusServerGroup>.rollbackServerGroupJob(
+    resource: Resource<TitusClusterSpec>,
+    rollbackServerGroup: TitusServerGroup
+  ): Job =
+    mutableMapOf(
+      "rollbackType" to "EXPLICIT",
+      "rollbackContext" to  mapOf(
+        "rollbackServerGroupName" to current?.moniker?.serverGroup,
+        "restoreServerGroupName" to rollbackServerGroup.moniker.serverGroup,
+        "targetHealthyRollbackPercentage" to 100,
+        "delayBeforeDisableSeconds" to 0
+      ),
+      "targetGroups" to desired.dependencies.targetGroups,
+      "securityGroups" to desired.dependencies.securityGroupNames,
+      "platformHealthOnlyShowOverride" to false,
+      "reason" to "rollin' back",
+      "type" to "rollbackServerGroup",
+      "moniker" to current?.moniker?.orcaClusterMoniker,
+      "region" to desired.location.region,
+      "credentials" to desired.location.account,
+      "cloudProvider" to TITUS_CLOUD_PROVIDER,
+      "user" to DEFAULT_SERVICE_ACCOUNT
+    )
 
   override fun ResourceDiff<TitusServerGroup>.resizeServerGroupJob(): Job {
     val current = requireNotNull(current) {
@@ -709,7 +746,6 @@ class TitusClusterHandler(
     )
   }
 
-  // todo eb: individual server group deploy strategy?
   // todo eb: scaling policies?
   private fun Resource<TitusClusterSpec>.toManagedRolloutClusterDefinition(image: Map<String, Any>) =
     with(spec) {

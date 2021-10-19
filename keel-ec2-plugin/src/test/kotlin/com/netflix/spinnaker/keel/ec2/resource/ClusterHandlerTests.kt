@@ -72,7 +72,9 @@ import io.mockk.coVerify as verify
 @Suppress("MemberVisibilityCanBePrivate")
 internal class ClusterHandlerTests : JUnit5Minutests {
 
-  val cloudDriverService = mockk<CloudDriverService>()
+  val cloudDriverService = mockk<CloudDriverService>() {
+    every { listServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection("test", emptySet())
+  }
   val cloudDriverCache = mockk<CloudDriverCache>()
   val orcaService = mockk<OrcaService>()
   val normalizers = emptyList<Resolver<ClusterSpec>>()
@@ -264,6 +266,8 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       every {
         springEnv.getProperty("keel.plugins.ec2.volumes.account-overrides.test.volume-type", String::class.java)
       } returns null
+
+      every { cloudDriverService.listServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection("test", emptySet())
     }
 
     after {
@@ -342,6 +346,7 @@ internal class ClusterHandlerTests : JUnit5Minutests {
       }
 
       test("annealing a diff creates staggered server groups with scaling policies upserted in the same orchestration") {
+        every { cloudDriverService.listServerGroups(any(), any(), any(), any(), any()) } returns ServerGroupCollection("test", emptySet())
         val slot = slot<OrchestrationRequest>()
         every { orcaService.orchestrate(resource.serviceAccount, capture(slot)) } answers { TaskRefResponse(ULID().nextULID()) }
 

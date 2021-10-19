@@ -38,6 +38,9 @@ import com.netflix.spinnaker.keel.api.ec2.MetricDimension
 import com.netflix.spinnaker.keel.api.ec2.PredefinedMetricSpecification
 import com.netflix.spinnaker.keel.api.ec2.Scaling
 import com.netflix.spinnaker.keel.api.ec2.ScalingProcess
+import com.netflix.spinnaker.keel.api.ec2.ScalingProcess.AddToLoadBalancer
+import com.netflix.spinnaker.keel.api.ec2.ScalingProcess.Launch
+import com.netflix.spinnaker.keel.api.ec2.ScalingProcess.Terminate
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.ActiveServerGroupImage
 import com.netflix.spinnaker.keel.api.ec2.ServerGroup.Health
@@ -71,10 +74,14 @@ import com.netflix.spinnaker.keel.clouddriver.model.MetricDimensionModel
 import com.netflix.spinnaker.keel.clouddriver.model.PredefinedMetricSpecificationModel
 import com.netflix.spinnaker.keel.clouddriver.model.ScalingPolicy
 import com.netflix.spinnaker.keel.clouddriver.model.StepAdjustmentModel
+import com.netflix.spinnaker.keel.clouddriver.model.SuspendedProcess
 import com.netflix.spinnaker.keel.clouddriver.model.subnet
+import com.netflix.spinnaker.keel.clouddriver.model.toActive
+import com.netflix.spinnaker.keel.core.api.DEFAULT_SERVICE_ACCOUNT
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
 import com.netflix.spinnaker.keel.core.parseMoniker
 import com.netflix.spinnaker.keel.core.serverGroup
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.ec2.MissingAppVersionException
 import com.netflix.spinnaker.keel.ec2.toEc2Api
 import com.netflix.spinnaker.keel.events.ResourceHealthEvent
@@ -178,11 +185,14 @@ class ClusterHandler(
   override fun ResourceDiff<ServerGroup>.moniker(): Moniker =
     desired.moniker
 
+  override fun ServerGroup.moniker(): Moniker =
+    moniker
+
   override fun Resource<ClusterSpec>.isStaggeredDeploy(): Boolean =
     spec.deployWith.isStaggered
 
   override fun Resource<ClusterSpec>.isManagedRollout(): Boolean =
-    spec.managedRollout?.enabled ?: false
+    spec.managedRollout.enabled
 
   override fun Resource<ClusterSpec>.regions(): List<String> =
     spec.locations.regions.map { it.name }
@@ -402,6 +412,30 @@ class ClusterHandler(
       it == Capacity::class.java || it == DefaultCapacity::class.java
     }
 
+  override fun ResourceDiff<ServerGroup>.isSuspendPropertiesAndCapacityOnly() =
+    affectedRootPropertyTypes.all {
+      it == Scaling::class.java || it == Capacity::class.java || it == DefaultCapacity::class.java
+    }
+      && sameSuspendedProcesses(current?.scaling, desired.scaling)
+
+  /**
+   * Clusters have different scaling config when disabled.
+   * This function checks if the scaling is the same minus that expected difference.
+   */
+  private fun sameSuspendedProcesses(
+    current: Scaling?,
+    desired: Scaling
+  ): Boolean {
+    if (current == null){
+      return false
+    }
+
+    val disabledProcesses = setOf(Launch, AddToLoadBalancer, Terminate)
+    val currentMinusDisabled = current.copy(suspendedProcesses = current.suspendedProcesses - disabledProcesses)
+
+    return !DefaultResourceDiff(desired, currentMinusDisabled).hasChanges()
+  }
+
   /**
    * @return `true` if the only changes in the diff are to scaling.
    */
@@ -442,6 +476,14 @@ class ClusterHandler(
         current!!.scaling.targetTrackingPolicies != desired.scaling.targetTrackingPolicies ||
           current!!.scaling.stepScalingPolicies != desired.scaling.stepScalingPolicies
         )
+
+  override suspend fun getServerGroupsByRegion(resource: Resource<ClusterSpec>): Map<String, List<ServerGroup>> =
+    getExistingServerGroupsByRegion(resource)
+      .mapValues { regionalList ->
+        regionalList.value.map { serverGroup: ClouddriverServerGroup ->
+          serverGroup.toActive(resource.spec.locations.account).toServerGroup()
+        }
+      }
 
   override fun ResourceDiff<ServerGroup>.disableOtherServerGroupJob(resource: Resource<ClusterSpec>, desiredVersion: String): Job {
     val current = requireNotNull(current) {
@@ -612,6 +654,30 @@ class ClusterHandler(
         mapOf("overrides" to buildOverrides(diffs)) +
         spec.deployWith.toOrcaJobProperties("Amazon")
     }
+
+  override fun ResourceDiff<ServerGroup>.rollbackServerGroupJob(
+    resource: Resource<ClusterSpec>,
+    rollbackServerGroup: ServerGroup
+  ): Job =
+    mutableMapOf(
+      "rollbackType" to "EXPLICIT",
+      "rollbackContext" to  mapOf(
+        "rollbackServerGroupName" to current?.moniker?.serverGroup,
+        "restoreServerGroupName" to rollbackServerGroup.moniker.serverGroup,
+        "targetHealthyRollbackPercentage" to 100,
+        "delayBeforeDisableSeconds" to 0
+      ),
+      "targetGroups" to desired.dependencies.targetGroups,
+      "securityGroups" to desired.dependencies.securityGroupNames,
+      "platformHealthOnlyShowOverride" to false,
+      "reason" to "rollin' back",
+      "type" to "rollbackServerGroup",
+      "moniker" to current?.moniker?.orcaClusterMoniker,
+      "region" to desired.location.region,
+      "credentials" to desired.location.account,
+      "cloudProvider" to EC2_CLOUD_PROVIDER,
+      "user" to DEFAULT_SERVICE_ACCOUNT
+    )
 
   fun Resource<ClusterSpec>.buildOverrides(diffs: List<ResourceDiff<ServerGroup>>): Map<String, Any?> {
     val overrides: MutableMap<String, Any?> = spec.overrides.toMutableMap()

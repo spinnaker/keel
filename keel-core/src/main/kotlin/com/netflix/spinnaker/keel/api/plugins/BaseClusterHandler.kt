@@ -9,6 +9,8 @@ import com.netflix.spinnaker.keel.api.actuation.Job
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.core.orcaClusterMoniker
+import com.netflix.spinnaker.keel.core.serverGroup
+import com.netflix.spinnaker.keel.diff.DefaultResourceDiff
 import com.netflix.spinnaker.keel.diff.toIndividualDiffs
 import com.netflix.spinnaker.keel.orca.dependsOn
 import com.netflix.spinnaker.keel.orca.restrictedExecutionWindow
@@ -16,6 +18,7 @@ import com.netflix.spinnaker.keel.orca.waitStage
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 
 /**
  * Common cluster functionality.
@@ -41,6 +44,8 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
 
   abstract fun ResourceDiff<RESOLVED>.moniker(): Moniker
 
+  abstract fun RESOLVED.moniker(): Moniker
+
   /**
    * returns true if the diff is only in whether there are too many clusters enabled
    */
@@ -50,6 +55,16 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
    * return true if diff is only in capacity
    */
   abstract fun ResourceDiff<RESOLVED>.isCapacityOnly(): Boolean
+
+  /**
+   * return true if diff is only that the server group is disabled
+   *
+   * This is only relevant for ec2, because disabled server groups have
+   *  the scaling processes []Launch, AddToLoadBalancer, Terminate] suspended.
+   *  So by default this method returns false to indicate that the diff is
+   *  not ignorable.
+   */
+  open fun ResourceDiff<RESOLVED>.isSuspendPropertiesAndCapacityOnly() = false
 
   /**
    * return true if diff is only in autoscaling
@@ -158,6 +173,10 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
    */
   abstract fun ResourceDiff<RESOLVED>.upsertServerGroupJob(resource: Resource<SPEC>, startingRefId: Int = 0, version: String? = null): Job
 
+  abstract suspend fun getServerGroupsByRegion(resource: Resource<SPEC>): Map<String, List<RESOLVED>>
+
+  abstract fun ResourceDiff<RESOLVED>.rollbackServerGroupJob(resource: Resource<SPEC>, rollbackServerGroup: RESOLVED): Job
+
   /**
    * return the job needed to upsert a server group using managed rollout
    */
@@ -206,6 +225,9 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
     "Deploy $version to cluster ${moniker()} in " +
       accountRegionString(this, diffs) + " using a managed rollout"
 
+  fun ResourceDiff<RESOLVED>.rollbackMessage(version: String, rollbackServerGroup: RESOLVED) =
+    "Rolling back cluster ${moniker()} to $version in ${accountRegionString(this)} (disabling ${current?.moniker()?.serverGroup}, enabling ${rollbackServerGroup.moniker().serverGroup})"
+
   abstract fun correlationId(resource: Resource<SPEC>, diff: ResourceDiff<RESOLVED>): String
   abstract fun Resource<SPEC>.isStaggeredDeploy(): Boolean
   abstract fun Resource<SPEC>.isManagedRollout(): Boolean
@@ -214,6 +236,30 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
   abstract fun Resource<SPEC>.account(): String
   abstract fun ResourceDiff<RESOLVED>.hasScalingPolicies(): Boolean
   abstract fun ResourceDiff<RESOLVED>.isCapacityOrAutoScalingOnly(): Boolean
+
+  /**
+   * Checks each region to see if there is a valid server group to roll back to, returns it if so.
+   */
+  @Suppress("UNCHECKED_CAST")
+  suspend fun List<ResourceDiff<RESOLVED>>.getRollbackServerGroupsByRegion(resource: Resource<SPEC>): Map<String, RESOLVED> {
+    val serverGroupsByRegion = getServerGroupsByRegion(resource)
+
+    return serverGroupsByRegion.mapValues { regionalList ->
+      val region = regionalList.key
+      val regionalServerGroups = regionalList.value
+      val result = find { getDesiredRegion(it) == region }?.let { regionalDiff ->
+        regionalServerGroups.firstOrNull {
+          val diff = DefaultResourceDiff(regionalDiff.desired, it)
+          !diff.hasChanges() || diff.isIgnorableForRollback()
+        }
+      }
+      result
+    }.filterValues { it != null } as Map<String, RESOLVED>
+  }
+
+  // rollback task fixes capacity
+  private fun ResourceDiff<RESOLVED>.isIgnorableForRollback() =
+    isCapacityOnly() || isSuspendPropertiesAndCapacityOnly()
 
   /**
    * @return `true` if [current] exists and the diff includes a scaling policy change.
@@ -250,12 +296,18 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
         .filter { diff -> diff.hasChanges() }
 
       val deferred: MutableList<Deferred<Task>> = mutableListOf()
-      val modifyDiffs = diffs.filter { it.isCapacityOrAutoScalingOnly() || it.isEnabledOnly() || it.isCapacityOnly() }
+
+      val rollbackServerGroups = diffs.getRollbackServerGroupsByRegion(resource)
+
+      val modifyDiffs = diffs
+        .filter {
+          it.isCapacityOrAutoScalingOnly() || it.isEnabledOnly() || it.isCapacityOnly() || rollbackServerGroups[getDesiredRegion(it)] != null
+        }
       val createDiffs = diffs - modifyDiffs
 
       if (modifyDiffs.isNotEmpty()) {
         deferred.addAll(
-          modifyInPlace(resource, modifyDiffs)
+          modifyInPlace(resource, modifyDiffs, rollbackServerGroups)
         )
       }
 
@@ -285,14 +337,17 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
     }
 
   /**
-   * Modifies existing server group instead of launching a new server group.
+   *  Modifies an existing server group instead of launching a new server group.
+   *  This either modifies the enabled server group, or enables a disabled server group.
    */
   suspend fun modifyInPlace(
     resource: Resource<SPEC>,
-    diffs: List<ResourceDiff<RESOLVED>>
+    diffs: List<ResourceDiff<RESOLVED>>,
+    rollbackServerGroups: Map<String, RESOLVED>
   ): List<Deferred<Task>> =
     coroutineScope {
       diffs.mapNotNull { diff ->
+        val rollbackServerGroup = rollbackServerGroups[getDesiredRegion(diff)]
         val (job, description) = when {
           diff.isCapacityOnly() -> listOf(diff.resizeServerGroupJob()) to diff.capacityOnlyMessage()
           diff.isAutoScalingOnly() -> diff.modifyScalingPolicyJob() to diff.autoScalingOnlyMessage()
@@ -300,6 +355,9 @@ abstract class BaseClusterHandler<SPEC: ComputeResourceSpec<*>, RESOLVED: Any>(
             val appVersion = diff.version(resource)
             val job = diff.disableOtherServerGroupJob(resource, appVersion)
             listOf(job) to diff.enabledOnlyMessage(job)
+          }
+          rollbackServerGroup != null -> {
+            listOf(diff.rollbackServerGroupJob(resource, rollbackServerGroup)) to diff.rollbackMessage(diff.version(resource), rollbackServerGroup)
           }
           else -> listOf(diff.resizeServerGroupJob()) + diff.modifyScalingPolicyJob(1) to diff.capacityAndAutoscalingMessage()
         }

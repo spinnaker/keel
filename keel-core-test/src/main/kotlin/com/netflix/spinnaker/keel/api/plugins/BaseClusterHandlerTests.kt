@@ -1,12 +1,14 @@
 package com.netflix.spinnaker.keel.api.plugins
 
 import com.netflix.spinnaker.keel.api.ComputeResourceSpec
+import com.netflix.spinnaker.keel.api.Moniker
 import com.netflix.spinnaker.keel.api.Resource
 import com.netflix.spinnaker.keel.api.ResourceDiff
 import com.netflix.spinnaker.keel.api.actuation.Job
 import com.netflix.spinnaker.keel.api.actuation.Task
 import com.netflix.spinnaker.keel.api.actuation.TaskLauncher
 import com.netflix.spinnaker.keel.api.support.EventPublisher
+import com.netflix.spinnaker.keel.core.serverGroup
 import com.netflix.spinnaker.time.MutableClock
 import io.mockk.coEvery
 import io.mockk.every
@@ -15,7 +17,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.contains
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
@@ -37,6 +38,7 @@ abstract class BaseClusterHandlerTests<
     eventPublisher: EventPublisher,
     taskLauncher: TaskLauncher,
   ): HANDLER
+
   abstract fun getSingleRegionCluster(): Resource<SPEC>
   abstract fun getMultiRegionCluster(): Resource<SPEC>
   abstract fun getMultiRegionStaggeredDeployCluster(): Resource<SPEC>
@@ -47,8 +49,13 @@ abstract class BaseClusterHandlerTests<
 
   abstract fun getDiffOnlyInEnabled(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
   abstract fun getDiffInCapacity(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
-  abstract fun getDiffInImage(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
+  abstract fun getDiffInImage(resource: Resource<SPEC>, version: String? = null): ResourceDiff<Map<String, RESOLVED>>
   abstract fun getCreateAndModifyDiff(resource: Resource<SPEC>): ResourceDiff<Map<String, RESOLVED>>
+  abstract fun getDiffForRollback(resource: Resource<SPEC>, version: String, currentMoniker: Moniker): ResourceDiff<Map<String, RESOLVED>>
+  abstract fun getDiffForRollbackPlusCapacity(resource: Resource<SPEC>, version: String, currentMoniker: Moniker): ResourceDiff<Map<String, RESOLVED>>
+
+  abstract fun getRollbackServerGroupsByRegion(resource: Resource<SPEC>, version: String, rollbackMoniker: Moniker): Map<String, List<RESOLVED>>
+  abstract fun getRollbackServerGroupsByRegionZeroCapacity(resource: Resource<SPEC>, version: String, rollbackMoniker: Moniker): Map<String, List<RESOLVED>>
 
   val clock: Clock = MutableClock()
   val eventPublisher: EventPublisher = mockk(relaxUnitFun = true)
@@ -99,6 +106,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `staggered deploy, multi region, image diff`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -134,6 +143,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `staggered deploy, multi region, capacity diff (no stagger resize stages)`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -165,6 +176,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `non staggered deploy, multi region, image diff`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>() // done this way so we can capture the stages for multiple requests
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -190,6 +203,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `non staggered deploy, one region, capacity diff`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>()
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -206,6 +221,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `non staggered deploy, one region, image diff`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>()
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -222,6 +239,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `managed rollout image diff`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>()
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots)) } returns Task("id", "name")
 
@@ -240,6 +259,8 @@ abstract class BaseClusterHandlerTests<
 
   @Test
   fun `managed rollout image diff plus capacity change`() {
+    coEvery { handler.getServerGroupsByRegion(any()) } returns emptyMap()
+
     val slots = mutableListOf<List<Job>>()
     coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
 
@@ -259,6 +280,61 @@ abstract class BaseClusterHandlerTests<
       that(managedRolloutStage["refId"]).isEqualTo("1")
       val targets = (managedRolloutStage["input"] as Map<String, Any?>)["targets"] as List<Map<String,Any?>>
       that(targets).hasSize(1)
+    }
+  }
+
+  @Test
+  fun `will rollback to a given server group`() {
+    val resource = getSingleRegionCluster()
+    val version = "sha:222"
+    val currentMoniker = resource.spec.moniker.copy(sequence = 2)
+    val rollbackMoniker = resource.spec.moniker.copy(sequence = 1)
+    coEvery { handler.getServerGroupsByRegion(resource) } returns
+      getRollbackServerGroupsByRegion(resource, version, rollbackMoniker)
+
+    val slots = mutableListOf<List<Job>>()
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
+
+    runBlocking { handler.upsert(resource, getDiffForRollback(resource, version, currentMoniker)) }
+
+    val stages = slots[0]
+    expect {
+      that(slots.size).isEqualTo(1)
+      that(stages.size).isEqualTo(1)
+      val rollbackStage = stages.first()
+      that(rollbackStage["type"]).isEqualTo("rollbackServerGroup")
+      that(rollbackStage["rollbackContext"]).isA<Map<String, Any?>>()
+      val rollbackContext = rollbackStage["rollbackContext"] as Map<String, Any?>
+      that(rollbackContext["rollbackServerGroupName"]).isEqualTo(currentMoniker.serverGroup)
+      that(rollbackContext["restoreServerGroupName"]).isEqualTo(rollbackMoniker.serverGroup)
+    }
+  }
+
+  @Test
+  fun `rollback to disabled server group with wrong capacity`() {
+    // the rollback tasks fixes the capacity
+    val resource = getSingleRegionCluster()
+    val version = "sha:222"
+    val currentMoniker = resource.spec.moniker.copy(sequence = 2)
+    val rollbackMoniker = resource.spec.moniker.copy(sequence = 1)
+    coEvery { handler.getServerGroupsByRegion(resource) } returns
+      getRollbackServerGroupsByRegionZeroCapacity(resource, version, rollbackMoniker)
+
+    val slots = mutableListOf<List<Job>>()
+    coEvery { taskLauncher.submitJob(any(), any(), any(), capture(slots), any()) } returns Task("id", "name")
+
+    runBlocking { handler.upsert(resource, getDiffForRollbackPlusCapacity(resource, version, currentMoniker)) }
+
+    val stages = slots[0]
+    expect {
+      that(slots.size).isEqualTo(1)
+      that(stages.size).isEqualTo(1)
+      val rollbackStage = stages.first()
+      that(rollbackStage["type"]).isEqualTo("rollbackServerGroup")
+      that(rollbackStage["rollbackContext"]).isA<Map<String, Any?>>()
+      val rollbackContext = rollbackStage["rollbackContext"] as Map<String, Any?>
+      that(rollbackContext["rollbackServerGroupName"]).isEqualTo(currentMoniker.serverGroup)
+      that(rollbackContext["restoreServerGroupName"]).isEqualTo(rollbackMoniker.serverGroup)
     }
   }
 }
