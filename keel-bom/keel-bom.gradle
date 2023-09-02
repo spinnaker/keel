@@ -7,7 +7,7 @@ javaPlatform {
 }
 
 dependencies {
-  api(platform("com.netflix.spinnaker.kork.internal:kork-bom"))
+  api(platform("io.spinnaker.kork:kork-bom:${korkVersion}"))
   constraints {
     rootProject
       .subprojects
