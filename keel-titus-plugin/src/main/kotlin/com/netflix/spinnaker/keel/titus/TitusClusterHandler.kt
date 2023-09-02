@@ -18,7 +18,8 @@
 package com.netflix.spinnaker.keel.titus
 
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.netflix.buoy.sdk.model.RolloutTarget
+import com.netflix.spinnaker.keel.actuation.RolloutLocation
+import com.netflix.spinnaker.keel.actuation.RolloutTarget
 import com.netflix.spinnaker.keel.api.ClusterDeployStrategy
 import com.netflix.spinnaker.keel.api.Exportable
 import com.netflix.spinnaker.keel.api.Moniker
@@ -104,7 +105,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import com.netflix.buoy.sdk.model.Location as RolloutLocation
 import com.netflix.spinnaker.keel.clouddriver.model.TitusServerGroup as ClouddriverTitusServerGroup
 
 /**

@@ -1,6 +1,5 @@
 package com.netflix.spinnaker.keel.actuation
 
-import com.netflix.buoy.sdk.model.RolloutTarget
 import com.netflix.spinnaker.keel.api.TaskStatus
 import java.time.Instant
 
@@ -40,6 +39,23 @@ data class RolloutTargetWithStatus(
   val status: RolloutStatus
 )
 
+//todo eb: take from buoy?
+data class RolloutTarget(
+  val cloudProvider: String,
+  val location: RolloutLocation,
+)
+
 enum class RolloutStatus {
   NOT_STARTED, RUNNING, SUCCEEDED, FAILED
 }
+
+data class RolloutLocation(
+  val account: String,
+  val region: String,
+  val sublocations: List<String> = emptyList()
+)
+
+data class RolloutStep(
+  val id: String,
+  val targets: List<RolloutTarget>
+)

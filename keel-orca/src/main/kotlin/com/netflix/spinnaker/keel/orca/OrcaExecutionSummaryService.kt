@@ -2,12 +2,12 @@ package com.netflix.spinnaker.keel.orca
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.netflix.buoy.sdk.model.Location as BuoyLocation
-import com.netflix.buoy.sdk.model.RolloutStep
-import com.netflix.buoy.sdk.model.RolloutTarget
 import com.netflix.spinnaker.keel.actuation.ExecutionSummary
 import com.netflix.spinnaker.keel.actuation.ExecutionSummaryService
+import com.netflix.spinnaker.keel.actuation.RolloutLocation
 import com.netflix.spinnaker.keel.actuation.RolloutStatus
+import com.netflix.spinnaker.keel.actuation.RolloutStep
+import com.netflix.spinnaker.keel.actuation.RolloutTarget
 import com.netflix.spinnaker.keel.actuation.RolloutTargetWithStatus
 import com.netflix.spinnaker.keel.actuation.Stage
 import com.netflix.spinnaker.keel.api.TaskStatus.CANCELED
@@ -194,7 +194,7 @@ class OrcaExecutionSummaryService(
     return regions.map { region ->
       RolloutTarget(
         cloudProvider,
-        BuoyLocation(account, region, emptyList()),
+        RolloutLocation(account, region, emptyList()),
       )
     }
   }
