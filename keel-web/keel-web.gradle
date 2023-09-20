@@ -1,11 +1,9 @@
 plugins {
-  id "application"
-  id "com.github.hauner.jarTest" version "1.0.1"
+  id("application")
 }
 
-apply plugin: "com.netflix.dgs.codegen"
-apply plugin: "io.spinnaker.package"
-apply plugin: "com.github.hauner.jarTest"
+apply(plugin: "com.netflix.dgs.codegen")
+apply(plugin: "io.spinnaker.package")
 
 repositories {
   mavenCentral() // for graphql-java-extended-scalars
@@ -48,7 +46,7 @@ dependencies {
   implementation("io.swagger.core.v3:swagger-annotations:2.1.2")
   implementation("org.apache.maven:maven-artifact:3.6.3")
   implementation("io.spinnaker.kork:kork-plugins")
-  implementation("com.slack.api:bolt-servlet:${slackSdkVersion}")
+  implementation("com.slack.api:bolt-servlet:1.6.0")
   implementation("com.graphql-java:graphql-java-extended-scalars:16.0.1")
 
   // DGS dependencies

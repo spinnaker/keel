@@ -10,4 +10,4 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 @ConditionalOnProperty(name = ["keel.security.custom"], havingValue = "false", matchIfMissing = true)
 @EnableFiatAutoConfig
-class DefaultSecurityConfiguration
+class SecurityConfiguration
