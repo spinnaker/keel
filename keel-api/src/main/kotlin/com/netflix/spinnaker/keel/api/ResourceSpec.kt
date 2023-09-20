@@ -38,5 +38,5 @@ interface ResourceSpec {
    */
   @JvmDefault
   fun deepRename(suffix: String): ResourceSpec =
-    throw UnsupportedOperationException("Not implemented")
+    throw TODO("Not implemented")
 }
