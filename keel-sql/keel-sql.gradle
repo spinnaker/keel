@@ -26,6 +26,7 @@ dependencies {
   implementation("org.jooq:jooq")
   implementation("com.zaxxer:HikariCP")
   implementation("org.liquibase:liquibase-core")
+  implementation 'com.github.blagerweij:liquibase-sessionlock:1.5.0'
 
   runtimeOnly("mysql:mysql-connector-java")
 
@@ -46,9 +47,9 @@ dependencies {
   jooqGenerator("ch.qos.logback:logback-classic:1.2.3")
 
   liquibaseRuntime(platform("io.spinnaker.kork:kork-bom:${korkVersion}"))
-  liquibaseRuntime("org.liquibase:liquibase-core:3.8.9")
+  liquibaseRuntime("org.liquibase:liquibase-core:4.24.0")
   liquibaseRuntime("ch.qos.logback:logback-classic:1.2.3")
-  liquibaseRuntime("org.yaml:snakeyaml:1.28")
+  liquibaseRuntime("org.yaml:snakeyaml:1.27")
   liquibaseRuntime("mysql:mysql-connector-java")
 }
 
@@ -62,7 +63,7 @@ liquibaseUpdate {
         commandLine("sh", "-c", "docker stop mysqlJooq >/dev/null 2>&1 || true")
       }
       exec {
-        commandLine("sh", "-c", "docker run --name mysqlJooq --health-cmd='mysqladmin ping -s' -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci >/dev/null 2>&1; while STATUS=\$(docker inspect --format \"{{.State.Health.Status}}\" mysqlJooq); [ \$STATUS != \"healthy\" ]; do if [ \$STATUS = \"unhealthy\" ]; then echo \"Docker failed to start\"; exit -1; fi; sleep 1; done")
+        commandLine("sh", "-c", "docker run --name mysqlJooq --health-cmd='mysqladmin ping -s' -d --rm -e MYSQL_ROOT_PASSWORD=sa -e MYSQL_DATABASE=keel -p 6603:3306 mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci >/dev/null 2>&1; while STATUS=\$(docker inspect --format \"{{.State.Health.Status}}\" mysqlJooq); [ \$STATUS != \"healthy\" ]; do if [ \$STATUS = \"unhealthy\" ]; then echo \"Docker failed to start\"; exit -1; fi; sleep 1; done")
       }
     }
   }
@@ -87,7 +88,7 @@ jooq {
         logging = org.jooq.meta.jaxb.Logging.ERROR
         jdbc {
           driver = "com.mysql.cj.jdbc.Driver"
-          url = "jdbc:mysql://127.0.0.1:6603/keel?useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC"
+          url = "jdbc:mysql://127.0.0.1:6603/keel?useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
           user = "root"
           password = "sa"
         }
@@ -263,8 +264,8 @@ liquibase {
   activities.register("local") {
     arguments = [
       "logLevel"     : "severe",
-      "changeLogFile": "src/main/resources/db/databaseChangeLog.yml",
-      "url"          : "jdbc:mysql://localhost:3306/keel?useSSL=false&serverTimezone=UTC",
+      "changeLogFile": "keel-sql/src/main/resources/db/databaseChangeLog.yml",
+      "url"          : "jdbc:mysql://localhost:3306/keel?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true",
       "username"     : "root",
       "password"     : ""
     ]
@@ -272,8 +273,8 @@ liquibase {
   activities.register("docker") {
     arguments = [
       "logLevel"     : "severe",
-      "changeLogFile": "src/main/resources/db/databaseChangeLog.yml",
-      "url"          : "jdbc:mysql://127.0.0.1:6603/keel?useSSL=false&serverTimezone=UTC",
+      "changeLogFile": "keel-sql/src/main/resources/db/databaseChangeLog.yml",
+      "url"          : "jdbc:mysql://127.0.0.1:6603/keel?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true",
       "username"     : "root",
       "password"     : "sa"
     ]
