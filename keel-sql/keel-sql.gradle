@@ -80,7 +80,7 @@ afterEvaluate {
 
 jooq {
   // get the version of JOOQ from Spring Boot
-  version = "4.24.0"
+  version = "3.19.6"
 
   configurations {
     main {
