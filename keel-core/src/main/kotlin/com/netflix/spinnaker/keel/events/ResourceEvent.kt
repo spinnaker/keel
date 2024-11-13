@@ -44,6 +44,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @JsonTypeInfo(
   use = Id.NAME,
@@ -101,7 +102,7 @@ data class ResourceCreated(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -126,7 +127,7 @@ data class ResourceUpdated(
     resource.version,
     resource.application,
     delta,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -143,7 +144,7 @@ data class ResourceDeleted(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -175,7 +176,7 @@ data class ResourceMissing(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -202,7 +203,7 @@ data class ResourceDeltaDetected(
     resource.version,
     resource.application,
     delta,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -229,7 +230,7 @@ data class ResourceActuationLaunched(
       resource.application,
       plugin,
       tasks,
-      clock.instant()
+      clock.instant().truncatedTo(ChronoUnit.MICROS)
     )
 }
 
@@ -253,13 +254,13 @@ data class ResourceActuationPaused(
     resource.id,
     resource.version,
     resource.application,
-    timestamp,
+    timestamp.truncatedTo(ChronoUnit.MICROS),
     triggeredBy
   )
 
   constructor(resource: Resource<*>, triggeredBy: String, clock: Clock = Companion.clock) : this(
     resource,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     triggeredBy
   )
 }
@@ -293,7 +294,7 @@ data class ResourceActuationVetoed(
     reason,
     veto,
     suggestedStatus,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -318,7 +319,7 @@ data class ResourceActuationResumed(
     resource.version,
     resource.application,
     triggeredBy,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -346,7 +347,7 @@ data class ResourceTaskFailed(
     resource.application,
     reason,
     tasks,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -370,7 +371,7 @@ data class ResourceTaskSucceeded(
     resource.version,
     resource.application,
     tasks,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -395,7 +396,7 @@ data class ResourceDeltaResolved(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
 
@@ -420,7 +421,7 @@ data class ResourceValid(
       resource.id,
       resource.version,
       resource.application,
-      clock.instant()
+      clock.instant().truncatedTo(ChronoUnit.MICROS)
     )
 }
 
@@ -446,7 +447,7 @@ data class ResourceCheckUnresolvable(
       resource.id,
       resource.version,
       resource.application,
-      clock.instant(),
+      clock.instant().truncatedTo(ChronoUnit.MICROS),
       exception.message
     )
 }
@@ -499,7 +500,7 @@ data class ResourceCheckError(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     exception.javaClass,
     exception.message
   )
@@ -523,7 +524,7 @@ data class ResourceDiffNotActionable(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     message
   )
 }
@@ -545,7 +546,7 @@ data class VerificationBlockedActuation(
     resource.id,
     resource.version,
     resource.application,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     message = if(e.active.count() == 1) {
       "there is an active verification against version ${e.active.first().version}"
     } else {
@@ -570,7 +571,7 @@ class MaxResourceDeletionAttemptsReached(
 ) : ResourceEvent() {
   constructor(resource: Resource<*>, attempts: Int, clock: Clock = Companion.clock) : this (
     resource.application,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     resource.displayName,
     resource.kind,
     resource.id,
@@ -602,6 +603,6 @@ data class ResourceDeletionLaunched(
       resource.application,
       plugin,
       tasks,
-      clock.instant()
+      clock.instant().truncatedTo(ChronoUnit.MICROS)
     )
 }

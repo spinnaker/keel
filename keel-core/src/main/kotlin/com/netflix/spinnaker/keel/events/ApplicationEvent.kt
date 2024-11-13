@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.time.Clock
 import java.time.Instant
 import com.netflix.spinnaker.keel.events.EventLevel.WARNING
+import java.time.temporal.ChronoUnit
 
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,
@@ -41,7 +42,7 @@ data class ApplicationActuationPaused(
 
   constructor(application: String, triggeredBy: String, comment: String? = null, clock: Clock = Companion.clock) : this(
     application,
-    clock.instant(),
+    clock.instant().truncatedTo(ChronoUnit.MICROS),
     triggeredBy,
     comment
   )
@@ -61,6 +62,6 @@ data class ApplicationActuationResumed(
   constructor(application: String, triggeredBy: String, clock: Clock = Companion.clock) : this(
     application,
     triggeredBy,
-    clock.instant()
+    clock.instant().truncatedTo(ChronoUnit.MICROS)
   )
 }
