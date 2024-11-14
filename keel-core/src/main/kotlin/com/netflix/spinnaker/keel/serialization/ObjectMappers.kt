@@ -34,23 +34,23 @@ fun configuredObjectMapper(): ObjectMapper = ObjectMapper().configureForKeel()
  * Factory method for [YAMLMapper]s configured how we like 'em.
  */
 fun configuredYamlMapper(): YAMLMapper = YAMLMapper().configureForKeel().disable(USE_NATIVE_TYPE_ID)
-class CustomInstantSerializer : JsonSerializer<Instant>() {
-  override fun serialize(p0: Instant?, p1: JsonGenerator?, p2: SerializerProvider?) {
-    p1?.writeObject(DateTimeFormatter.ISO_INSTANT.format(p0))
-  }
-}
-
-class CustomInstantDeserializer : JsonDeserializer<Instant>() {
-    //KEY here is for the DB to correctly serialize/deserialize date from strings, and so MUST match the supported formatter for str_to_date
-    // (str_to_date(json->>'$.triggeredAt', '%Y-%m-%dT%T.%fZ'))
-  override fun deserialize(p0: JsonParser?, p1: DeserializationContext?): Instant {
-    return Instant.from(DateTimeFormatter.ISO_INSTANT.parse(p0?.getValueAsString()))
-  }
-}
+//class CustomInstantSerializer : JsonSerializer<Instant>() {
+//  override fun serialize(p0: Instant?, p1: JsonGenerator?, p2: SerializerProvider?) {
+//    p1?.writeObject(DateTimeFormatter.ISO_INSTANT.format(p0))
+//  }
+//}
+//
+//class CustomInstantDeserializer : JsonDeserializer<Instant>() {
+//    //KEY here is for the DB to correctly serialize/deserialize date from strings, and so MUST match the supported formatter for str_to_date
+//    // (str_to_date(json->>'$.triggeredAt', '%Y-%m-%dT%T.%fZ'))
+//  override fun deserialize(p0: JsonParser?, p1: DeserializationContext?): Instant {
+//    return Instant.from(DateTimeFormatter.ISO_INSTANT.parse(p0?.getValueAsString()))
+//  }
+//}
 fun <T : ObjectMapper> T.configureForKeel(): T {
   val javaTimeModule = JavaTimeModule()
-  javaTimeModule.addSerializer(Instant::class.java, CustomInstantSerializer())
-  javaTimeModule.addDeserializer(Instant::class.java, CustomInstantDeserializer())
+//  javaTimeModule.addSerializer(Instant::class.java, CustomInstantSerializer())
+//  javaTimeModule.addDeserializer(Instant::class.java, CustomInstantDeserializer())
   return apply {
     registerKeelApiModule()
       .registerKotlinModule()
