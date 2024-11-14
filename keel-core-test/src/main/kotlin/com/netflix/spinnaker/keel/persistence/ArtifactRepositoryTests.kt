@@ -54,6 +54,7 @@ import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import java.time.Clock
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests {
   val publisher: ApplicationEventPublisher = mockk(relaxed = true)
@@ -649,7 +650,7 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     }
 
     context("artifact creation timestamp exists") {
-      val createdAt = Instant.now()
+      val createdAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
       before {
         subject.register(versionedSnapshotDebian)
