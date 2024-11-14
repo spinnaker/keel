@@ -31,7 +31,7 @@ fun configuredObjectMapper(): ObjectMapper = ObjectMapper().configureForKeel()
 fun configuredYamlMapper(): YAMLMapper = YAMLMapper().configureForKeel().disable(USE_NATIVE_TYPE_ID)
 fun <T : ObjectMapper> T.configureForKeel(): T {
   val javaTimeModule = JavaTimeModule()
-  javaTimeModule.addDeserializer(Instant::class.java, PrecisionSqlDeserializer())
+//  javaTimeModule.addDeserializer(Instant::class.java, PrecisionSqlDeserializer())
   javaTimeModule.addSerializer(Instant::class.java,PrecisionSqlSerializer())
   return apply {
     registerKeelApiModule()
