@@ -1,16 +1,11 @@
 package com.netflix.spinnaker.config
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.keel.api.plugins.ArtifactSupplier
 import com.netflix.spinnaker.keel.events.PersistentEvent.Companion.clock
 import com.netflix.spinnaker.keel.resources.ResourceFactory
 import com.netflix.spinnaker.keel.scheduled.ScheduledAgent
-import com.netflix.spinnaker.keel.serialization.CustomInstantDeserializer
-import com.netflix.spinnaker.keel.serialization.CustomInstantSerializer
 import com.netflix.spinnaker.keel.sql.SqlActionRepository
 import com.netflix.spinnaker.keel.sql.SqlAgentLockRepository
 import com.netflix.spinnaker.keel.sql.SqlArtifactRepository
@@ -45,18 +40,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.core.env.Environment
 import java.time.Clock
-import java.time.Instant
-import java.time.format.DateTimeFormatter
 import javax.annotation.PostConstruct
 
 @Configuration
 @ConditionalOnProperty("sql.enabled")
 @EnableConfigurationProperties(RetentionProperties::class)
 @Import(DefaultSqlConfiguration::class, SqlRetryProperties::class, EnvironmentExclusionConfig::class)
-class SqlConfiguration {
-
-
-
+class SqlConfiguration
+{
 
   @Autowired
   lateinit var jooqConfiguration: DefaultConfiguration
@@ -76,15 +67,6 @@ class SqlConfiguration {
     jooqConfiguration.settings().isRenderSchema = false
   }
 
-  fun overloadMapper(mapper: ObjectMapper): ObjectMapper {
-    val copy = mapper.copy()
-    val timeModule = JavaTimeModule()
-    timeModule.addSerializer(Instant::class.java, CustomInstantSerializer())
-    timeModule.addDeserializer(Instant::class.java, CustomInstantDeserializer())
-    copy.registerModule(timeModule)
-    return copy
-  }
-
   @Bean
   fun resourceRepository(
     jooq: DSLContext,
@@ -98,7 +80,7 @@ class SqlConfiguration {
     SqlResourceRepository(
       jooq,
       clock,
-      overloadMapper(objectMapper),
+      objectMapper,
       resourceFactory,
       SqlRetry(sqlRetryProperties),
       publisher,
@@ -117,7 +99,7 @@ class SqlConfiguration {
     SqlArtifactRepository(
       jooq,
       clock,
-      overloadMapper(objectMapper),
+      objectMapper,
       SqlRetry(sqlRetryProperties),
       artifactSuppliers,
       publisher
@@ -136,7 +118,7 @@ class SqlConfiguration {
       jooq = jooq,
       clock = clock,
       resourceFactory = resourceFactory,
-      objectMapper = overloadMapper(objectMapper),
+      objectMapper = objectMapper,
       sqlRetry = SqlRetry(sqlRetryProperties),
       artifactSuppliers = artifactSuppliers,
       publisher = publisher
@@ -199,7 +181,7 @@ class SqlConfiguration {
   ) = SqlActionRepository(
     jooq,
     clock,
-    overloadMapper(objectMapper),
+    objectMapper,
     resourceFactory,
     SqlRetry(sqlRetryProperties),
     artifactSuppliers,
@@ -223,7 +205,7 @@ class SqlConfiguration {
     clock: Clock,
     properties: SqlProperties,
     objectMapper: ObjectMapper
-  ) = SqlLifecycleMonitorRepository(jooq, clock, overloadMapper(objectMapper), SqlRetry(sqlRetryProperties))
+  ) = SqlLifecycleMonitorRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
 
   @Bean
   fun bakedImageRepository(
@@ -231,7 +213,7 @@ class SqlConfiguration {
     clock: Clock,
     properties: SqlProperties,
     objectMapper: ObjectMapper
-  ) = SqlBakedImageRepository(jooq, clock,  overloadMapper(objectMapper), SqlRetry(sqlRetryProperties))
+  ) = SqlBakedImageRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
 
   @Bean
   fun environmentLeaseRepository(
@@ -257,7 +239,7 @@ class SqlConfiguration {
   ) = SqlEnvironmentDeletionRepository(
     jooq,
     clock,
-    overloadMapper(objectMapper),
+    objectMapper,
     SqlRetry(sqlRetryProperties),
     resourceFactory,
     artifactSuppliers
@@ -268,7 +250,7 @@ class SqlConfiguration {
     jooq: DSLContext,
     clock: Clock,
     objectMapper: ObjectMapper
-  ) = SqlWorkQueueRepository(jooq, clock, overloadMapper(objectMapper), SqlRetry(sqlRetryProperties))
+  ) = SqlWorkQueueRepository(jooq, clock, objectMapper, SqlRetry(sqlRetryProperties))
 
   @Bean
   fun featureRolloutRepository(
