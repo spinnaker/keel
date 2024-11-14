@@ -3,18 +3,19 @@ databaseChangeLog:
       id: long-date-sizes-linux-java-17
       author: jasonmcintosh
       changes:
-        - sql:
-            sql: |
-              alter table event
-              change timestamp_gen datetime(6) generated always as (str_to_date(json->>'$.timestamp', '%Y-%m-%dT%T.%fZ'))
-              after application;
+        - dropColumn:
+            tableName: dismissible_notification
+            columnName: triggered_at
         - sql:
             sql: |
               alter table dismissible_notification
-              change triggered_at datetime(6) generated always as (str_to_date(json->>'$.triggeredAt', '%Y-%m-%dT%T.%fZ'))
+              add column triggered_at datetime(6) generated always as (str_to_date(json->>'$.triggeredAt', '%Y-%m-%dT%T.%fZ'))
               after uid;
+        - dropColumn:
+            tableName: dismissible_notification
+            columnName: dismissed_at
         - sql:
             sql: |
               alter table dismissible_notification
-              change dismissed_at datetime(6) generated always as (str_to_date(json->>'$.dismissedAt', '%Y-%m-%dT%T.%fZ'))
+              add column dismissed_at datetime(6) generated always as (str_to_date(json->>'$.dismissedAt', '%Y-%m-%dT%T.%fZ'))
               after dismissed_by;
