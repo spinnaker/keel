@@ -22,7 +22,7 @@ import java.time.format.DateTimeFormatterBuilder;
  *   <li>https://stackoverflow.com/a/38042457 for more information.
  * </ul>
  *
- * <p>NOTE we're going to 3 digits, but could go to 6 if but NO larger than 6 due to <a
+ * <p>NOTE we're going to 6 digits to match <a
  * href="https://www.w3schools.com/sql/func_mysql_str_to_date.asp">Mysql str_to_date function
  * limits</a> on microseconds parsing. This is used in the SQL definition: <code>
  *  add column triggered_at datetime(3) generated always as (str_to_date(json->>'$.triggeredAt', '%Y-%m-%dT%T.%fZ'))
