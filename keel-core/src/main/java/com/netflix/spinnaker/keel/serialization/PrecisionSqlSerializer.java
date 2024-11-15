@@ -35,7 +35,7 @@ public class PrecisionSqlSerializer extends InstantSerializerBase<Instant> {
         Instant::toEpochMilli,
         Instant::getEpochSecond,
         Instant::getNano,
-        new DateTimeFormatterBuilder().appendInstant(3).toFormatter());
+        new DateTimeFormatterBuilder().appendInstant(6).toFormatter());
   }
 
   @Override
