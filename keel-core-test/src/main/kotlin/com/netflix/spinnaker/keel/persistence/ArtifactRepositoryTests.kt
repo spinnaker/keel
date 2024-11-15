@@ -650,6 +650,9 @@ abstract class ArtifactRepositoryTests<T : ArtifactRepository> : JUnit5Minutests
     }
 
     context("artifact creation timestamp exists") {
+      // We truncate this since we're using a serialization to java that reduces the level of precision
+      // and later comparisons break otherwise.  This is needed to work with generated columns in
+      // certain databases.  See the PrecisionSqlSerializer class for more info
       val createdAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
       before {
